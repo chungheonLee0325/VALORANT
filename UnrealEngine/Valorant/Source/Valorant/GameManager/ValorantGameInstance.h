@@ -18,6 +18,8 @@ class VALORANT_API UValorantGameInstance : public UGameInstance
 public:
 	FAgentData* GetAgentData(int AgentID);
 	FWeaponData* GetWeaponData(int WeaponID);
+	FGameplayEffectData* GetGEffectData(int GEffectID);
+	FAbilityData* GetAbilityData(int AbilityID);
 
 protected:
 	virtual void Init() override;
@@ -27,4 +29,8 @@ private:
 	TMap<int32, FAgentData> dt_Agent;
 	UPROPERTY()
 	TMap<int32, FWeaponData> dt_Weapon;
+	UPROPERTY()
+	TMap<int32, FGameplayEffectData> dt_GEffect;
+	UPROPERTY()
+	TMap<int32, FAbilityData> dt_Ability;
 };
