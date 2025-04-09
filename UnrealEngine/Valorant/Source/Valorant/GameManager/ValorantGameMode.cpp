@@ -1,7 +1,7 @@
 // Copyright Epic Games, Inc. All Rights Reserved.
 
 #include "ValorantGameMode.h"
-#include "ValorantCharacter.h"
+#include "Valorant/ValorantCharacter.h"
 #include "UObject/ConstructorHelpers.h"
 
 AValorantGameMode::AValorantGameMode()
