@@ -4,27 +4,45 @@
 #include "BaseAgent.h"
 
 
-// Sets default values
 ABaseAgent::ABaseAgent()
 {
-	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
+	
+	ThirdPersonMesh = CreateDefaultSubobject<USkeletalMeshComponent>("ThirdPersonMesh");
+	ThirdPersonMesh->SetupAttachment(GetRootComponent());
+	
+	ThirdPersonMesh->AlwaysLoadOnClient = true;
+	ThirdPersonMesh->AlwaysLoadOnServer = true;
+	ThirdPersonMesh->bOwnerNoSee = false;
+	ThirdPersonMesh->VisibilityBasedAnimTickOption = EVisibilityBasedAnimTickOption::AlwaysTickPose;
+	ThirdPersonMesh->bCastDynamicShadow = true;
+	ThirdPersonMesh->bAffectDynamicIndirectLighting = true;
+	ThirdPersonMesh->PrimaryComponentTick.TickGroup = TG_PrePhysics;
+	ThirdPersonMesh->SetGenerateOverlapEvents(false);
+	ThirdPersonMesh->SetCanEverAffectNavigation(false);
 }
 
-// Called when the game starts or when spawned
 void ABaseAgent::BeginPlay()
 {
 	Super::BeginPlay();
-	
+
+	if (IsLocallyControlled())
+	{
+		GetMesh()->SetOwnerNoSee(true);
+		ThirdPersonMesh->SetOwnerNoSee(false);
+	}
+	else
+	{
+		GetMesh()->SetOwnerNoSee(false);
+		ThirdPersonMesh->SetOwnerNoSee(true);
+	}
 }
 
-// Called every frame
 void ABaseAgent::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 }
 
-// Called to bind functionality to input
 void ABaseAgent::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
 	Super::SetupPlayerInputComponent(PlayerInputComponent);

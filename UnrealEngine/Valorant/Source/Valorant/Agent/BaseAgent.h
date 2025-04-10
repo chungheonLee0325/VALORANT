@@ -14,6 +14,9 @@ public:
 	virtual void Tick(float DeltaTime) override;
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	USkeletalMeshComponent* ThirdPersonMesh;
+
 protected:
 	virtual void BeginPlay() override;
 
