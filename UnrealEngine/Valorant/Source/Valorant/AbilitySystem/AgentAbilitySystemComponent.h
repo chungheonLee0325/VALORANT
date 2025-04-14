@@ -7,7 +7,7 @@
 #include "AgentAbilitySystemComponent.generated.h"
 
 
-UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
+UCLASS()
 class VALORANT_API UAgentAbilitySystemComponent : public UAbilitySystemComponent
 {
 	GENERATED_BODY()

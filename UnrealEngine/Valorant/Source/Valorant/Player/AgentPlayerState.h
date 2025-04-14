@@ -21,8 +21,10 @@ class VALORANT_API AAgentPlayerState : public APlayerState, public IAbilitySyste
 public:
 	AAgentPlayerState();
 
+	UFUNCTION(BlueprintCallable)
 	UAbilitySystemComponent* GetAbilitySystemComponent() const override;
-	UBaseAttributeSet* GetBaseAttributeSetBase() const;
+	UBaseAttributeSet* GetBaseAttributeSet() const;
+	UAttributeSet* GetAttributeSet() const;
 
 	UFUNCTION(BlueprintCallable, Category = "Agent|BaseAttributes")
 	float GetHealth() const;
@@ -35,11 +37,17 @@ public:
 	
 	UFUNCTION(BlueprintCallable, Category = "Agent|BaseAttributes")
 	float GetMoveSpeed() const;
-	
+		
 protected:
+	virtual void BeginPlay() override;
+	
 	UPROPERTY()
 	UAgentAbilitySystemComponent* ASC;
+
+	
 	
 	UPROPERTY()
 	UBaseAttributeSet* BaseAttributeSet;
+
+	
 };

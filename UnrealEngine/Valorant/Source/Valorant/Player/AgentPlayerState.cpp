@@ -4,7 +4,8 @@
 #include "AgentPlayerState.h"
 
 #include "Valorant/AbilitySystem/AgentAbilitySystemComponent.h"
-#include "Valorant/Attribute/BaseAttributeSet.h"
+#include "Valorant/Agent/BaseAgent.h"
+#include "Valorant/AbilitySystem/Attributes/BaseAttributeSet.h"
 
 AAgentPlayerState::AAgentPlayerState()
 {
@@ -22,12 +23,34 @@ AAgentPlayerState::AAgentPlayerState()
 	MinNetUpdateFrequency = 33.f;
 }
 
+void AAgentPlayerState::BeginPlay()
+{
+	Super::BeginPlay();
+	if (HasAuthority() && ASC) {
+		//TODO: 레거시. 후에 Initial목적 GE 따로 제작
+		ASC->SetNumericAttributeBase(UBaseAttributeSet::GetHealthAttribute(), 100.f);
+		ASC->SetNumericAttributeBase(UBaseAttributeSet::GetMaxHealthAttribute(), 100.f);
+		ASC->SetNumericAttributeBase(UBaseAttributeSet::GetArmorAttribute(), 0.f);
+		ASC->SetNumericAttributeBase(UBaseAttributeSet::GetMaxArmorAttribute(), 1000.f);
+		ASC->SetNumericAttributeBase(UBaseAttributeSet::GetMoveSpeedAttribute(), 600.f);
+		
+		UE_LOG(LogTemp, Warning, TEXT("Health: %f"), ASC->GetNumericAttribute(UBaseAttributeSet::GetHealthAttribute()));
+		UE_LOG(LogTemp, Warning, TEXT("Armor: %f"), ASC->GetNumericAttribute(UBaseAttributeSet::GetArmorAttribute()));
+		UE_LOG(LogTemp, Warning, TEXT("WalkSpeed: %f"), ASC->GetNumericAttribute(UBaseAttributeSet::GetMoveSpeedAttribute()));
+	}
+}
+
 UAbilitySystemComponent* AAgentPlayerState::GetAbilitySystemComponent() const
 {
 	return ASC;
 }
 
-UBaseAttributeSet* AAgentPlayerState::GetBaseAttributeSetBase() const
+UBaseAttributeSet* AAgentPlayerState::GetBaseAttributeSet() const
+{
+	return BaseAttributeSet;
+}
+
+UAttributeSet* AAgentPlayerState::GetAttributeSet() const
 {
 	return BaseAttributeSet;
 }
@@ -51,3 +74,6 @@ float AAgentPlayerState::GetMoveSpeed() const
 {
 	return BaseAttributeSet->GetMoveSpeed();
 }
+
+
+

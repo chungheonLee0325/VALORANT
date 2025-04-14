@@ -7,7 +7,6 @@
 UAgentAbilitySystemComponent::UAgentAbilitySystemComponent()
 {
 	PrimaryComponentTick.bCanEverTick = true;
-
 }
 
 void UAgentAbilitySystemComponent::BeginPlay()
