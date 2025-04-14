@@ -3,7 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Valorant/Attribute/BaseAttributeSet.h"
+#include "Valorant/AbilitySystem/Attributes/BaseAttributeSet.h" 
 #include "AbilitySystemComponent.h" 
 #include "JettAttributeSet.generated.h"
 
