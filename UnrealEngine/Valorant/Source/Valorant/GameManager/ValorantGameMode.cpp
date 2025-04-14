@@ -8,7 +8,8 @@ AValorantGameMode::AValorantGameMode()
 	: Super()
 {
 	// set default pawn class to our Blueprinted character
-	static ConstructorHelpers::FClassFinder<APawn> PlayerPawnClassFinder(TEXT("/Game/FirstPerson/Blueprints/BP_FirstPersonCharacter"));
-	DefaultPawnClass = PlayerPawnClassFinder.Class;
 
+	// KBD: 폴더링 하는 동안 불러오지 않도록 함
+	// static ConstructorHelpers::FClassFinder<APawn> PlayerPawnClassFinder(TEXT("/Game/FirstPerson/Blueprints/BP_FirstPersonCharacter"));
+	// DefaultPawnClass = PlayerPawnClassFinder.Class;
 }
