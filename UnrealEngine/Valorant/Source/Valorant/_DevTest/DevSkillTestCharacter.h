@@ -5,16 +5,22 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
 #include "Valorant/ValorantCharacter.h"
+#include "AbilitySystemInterface.h"
 #include "DevSkillTestCharacter.generated.h"
 
 UCLASS()
-class VALORANT_API ADevSkillTestCharacter : public AValorantCharacter
+class VALORANT_API ADevSkillTestCharacter : public AValorantCharacter, public IAbilitySystemInterface
 {
 	GENERATED_BODY()
 
 public:
 	// Sets default values for this character's properties
 	ADevSkillTestCharacter();
+	
+	UAbilitySystemComponent* GetAbilitySystemComponent() const override;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite)
+	TObjectPtr<UAbilitySystemComponent> AbilitySystemComponent;
 
 protected:
 	// Called when the game starts or when spawned

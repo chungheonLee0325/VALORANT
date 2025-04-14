@@ -3,19 +3,31 @@
 
 #include "DevSkillTestCharacter.h"
 
+#include "AbilitySystemComponent.h"
+
 
 // Sets default values
 ADevSkillTestCharacter::ADevSkillTestCharacter()
 {
-	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
+
+	AbilitySystemComponent = CreateDefaultSubobject<UAbilitySystemComponent>(TEXT("AbilitySystemComponent"));
 }
 
-// Called when the game starts or when spawned
 void ADevSkillTestCharacter::BeginPlay()
 {
 	Super::BeginPlay();
-	
+
+	if (AbilitySystemComponent != nullptr)
+	{
+		AbilitySystemComponent->InitAbilityActorInfo(this,this);
+		// AbilitySystemComponent->SetNumericAttributeBase(U뭐시기, Init뭐시기);
+	}
+}
+
+UAbilitySystemComponent* ADevSkillTestCharacter::GetAbilitySystemComponent() const
+{
+	return AbilitySystemComponent;
 }
 
 // Called every frame
