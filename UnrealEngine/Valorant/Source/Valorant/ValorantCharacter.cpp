@@ -9,6 +9,7 @@
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "InputActionValue.h"
+#include "RenderCore.h"
 #include "Engine/LocalPlayer.h"
 
 DEFINE_LOG_CATEGORY(LogTemplateCharacter);
@@ -18,6 +19,9 @@ DEFINE_LOG_CATEGORY(LogTemplateCharacter);
 
 AValorantCharacter::AValorantCharacter()
 {
+	// KBD: 반동 회복을 위해 Tick 활성화
+	PrimaryActorTick.bCanEverTick = true;
+	
 	// Set size for collision capsule
 	GetCapsuleComponent()->InitCapsuleSize(55.f, 96.0f);
 		
@@ -98,5 +102,22 @@ void AValorantCharacter::Look(const FInputActionValue& Value)
 		// add yaw and pitch input to controller
 		AddControllerYawInput(LookAxisVector.X);
 		AddControllerPitchInput(LookAxisVector.Y);
+	}
+}
+
+void AValorantCharacter::Tick(float DeltaSeconds)
+{
+	Super::Tick(DeltaSeconds);
+
+	// KBD: 현재 뭔가를 발사 중이 아니고, 누적반동값이 0이 아니라면 반동을 회복하자
+	if (false == bIsFiring && TotalRecoilOffsetPitch + TotalRecoilOffsetYaw != 0.0f)
+	{
+		const float SubPitchValue = -FMath::Lerp(TotalRecoilOffsetPitch, 0.0f, 0.88f);
+		TotalRecoilOffsetPitch += SubPitchValue;
+		AddControllerPitchInput(SubPitchValue);
+
+		const float SubYawValue = -FMath::Lerp(TotalRecoilOffsetYaw, 0.0f, 0.88f);
+		TotalRecoilOffsetYaw += SubYawValue;
+		AddControllerYawInput(SubYawValue);
 	}
 }
