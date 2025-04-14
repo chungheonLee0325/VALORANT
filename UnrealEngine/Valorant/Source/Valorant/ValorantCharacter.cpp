@@ -112,11 +112,11 @@ void AValorantCharacter::Tick(float DeltaSeconds)
 	// KBD: 현재 뭔가를 발사 중이 아니고, 누적반동값이 0이 아니라면 반동을 회복하자
 	if (false == bIsFiring && TotalRecoilOffsetPitch + TotalRecoilOffsetYaw != 0.0f)
 	{
-		const float SubPitchValue = -FMath::Lerp(TotalRecoilOffsetPitch, 0.0f, 0.9f);
+		const float SubPitchValue = -FMath::Lerp(TotalRecoilOffsetPitch, 0.0f, 0.88f);
 		TotalRecoilOffsetPitch += SubPitchValue;
 		AddControllerPitchInput(SubPitchValue);
 
-		const float SubYawValue = -FMath::Lerp(TotalRecoilOffsetYaw, 0.0f, 0.9f);
+		const float SubYawValue = -FMath::Lerp(TotalRecoilOffsetYaw, 0.0f, 0.88f);
 		TotalRecoilOffsetYaw += SubYawValue;
 		AddControllerYawInput(SubYawValue);
 	}

@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Components/SkeletalMeshComponent.h"
+#include "ResourceManager/ValorantGameType.h"
 #include "ValorantWeaponComponent.generated.h"
 
 class AValorantCharacter;
@@ -64,4 +65,9 @@ protected:
 private:
 	/** The Character holding this weapon*/
 	AValorantCharacter* Character;
+
+public:
+	int RecoilLevel = 0;
+	TArray<FGunRecoilData> RecoilData;
+	virtual void BeginPlay() override;
 };
