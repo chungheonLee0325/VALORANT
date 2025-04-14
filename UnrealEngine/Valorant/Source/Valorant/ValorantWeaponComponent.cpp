@@ -10,8 +10,10 @@
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "Animation/AnimInstance.h"
+#include "ResourceManager/ValorantGameType.h"
 #include "Engine/LocalPlayer.h"
 #include "Engine/World.h"
+#include "GameManager/ValorantGameInstance.h"
 
 // Sets default values for this component's properties
 UValorantWeaponComponent::UValorantWeaponComponent()
@@ -28,23 +30,54 @@ void UValorantWeaponComponent::Fire()
 		return;
 	}
 
+	Character->bIsFiring = true;
+	if (FMath::IsNearlyZero(Character->TotalRecoilOffsetPitch + Character->TotalRecoilOffsetYaw, 0.1f))
+	{
+		Character->TotalRecoilOffsetPitch = 0.0f;
+		Character->TotalRecoilOffsetYaw = 0.0f;
+		RecoilLevel = 0;
+	}
+
+	UE_LOG(LogTemp, Warning, TEXT("RecoilLevel : %d"), RecoilLevel);
+	
+	// KBD: 발사 시 캐릭터에 반동값 적용
+	const float PitchValue = RecoilData[RecoilLevel].OffsetPitch * 0.4;
+	UE_LOG(LogTemp, Warning, TEXT("PitchValue : %f"), PitchValue);
+	Character->AddControllerPitchInput(PitchValue);
+	Character->TotalRecoilOffsetPitch += PitchValue;
+
+	const float YawValue = RecoilData[RecoilLevel].OffsetYaw * 0.4;
+	UE_LOG(LogTemp, Warning, TEXT("YawValue : %f"), YawValue);
+	Character->AddControllerYawInput(YawValue);
+	Character->TotalRecoilOffsetYaw += YawValue;
+	
+	RecoilLevel = FMath::Clamp(RecoilLevel + 1, 0, RecoilData.Num() - 1);
+
 	// Try and fire a projectile
 	if (ProjectileClass != nullptr)
 	{
 		UWorld* const World = GetWorld();
 		if (World != nullptr)
 		{
-			APlayerController* PlayerController = Cast<APlayerController>(Character->GetController());
-			const FRotator SpawnRotation = PlayerController->PlayerCameraManager->GetCameraRotation();
-			// MuzzleOffset is in camera space, so transform it to world space before offsetting from the character location to find the final muzzle position
-			const FVector SpawnLocation = GetOwner()->GetActorLocation() + SpawnRotation.RotateVector(MuzzleOffset);
-	
-			//Set Spawn Collision Handling Override
-			FActorSpawnParameters ActorSpawnParams;
-			ActorSpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButDontSpawnIfColliding;
-	
-			// Spawn the projectile at the muzzle
-			World->SpawnActor<AValorantProjectile>(ProjectileClass, SpawnLocation, SpawnRotation, ActorSpawnParams);
+			const APlayerController* PlayerController = Cast<APlayerController>(Character->GetController());
+			FVector Start, Dir;
+			int32 ScreenWidth, ScreenHeight;
+			PlayerController->GetViewportSize(ScreenWidth, ScreenHeight);
+			PlayerController->DeprojectScreenPositionToWorld(ScreenWidth * 0.5f, ScreenHeight * 0.5f, Start, Dir);
+			const FVector End = Start + Dir * 9999;
+			
+			DrawDebugLine(World, Start, End, FColor::Red, false, 3, 0, 0.3);
+			
+			// const FRotator SpawnRotation = PlayerController->PlayerCameraManager->GetCameraRotation();
+			// // MuzzleOffset is in camera space, so transform it to world space before offsetting from the character location to find the final muzzle position
+			// const FVector SpawnLocation = GetOwner()->GetActorLocation() + SpawnRotation.RotateVector(MuzzleOffset);
+			//
+			// //Set Spawn Collision Handling Override
+			// FActorSpawnParameters ActorSpawnParams;
+			// ActorSpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButDontSpawnIfColliding;
+			//
+			// // Spawn the projectile at the muzzle
+			// World->SpawnActor<AValorantProjectile>(ProjectileClass, SpawnLocation, SpawnRotation, ActorSpawnParams);
 		}
 	}
 	
@@ -64,6 +97,16 @@ void UValorantWeaponComponent::Fire()
 			AnimInstance->Montage_Play(FireAnimation, 1.f);
 		}
 	}
+}
+
+void UValorantWeaponComponent::EndFire()
+{
+	if (nullptr == Character)
+	{
+		return;
+	}
+	
+	Character->bIsFiring = false;
 }
 
 bool UValorantWeaponComponent::AttachWeapon(AValorantCharacter* TargetCharacter)
@@ -93,6 +136,7 @@ bool UValorantWeaponComponent::AttachWeapon(AValorantCharacter* TargetCharacter)
 		{
 			// Fire
 			EnhancedInputComponent->BindAction(FireAction, ETriggerEvent::Triggered, this, &UValorantWeaponComponent::Fire);
+			EnhancedInputComponent->BindAction(EndFireAction, ETriggerEvent::Triggered, this, &UValorantWeaponComponent::EndFire);
 		}
 	}
 
@@ -116,4 +160,22 @@ void UValorantWeaponComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 
 	// maintain the EndPlay call chain
 	Super::EndPlay(EndPlayReason);
+}
+
+void UValorantWeaponComponent::BeginPlay()
+{
+	Super::BeginPlay();
+	auto* GameInstance = Cast<UValorantGameInstance>(UGameplayStatics::GetGameInstance(GetWorld()));
+	if (GameInstance)
+	{
+		auto* WeaponData = GameInstance->GetWeaponData(0);
+		if (WeaponData)
+		{
+			for (auto Element : WeaponData->GunRecoilMap)
+			{
+				RecoilData.Add(Element);
+			}
+		}
+	}
+	
 }
