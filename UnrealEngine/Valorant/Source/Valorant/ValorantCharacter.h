@@ -67,5 +67,12 @@ public:
 	/** Returns FirstPersonCameraComponent subobject **/
 	UCameraComponent* GetFirstPersonCameraComponent() const { return FirstPersonCameraComponent; }
 
+	/*
+	 *	KBD: 현재 누적된 반동값 (뭔가를 발사 중이 아닌 경우 Tick에서 서서히 회복)
+	 */
+public:
+	bool bIsFiring = false;
+	float TotalRecoilOffsetPitch = 0.0f;
+	float TotalRecoilOffsetYaw = 0.0f;
+	virtual void Tick(float DeltaSeconds) override;
 };
-

@@ -140,7 +140,20 @@ enum class EAbilitySlotType : uint8
 	Slot_X UMETA(DisplayName = "Slot X"),
 };
 
-// Struct
+USTRUCT(BlueprintType)
+struct FGunRecoilData : public FTableRowBase
+{
+	GENERATED_BODY()
+	
+	// UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Data")
+	// int32 RecoilID = 0;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Data")
+	float OffsetPitch = 0.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Data")
+	float OffsetYaw = 0.0f;
+};
 
 // AgentData
 USTRUCT(BlueprintType)
@@ -219,6 +232,9 @@ struct FWeaponData : public FTableRowBase
 	// 크레딧 비용
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Data")
 	int32 Cost = 0;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Data")
+	TArray<FGunRecoilData> GunRecoilMap;
 
 	// 무기 대미지 이펙트
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Data")
@@ -332,3 +348,4 @@ struct FAbilityData : public FTableRowBase
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Network")
 	bool ReplicateAbility = true;
 };
+
