@@ -3,7 +3,7 @@
 
 #include "EffectManager.h"
 
-#include "Valorant/Attribute/BaseAttributeSet.h"
+#include "Valorant/AbilitySystem/Attributes/BaseAttributeSet.h"
 #include "Valorant/ResourceManager/ValorantGameType.h"
 #include "AbilitySystemGlobals.h"
 #include "AbilitySystemComponent.h"
