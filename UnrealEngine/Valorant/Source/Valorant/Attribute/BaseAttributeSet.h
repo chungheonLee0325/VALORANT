@@ -19,12 +19,16 @@ UCLASS()
 class VALORANT_API UBaseAttributeSet : public UAttributeSet
 {
 	GENERATED_BODY()
+	
 public:
 	UBaseAttributeSet();
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Agent", ReplicatedUsing = OnRep_Health)
 	FGameplayAttributeData Health;
 	ATTRIBUTE_ACCESSORS(UBaseAttributeSet,Health);
+
+	UPROPERTY()
+	FPlayAttributeEvent OnHealthChanged;
 
 	UPROPERTY(BlueprintReadOnly, Category = "Agent", ReplicatedUsing = OnRep_MaxHealth)
 	FGameplayAttributeData MaxHealth;
