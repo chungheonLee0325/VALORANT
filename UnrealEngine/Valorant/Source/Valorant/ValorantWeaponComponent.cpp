@@ -28,6 +28,11 @@ void UValorantWeaponComponent::Fire()
 		return;
 	}
 
+	// KBD: 발사 시 캐릭터에 반동값 적용
+	Character->bIsFiring = true;
+	Character->AddControllerPitchInput(-0.5f);
+	Character->TotalRecoilOffsetPitch += -0.5f;
+
 	// Try and fire a projectile
 	if (ProjectileClass != nullptr)
 	{
@@ -66,6 +71,16 @@ void UValorantWeaponComponent::Fire()
 	}
 }
 
+void UValorantWeaponComponent::EndFire()
+{
+	if (nullptr == Character)
+	{
+		return;
+	}
+	
+	Character->bIsFiring = false;
+}
+
 bool UValorantWeaponComponent::AttachWeapon(AValorantCharacter* TargetCharacter)
 {
 	Character = TargetCharacter;
@@ -93,6 +108,7 @@ bool UValorantWeaponComponent::AttachWeapon(AValorantCharacter* TargetCharacter)
 		{
 			// Fire
 			EnhancedInputComponent->BindAction(FireAction, ETriggerEvent::Triggered, this, &UValorantWeaponComponent::Fire);
+			EnhancedInputComponent->BindAction(EndFireAction, ETriggerEvent::Triggered, this, &UValorantWeaponComponent::EndFire);
 		}
 	}
 
