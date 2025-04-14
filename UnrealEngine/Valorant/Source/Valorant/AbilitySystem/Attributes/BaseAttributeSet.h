@@ -7,7 +7,7 @@
 #include "AttributeSet.h"
 #include "BaseAttributeSet.generated.h"
 
-#define ATTRIBUTE_ACCESSORS(ClassName, PropertyName) \
+#define PLAY_ATTRIBUTE_ACCESSORS(ClassName, PropertyName) \
 GAMEPLAYATTRIBUTE_PROPERTY_GETTER(ClassName, PropertyName) \
 GAMEPLAYATTRIBUTE_VALUE_GETTER(PropertyName) \
 GAMEPLAYATTRIBUTE_VALUE_SETTER(PropertyName) \
@@ -25,26 +25,26 @@ public:
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Agent", ReplicatedUsing = OnRep_Health)
 	FGameplayAttributeData Health;
-	ATTRIBUTE_ACCESSORS(UBaseAttributeSet,Health);
+	PLAY_ATTRIBUTE_ACCESSORS(UBaseAttributeSet,Health);
 
 	UPROPERTY()
 	FPlayAttributeEvent OnHealthChanged;
 
 	UPROPERTY(BlueprintReadOnly, Category = "Agent", ReplicatedUsing = OnRep_MaxHealth)
 	FGameplayAttributeData MaxHealth;
-	ATTRIBUTE_ACCESSORS(UBaseAttributeSet,MaxHealth);
+	PLAY_ATTRIBUTE_ACCESSORS(UBaseAttributeSet,MaxHealth);
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Agent", ReplicatedUsing = OnRep_Armor)
 	FGameplayAttributeData Armor;
-	ATTRIBUTE_ACCESSORS(UBaseAttributeSet, Armor);
+	PLAY_ATTRIBUTE_ACCESSORS(UBaseAttributeSet, Armor);
 
 	UPROPERTY(BlueprintReadOnly, Category = "Agent")
 	FGameplayAttributeData MaxArmor;
-	ATTRIBUTE_ACCESSORS(UBaseAttributeSet, MaxArmor);
+	PLAY_ATTRIBUTE_ACCESSORS(UBaseAttributeSet, MaxArmor);
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Agent", ReplicatedUsing = OnRep_MoveSpeed)
 	FGameplayAttributeData MoveSpeed;
-	ATTRIBUTE_ACCESSORS(UBaseAttributeSet, MoveSpeed);
+	PLAY_ATTRIBUTE_ACCESSORS(UBaseAttributeSet, MoveSpeed);
 
 private:
 	//TODO: 태그에 대해 논의
