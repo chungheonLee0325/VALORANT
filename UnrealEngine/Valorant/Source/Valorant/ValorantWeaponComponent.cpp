@@ -41,12 +41,12 @@ void UValorantWeaponComponent::Fire()
 	UE_LOG(LogTemp, Warning, TEXT("RecoilLevel : %d"), RecoilLevel);
 	
 	// KBD: 발사 시 캐릭터에 반동값 적용
-	const float PitchValue = RecoilData[RecoilLevel].OffsetPitch * 0.4;
+	const float PitchValue = RecoilData[RecoilLevel].OffsetPitch * 0.2;
 	UE_LOG(LogTemp, Warning, TEXT("PitchValue : %f"), PitchValue);
 	Character->AddControllerPitchInput(PitchValue);
 	Character->TotalRecoilOffsetPitch += PitchValue;
 
-	const float YawValue = RecoilData[RecoilLevel].OffsetYaw * 0.4;
+	const float YawValue = RecoilData[RecoilLevel].OffsetYaw * 0.2;
 	UE_LOG(LogTemp, Warning, TEXT("YawValue : %f"), YawValue);
 	Character->AddControllerYawInput(YawValue);
 	Character->TotalRecoilOffsetYaw += YawValue;
@@ -168,7 +168,7 @@ void UValorantWeaponComponent::BeginPlay()
 	auto* GameInstance = Cast<UValorantGameInstance>(UGameplayStatics::GetGameInstance(GetWorld()));
 	if (GameInstance)
 	{
-		auto* WeaponData = GameInstance->GetWeaponData(0);
+		auto* WeaponData = GameInstance->GetWeaponData(1);
 		if (WeaponData)
 		{
 			for (auto Element : WeaponData->GunRecoilMap)
