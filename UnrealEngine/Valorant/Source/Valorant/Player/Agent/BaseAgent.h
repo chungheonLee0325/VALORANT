@@ -41,7 +41,7 @@ protected:
 
 	FAgentData* m_AgentData = nullptr;
 
-	UPROPERTY()
+	UPROPERTY(BlueprintReadWrite)
 	UAgentAbilitySystemComponent* ASC;
 	
 	virtual void OnHealthChanged(const FOnAttributeChangeData& Data);
