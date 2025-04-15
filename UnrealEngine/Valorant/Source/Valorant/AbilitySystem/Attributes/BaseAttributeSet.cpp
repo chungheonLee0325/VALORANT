@@ -2,9 +2,7 @@
 
 
 #include "BaseAttributeSet.h"
-#include "Valorant/Agent/BaseAgent.h"
-#include "GameplayEffect.h"
-#include "GameplayEffectExtension.h"
+#include "Valorant/Player/Agent/BaseAgent.h"
 #include "Net/UnrealNetwork.h"
 
 UBaseAttributeSet::UBaseAttributeSet()

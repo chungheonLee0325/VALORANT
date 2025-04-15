@@ -3,7 +3,7 @@
 #include "GA_Maker.h"
 
 #include "AbilitySystemComponent.h"
-#include "Valorant/Agent/BaseAgent.h"
+#include "Valorant/Player/Agent/BaseAgent.h"
 #include "Components/BoxComponent.h"
 #include "Components/WidgetComponent.h"
 #include "Valorant/Player/AgentPlayerState.h"

@@ -16,7 +16,6 @@ class VALORANT_API UAgentAbilitySystemComponent : public UAbilitySystemComponent
 public:
 	UAgentAbilitySystemComponent();
 
-
 	void InitializeAgentData(FAgentData* agentData);
 	
 	FAgentData* GetAgentData() const { return m_AgentData; }
