@@ -21,7 +21,14 @@ public:
 protected:
 	virtual void BeginPlay() override;
 	
+	/** Ends gameplay for this component. */
+	UFUNCTION()
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+	
 public:
+	UPROPERTY(EditDefaultsOnly, Category=Weapon)
+	int WeaponID = 1;
+	
 	/** Projectile class to spawn */
 	UPROPERTY(EditDefaultsOnly, Category=Projectile)
 	TSubclassOf<class AValorantProjectile> ProjectileClass;
@@ -54,20 +61,16 @@ public:
 	UFUNCTION(BlueprintCallable, Category="Weapon")
 	bool AttachWeapon(AValorantCharacter* TargetCharacter);
 
-protected:
-	/** Ends gameplay for this component. */
-	UFUNCTION()
-	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
-
 private:
 	/** The Character holding this weapon*/
 	AValorantCharacter* Character;
 
-public:
-	int RecoilLevel = 0;
+	FWeaponData* WeaponData = nullptr;
 	TArray<FGunRecoilData> RecoilData;
-	
+	// 발사/사용 주기 (1 / FireRate)
 	float FireInterval = 0.08f;
+	
+	int RecoilLevel = 0;
 	float LastFireTime = -9999.0f;
 	FTimerHandle AutoFireHandle;
 	

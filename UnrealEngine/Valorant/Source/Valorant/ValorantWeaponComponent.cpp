@@ -22,6 +22,42 @@ UValorantWeaponComponent::UValorantWeaponComponent()
 	MuzzleOffset = FVector(100.0f, 0.0f, 10.0f);
 }
 
+void UValorantWeaponComponent::BeginPlay()
+{
+	Super::BeginPlay();
+	if (auto* GameInstance = Cast<UValorantGameInstance>(UGameplayStatics::GetGameInstance(GetWorld())))
+	{
+		if (auto* Data = GameInstance->GetWeaponData(WeaponID))
+		{
+			WeaponData = Data;
+			FireInterval = 1.0f / Data->FireRate;
+			for (auto Element : Data->GunRecoilMap)
+			{
+				RecoilData.Add(Element);
+			}
+		}
+	}
+}
+
+void UValorantWeaponComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	// ensure we have a character owner
+	if (Character != nullptr)
+	{
+		// remove the input mapping context from the Player Controller
+		if (APlayerController* PlayerController = Cast<APlayerController>(Character->GetController()))
+		{
+			if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PlayerController->GetLocalPlayer()))
+			{
+				Subsystem->RemoveMappingContext(FireMappingContext);
+			}
+		}
+	}
+
+	// maintain the EndPlay call chain
+	Super::EndPlay(EndPlayReason);
+}
+
 void UValorantWeaponComponent::StartFire()
 {
 	if (Character == nullptr || Character->GetController() == nullptr)
@@ -158,41 +194,4 @@ bool UValorantWeaponComponent::AttachWeapon(AValorantCharacter* TargetCharacter)
 	}
 
 	return true;
-}
-
-void UValorantWeaponComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
-{
-	// ensure we have a character owner
-	if (Character != nullptr)
-	{
-		// remove the input mapping context from the Player Controller
-		if (APlayerController* PlayerController = Cast<APlayerController>(Character->GetController()))
-		{
-			if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PlayerController->GetLocalPlayer()))
-			{
-				Subsystem->RemoveMappingContext(FireMappingContext);
-			}
-		}
-	}
-
-	// maintain the EndPlay call chain
-	Super::EndPlay(EndPlayReason);
-}
-
-void UValorantWeaponComponent::BeginPlay()
-{
-	Super::BeginPlay();
-	auto* GameInstance = Cast<UValorantGameInstance>(UGameplayStatics::GetGameInstance(GetWorld()));
-	if (GameInstance)
-	{
-		auto* WeaponData = GameInstance->GetWeaponData(1);
-		if (WeaponData)
-		{
-			for (auto Element : WeaponData->GunRecoilMap)
-			{
-				RecoilData.Add(Element);
-			}
-		}
-	}
-	
 }
