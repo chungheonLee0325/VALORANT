@@ -22,8 +22,7 @@ UValorantWeaponComponent::UValorantWeaponComponent()
 	MuzzleOffset = FVector(100.0f, 0.0f, 10.0f);
 }
 
-
-void UValorantWeaponComponent::Fire()
+void UValorantWeaponComponent::StartFire()
 {
 	if (Character == nullptr || Character->GetController() == nullptr)
 	{
@@ -37,8 +36,24 @@ void UValorantWeaponComponent::Fire()
 		Character->TotalRecoilOffsetYaw = 0.0f;
 		RecoilLevel = 0;
 	}
+	UE_LOG(LogTemp, Warning, TEXT("StartFire, RecoilLevel : %d"), RecoilLevel);
 
-	UE_LOG(LogTemp, Warning, TEXT("RecoilLevel : %d"), RecoilLevel);
+	GetWorld()->GetTimerManager().SetTimer(AutoFireHandle, this, &UValorantWeaponComponent::Fire, 0.01f, true, 0);
+}
+
+void UValorantWeaponComponent::Fire()
+{
+	if (Character == nullptr || Character->GetController() == nullptr)
+	{
+		return;
+	}
+
+	const float CurrentTime = GetWorld()->GetTimeSeconds();
+	if (LastFireTime + FireInterval > CurrentTime)
+	{
+		return;
+	}
+	LastFireTime = CurrentTime;
 	
 	// KBD: 발사 시 캐릭터에 반동값 적용
 	const float PitchValue = RecoilData[RecoilLevel].OffsetPitch * 0.2;
@@ -107,6 +122,8 @@ void UValorantWeaponComponent::EndFire()
 	}
 	
 	Character->bIsFiring = false;
+
+	GetWorld()->GetTimerManager().ClearTimer(AutoFireHandle);
 }
 
 bool UValorantWeaponComponent::AttachWeapon(AValorantCharacter* TargetCharacter)
@@ -135,7 +152,7 @@ bool UValorantWeaponComponent::AttachWeapon(AValorantCharacter* TargetCharacter)
 		if (UEnhancedInputComponent* EnhancedInputComponent = Cast<UEnhancedInputComponent>(PlayerController->InputComponent))
 		{
 			// Fire
-			EnhancedInputComponent->BindAction(FireAction, ETriggerEvent::Triggered, this, &UValorantWeaponComponent::Fire);
+			EnhancedInputComponent->BindAction(StartFireAction, ETriggerEvent::Triggered, this, &UValorantWeaponComponent::StartFire);
 			EnhancedInputComponent->BindAction(EndFireAction, ETriggerEvent::Triggered, this, &UValorantWeaponComponent::EndFire);
 		}
 	}

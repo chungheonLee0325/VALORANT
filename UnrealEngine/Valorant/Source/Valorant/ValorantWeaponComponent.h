@@ -15,6 +15,13 @@ class VALORANT_API UValorantWeaponComponent : public USkeletalMeshComponent
 	GENERATED_BODY()
 
 public:
+	/** Sets default values for this component's properties */
+	UValorantWeaponComponent();
+	
+protected:
+	virtual void BeginPlay() override;
+	
+public:
 	/** Projectile class to spawn */
 	UPROPERTY(EditDefaultsOnly, Category=Projectile)
 	TSubclassOf<class AValorantProjectile> ProjectileClass;
@@ -37,25 +44,15 @@ public:
 
 	/** Fire Input Action */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category=Input, meta=(AllowPrivateAccess = "true"))
-	class UInputAction* FireAction;
+	class UInputAction* StartFireAction;
 
 	/** EndFire Input Action */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category=Input, meta=(AllowPrivateAccess = "true"))
 	class UInputAction* EndFireAction;
 
-	/** Sets default values for this component's properties */
-	UValorantWeaponComponent();
-	
 	/** Attaches the actor to a FirstPersonCharacter */
 	UFUNCTION(BlueprintCallable, Category="Weapon")
 	bool AttachWeapon(AValorantCharacter* TargetCharacter);
-
-	/** Make the weapon Fire a Projectile */
-	UFUNCTION(BlueprintCallable, Category="Weapon")
-	void Fire();
-
-	UFUNCTION(BlueprintCallable, Category="Weapon")
-	void EndFire();
 
 protected:
 	/** Ends gameplay for this component. */
@@ -69,5 +66,18 @@ private:
 public:
 	int RecoilLevel = 0;
 	TArray<FGunRecoilData> RecoilData;
-	virtual void BeginPlay() override;
+	
+	float FireInterval = 0.08f;
+	float LastFireTime = -9999.0f;
+	FTimerHandle AutoFireHandle;
+	
+	UFUNCTION(BlueprintCallable, Category="Weapon")
+	void StartFire();
+	
+	/** Make the weapon Fire a Projectile */
+	UFUNCTION(BlueprintCallable, Category="Weapon")
+	void Fire();
+
+	UFUNCTION(BlueprintCallable, Category="Weapon")
+	void EndFire();
 };
