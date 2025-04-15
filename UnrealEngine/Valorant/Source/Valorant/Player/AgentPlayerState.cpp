@@ -4,7 +4,7 @@
 #include "AgentPlayerState.h"
 
 #include "Valorant/AbilitySystem/AgentAbilitySystemComponent.h"
-#include "Valorant/Agent/BaseAgent.h"
+#include "Valorant/Player/Agent/BaseAgent.h"
 #include "Valorant/AbilitySystem/Attributes/BaseAttributeSet.h"
 #include "Valorant/GameManager/ValorantGameInstance.h"
 

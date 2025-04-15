@@ -8,6 +8,8 @@
 #include "BaseAgent.generated.h"
 
 class UValorantGameInstance;
+class UAgentInputComponent;
+class UAgentAbilitySystemComponent;
 
 UCLASS()
 class VALORANT_API ABaseAgent : public ACharacter
@@ -16,20 +18,20 @@ class VALORANT_API ABaseAgent : public ACharacter
 
 public:
 	ABaseAgent();
-	virtual void Tick(float DeltaTime) override;
-	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
 	class UCameraComponent* Camera;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
 	USkeletalMeshComponent* ThirdPersonMesh;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
+	UAgentInputComponent* MovementComponent;
 
 protected:
 	virtual void BeginPlay() override;
-
-	UPROPERTY()
-	class UAgentAbilitySystemComponent* ASC;
+	virtual void Tick(float DeltaTime) override;
+	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	UValorantGameInstance* m_GameInstance;
@@ -38,6 +40,9 @@ protected:
 	int32 m_AgentID = 0;
 
 	FAgentData* m_AgentData = nullptr;
+
+	UPROPERTY()
+	UAgentAbilitySystemComponent* ASC;
 	
 	virtual void OnHealthChanged(const FOnAttributeChangeData& Data);
 	virtual void OnMaxHealthChanged(const FOnAttributeChangeData& Data);

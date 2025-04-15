@@ -3,10 +3,13 @@
 
 #include "BaseAgent.h"
 #include "AbilitySystemComponent.h"
+#include "EnhancedInputComponent.h"
 #include "Camera/CameraComponent.h"
+#include "GameFramework/CharacterMovementComponent.h"
 #include "Valorant/AbilitySystem/AgentAbilitySystemComponent.h"
 #include "Valorant/AbilitySystem/Attributes/BaseAttributeSet.h"
 #include "Valorant/GameManager/ValorantGameInstance.h"
+#include "Valorant/Player/AgentInputComponent.h"
 #include "Valorant/Player/AgentPlayerState.h"
 
 
@@ -33,6 +36,8 @@ ABaseAgent::ABaseAgent()
 	ThirdPersonMesh->SetCanEverAffectNavigation(false);
 
 	GetMesh()->SetupAttachment(Camera);
+
+	MovementComponent = CreateDefaultSubobject<UAgentInputComponent>("MovementComponent");
 }
 
 void ABaseAgent::BeginPlay()
@@ -57,9 +62,11 @@ void ABaseAgent::BeginPlay()
 	{
 		ASC = Cast<UAgentAbilitySystemComponent>(PS->GetAbilitySystemComponent());
 		const UBaseAttributeSet* Attr = PS->GetBaseAttributeSet();
+		ASC->GetGameplayAttributeValueChangeDelegate(UBaseAttributeSet::GetHealthAttribute()).AddUObject(this,&ABaseAgent::OnHealthChanged);
+		ASC->GetGameplayAttributeValueChangeDelegate(UBaseAttributeSet::GetMaxHealthAttribute()).AddUObject(this,&ABaseAgent::OnMaxHealthChanged);
+		ASC->GetGameplayAttributeValueChangeDelegate(UBaseAttributeSet::GetArmorAttribute()).AddUObject(this,&ABaseAgent::OnArmorChanged);
+		ASC->GetGameplayAttributeValueChangeDelegate(UBaseAttributeSet::GetMoveSpeedAttribute()).AddUObject(this,&ABaseAgent::OnMoveSpeedChanged);
 	}
-
-	m_GameInstance = Cast<UValorantGameInstance>(GetGameInstance());
 }
 
 void ABaseAgent::Tick(float DeltaTime)
@@ -91,5 +98,6 @@ void ABaseAgent::OnArmorChanged(const FOnAttributeChangeData& Data)
 void ABaseAgent::OnMoveSpeedChanged(const FOnAttributeChangeData& Data)
 {
 	float movespeed = Data.NewValue;
+	GetCharacterMovement()->MaxWalkSpeed = movespeed;
 }
 
