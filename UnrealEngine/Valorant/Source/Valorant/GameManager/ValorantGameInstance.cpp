@@ -12,6 +12,7 @@ void UValorantGameInstance::Init()
 	// Agent Data
 	UDataTable* AgentData = LoadObject<UDataTable>(
 		nullptr, TEXT("/Script/Engine.DataTable'/Game/BluePrint/DataTable/dt_Agent.dt_Agent'"));
+	
 	if (nullptr != AgentData)
 	{
 		TArray<FName> RowNames = AgentData->GetRowNames();
@@ -84,6 +85,7 @@ FAgentData* UValorantGameInstance::GetAgentData(int AgentID)
 	{
 		return data;
 	}
+	UE_LOG(LogTemp, Error, TEXT("해당 ID의 데이터를 로드할 수 없습니다. AgentID:%d"),AgentID);
 	return nullptr;
 }
 
@@ -93,6 +95,7 @@ FWeaponData* UValorantGameInstance::GetWeaponData(int WeaponID)
 	{
 		return data;
 	}
+	UE_LOG(LogTemp, Error, TEXT("해당 ID의 데이터를 로드할 수 없습니다. WeaponID:%d"),WeaponID);
 	return nullptr;
 }
 
@@ -102,6 +105,7 @@ FGameplayEffectData* UValorantGameInstance::GetGEffectData(int GEffectID)
 	{
 		return data;
 	}
+	UE_LOG(LogTemp, Error, TEXT("해당 ID의 데이터를 로드할 수 없습니다. GEffectID:%d"),GEffectID);
 	return nullptr;
 }
 
@@ -111,5 +115,6 @@ FAbilityData* UValorantGameInstance::GetAbilityData(int AbilityID)
 	{
 		return data;
 	}
+	UE_LOG(LogTemp, Error, TEXT("해당 ID의 데이터를 로드할 수 없습니다. AbilityID:%d"),AbilityID);
 	return nullptr;
 }
