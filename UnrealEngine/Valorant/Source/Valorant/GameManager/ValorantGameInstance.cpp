@@ -3,11 +3,14 @@
 
 #include "ValorantGameInstance.h"
 
+#include "Valorant/AbilitySystem/ValorantGameplayTags.h"
 #include "Valorant/ResourceManager/ValorantGameType.h"
 
 void UValorantGameInstance::Init()
 {
 	Super::Init();
+	
+	FValorantGameplayTags::Get().InitializeNativeTags();
 
 	// Agent Data
 	UDataTable* AgentData = LoadObject<UDataTable>(

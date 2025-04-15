@@ -3,13 +3,19 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "GameplayTagContainer.h"
 
 /**
  * 
  */
-class VALORANT_API ValorantGameplayTags
+
+struct FValorantGameplayTags
 {
-public:
-	ValorantGameplayTags();
-	~ValorantGameplayTags();
+	FGameplayTag InputTag_Ability_Q;
+	FGameplayTag InputTag_Ability_E;
+	FGameplayTag InputTag_Ability_C;
+	FGameplayTag InputTag_Ability_X;
+	
+	static FValorantGameplayTags& Get();
+	void InitializeNativeTags();
 };

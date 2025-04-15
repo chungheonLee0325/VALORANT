@@ -13,4 +13,8 @@ UCLASS()
 class VALORANT_API UGameplayAbilityWithTag : public UBaseGameplayAbility
 {
 	GENERATED_BODY()
+	
+public:
+	UPROPERTY(EditDefaultsOnly, Category="Tags")
+	FGameplayTag AbilityTypeTag; 
 };
