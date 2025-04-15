@@ -24,6 +24,9 @@ public:
 
 	UPROPERTY(EditDefaultsOnly,BlueprintReadWrite)
 	class UTextRenderComponent* Text;
+	
+	UPROPERTY(EditDefaultsOnly,BlueprintReadWrite)
+	UTextRenderComponent* NameText;
 
 protected:
 	virtual void BeginPlay() override;

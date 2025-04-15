@@ -20,6 +20,9 @@ AGE_Zone::AGE_Zone()
 	Text = CreateDefaultSubobject<UTextRenderComponent>("EffectText");
 	Text->SetupAttachment(BoxComp);
 	Text->SetVisibility(false);
+
+	NameText = CreateDefaultSubobject<UTextRenderComponent>("NameText");
+	NameText->SetupAttachment(BoxComp);
 }
 
 // Called when the game starts or when spawned
@@ -27,6 +30,12 @@ void AGE_Zone::BeginPlay()
 {
 	Super::BeginPlay();
 	BoxComp->OnComponentBeginOverlap.AddDynamic(this,&AGE_Zone::OnActorxBeginOverlap);
+
+	if (EffectClass)
+	{
+		NameText->SetText(FText::FromString(EffectClass->GetName()));
+		UE_LOG(LogTemp,Warning,TEXT("%s"),*EffectClass->GetName());
+	}
 }
 
 void AGE_Zone::OnActorxBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
