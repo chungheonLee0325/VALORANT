@@ -18,9 +18,9 @@ AAgentPlayerState::AAgentPlayerState()
 	ASC->SetReplicationMode(EGameplayEffectReplicationMode::Mixed);
 
 	BaseAttributeSet = CreateDefaultSubobject<UBaseAttributeSet>(TEXT("BaseAttributeSet"));
-	
-	NetUpdateFrequency = 100.f;
-	MinNetUpdateFrequency = 33.f;
+
+	SetNetUpdateFrequency(100.f);
+	SetMinNetUpdateFrequency(33.f);
 }
 
 void AAgentPlayerState::BeginPlay()
