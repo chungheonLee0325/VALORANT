@@ -9,7 +9,7 @@
 #include "Valorant/AbilitySystem/AgentAbilitySystemComponent.h"
 #include "Valorant/AbilitySystem/Attributes/BaseAttributeSet.h"
 #include "Valorant/GameManager/ValorantGameInstance.h"
-#include "Valorant/Player/AgentInputComponent.h"
+//#include "Valorant/Player/AgentInputComponent.h"
 #include "Valorant/Player/AgentPlayerState.h"
 
 
@@ -37,7 +37,7 @@ ABaseAgent::ABaseAgent()
 
 	GetMesh()->SetupAttachment(Camera);
 
-	MovementComponent = CreateDefaultSubobject<UAgentInputComponent>("MovementComponent");
+	//MovementComponent = CreateDefaultSubobject<UAgentInputComponent>("MovementComponent");
 }
 
 void ABaseAgent::BeginPlay()
@@ -61,7 +61,7 @@ void ABaseAgent::BeginPlay()
 	if (PS && PS->GetAbilitySystemComponent())
 	{
 		ASC = Cast<UAgentAbilitySystemComponent>(PS->GetAbilitySystemComponent());
-		const UBaseAttributeSet* Attr = PS->GetBaseAttributeSet();
+
 		ASC->GetGameplayAttributeValueChangeDelegate(UBaseAttributeSet::GetHealthAttribute()).AddUObject(this,&ABaseAgent::OnHealthChanged);
 		ASC->GetGameplayAttributeValueChangeDelegate(UBaseAttributeSet::GetMaxHealthAttribute()).AddUObject(this,&ABaseAgent::OnMaxHealthChanged);
 		ASC->GetGameplayAttributeValueChangeDelegate(UBaseAttributeSet::GetArmorAttribute()).AddUObject(this,&ABaseAgent::OnArmorChanged);

@@ -25,8 +25,8 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
 	USkeletalMeshComponent* ThirdPersonMesh;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
-	UAgentInputComponent* MovementComponent;
+	// UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
+	// UAgentInputComponent* MovementComponent;
 
 protected:
 	virtual void BeginPlay() override;
