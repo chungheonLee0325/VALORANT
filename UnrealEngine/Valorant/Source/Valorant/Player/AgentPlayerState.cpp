@@ -6,6 +6,7 @@
 #include "Valorant/AbilitySystem/AgentAbilitySystemComponent.h"
 #include "Valorant/Agent/BaseAgent.h"
 #include "Valorant/AbilitySystem/Attributes/BaseAttributeSet.h"
+#include "Valorant/GameManager/ValorantGameInstance.h"
 
 AAgentPlayerState::AAgentPlayerState()
 {
@@ -26,11 +27,14 @@ AAgentPlayerState::AAgentPlayerState()
 void AAgentPlayerState::BeginPlay()
 {
 	Super::BeginPlay();
+
+	m_GameInstance = Cast<UValorantGameInstance>(GetGameInstance());
+	
 	if (HasAuthority() && ASC) {
 
 		//TODO: 게임 진행 중 캐릭터를 possess해줘야 한다면 함수로 빼서 재사용하는 것을 고려해볼 것.
 		ASC->InitAbilityActorInfo(this, GetPawn());
-		ASC->InitializeData(0);
+		ASC->InitializeAgentData(m_GameInstance->GetAgentData(0));
 		
 		UE_LOG(LogTemp, Warning, TEXT("Health: %f"), ASC->GetNumericAttribute(UBaseAttributeSet::GetHealthAttribute()));
 		UE_LOG(LogTemp, Warning, TEXT("Armor: %f"), ASC->GetNumericAttribute(UBaseAttributeSet::GetArmorAttribute()));

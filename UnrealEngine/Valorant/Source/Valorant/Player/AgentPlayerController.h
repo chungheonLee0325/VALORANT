@@ -13,4 +13,12 @@ UCLASS()
 class VALORANT_API AAgentPlayerController : public APlayerController
 {
 	GENERATED_BODY()
+
+public:
+
+protected:
+	virtual void BeginPlay() override;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	class UValorantGameInstance* m_GameInstance;
 };

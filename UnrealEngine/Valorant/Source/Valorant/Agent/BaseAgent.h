@@ -4,7 +4,10 @@
 #include "GameFramework/Character.h"
 #include "AbilitySystemInterface.h"
 #include "GameplayEffectTypes.h"
+#include "Valorant/ResourceManager/ValorantGameType.h"
 #include "BaseAgent.generated.h"
+
+class UValorantGameInstance;
 
 UCLASS()
 class VALORANT_API ABaseAgent : public ACharacter
@@ -28,6 +31,14 @@ protected:
 	UPROPERTY()
 	class UAgentAbilitySystemComponent* ASC;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UValorantGameInstance* m_GameInstance;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	int32 m_AgentID = 0;
+
+	FAgentData* m_AgentData = nullptr;
+	
 	virtual void OnHealthChanged(const FOnAttributeChangeData& Data);
 	virtual void OnMaxHealthChanged(const FOnAttributeChangeData& Data);
 	virtual void OnArmorChanged(const FOnAttributeChangeData& Data);

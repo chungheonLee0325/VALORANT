@@ -6,6 +6,7 @@
 #include "Camera/CameraComponent.h"
 #include "Valorant/AbilitySystem/AgentAbilitySystemComponent.h"
 #include "Valorant/AbilitySystem/Attributes/BaseAttributeSet.h"
+#include "Valorant/GameManager/ValorantGameInstance.h"
 #include "Valorant/Player/AgentPlayerState.h"
 
 
@@ -42,6 +43,8 @@ void ABaseAgent::BeginPlay()
 	{
 		GetMesh()->SetOwnerNoSee(true);
 		ThirdPersonMesh->SetOwnerNoSee(false);
+		
+		m_GameInstance = GetGameInstance<UValorantGameInstance>();
 	}
 	else
 	{
@@ -55,6 +58,8 @@ void ABaseAgent::BeginPlay()
 		ASC = Cast<UAgentAbilitySystemComponent>(PS->GetAbilitySystemComponent());
 		const UBaseAttributeSet* Attr = PS->GetBaseAttributeSet();
 	}
+
+	m_GameInstance = Cast<UValorantGameInstance>(GetGameInstance());
 }
 
 void ABaseAgent::Tick(float DeltaTime)

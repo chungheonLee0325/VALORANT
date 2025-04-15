@@ -8,6 +8,7 @@
 #include "GameplayEffectTypes.h"
 #include "AgentPlayerState.generated.h"
 
+class UValorantGameInstance;
 class UAgentAbilitySystemComponent;
 class UBaseAttributeSet;
 /**
@@ -41,11 +42,13 @@ public:
 protected:
 	virtual void BeginPlay() override;
 	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UValorantGameInstance* m_GameInstance;
+	
 	UPROPERTY()
 	UAgentAbilitySystemComponent* ASC;
 	
 	UPROPERTY()
 	UBaseAttributeSet* BaseAttributeSet;
 
-	
 };
