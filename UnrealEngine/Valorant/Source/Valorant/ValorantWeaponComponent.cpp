@@ -116,8 +116,26 @@ void UValorantWeaponComponent::Fire()
 			PlayerController->GetViewportSize(ScreenWidth, ScreenHeight);
 			PlayerController->DeprojectScreenPositionToWorld(ScreenWidth * 0.5f, ScreenHeight * 0.5f, Start, Dir);
 			const FVector End = Start + Dir * 9999;
-			
-			DrawDebugLine(World, Start, End, FColor::Red, false, 3, 0, 0.3);
+
+			// 궤적, 탄착군 디버깅
+			TArray<AActor*> ActorsToIgnore;
+			ActorsToIgnore.Add(GetOwner());
+			FHitResult OutHit;
+			const bool bHit = UKismetSystemLibrary::LineTraceSingle(
+				World,
+				Start,
+				End,
+				UEngineTypes::ConvertToTraceType(ECC_Visibility),
+				false,
+				ActorsToIgnore,
+				EDrawDebugTrace::ForDuration,
+				OutHit,
+				true
+			);
+			if (bHit)
+			{
+				DrawDebugPoint(World, OutHit.ImpactPoint, 10, FColor::Green, false, 30);
+			}
 			
 			// const FRotator SpawnRotation = PlayerController->PlayerCameraManager->GetCameraRotation();
 			// // MuzzleOffset is in camera space, so transform it to world space before offsetting from the character location to find the final muzzle position
