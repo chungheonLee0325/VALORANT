@@ -15,17 +15,35 @@ class VALORANT_API UAgentAbilitySystemComponent : public UAbilitySystemComponent
 
 public:
 	UAgentAbilitySystemComponent();
-	
-	FAgentData* AgentData;
 
-	void InitializeData(int32 agentID);
+
+	void InitializeAgentData(FAgentData* agentData);
 	
-	FAgentData* GetAgentData() const { return AgentData; }
+	FAgentData* GetAgentData() const { return m_AgentData; }
 
 protected:
 	virtual void BeginPlay() override;
 
+	//AttributeSet
+	void InitializeAttribute();
+
+	//Ability
+	void RegisterAgentAbilities();
+	void ClearAgentAbilities();
+
 public:
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType,
 	                           FActorComponentTickFunction* ThisTickFunction) override;
+	
+	FAgentData* m_AgentData;
+	
+
+	UPROPERTY()
+	UGameplayAbility* Ability_C = nullptr;
+	UPROPERTY()
+	UGameplayAbility* Ability_Q = nullptr;
+	UPROPERTY()
+	UGameplayAbility* Ability_E = nullptr;
+	UPROPERTY()
+	UGameplayAbility* Ability_X = nullptr;
 };

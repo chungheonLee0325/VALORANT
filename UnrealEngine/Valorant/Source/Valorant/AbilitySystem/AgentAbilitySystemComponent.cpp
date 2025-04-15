@@ -11,36 +11,6 @@ UAgentAbilitySystemComponent::UAgentAbilitySystemComponent()
 	PrimaryComponentTick.bCanEverTick = true;
 }
 
-void UAgentAbilitySystemComponent::InitializeData(int32 agentID)
-{
-	UDataTable* AgentDataTable = LoadObject<UDataTable>(nullptr, TEXT("/Game/BluePrint/DataTable/dt_Agent.dt_Agent"));
-	
-	if (!AgentDataTable)
-	{
-		UE_LOG(LogTemp, Error, TEXT("데이터 테이블을 로드할 수 없습니다"));
-		return;
-	}
-
-	FString rowString = FString::FromInt(agentID);
-	FName rowName(*rowString);
-	
-	FAgentData* agentData = AgentDataTable->FindRow<FAgentData>(rowName, TEXT(""));
-	if (!agentData)
-	{
-		UE_LOG(LogTemp, Error, TEXT("해당 ID의 agent를 찾을 수 없어요. iD: %d"), agentID);
-		return;
-	}
-	
-	UE_LOG(LogTemp, Warning, TEXT("Agent Name: %s"), *agentData->AgentName);
-	AgentData = agentData;
-
-	SetNumericAttributeBase(UBaseAttributeSet::GetHealthAttribute(), AgentData->BaseHealth);
-	SetNumericAttributeBase(UBaseAttributeSet::GetMaxHealthAttribute(), AgentData->MaxHealth);
-	SetNumericAttributeBase(UBaseAttributeSet::GetArmorAttribute(),AgentData->BaseArmor);
-	SetNumericAttributeBase(UBaseAttributeSet::GetMaxArmorAttribute(), AgentData->MaxArmor);
-	SetNumericAttributeBase(UBaseAttributeSet::GetMoveSpeedAttribute(), AgentData->Speed);
-}
-
 void UAgentAbilitySystemComponent::BeginPlay()
 {
 	Super::BeginPlay();
@@ -52,3 +22,51 @@ void UAgentAbilitySystemComponent::TickComponent(float DeltaTime, ELevelTick Tic
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 }
 
+void UAgentAbilitySystemComponent::InitializeAgentData(FAgentData* agentData)
+{
+	m_AgentData = agentData;
+	
+	InitializeAttribute();
+	RegisterAgentAbilities();
+}
+
+void UAgentAbilitySystemComponent::InitializeAttribute()
+{
+	SetNumericAttributeBase(UBaseAttributeSet::GetHealthAttribute(), m_AgentData->BaseHealth);
+	SetNumericAttributeBase(UBaseAttributeSet::GetMaxHealthAttribute(), m_AgentData->MaxHealth);
+	SetNumericAttributeBase(UBaseAttributeSet::GetArmorAttribute(),m_AgentData->BaseArmor);
+	SetNumericAttributeBase(UBaseAttributeSet::GetMaxArmorAttribute(), m_AgentData->MaxArmor);
+	SetNumericAttributeBase(UBaseAttributeSet::GetMoveSpeedAttribute(), m_AgentData->Speed);
+}
+
+void UAgentAbilitySystemComponent::RegisterAgentAbilities()
+{
+	GiveAbility(m_AgentData->Ability_C);
+	GiveAbility(m_AgentData->Ability_E);
+	GiveAbility(m_AgentData->Ability_Q);
+	GiveAbility(m_AgentData->Ability_X);
+}
+
+void UAgentAbilitySystemComponent::ClearAgentAbilities()
+{
+	FGameplayAbilitySpec* specC = FindAbilitySpecFromClass(m_AgentData->Ability_C);
+	if (specC)
+	{
+		ClearAbility(specC->Handle);
+	}
+	FGameplayAbilitySpec* specE = FindAbilitySpecFromClass(m_AgentData->Ability_E);
+	if (specE)
+	{
+		ClearAbility(specE->Handle);
+	}
+	FGameplayAbilitySpec* specQ = FindAbilitySpecFromClass(m_AgentData->Ability_Q);
+	if (specQ)
+	{
+		ClearAbility(specQ->Handle);
+	}
+	FGameplayAbilitySpec* specX = FindAbilitySpecFromClass(m_AgentData->Ability_X);
+	if (specX)
+	{
+		ClearAbility(specX->Handle);
+	}
+}
