@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "AbilitySystemComponent.h"
+#include "Valorant/ResourceManager/ValorantGameType.h"
 #include "AgentAbilitySystemComponent.generated.h"
 
 
@@ -14,6 +15,12 @@ class VALORANT_API UAgentAbilitySystemComponent : public UAbilitySystemComponent
 
 public:
 	UAgentAbilitySystemComponent();
+	
+	FAgentData* AgentData;
+
+	void InitializeData(int32 agentID);
+	
+	FAgentData* GetAgentData() const { return AgentData; }
 
 protected:
 	virtual void BeginPlay() override;

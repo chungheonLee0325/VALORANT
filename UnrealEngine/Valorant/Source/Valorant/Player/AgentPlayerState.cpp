@@ -27,12 +27,10 @@ void AAgentPlayerState::BeginPlay()
 {
 	Super::BeginPlay();
 	if (HasAuthority() && ASC) {
-		//TODO: 레거시. 후에 Initial목적 GE 따로 제작
-		ASC->SetNumericAttributeBase(UBaseAttributeSet::GetHealthAttribute(), 100.f);
-		ASC->SetNumericAttributeBase(UBaseAttributeSet::GetMaxHealthAttribute(), 100.f);
-		ASC->SetNumericAttributeBase(UBaseAttributeSet::GetArmorAttribute(), 0.f);
-		ASC->SetNumericAttributeBase(UBaseAttributeSet::GetMaxArmorAttribute(), 1000.f);
-		ASC->SetNumericAttributeBase(UBaseAttributeSet::GetMoveSpeedAttribute(), 600.f);
+
+		//TODO: 게임 진행 중 캐릭터를 possess해줘야 한다면 함수로 빼서 재사용하는 것을 고려해볼 것.
+		ASC->InitAbilityActorInfo(this, GetPawn());
+		ASC->InitializeData(0);
 		
 		UE_LOG(LogTemp, Warning, TEXT("Health: %f"), ASC->GetNumericAttribute(UBaseAttributeSet::GetHealthAttribute()));
 		UE_LOG(LogTemp, Warning, TEXT("Armor: %f"), ASC->GetNumericAttribute(UBaseAttributeSet::GetArmorAttribute()));
@@ -49,12 +47,6 @@ UBaseAttributeSet* AAgentPlayerState::GetBaseAttributeSet() const
 {
 	return BaseAttributeSet;
 }
-
-UAttributeSet* AAgentPlayerState::GetAttributeSet() const
-{
-	return BaseAttributeSet;
-}
-
 float AAgentPlayerState::GetHealth() const
 {
 	return BaseAttributeSet->GetHealth();

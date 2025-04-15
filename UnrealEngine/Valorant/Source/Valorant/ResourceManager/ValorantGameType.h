@@ -197,10 +197,19 @@ struct FAgentData : public FTableRowBase
 	EAgentRole AgentRole = EAgentRole::None;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Data")
+	int32 MaxHealth = 100;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Data")
 	int32 BaseHealth = 1;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Data")
+	int32 MaxArmor = 1000;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Data")
 	int32 BaseArmor = 0;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Data")
+	int32 Speed = 600;
 
 	// 고유 패시브 효과
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Data")

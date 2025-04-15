@@ -23,8 +23,8 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	UAbilitySystemComponent* GetAbilitySystemComponent() const override;
+	
 	UBaseAttributeSet* GetBaseAttributeSet() const;
-	UAttributeSet* GetAttributeSet() const;
 
 	UFUNCTION(BlueprintCallable, Category = "Agent|BaseAttributes")
 	float GetHealth() const;
@@ -43,8 +43,6 @@ protected:
 	
 	UPROPERTY()
 	UAgentAbilitySystemComponent* ASC;
-
-	
 	
 	UPROPERTY()
 	UBaseAttributeSet* BaseAttributeSet;
