@@ -92,15 +92,15 @@ void UValorantWeaponComponent::Fire()
 	LastFireTime = CurrentTime;
 	
 	// KBD: 발사 시 캐릭터에 반동값 적용
-	const float PitchValue = RecoilData[RecoilLevel].OffsetPitch * 0.2;
-	UE_LOG(LogTemp, Warning, TEXT("PitchValue : %f"), PitchValue);
+	const float PitchValue = RecoilData[RecoilLevel].OffsetPitch;
 	Character->AddControllerPitchInput(PitchValue);
 	Character->TotalRecoilOffsetPitch += PitchValue;
 
-	const float YawValue = RecoilData[RecoilLevel].OffsetYaw * 0.2;
-	UE_LOG(LogTemp, Warning, TEXT("YawValue : %f"), YawValue);
+	const float YawValue = RecoilData[RecoilLevel].OffsetYaw;
 	Character->AddControllerYawInput(YawValue);
 	Character->TotalRecoilOffsetYaw += YawValue;
+
+	UE_LOG(LogTemp, Warning, TEXT("Total : (%f, %f), Add : (%f, %f)"), Character->TotalRecoilOffsetPitch, Character->TotalRecoilOffsetYaw, PitchValue, YawValue);
 	
 	RecoilLevel = FMath::Clamp(RecoilLevel + 1, 0, RecoilData.Num() - 1);
 
