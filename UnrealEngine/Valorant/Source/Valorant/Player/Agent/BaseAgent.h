@@ -7,6 +7,8 @@
 #include "Valorant/ResourceManager/ValorantGameType.h"
 #include "BaseAgent.generated.h"
 
+class UAgentBaseWidget;
+class USpringArmComponent;
 class UValorantGameInstance;
 class UAgentInputComponent;
 class UAgentAbilitySystemComponent;
@@ -23,16 +25,15 @@ public:
 	class UCameraComponent* Camera;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
+	USpringArmComponent* SpringArm;
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
 	USkeletalMeshComponent* ThirdPersonMesh;
 
-	// UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
-	// UAgentInputComponent* MovementComponent;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Widget")
+	TSubclassOf<UUserWidget> AgentWidgetClass;
 
 protected:
-	virtual void BeginPlay() override;
-	virtual void Tick(float DeltaTime) override;
-	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
-
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	UValorantGameInstance* m_GameInstance;
 
@@ -43,12 +44,28 @@ protected:
 
 	UPROPERTY(BlueprintReadWrite)
 	UAgentAbilitySystemComponent* ASC;
+
+	UPROPERTY(BlueprintReadWrite)
+	float RotOffset = -1.0f;
+
+	UPROPERTY(BlueprintReadWrite)
+	UAgentBaseWidget* AgentWidget;
 	
+public:
+	UFUNCTION(BlueprintCallable)
+	void AddCameraYawInput(float val);
+	
+protected:
+	virtual void BeginPlay() override;
+	virtual void Tick(float DeltaTime) override;
+	
+	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
+	virtual void Crouch(bool bClientSimulation = false) override;
+	
+private:
 	virtual void OnHealthChanged(const FOnAttributeChangeData& Data);
 	virtual void OnMaxHealthChanged(const FOnAttributeChangeData& Data);
 	virtual void OnArmorChanged(const FOnAttributeChangeData& Data);
 	virtual void OnMoveSpeedChanged(const FOnAttributeChangeData& Data);
-
-private:
 	
 };

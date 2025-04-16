@@ -10,7 +10,11 @@
 #include "Valorant/AbilitySystem/Attributes/BaseAttributeSet.h"
 #include "Valorant/GameManager/ValorantGameInstance.h"
 //#include "Valorant/Player/AgentInputComponent.h"
+#include "Blueprint/UserWidget.h"
+#include "Components/CapsuleComponent.h"
+#include "GameFramework/SpringArmComponent.h"
 #include "Valorant/Player/AgentPlayerState.h"
+#include "Valorant/Player/Widget/AgentBaseWidget.h"
 
 
 class AAgentPlayerState;
@@ -18,12 +22,21 @@ class AAgentPlayerState;
 ABaseAgent::ABaseAgent()
 {
 	PrimaryActorTick.bCanEverTick = true;
+	SpringArm = CreateDefaultSubobject<USpringArmComponent>("Spring Arm");
+	SpringArm->SetupAttachment(GetRootComponent());
+	SpringArm->SetRelativeLocation(FVector(-10, 0, 60));
 	
 	Camera = CreateDefaultSubobject<UCameraComponent>("Camera");
-	Camera->SetupAttachment(GetRootComponent());
+	Camera->SetupAttachment(SpringArm);
+	
+	GetMesh()->SetupAttachment(GetRootComponent());
+	GetMesh()->SetRelativeScale3D(FVector(.34f));
+	GetMesh()->SetRelativeLocation(FVector(-30,0,-90));
 	
 	ThirdPersonMesh = CreateDefaultSubobject<USkeletalMeshComponent>("ThirdPersonMesh");
-	ThirdPersonMesh->SetupAttachment(Camera);
+	ThirdPersonMesh->SetupAttachment(GetRootComponent());
+	ThirdPersonMesh->SetRelativeScale3D(FVector(.34f));
+	ThirdPersonMesh->SetRelativeLocation(FVector(.0f,.0f,-90.f));
 	
 	ThirdPersonMesh->AlwaysLoadOnClient = true;
 	ThirdPersonMesh->AlwaysLoadOnServer = true;
@@ -35,26 +48,54 @@ ABaseAgent::ABaseAgent()
 	ThirdPersonMesh->SetGenerateOverlapEvents(false);
 	ThirdPersonMesh->SetCanEverAffectNavigation(false);
 
-	GetMesh()->SetupAttachment(Camera);
-
+	GetCharacterMovement()->GetNavAgentPropertiesRef().bCanCrouch = true;
+	GetCharacterMovement()->CrouchedHalfHeight = GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight();
 	//MovementComponent = CreateDefaultSubobject<UAgentInputComponent>("MovementComponent");
+}
+
+void ABaseAgent::AddCameraYawInput(float val)
+{
+	float pitch = SpringArm->GetRelativeRotation().Pitch;
+	float newPitch = pitch + val * RotOffset;
+	SpringArm->SetRelativeRotation(FRotator(newPitch, 0, 0));
 }
 
 void ABaseAgent::BeginPlay()
 {
 	Super::BeginPlay();
-
+	
 	if (IsLocallyControlled())
 	{
-		GetMesh()->SetOwnerNoSee(true);
-		ThirdPersonMesh->SetOwnerNoSee(false);
+		UE_LOG(LogTemp, Warning, TEXT("내 캐릭터"));
+		// GetMesh()->SetOwnerNoSee(false);
+		// ThirdPersonMesh->SetOwnerNoSee(true);
+		
+		ThirdPersonMesh->SetVisibility(false);
+		GetMesh()->SetVisibility(true);
 		
 		m_GameInstance = GetGameInstance<UValorantGameInstance>();
+
+		if (AgentWidgetClass == nullptr)
+		{
+			UE_LOG(LogTemp,Error,TEXT("AgentWidget에 AgentWidget 좀 넣어주세요."));
+			return;
+		}
+		
+		APlayerController* pc = Cast<APlayerController>(GetController());
+		if (pc)
+		{
+			AgentWidget = CreateWidget<UAgentBaseWidget>(pc, AgentWidgetClass);
+			if (AgentWidget)
+			{
+				AgentWidget->AddToViewport();
+			}
+		}
 	}
 	else
 	{
-		GetMesh()->SetOwnerNoSee(false);
-		ThirdPersonMesh->SetOwnerNoSee(true);
+		UE_LOG(LogTemp, Warning, TEXT("다른 사람 캐릭터"));
+		ThirdPersonMesh->SetVisibility(true);
+		GetMesh()->SetVisibility(false);
 	}
 
 	AAgentPlayerState* PS = GetPlayerState<AAgentPlayerState>();
@@ -74,9 +115,17 @@ void ABaseAgent::Tick(float DeltaTime)
 	Super::Tick(DeltaTime);
 }
 
+
+
 void ABaseAgent::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
+}
+
+void ABaseAgent::Crouch(bool bClientSimulation)
+{
+	Super::Crouch(bClientSimulation);
+	
 }
 
 // 값 변경시 콜백함수
@@ -100,4 +149,3 @@ void ABaseAgent::OnMoveSpeedChanged(const FOnAttributeChangeData& Data)
 	float movespeed = Data.NewValue;
 	GetCharacterMovement()->MaxWalkSpeed = movespeed;
 }
-
