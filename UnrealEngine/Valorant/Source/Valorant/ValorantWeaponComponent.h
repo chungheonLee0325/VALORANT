@@ -66,12 +66,20 @@ private:
 	AValorantCharacter* Character;
 
 	FWeaponData* WeaponData = nullptr;
+
+	// 탄창 크기
+	int MagazineSize = 0;
+	// 탄창 내 남은 탄약
+	int MagazineAmmo = 0;
+	// 여분 탄약 (장전되어있는 탄창 내 탄약은 제외)
+	int SpareAmmo = 0;
+	
 	TArray<FGunRecoilData> RecoilData;
+	int RecoilLevel = 0;
+	
+	float LastFireTime = -9999.0f;
 	// 발사/사용 주기 (1 / FireRate)
 	float FireInterval = 0.08f;
-	
-	int RecoilLevel = 0;
-	float LastFireTime = -9999.0f;
 	FTimerHandle AutoFireHandle;
 	
 	UFUNCTION(BlueprintCallable, Category="Weapon")

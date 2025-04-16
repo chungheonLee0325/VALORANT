@@ -30,6 +30,10 @@ void UValorantWeaponComponent::BeginPlay()
 		if (auto* Data = GameInstance->GetWeaponData(WeaponID))
 		{
 			WeaponData = Data;
+			MagazineSize = WeaponData->MagazineSize;
+			MagazineAmmo = MagazineSize;
+			// TODO: 총기별 여분탄약 데이터 추가 필요
+			SpareAmmo = MagazineSize * 3;
 			FireInterval = 1.0f / Data->FireRate;
 			for (auto Element : Data->GunRecoilMap)
 			{
@@ -84,12 +88,22 @@ void UValorantWeaponComponent::Fire()
 		return;
 	}
 
+	if (MagazineAmmo <= 0)
+	{
+		if (SpareAmmo > 0)
+		{
+			// TODO: 여분 탄약이 있으면 재장전 시작
+		}
+		return;
+	}
+	
 	const float CurrentTime = GetWorld()->GetTimeSeconds();
 	if (LastFireTime + FireInterval > CurrentTime)
 	{
 		return;
 	}
 	LastFireTime = CurrentTime;
+	MagazineAmmo--;
 	
 	// KBD: 발사 시 캐릭터에 반동값 적용
 	const float PitchValue = RecoilData[RecoilLevel].OffsetPitch;
@@ -100,54 +114,49 @@ void UValorantWeaponComponent::Fire()
 	Character->AddControllerYawInput(YawValue);
 	Character->TotalRecoilOffsetYaw += YawValue;
 
-	UE_LOG(LogTemp, Warning, TEXT("Total : (%f, %f), Add : (%f, %f)"), Character->TotalRecoilOffsetPitch, Character->TotalRecoilOffsetYaw, PitchValue, YawValue);
+	UE_LOG(LogTemp, Warning, TEXT("Ammo : %d, Total : (%f, %f), Add : (%f, %f)"), MagazineAmmo, Character->TotalRecoilOffsetPitch, Character->TotalRecoilOffsetYaw, PitchValue, YawValue);
 	
 	RecoilLevel = FMath::Clamp(RecoilLevel + 1, 0, RecoilData.Num() - 1);
 
-	// Try and fire a projectile
-	if (ProjectileClass != nullptr)
+	if (const UWorld* const World = GetWorld())
 	{
-		UWorld* const World = GetWorld();
-		if (World != nullptr)
-		{
-			const APlayerController* PlayerController = Cast<APlayerController>(Character->GetController());
-			FVector Start, Dir;
-			int32 ScreenWidth, ScreenHeight;
-			PlayerController->GetViewportSize(ScreenWidth, ScreenHeight);
-			PlayerController->DeprojectScreenPositionToWorld(ScreenWidth * 0.5f, ScreenHeight * 0.5f, Start, Dir);
-			const FVector End = Start + Dir * 9999;
+		const APlayerController* PlayerController = Cast<APlayerController>(Character->GetController());
+		FVector Start, Dir;
+		int32 ScreenWidth, ScreenHeight;
+		PlayerController->GetViewportSize(ScreenWidth, ScreenHeight);
+		PlayerController->DeprojectScreenPositionToWorld(ScreenWidth * 0.5f, ScreenHeight * 0.5f, Start, Dir);
+		const FVector End = Start + Dir * 9999;
 
-			// 궤적, 탄착군 디버깅
-			TArray<AActor*> ActorsToIgnore;
-			ActorsToIgnore.Add(GetOwner());
-			FHitResult OutHit;
-			const bool bHit = UKismetSystemLibrary::LineTraceSingle(
-				World,
-				Start,
-				End,
-				UEngineTypes::ConvertToTraceType(ECC_Visibility),
-				false,
-				ActorsToIgnore,
-				EDrawDebugTrace::ForDuration,
-				OutHit,
-				true
-			);
-			if (bHit)
-			{
-				DrawDebugPoint(World, OutHit.ImpactPoint, 10, FColor::Green, false, 30);
-			}
-			
-			// const FRotator SpawnRotation = PlayerController->PlayerCameraManager->GetCameraRotation();
-			// // MuzzleOffset is in camera space, so transform it to world space before offsetting from the character location to find the final muzzle position
-			// const FVector SpawnLocation = GetOwner()->GetActorLocation() + SpawnRotation.RotateVector(MuzzleOffset);
-			//
-			// //Set Spawn Collision Handling Override
-			// FActorSpawnParameters ActorSpawnParams;
-			// ActorSpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButDontSpawnIfColliding;
-			//
-			// // Spawn the projectile at the muzzle
-			// World->SpawnActor<AValorantProjectile>(ProjectileClass, SpawnLocation, SpawnRotation, ActorSpawnParams);
+		// 궤적, 탄착군 디버깅
+		TArray<AActor*> ActorsToIgnore;
+		ActorsToIgnore.Add(GetOwner());
+		FHitResult OutHit;
+		const bool bHit = UKismetSystemLibrary::LineTraceSingle(
+			World,
+			Start,
+			End,
+			UEngineTypes::ConvertToTraceType(ECC_Visibility),
+			false,
+			ActorsToIgnore,
+			EDrawDebugTrace::ForDuration,
+			OutHit,
+			true
+		);
+		if (bHit)
+		{
+			DrawDebugPoint(World, OutHit.ImpactPoint, 10, FColor::Green, false, 30);
 		}
+			
+		// const FRotator SpawnRotation = PlayerController->PlayerCameraManager->GetCameraRotation();
+		// // MuzzleOffset is in camera space, so transform it to world space before offsetting from the character location to find the final muzzle position
+		// const FVector SpawnLocation = GetOwner()->GetActorLocation() + SpawnRotation.RotateVector(MuzzleOffset);
+		//
+		// //Set Spawn Collision Handling Override
+		// FActorSpawnParameters ActorSpawnParams;
+		// ActorSpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButDontSpawnIfColliding;
+		//
+		// // Spawn the projectile at the muzzle
+		// World->SpawnActor<AValorantProjectile>(ProjectileClass, SpawnLocation, SpawnRotation, ActorSpawnParams);
 	}
 	
 	// Try and play the sound if specified
