@@ -83,7 +83,7 @@ void UValorantWeaponComponent::StartFire()
 
 void UValorantWeaponComponent::Fire()
 {
-	if (Character == nullptr || Character->GetController() == nullptr)
+	if (Character == nullptr || Character->GetController() == nullptr || false == Character->bIsFiring)
 	{
 		return;
 	}
@@ -92,7 +92,7 @@ void UValorantWeaponComponent::Fire()
 	{
 		if (SpareAmmo > 0)
 		{
-			// TODO: 여분 탄약이 있으면 재장전 시작
+			StartReload();
 		}
 		return;
 	}
@@ -217,8 +217,52 @@ bool UValorantWeaponComponent::AttachWeapon(AValorantCharacter* TargetCharacter)
 			// Fire
 			EnhancedInputComponent->BindAction(StartFireAction, ETriggerEvent::Triggered, this, &UValorantWeaponComponent::StartFire);
 			EnhancedInputComponent->BindAction(EndFireAction, ETriggerEvent::Triggered, this, &UValorantWeaponComponent::EndFire);
+			EnhancedInputComponent->BindAction(StartReloadAction, ETriggerEvent::Triggered, this, &UValorantWeaponComponent::StartReload);
 		}
 	}
 
 	return true;
+}
+
+void UValorantWeaponComponent::StartReload()
+{
+	if (nullptr == WeaponData || MagazineAmmo == MagazineSize || SpareAmmo <= 0)
+	{
+		return;
+	}
+	
+	if (const auto* World = GetWorld())
+	{
+		if (false == World->GetTimerManager().IsTimerActive(ReloadHandle))
+		{
+			UE_LOG(LogTemp, Warning, TEXT("StartReload"));
+			Character->bIsFiring = false;
+			World->GetTimerManager().SetTimer(ReloadHandle, this, &UValorantWeaponComponent::Reload, 3, false, WeaponData->ReloadTime);
+		}
+	}
+}
+
+void UValorantWeaponComponent::Reload()
+{
+	const int Req = MagazineSize - MagazineAmmo;
+	const int D = FMath::Min(Req, SpareAmmo);
+	UE_LOG(LogTemp, Warning, TEXT("Reload Completed, MagazineAmmo : %d -> %d, SpareAmmo : %d -> %d"), MagazineAmmo, MagazineAmmo + D, SpareAmmo, SpareAmmo - D);
+	MagazineAmmo += D;
+	SpareAmmo -= D;
+	if (const auto* World = GetWorld())
+	{
+		if (World->GetTimerManager().IsTimerActive(AutoFireHandle))
+		{
+			Character->bIsFiring = true;
+			RecoilLevel = 0;
+		}
+	}
+}
+
+void UValorantWeaponComponent::StopReload()
+{
+	if (const auto* World = GetWorld())
+	{
+		World->GetTimerManager().ClearTimer(ReloadHandle);
+	}
 }

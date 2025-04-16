@@ -57,6 +57,10 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category=Input, meta=(AllowPrivateAccess = "true"))
 	class UInputAction* EndFireAction;
 
+	/** StartReload Input Action */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category=Input, meta=(AllowPrivateAccess = "true"))
+	const UInputAction* StartReloadAction;
+
 	/** Attaches the actor to a FirstPersonCharacter */
 	UFUNCTION(BlueprintCallable, Category="Weapon")
 	bool AttachWeapon(AValorantCharacter* TargetCharacter);
@@ -84,6 +88,17 @@ private:
 
 	UFUNCTION(BlueprintCallable, Category="Weapon")
 	void EndFire();
+
+	FTimerHandle ReloadHandle;
+	
+	UFUNCTION(BlueprintCallable, Category="Weapon")
+	void StartReload();
+
+	UFUNCTION(BlueprintCallable, Category="Weapon")
+	void Reload();
+
+	UFUNCTION(BlueprintCallable, Category="Weapon")
+	void StopReload();
 
 public:
 	// 탄창 크기
