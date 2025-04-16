@@ -57,6 +57,10 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category=Input, meta=(AllowPrivateAccess = "true"))
 	class UInputAction* EndFireAction;
 
+	/** StartReload Input Action */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category=Input, meta=(AllowPrivateAccess = "true"))
+	const UInputAction* StartReloadAction;
+
 	/** Attaches the actor to a FirstPersonCharacter */
 	UFUNCTION(BlueprintCallable, Category="Weapon")
 	bool AttachWeapon(AValorantCharacter* TargetCharacter);
@@ -66,12 +70,13 @@ private:
 	AValorantCharacter* Character;
 
 	FWeaponData* WeaponData = nullptr;
+	
 	TArray<FGunRecoilData> RecoilData;
+	int RecoilLevel = 0;
+	
+	float LastFireTime = -9999.0f;
 	// 발사/사용 주기 (1 / FireRate)
 	float FireInterval = 0.08f;
-	
-	int RecoilLevel = 0;
-	float LastFireTime = -9999.0f;
 	FTimerHandle AutoFireHandle;
 	
 	UFUNCTION(BlueprintCallable, Category="Weapon")
@@ -83,4 +88,25 @@ private:
 
 	UFUNCTION(BlueprintCallable, Category="Weapon")
 	void EndFire();
+
+	FTimerHandle ReloadHandle;
+	
+	UFUNCTION(BlueprintCallable, Category="Weapon")
+	void StartReload();
+
+	UFUNCTION(BlueprintCallable, Category="Weapon")
+	void Reload();
+
+	UFUNCTION(BlueprintCallable, Category="Weapon")
+	void StopReload();
+
+public:
+	// 탄창 크기
+	int MagazineSize = 0;
+	// 탄창 내 남은 탄약
+	UPROPERTY(BlueprintReadOnly)
+	int MagazineAmmo = 0;
+	// 여분 탄약 (장전되어있는 탄창 내 탄약은 제외)
+	UPROPERTY(BlueprintReadOnly)
+	int SpareAmmo = 0;
 };
