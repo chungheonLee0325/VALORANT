@@ -22,8 +22,43 @@ UValorantWeaponComponent::UValorantWeaponComponent()
 	MuzzleOffset = FVector(100.0f, 0.0f, 10.0f);
 }
 
+void UValorantWeaponComponent::BeginPlay()
+{
+	Super::BeginPlay();
+	if (auto* GameInstance = Cast<UValorantGameInstance>(UGameplayStatics::GetGameInstance(GetWorld())))
+	{
+		if (auto* Data = GameInstance->GetWeaponData(WeaponID))
+		{
+			WeaponData = Data;
+			FireInterval = 1.0f / Data->FireRate;
+			for (auto Element : Data->GunRecoilMap)
+			{
+				RecoilData.Add(Element);
+			}
+		}
+	}
+}
 
-void UValorantWeaponComponent::Fire()
+void UValorantWeaponComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	// ensure we have a character owner
+	if (Character != nullptr)
+	{
+		// remove the input mapping context from the Player Controller
+		if (APlayerController* PlayerController = Cast<APlayerController>(Character->GetController()))
+		{
+			if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PlayerController->GetLocalPlayer()))
+			{
+				Subsystem->RemoveMappingContext(FireMappingContext);
+			}
+		}
+	}
+
+	// maintain the EndPlay call chain
+	Super::EndPlay(EndPlayReason);
+}
+
+void UValorantWeaponComponent::StartFire()
 {
 	if (Character == nullptr || Character->GetController() == nullptr)
 	{
@@ -37,8 +72,24 @@ void UValorantWeaponComponent::Fire()
 		Character->TotalRecoilOffsetYaw = 0.0f;
 		RecoilLevel = 0;
 	}
+	UE_LOG(LogTemp, Warning, TEXT("StartFire, RecoilLevel : %d"), RecoilLevel);
 
-	UE_LOG(LogTemp, Warning, TEXT("RecoilLevel : %d"), RecoilLevel);
+	GetWorld()->GetTimerManager().SetTimer(AutoFireHandle, this, &UValorantWeaponComponent::Fire, 0.01f, true, 0);
+}
+
+void UValorantWeaponComponent::Fire()
+{
+	if (Character == nullptr || Character->GetController() == nullptr)
+	{
+		return;
+	}
+
+	const float CurrentTime = GetWorld()->GetTimeSeconds();
+	if (LastFireTime + FireInterval > CurrentTime)
+	{
+		return;
+	}
+	LastFireTime = CurrentTime;
 	
 	// KBD: 발사 시 캐릭터에 반동값 적용
 	const float PitchValue = RecoilData[RecoilLevel].OffsetPitch * 0.2;
@@ -65,8 +116,26 @@ void UValorantWeaponComponent::Fire()
 			PlayerController->GetViewportSize(ScreenWidth, ScreenHeight);
 			PlayerController->DeprojectScreenPositionToWorld(ScreenWidth * 0.5f, ScreenHeight * 0.5f, Start, Dir);
 			const FVector End = Start + Dir * 9999;
-			
-			DrawDebugLine(World, Start, End, FColor::Red, false, 3, 0, 0.3);
+
+			// 궤적, 탄착군 디버깅
+			TArray<AActor*> ActorsToIgnore;
+			ActorsToIgnore.Add(GetOwner());
+			FHitResult OutHit;
+			const bool bHit = UKismetSystemLibrary::LineTraceSingle(
+				World,
+				Start,
+				End,
+				UEngineTypes::ConvertToTraceType(ECC_Visibility),
+				false,
+				ActorsToIgnore,
+				EDrawDebugTrace::ForDuration,
+				OutHit,
+				true
+			);
+			if (bHit)
+			{
+				DrawDebugPoint(World, OutHit.ImpactPoint, 10, FColor::Green, false, 30);
+			}
 			
 			// const FRotator SpawnRotation = PlayerController->PlayerCameraManager->GetCameraRotation();
 			// // MuzzleOffset is in camera space, so transform it to world space before offsetting from the character location to find the final muzzle position
@@ -107,6 +176,8 @@ void UValorantWeaponComponent::EndFire()
 	}
 	
 	Character->bIsFiring = false;
+
+	GetWorld()->GetTimerManager().ClearTimer(AutoFireHandle);
 }
 
 bool UValorantWeaponComponent::AttachWeapon(AValorantCharacter* TargetCharacter)
@@ -135,47 +206,10 @@ bool UValorantWeaponComponent::AttachWeapon(AValorantCharacter* TargetCharacter)
 		if (UEnhancedInputComponent* EnhancedInputComponent = Cast<UEnhancedInputComponent>(PlayerController->InputComponent))
 		{
 			// Fire
-			EnhancedInputComponent->BindAction(FireAction, ETriggerEvent::Triggered, this, &UValorantWeaponComponent::Fire);
+			EnhancedInputComponent->BindAction(StartFireAction, ETriggerEvent::Triggered, this, &UValorantWeaponComponent::StartFire);
 			EnhancedInputComponent->BindAction(EndFireAction, ETriggerEvent::Triggered, this, &UValorantWeaponComponent::EndFire);
 		}
 	}
 
 	return true;
-}
-
-void UValorantWeaponComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
-{
-	// ensure we have a character owner
-	if (Character != nullptr)
-	{
-		// remove the input mapping context from the Player Controller
-		if (APlayerController* PlayerController = Cast<APlayerController>(Character->GetController()))
-		{
-			if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PlayerController->GetLocalPlayer()))
-			{
-				Subsystem->RemoveMappingContext(FireMappingContext);
-			}
-		}
-	}
-
-	// maintain the EndPlay call chain
-	Super::EndPlay(EndPlayReason);
-}
-
-void UValorantWeaponComponent::BeginPlay()
-{
-	Super::BeginPlay();
-	auto* GameInstance = Cast<UValorantGameInstance>(UGameplayStatics::GetGameInstance(GetWorld()));
-	if (GameInstance)
-	{
-		auto* WeaponData = GameInstance->GetWeaponData(1);
-		if (WeaponData)
-		{
-			for (auto Element : WeaponData->GunRecoilMap)
-			{
-				RecoilData.Add(Element);
-			}
-		}
-	}
-	
 }
