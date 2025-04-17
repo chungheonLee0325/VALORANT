@@ -57,8 +57,7 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void AddCameraYawInput(float val);
 
-	UFUNCTION(BlueprintCallable)
-	void UpdateUISkill(const FGameplayTag skillTag, const FName skillName);
+
 	
 protected:
 	virtual void PossessedBy(AController* NewController) override;
@@ -73,6 +72,8 @@ protected:
 	virtual void Crouch(bool bClientSimulation = false) override;
 	
 private:
+	void InitUI();
+	
 	virtual void OnHealthChanged(const FOnAttributeChangeData& Data);
 	virtual void OnMaxHealthChanged(const FOnAttributeChangeData& Data);
 	virtual void OnArmorChanged(const FOnAttributeChangeData& Data);

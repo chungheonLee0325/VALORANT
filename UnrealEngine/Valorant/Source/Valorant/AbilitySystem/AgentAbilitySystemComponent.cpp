@@ -36,17 +36,25 @@ void UAgentAbilitySystemComponent::GetLifetimeReplicatedProps(TArray<class FLife
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 	
+	DOREPLIFETIME(UAgentAbilitySystemComponent, AgentName);
+	DOREPLIFETIME(UAgentAbilitySystemComponent, SkillQName);
+	DOREPLIFETIME(UAgentAbilitySystemComponent, SkillCName);
+	DOREPLIFETIME(UAgentAbilitySystemComponent, SkillEName);
+	DOREPLIFETIME(UAgentAbilitySystemComponent, SkillXName);
 	DOREPLIFETIME(UAgentAbilitySystemComponent, m_AgentID);
 	DOREPLIFETIME(UAgentAbilitySystemComponent, AgentSkillHandle);
 }
 
 /**서버에서만 호출됩니다.*/
-void UAgentAbilitySystemComponent::InitializeAgentData(int32 agentID)
+void UAgentAbilitySystemComponent::InitializeByAgentData(int32 agentID)
 {
 	UValorantGameInstance* gi = Cast<UValorantGameInstance>(GetWorld()->GetGameInstance());
+	FAgentData* data = gi->GetAgentData(agentID);
+
+	AgentName = data->AgentName;
 	
-	InitializeAttribute(gi->GetAgentData(agentID));
-	RegisterAgentAbilities(gi->GetAgentData(agentID));
+	InitializeAttribute(data);
+	RegisterAgentAbilities(data);
 }
 
 void UAgentAbilitySystemComponent::SkillCallByTag(const FGameplayTag& inputTag)
@@ -93,13 +101,33 @@ void UAgentAbilitySystemComponent::GiveAgentAbility(TSubclassOf<UGameplayAbility
 {
 	UGameplayAbility* ga = abilityClass->GetDefaultObject<UGameplayAbility>();
 	FGameplayAbilitySpec spec(abilityClass, level);
+	//TODO: 스킬에 태그 늘어나면 변경
+	FGameplayTag skillTag = ga->AbilityTags.First();
 
-	if (!SkillTags.Contains(ga->AbilityTags.First()))
+	if (!SkillTags.Contains(skillTag))
 	{
-		UE_LOG(LogTemp, Error, TEXT("AbilityTypeTag %s는 스킬용 태그가 아니므로 등록할 수 없습니다."), *ga->AbilityTags.First().ToString());
+		UE_LOG(LogTemp, Error, TEXT("AbilityTypeTag %s는 스킬용 태그가 아니므로 등록할 수 없습니다."), *skillTag.ToString());
 		return;
 	}
-	
+
+	//TODO: 레거시. 프로토 UI에 스킬 네임 전달하기 위함
+	if (skillTag == FValorantGameplayTags::Get().InputTag_Ability_Q)
+	{
+		 SkillQName = abilityClass->GetName();
+	}
+	else if (skillTag == FValorantGameplayTags::Get().InputTag_Ability_C)
+	{
+		SkillCName = abilityClass->GetName();
+	}
+	else if (skillTag == FValorantGameplayTags::Get().InputTag_Ability_E)
+	{
+		SkillEName = abilityClass->GetName();
+	}
+	else if (skillTag == FValorantGameplayTags::Get().InputTag_Ability_X)
+	{
+		SkillXName = abilityClass->GetName();
+	}
+		
 	//GiveAbility 다음 tick에서 spec의 handle이 생성되므로, handle을 리턴값으로 받아줘야 정확함.
 	spec.GetDynamicSpecSourceTags().AddTag(ga->AbilityTags.First());
 	FGameplayAbilitySpecHandle handle = GiveAbility(spec);
@@ -110,9 +138,25 @@ void UAgentAbilitySystemComponent::ClearAgentAbility(const FGameplayTagContainer
 {
 	for (const FGameplayAbilitySpec& spec : GetActivatableAbilities())
 	{
-		if (spec.DynamicAbilityTags.HasAny(tags))
+		if (spec.GetDynamicSpecSourceTags().HasAny(tags))
 		{
 			ClearAbility(spec.Handle);
 		}
 	}
 }
+
+// void UAgentAbilitySystemComponent::HandleHealthChanged(const FOnAttributeChangeData& Data)
+// {
+// }
+//
+// void UAgentAbilitySystemComponent::HandleMaxHealthChanged(const FOnAttributeChangeData& Data)
+// {
+// }
+//
+// void UAgentAbilitySystemComponent::HandleArmorChanged(const FOnAttributeChangeData& Data)
+// {
+// }
+//
+// void UAgentAbilitySystemComponent::HandleMoveSpeedChanged(const FOnAttributeChangeData& Data)
+// {
+// }

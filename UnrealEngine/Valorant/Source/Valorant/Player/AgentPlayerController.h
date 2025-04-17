@@ -6,6 +6,7 @@
 
 #include "AgentPlayerController.generated.h"
 
+class UAgentAbilitySystemComponent;
 class UAgentBaseWidget;
 /**
  * 
@@ -16,6 +17,11 @@ class VALORANT_API AAgentPlayerController : public APlayerController
 	GENERATED_BODY()
 
 public:
+	UAgentBaseWidget* GetAgentWidget() const { return AgentWidget; }
+
+	UFUNCTION(BlueprintCallable)
+	void InitUI(const int32 health, const int32 armor, const int32 speed);
+	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Widget")
 	TSubclassOf<UUserWidget> AgentWidgetClass;
 	
@@ -24,7 +30,10 @@ protected:
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	class UValorantGameInstance* m_GameInstance;
-
+	
 	UPROPERTY(BlueprintReadWrite)
 	UAgentBaseWidget* AgentWidget;
+
+public:
+	
 };

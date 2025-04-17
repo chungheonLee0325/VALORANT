@@ -9,9 +9,10 @@
 #include "Valorant/ResourceManager/ValorantGameType.h"
 #include "AgentAbilitySystemComponent.generated.h"
 
-
 class UGameplayAbilityWithTag;
 class UValorantGameInstance;
+
+
 
 UCLASS()
 class VALORANT_API UAgentAbilitySystemComponent : public UAbilitySystemComponent
@@ -22,11 +23,17 @@ public:
 	UAgentAbilitySystemComponent();
 
 	/**서버에서만 호출됩니다.*/
-	void InitializeAgentData(int32 agentID);
-
+	void InitializeByAgentData(int32 agentID);
+	
 	UFUNCTION(BlueprintCallable)
 	void SkillCallByTag(const FGameplayTag& inputTag);
-
+	
+	FString GetAgentName() const { return AgentName; }
+	FString GetSkillQName() const { return SkillQName; }
+	FString GetSkillEName() const { return SkillEName; }
+	FString GetSkillCName() const { return SkillCName; }
+	FString GetSkillXName() const { return SkillXName; }
+	
 private:
 	TSet<FGameplayTag> SkillTags = {
 		FValorantGameplayTags::Get().InputTag_Ability_Q,
@@ -40,6 +47,21 @@ private:
 	
 	UPROPERTY(Replicated)
 	int32 m_AgentID;
+
+	UPROPERTY(Replicated)
+	FAgentData m_AgentData;
+
+	//TODO: 데이터를 이렇게 담는 게 맞나?
+	UPROPERTY(Replicated)
+	FString AgentName = "";
+	UPROPERTY(Replicated)
+	FString SkillQName = "";
+	UPROPERTY(Replicated)
+	FString SkillEName = "";
+	UPROPERTY(Replicated)
+	FString SkillCName = "";
+	UPROPERTY(Replicated)
+	FString SkillXName = "";
 
 protected:
 	virtual void BeginPlay() override;
@@ -56,4 +78,9 @@ protected:
 	void GiveAgentAbility(TSubclassOf<UGameplayAbility> abilityClass, int32 level);
 	void ClearAgentAbilities();
 	void ClearAgentAbility(const FGameplayTagContainer& tags);
+
+	// void HandleHealthChanged(const FOnAttributeChangeData& Data);
+	// void HandleMaxHealthChanged(const FOnAttributeChangeData& Data);
+	// void HandleArmorChanged(const FOnAttributeChangeData& Data);
+	// void HandleMoveSpeedChanged(const FOnAttributeChangeData& Data);
 };

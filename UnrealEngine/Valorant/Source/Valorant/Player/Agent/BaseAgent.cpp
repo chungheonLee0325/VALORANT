@@ -13,6 +13,7 @@
 #include "Blueprint/UserWidget.h"
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/SpringArmComponent.h"
+#include "Valorant/Player/AgentPlayerController.h"
 #include "Valorant/Player/AgentPlayerState.h"
 #include "Valorant/Player/Widget/AgentBaseWidget.h"
 
@@ -29,7 +30,7 @@ ABaseAgent::ABaseAgent()
 	Camera = CreateDefaultSubobject<UCameraComponent>("Camera");
 	Camera->SetupAttachment(SpringArm);
 	
-	GetMesh()->SetupAttachment(GetRootComponent());
+	GetMesh()->SetupAttachment(SpringArm);
 	GetMesh()->SetRelativeScale3D(FVector(.34f));
 	GetMesh()->SetRelativeLocation(FVector(-30,0,-90));
 	
@@ -60,10 +61,6 @@ void ABaseAgent::AddCameraYawInput(float val)
 	SpringArm->SetRelativeRotation(FRotator(newPitch, 0, 0));
 }
 
-void ABaseAgent::UpdateUISkill(const FGameplayTag skillTag, const FName skillName)
-{
-}
-
 // 서버 전용. 캐릭터를 Possess할 때 호출됨. 게임 첫 시작시, BeginPlay 보다 먼저 호출됩니다.
 void ABaseAgent::PossessedBy(AController* NewController)
 {
@@ -78,26 +75,30 @@ void ABaseAgent::OnRep_PlayerState()
 	Super::OnRep_PlayerState();
 	
 	InitAgentData();
+	InitUI();
 }
 
 void ABaseAgent::BeginPlay()
 {
 	Super::BeginPlay();
+
+	if (HasAuthority())
+	{
+		InitUI();
+	}
 	
 	if (IsLocallyControlled())
 	{
-		UE_LOG(LogTemp, Warning, TEXT("내 캐릭터"));
+		//UE_LOG(LogTemp, Warning, TEXT("내 캐릭터"));
 		// GetMesh()->SetOwnerNoSee(false);
 		// ThirdPersonMesh->SetOwnerNoSee(true);
 		
 		ThirdPersonMesh->SetVisibility(false);
 		GetMesh()->SetVisibility(true);
-		
-		m_GameInstance = GetGameInstance<UValorantGameInstance>();
 	}
 	else
 	{
-		UE_LOG(LogTemp, Warning, TEXT("다른 사람 캐릭터"));
+		//UE_LOG(LogTemp, Warning, TEXT("다른 사람 캐릭터"));
 		ThirdPersonMesh->SetVisibility(true);
 		GetMesh()->SetVisibility(false);
 	}
@@ -130,10 +131,11 @@ void ABaseAgent::InitAgentData()
 	
 	ASC = Cast<UAgentAbilitySystemComponent>(ps->GetAbilitySystemComponent());
 	ASC->InitAbilityActorInfo(ps, this);
-	
+
+
 	if (HasAuthority())
 	{
-		ASC->InitializeAgentData(m_AgentID);
+		ASC->InitializeByAgentData(m_AgentID);
 		
 		UE_LOG(LogTemp, Warning, TEXT("=== ASC 등록된 GA 목록 ==="));
 		for (const FGameplayAbilitySpec& spec : ASC->GetActivatableAbilities())
@@ -164,6 +166,19 @@ void ABaseAgent::Crouch(bool bClientSimulation)
 {
 	Super::Crouch(bClientSimulation);
 	
+}
+
+void ABaseAgent::InitUI()
+{
+	if (IsLocallyControlled())
+	{
+		AAgentPlayerController* pc = Cast<AAgentPlayerController>(GetController<AAgentPlayerController>());
+		AAgentPlayerState* ps = GetPlayerState<AAgentPlayerState>();
+		if (pc && ps)
+		{
+			pc->InitUI(ps->GetHealth(),ps->GetArmor(),ps->GetMoveSpeed());
+		}
+	}
 }
 
 // 값 변경시 콜백함수
