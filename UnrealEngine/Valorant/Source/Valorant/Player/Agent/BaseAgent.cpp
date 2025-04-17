@@ -60,6 +60,26 @@ void ABaseAgent::AddCameraYawInput(float val)
 	SpringArm->SetRelativeRotation(FRotator(newPitch, 0, 0));
 }
 
+void ABaseAgent::UpdateUISkill(const FGameplayTag skillTag, const FName skillName)
+{
+}
+
+// 서버 전용. 캐릭터를 Possess할 때 호출됨. 게임 첫 시작시, BeginPlay 보다 먼저 호출됩니다.
+void ABaseAgent::PossessedBy(AController* NewController)
+{
+	Super::PossessedBy(NewController);
+
+	InitAgentData();
+}
+
+// 클라이언트 전용. 서버로부터 PlayerState를 최초로 받을 때 호출됨
+void ABaseAgent::OnRep_PlayerState()
+{
+	Super::OnRep_PlayerState();
+	
+	InitAgentData();
+}
+
 void ABaseAgent::BeginPlay()
 {
 	Super::BeginPlay();
@@ -74,22 +94,6 @@ void ABaseAgent::BeginPlay()
 		GetMesh()->SetVisibility(true);
 		
 		m_GameInstance = GetGameInstance<UValorantGameInstance>();
-
-		if (AgentWidgetClass == nullptr)
-		{
-			UE_LOG(LogTemp,Error,TEXT("AgentWidget에 AgentWidget 좀 넣어주세요."));
-			return;
-		}
-		
-		APlayerController* pc = Cast<APlayerController>(GetController());
-		if (pc)
-		{
-			AgentWidget = CreateWidget<UAgentBaseWidget>(pc, AgentWidgetClass);
-			if (AgentWidget)
-			{
-				AgentWidget->AddToViewport();
-			}
-		}
 	}
 	else
 	{
@@ -115,7 +119,41 @@ void ABaseAgent::Tick(float DeltaTime)
 	Super::Tick(DeltaTime);
 }
 
+void ABaseAgent::InitAgentData()
+{
+	AAgentPlayerState* ps = GetPlayerState<AAgentPlayerState>();
+	if (ps == nullptr)
+	{
+		UE_LOG(LogTemp, Error, TEXT("PlayerState를 AAgentPlayerState를 상속받는 녀석으로 교체 부탁"));
+		return;
+	}
+	
+	ASC = Cast<UAgentAbilitySystemComponent>(ps->GetAbilitySystemComponent());
+	ASC->InitAbilityActorInfo(ps, this);
+	
+	if (HasAuthority())
+	{
+		ASC->InitializeAgentData(m_AgentID);
+		
+		UE_LOG(LogTemp, Warning, TEXT("=== ASC 등록된 GA 목록 ==="));
+		for (const FGameplayAbilitySpec& spec : ASC->GetActivatableAbilities())
+		{
+			if (spec.Ability)
+			{
+				UE_LOG(LogTemp, Warning, TEXT("GA: %s"), *spec.Ability->GetName());
 
+				FString TagString;
+				TArray<FGameplayTag> tags = spec.GetDynamicSpecSourceTags().GetGameplayTagArray();
+				for (const FGameplayTag& Tag : tags)
+				{
+					TagString += Tag.ToString() + TEXT(" ");
+				}
+
+				UE_LOG(LogTemp, Warning, TEXT("태그 목록: %s"), *TagString);
+			}
+		}
+	}
+}
 
 void ABaseAgent::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {

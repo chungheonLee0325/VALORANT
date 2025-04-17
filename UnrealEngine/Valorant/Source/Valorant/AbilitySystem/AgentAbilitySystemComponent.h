@@ -10,6 +10,9 @@
 #include "AgentAbilitySystemComponent.generated.h"
 
 
+class UGameplayAbilityWithTag;
+class UValorantGameInstance;
+
 UCLASS()
 class VALORANT_API UAgentAbilitySystemComponent : public UAbilitySystemComponent
 {
@@ -17,39 +20,40 @@ class VALORANT_API UAgentAbilitySystemComponent : public UAbilitySystemComponent
 
 public:
 	UAgentAbilitySystemComponent();
-	
-	void InitializeAgentData(FAgentData* agentData);
-	
-	FAgentData* GetAgentData() const { return m_AgentData; }
+
+	/**서버에서만 호출됩니다.*/
+	void InitializeAgentData(int32 agentID);
 
 	UFUNCTION(BlueprintCallable)
 	void SkillCallByTag(const FGameplayTag& inputTag);
 
 private:
-	FAgentData* m_AgentData;
-
-	UPROPERTY()
-	TMap<FGameplayTag, FGameplayAbilitySpecHandle> SkillHandleMap;
-	
-	TSet<FGameplayTag> InputSlots = {
+	TSet<FGameplayTag> SkillTags = {
 		FValorantGameplayTags::Get().InputTag_Ability_Q,
 		FValorantGameplayTags::Get().InputTag_Ability_E,
 		FValorantGameplayTags::Get().InputTag_Ability_C,
 		FValorantGameplayTags::Get().InputTag_Ability_X
 	};
 
-	TMap<FGameplayTag, FGameplayAbilitySpecHandle> ActiveAbilitiesSlot;
+	UPROPERTY(Replicated)
+	TArray<FGameplayAbilitySpecHandle> AgentSkillHandle;
+	
+	UPROPERTY(Replicated)
+	int32 m_AgentID;
 
 protected:
 	virtual void BeginPlay() override;
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType,
 							   FActorComponentTickFunction* ThisTickFunction) override;
+
+	virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;
+	
 	//AttributeSet
-	void InitializeAttribute();
+	void InitializeAttribute(const FAgentData* agentData);
 
 	//Ability
-	void RegisterAgentAbilities();
-	void ClearAgentAbilities();
-	void ClearAgentAbility(FGameplayAbilitySpec* spec);
+	void RegisterAgentAbilities(const FAgentData* agentData);
 	void GiveAgentAbility(TSubclassOf<UGameplayAbility> abilityClass, int32 level);
+	void ClearAgentAbilities();
+	void ClearAgentAbility(const FGameplayTagContainer& tags);
 };
