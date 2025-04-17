@@ -4,8 +4,10 @@
 
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
+#include "Valorant/AbilitySystem/ValorantGameplayTags.h"
 #include "AgentBaseWidget.generated.h"
 
+struct FGameplayTag;
 class UImage;
 class UTextBlock;
 /**
@@ -37,5 +39,13 @@ public:
 	UPROPERTY(meta=(BindWidget))
 	UTextBlock* txt_X;
 
+private:
+	FGameplayTag TagQ = FValorantGameplayTags::Get().InputTag_Ability_Q;
+	FGameplayTag TagE = FValorantGameplayTags::Get().InputTag_Ability_E;
+	FGameplayTag TagC = FValorantGameplayTags::Get().InputTag_Ability_C;
+	FGameplayTag TagX = FValorantGameplayTags::Get().InputTag_Ability_X;
+	
 public:
+	UFUNCTION()
+	void UpdateDisplaySkill(const FGameplayTag skillTag, const FName skillName);
 };
