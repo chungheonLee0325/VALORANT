@@ -2,6 +2,9 @@
 
 #include "ValorantPickUpComponent.h"
 
+#include "ValorantWeaponComponent.h"
+#include "Components/CapsuleComponent.h"
+
 UValorantPickUpComponent::UValorantPickUpComponent()
 {
 	// Setup the Sphere Collision
@@ -19,13 +22,46 @@ void UValorantPickUpComponent::BeginPlay()
 void UValorantPickUpComponent::OnSphereBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
 	// Checking if it is a First Person Character overlapping
-	AValorantCharacter* Character = Cast<AValorantCharacter>(OtherActor);
-	if(Character != nullptr)
+	if(AValorantCharacter* Character = Cast<AValorantCharacter>(OtherActor))
 	{
+		if (Character->InteractionCapsule == Cast<UCapsuleComponent>(OtherComp))
+		{
+			return;
+		}
+
+		TArray<USceneComponent*> ChildrenArray;
+		Character->GetMesh1P()->GetChildrenComponents(true, ChildrenArray);
+		
+		// TODO: 주무기, 보조무기, 근접무기 구분 필요
+		if (ChildrenArray.FindItemByClass<UValorantWeaponComponent>())
+		{
+			return;
+		}
+
+		UE_LOG(LogTemp, Warning, TEXT("??"));
+		for (auto Element : Character->GetInstanceComponents())
+		{
+			UE_LOG(LogTemp, Warning, TEXT("%s"), *Element->GetName());
+		}
+		
 		// Notify that the actor is being picked up
 		OnPickUp.Broadcast(Character);
 
 		// Unregister from the Overlap Event so it is no longer triggered
 		OnComponentBeginOverlap.RemoveAll(this);
 	}
+}
+
+void UValorantPickUpComponent::PickUp(AValorantCharacter* Character)
+{
+	if (Character != nullptr)
+	{
+		OnPickUp.Broadcast(Character);
+		OnComponentBeginOverlap.RemoveAll(this);
+	}
+}
+
+void UValorantPickUpComponent::SetEnableBeginOverlap()
+{
+	OnComponentBeginOverlap.AddDynamic(this, &UValorantPickUpComponent::OnSphereBeginOverlap);
 }

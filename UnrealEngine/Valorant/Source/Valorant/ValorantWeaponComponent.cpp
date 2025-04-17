@@ -3,13 +3,15 @@
 
 #include "ValorantWeaponComponent.h"
 #include "ValorantCharacter.h"
-#include "ValorantProjectile.h"
 #include "GameFramework/PlayerController.h"
 #include "Camera/PlayerCameraManager.h"
 #include "Kismet/GameplayStatics.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
+#include "InputMappingContext.h"
+#include "ValorantPickUpComponent.h"
 #include "Animation/AnimInstance.h"
+#include "Components/WidgetComponent.h"
 #include "ResourceManager/ValorantGameType.h"
 #include "Engine/LocalPlayer.h"
 #include "Engine/World.h"
@@ -18,8 +20,53 @@
 // Sets default values for this component's properties
 UValorantWeaponComponent::UValorantWeaponComponent()
 {
-	// Default offset from the character location for projectiles to spawn
-	MuzzleOffset = FVector(100.0f, 0.0f, 10.0f);
+	static ConstructorHelpers::FObjectFinder<USkeletalMesh> SkeletalMeshAssetObj(TEXT("/Script/Engine.SkeletalMesh'/Game/Resource/FPWeapon/Mesh/SK_FPGun.SK_FPGun'"));
+	if (SkeletalMeshAssetObj.Succeeded())
+	{
+		SetSkeletalMeshAsset(SkeletalMeshAssetObj.Object);
+	}
+
+	static ConstructorHelpers::FObjectFinder<USoundWave> FireSoundObj(TEXT("/Script/Engine.SoundWave'/Game/Resource/FPWeapon/Audio/FirstPersonTemplateWeaponFire02.FirstPersonTemplateWeaponFire02'"));
+	if (FireSoundObj.Succeeded())
+	{
+		FireSound = FireSoundObj.Object;
+	}
+
+	static ConstructorHelpers::FObjectFinder<UAnimMontage> FireAnimationObj(TEXT("/Script/Engine.AnimMontage'/Game/Resource/FirstPersonArms/Animations/FP_Rifle_Shoot_Montage.FP_Rifle_Shoot_Montage'"));
+	if (FireAnimationObj.Succeeded())
+	{
+		FireAnimation = FireAnimationObj.Object;
+	}
+
+	static ConstructorHelpers::FObjectFinder<UInputMappingContext> FireMappingContextObj(TEXT("/Script/EnhancedInput.InputMappingContext'/Game/BluePrint/FirstPerson/Input/IMC_Weapons.IMC_Weapons'"));
+	if (FireMappingContextObj.Succeeded())
+	{
+		FireMappingContext = FireMappingContextObj.Object;
+	}
+
+	static ConstructorHelpers::FObjectFinder<UInputAction> StartFireActionObj(TEXT("/Script/EnhancedInput.InputAction'/Game/BluePrint/FirstPerson/Input/Actions/IA_StartFire.IA_StartFire'"));
+	if (StartFireActionObj.Succeeded())
+	{
+		StartFireAction = StartFireActionObj.Object;
+	}
+	
+	static ConstructorHelpers::FObjectFinder<UInputAction> EndFireActionObj(TEXT("/Script/EnhancedInput.InputAction'/Game/BluePrint/FirstPerson/Input/Actions/IA_EndFire.IA_EndFire'"));
+	if (EndFireActionObj.Succeeded())
+	{
+		EndFireAction = EndFireActionObj.Object;
+	}
+	
+	static ConstructorHelpers::FObjectFinder<UInputAction> StartReloadActionObj(TEXT("/Script/EnhancedInput.InputAction'/Game/BluePrint/FirstPerson/Input/Actions/IA_StartReload.IA_StartReload'"));
+	if (StartReloadActionObj.Succeeded())
+	{
+		StartReloadAction = StartReloadActionObj.Object;
+	}
+
+	static ConstructorHelpers::FObjectFinder<UInputAction> DropActionObj(TEXT("/Script/EnhancedInput.InputAction'/Game/BluePrint/FirstPerson/Input/Actions/IA_Drop.IA_Drop'"));
+	if (DropActionObj.Succeeded())
+	{
+		DropAction = DropActionObj.Object;
+	}
 }
 
 void UValorantWeaponComponent::BeginPlay()
@@ -149,17 +196,6 @@ void UValorantWeaponComponent::Fire()
 		{
 			DrawDebugPoint(World, OutHit.ImpactPoint, 10, FColor::Green, false, 30);
 		}
-			
-		// const FRotator SpawnRotation = PlayerController->PlayerCameraManager->GetCameraRotation();
-		// // MuzzleOffset is in camera space, so transform it to world space before offsetting from the character location to find the final muzzle position
-		// const FVector SpawnLocation = GetOwner()->GetActorLocation() + SpawnRotation.RotateVector(MuzzleOffset);
-		//
-		// //Set Spawn Collision Handling Override
-		// FActorSpawnParameters ActorSpawnParams;
-		// ActorSpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButDontSpawnIfColliding;
-		//
-		// // Spawn the projectile at the muzzle
-		// World->SpawnActor<AValorantProjectile>(ProjectileClass, SpawnLocation, SpawnRotation, ActorSpawnParams);
 	}
 	
 	// Try and play the sound if specified
@@ -195,11 +231,20 @@ void UValorantWeaponComponent::EndFire()
 bool UValorantWeaponComponent::AttachWeapon(AValorantCharacter* TargetCharacter)
 {
 	Character = TargetCharacter;
-
+	UE_LOG(LogTemp, Warning, TEXT("AttachWeapon %p"), this);
+	
 	// Check that the character is valid, and has no weapon component yet
 	if (Character == nullptr || Character->GetInstanceComponents().FindItemByClass<UValorantWeaponComponent>())
 	{
 		return false;
+	}
+
+	if (const auto* Owner = GetOwner())
+	{
+		if (auto* PickUpUI = Owner->FindComponentByClass<UWidgetComponent>())
+		{
+			PickUpUI->SetVisibility(false);
+		}
 	}
 
 	// Attach the weapon to the First Person Character
@@ -221,6 +266,7 @@ bool UValorantWeaponComponent::AttachWeapon(AValorantCharacter* TargetCharacter)
 			EnhancedInputComponent->BindAction(StartFireAction, ETriggerEvent::Triggered, this, &UValorantWeaponComponent::StartFire);
 			EnhancedInputComponent->BindAction(EndFireAction, ETriggerEvent::Triggered, this, &UValorantWeaponComponent::EndFire);
 			EnhancedInputComponent->BindAction(StartReloadAction, ETriggerEvent::Triggered, this, &UValorantWeaponComponent::StartReload);
+			EnhancedInputComponent->BindAction(DropAction, ETriggerEvent::Triggered, this, &UValorantWeaponComponent::Drop);
 		}
 	}
 
@@ -238,7 +284,7 @@ void UValorantWeaponComponent::StartReload()
 	{
 		if (false == World->GetTimerManager().IsTimerActive(ReloadHandle))
 		{
-			UE_LOG(LogTemp, Warning, TEXT("StartReload"));
+			UE_LOG(LogTemp, Warning, TEXT("StartReload %p"), this);
 			Character->bIsFiring = false;
 			World->GetTimerManager().SetTimer(ReloadHandle, this, &UValorantWeaponComponent::Reload, 3, false, WeaponData->ReloadTime);
 		}
@@ -268,4 +314,39 @@ void UValorantWeaponComponent::StopReload()
 	{
 		World->GetTimerManager().ClearTimer(ReloadHandle);
 	}
+}
+
+void UValorantWeaponComponent::Drop()
+{
+	if (Character == nullptr || Character->GetInstanceComponents().FindItemByClass<UValorantWeaponComponent>())
+	{
+		return;
+	}
+
+	if (APlayerController* PlayerController = Cast<APlayerController>(Character->GetController()))
+	{
+		if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PlayerController->GetLocalPlayer()))
+		{
+			UE_LOG(LogTemp, Warning, TEXT("RemoveMappingContext"));
+			Subsystem->RemoveMappingContext(FireMappingContext);
+		}
+	}
+
+	TArray<USceneComponent*> ChildrenArray;
+	GetChildrenComponents(true, ChildrenArray);
+	for (auto* Component : ChildrenArray)
+	{
+		if (auto* PickUpComponent = Cast<UValorantPickUpComponent>(Component))
+		{
+			PickUpComponent->SetEnableBeginOverlap();
+			break;
+		}
+	}
+	
+	DetachFromComponent(FDetachmentTransformRules::KeepWorldTransform);
+	const FVector ForwardVector = Character->GetActorForwardVector();
+	SetWorldLocation(GetComponentLocation() + ForwardVector * 300);
+
+	OnDropWeapon.Broadcast(Character);
+	Character = nullptr;
 }
