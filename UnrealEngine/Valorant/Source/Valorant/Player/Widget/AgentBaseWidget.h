@@ -7,6 +7,7 @@
 #include "Valorant/AbilitySystem/ValorantGameplayTags.h"
 #include "AgentBaseWidget.generated.h"
 
+class UAgentAbilitySystemComponent;
 struct FGameplayTag;
 class UImage;
 class UTextBlock;
@@ -19,6 +20,19 @@ class VALORANT_API UAgentBaseWidget : public UUserWidget
 	GENERATED_BODY()
 
 public:
+	
+	UPROPERTY(meta=(BindWidget))
+	UTextBlock* txt_AgentName;
+
+	UPROPERTY(meta=(BindWidget))
+	UTextBlock* txt_Armor;
+
+	UPROPERTY(meta=(BindWidget))
+	UTextBlock* txt_HP;
+	
+	UPROPERTY(meta=(BindWidget))
+	UTextBlock* txt_Speed;
+	
 	UPROPERTY(meta=(BindWidget))
 	UImage* img_C;
 	UPROPERTY(meta=(BindWidget))
@@ -44,8 +58,26 @@ private:
 	FGameplayTag TagE = FValorantGameplayTags::Get().InputTag_Ability_E;
 	FGameplayTag TagC = FValorantGameplayTags::Get().InputTag_Ability_C;
 	FGameplayTag TagX = FValorantGameplayTags::Get().InputTag_Ability_X;
+
+	UPROPERTY()
+	UAgentAbilitySystemComponent* ASC;
 	
 public:
+	UFUNCTION(BlueprintCallable)
+	void SetASC(UAgentAbilitySystemComponent* _asc) { ASC = _asc; }
+
+	UFUNCTION(BlueprintCallable)
+	void InitDisplayAgentData(const int32 health, const int32 armor, const int32 speed);
+
+	UFUNCTION(BlueprintCallable)
+	void UpdateDisplayHealth(const int32 health);
+	UFUNCTION(BlueprintCallable)
+	void UpdateDisplayArmor(const int32 armor);
+	UFUNCTION(BlueprintCallable)
+	void UpdateDisplaySpeed(const int32 speed);
+	
 	UFUNCTION()
 	void UpdateDisplaySkill(const FGameplayTag skillTag, const FName skillName);
+
+	
 };

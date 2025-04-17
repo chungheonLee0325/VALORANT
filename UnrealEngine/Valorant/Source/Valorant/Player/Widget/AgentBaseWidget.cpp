@@ -6,6 +6,44 @@
 #include "GameplayTagContainer.h"
 #include "Components/Image.h"
 #include "Components/TextBlock.h"
+#include "Valorant/AbilitySystem/AgentAbilitySystemComponent.h"
+#include "Valorant/Player/AgentPlayerState.h"
+
+void UAgentBaseWidget::InitDisplayAgentData(const int32 health, const int32 armor, const int32 speed)
+{
+	if (ASC==nullptr)
+	{
+		UE_LOG(LogTemp, Error, TEXT("AgentBaseWidget: ASC is null"));
+		return;
+	}
+
+	txt_AgentName->SetText(FText::FromString(ASC->GetAgentName()));
+	
+	txt_C->SetText(FText::FromString(ASC->GetSkillCName()));
+	txt_E->SetText(FText::FromString(ASC->GetSkillEName()));
+	txt_Q->SetText(FText::FromString(ASC->GetSkillQName()));
+	txt_X->SetText(FText::FromString(ASC->GetSkillXName()));
+
+	AAgentPlayerState* ps = Cast<AAgentPlayerState>(GetOwningPlayerState());
+	UpdateDisplayHealth(health);
+	UpdateDisplayArmor(armor);
+	UpdateDisplaySpeed(speed);
+}
+
+void UAgentBaseWidget::UpdateDisplayHealth(const int32 health)
+{
+	txt_HP->SetText(FText::AsNumber(health));
+}
+
+void UAgentBaseWidget::UpdateDisplayArmor(const int32 armor)
+{
+	txt_Armor->SetText(FText::AsNumber(armor));
+}
+
+void UAgentBaseWidget::UpdateDisplaySpeed(const int32 speed)
+{
+	txt_Speed->SetText(FText::AsNumber(speed));
+}
 
 void UAgentBaseWidget::UpdateDisplaySkill(const FGameplayTag skillTag, const FName skillName)
 {
