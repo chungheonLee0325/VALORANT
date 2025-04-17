@@ -106,17 +106,20 @@ void UValorantWeaponComponent::Fire()
 	MagazineAmmo--;
 	
 	// KBD: 발사 시 캐릭터에 반동값 적용
-	const float PitchValue = RecoilData[RecoilLevel].OffsetPitch;
-	Character->AddControllerPitchInput(PitchValue);
-	Character->TotalRecoilOffsetPitch += PitchValue;
+	if (RecoilData.Num() > 0)
+	{
+		const float PitchValue = RecoilData[RecoilLevel].OffsetPitch;
+		Character->AddControllerPitchInput(PitchValue);
+		Character->TotalRecoilOffsetPitch += PitchValue;
 
-	const float YawValue = RecoilData[RecoilLevel].OffsetYaw;
-	Character->AddControllerYawInput(YawValue);
-	Character->TotalRecoilOffsetYaw += YawValue;
-
-	UE_LOG(LogTemp, Warning, TEXT("Ammo : %d, Total : (%f, %f), Add : (%f, %f)"), MagazineAmmo, Character->TotalRecoilOffsetPitch, Character->TotalRecoilOffsetYaw, PitchValue, YawValue);
-	
-	RecoilLevel = FMath::Clamp(RecoilLevel + 1, 0, RecoilData.Num() - 1);
+		const float YawValue = RecoilData[RecoilLevel].OffsetYaw;
+		Character->AddControllerYawInput(YawValue);
+		Character->TotalRecoilOffsetYaw += YawValue;
+		
+		RecoilLevel = FMath::Clamp(RecoilLevel + 1, 0, RecoilData.Num() - 1);
+		
+		UE_LOG(LogTemp, Warning, TEXT("Ammo : %d, Total : (%f, %f), Add : (%f, %f)"), MagazineAmmo, Character->TotalRecoilOffsetPitch, Character->TotalRecoilOffsetYaw, PitchValue, YawValue);
+	}
 
 	if (const UWorld* const World = GetWorld())
 	{
