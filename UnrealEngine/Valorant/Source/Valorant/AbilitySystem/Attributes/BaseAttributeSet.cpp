@@ -53,7 +53,6 @@ void UBaseAttributeSet::OnRep_Health(const FGameplayAttributeData& OldHealth)
 	// ReplicatedUsing으로 인해 값이 변경되는 경우, gas에 내장되어있는 델리게이트(값의 변화를 감지하는 델리게이트)가 호출되지않음.
 	// 그 델리게이트 함수가 호출될 수 있도록 연결해주는 역할을 하는 것이 아래 메서드.
 	GAMEPLAYATTRIBUTE_REPNOTIFY(UBaseAttributeSet, Health, OldHealth);
-	
 }
 
 void UBaseAttributeSet::OnRep_MaxHealth(const FGameplayAttributeData& OldMaxHealth)

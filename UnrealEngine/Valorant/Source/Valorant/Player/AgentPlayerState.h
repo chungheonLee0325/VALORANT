@@ -42,9 +42,6 @@ public:
 protected:
 	virtual void BeginPlay() override;
 	
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	UValorantGameInstance* m_GameInstance;
-	
 	UPROPERTY()
 	UAgentAbilitySystemComponent* ASC;
 	
