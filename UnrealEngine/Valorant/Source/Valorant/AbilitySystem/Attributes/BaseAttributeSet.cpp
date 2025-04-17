@@ -9,15 +9,43 @@ UBaseAttributeSet::UBaseAttributeSet()
 {
 }
 
-// 호출시점: 속성에 변경된 값을 적용하기 직전
+// 호출시점: SetAttributeBaseValue()처럼 수동으로 값이 바뀔 시, 속성에 변경된 값을 적용하기 직전.
 // 용도: 최종적으로 값을 점검 (e.g. 최대값을 넘지 않도록 제한 / 비율 유지)
-// SetCurrentValue 처럼 Gas나 GE에 의해 변경되지 않는 경우에는 호출되지 않는다
 void UBaseAttributeSet::PreAttributeChange(const FGameplayAttribute& Attribute, float& NewValue)
 {
 	Super::PreAttributeChange(Attribute, NewValue);
 }
 
-// 호출시점: 속성이 바뀐 직후
+// 호출시점: SetBaseValue(), SetCurrentValue() 등 수동으로 값이 바뀔 시, 속성이 변경된 직후
+// 용도: UI 업데이트
+void UBaseAttributeSet::PostAttributeChange(const FGameplayAttribute& Attribute, float OldValue, float NewValue)
+{
+	Super::PostAttributeChange(Attribute, OldValue, NewValue);
+	
+	// if (Attribute == GetHealthAttribute())
+	// {
+	// 	OnAgentHealthChanged.Broadcast(NewValue);
+	// }
+	// if (Attribute == GetMaxHealthAttribute())
+	// {
+	// 	OnAgentMaxHealthChanged.Broadcast(NewValue);
+	// }
+	// if (Attribute == GetArmorAttribute())
+	// {
+	// 	OnAgentArmorChanged.Broadcast(NewValue);
+	// }
+	// if (Attribute == GetMoveSpeedAttribute())
+	// {
+	// 	OnAgentMoveSpeedChanged.Broadcast(NewValue);
+	// }
+}
+
+bool UBaseAttributeSet::PreGameplayEffectExecute(struct FGameplayEffectModCallbackData& Data)
+{
+	return Super::PreGameplayEffectExecute(Data);
+}
+
+// 호출시점: GE로 인해 속성이 바뀐 직후
 // 용도: 이펙트, 애니메이션 등의 트리거 / 사망 처리 / 태그 조건에 따른 추가 처리
 void UBaseAttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCallbackData& Data)
 {

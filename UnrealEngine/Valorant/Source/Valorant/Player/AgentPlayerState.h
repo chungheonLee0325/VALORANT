@@ -42,10 +42,10 @@ public:
 protected:
 	virtual void BeginPlay() override;
 	
-	UPROPERTY()
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
 	UAgentAbilitySystemComponent* ASC;
 	
-	UPROPERTY()
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
 	UBaseAttributeSet* BaseAttributeSet;
 
 };

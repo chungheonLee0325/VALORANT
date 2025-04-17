@@ -13,7 +13,10 @@ GAMEPLAYATTRIBUTE_VALUE_GETTER(PropertyName) \
 GAMEPLAYATTRIBUTE_VALUE_SETTER(PropertyName) \
 GAMEPLAYATTRIBUTE_VALUE_INITTER(PropertyName)
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FPlayAttributeEvent, float, EffectMagnitude, float, NewValue);
+// DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnAgentHealthChanged, float, newHealth);
+// DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnAgentMaxHealthChanged, float, newMaxHealth);
+// DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnAgentArmorChanged, float, newArmor);
+// DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnAgentMoveSpeedChanged, float, newSpeed);
 
 UCLASS()
 class VALORANT_API UBaseAttributeSet : public UAttributeSet
@@ -26,9 +29,6 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Agent", ReplicatedUsing = OnRep_Health)
 	FGameplayAttributeData Health;
 	PLAY_ATTRIBUTE_ACCESSORS(UBaseAttributeSet,Health);
-
-	UPROPERTY()
-	FPlayAttributeEvent OnHealthChanged;
 
 	UPROPERTY(BlueprintReadOnly, Category = "Agent", ReplicatedUsing = OnRep_MaxHealth)
 	FGameplayAttributeData MaxHealth;
@@ -45,15 +45,25 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Agent", ReplicatedUsing = OnRep_MoveSpeed)
 	FGameplayAttributeData MoveSpeed;
 	PLAY_ATTRIBUTE_ACCESSORS(UBaseAttributeSet, MoveSpeed);
-
-private:
-	//TODO: 태그에 대해 논의
+	
+	// UPROPERTY(BlueprintAssignable)
+	// FOnAgentHealthChanged OnAgentHealthChanged;
+	// UPROPERTY(BlueprintAssignable)
+	// FOnAgentMaxHealthChanged OnAgentMaxHealthChanged;
+	// UPROPERTY(BlueprintAssignable)
+	// FOnAgentArmorChanged OnAgentArmorChanged;
+	// UPROPERTY(BlueprintAssignable)
+	// FOnAgentMoveSpeedChanged OnAgentMoveSpeedChanged;
 	
 public:
 	virtual void PreAttributeChange(const FGameplayAttribute& Attribute, float& NewValue) override;
+	virtual void PostAttributeChange(const FGameplayAttribute& Attribute, float OldValue, float NewValue) override;
+
+	virtual bool PreGameplayEffectExecute(struct FGameplayEffectModCallbackData& Data) override;
 	virtual void PostGameplayEffectExecute(const FGameplayEffectModCallbackData& Data) override;
 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
 	
 protected:
 	void AdjustAttributeForMaxChange(FGameplayAttributeData& AffectedAttribute, const FGameplayAttributeData& MaxAttribute, float NewMaxValue, const FGameplayAttribute& AffectedAttributeProperty);
