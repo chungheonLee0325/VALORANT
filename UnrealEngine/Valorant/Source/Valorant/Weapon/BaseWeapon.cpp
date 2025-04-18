@@ -112,7 +112,7 @@ void ABaseWeapon::StartFire()
 		return;
 	}
 
-	// Agent->bIsFiring = true;
+	bIsFiring = true;
 	if (FMath::IsNearlyZero(TotalRecoilOffsetPitch + TotalRecoilOffsetYaw, 0.1f))
 	{
 		RecoilLevel = 0;
