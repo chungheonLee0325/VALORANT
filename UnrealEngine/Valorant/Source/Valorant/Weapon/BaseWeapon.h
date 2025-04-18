@@ -6,6 +6,10 @@
 #include "GameFramework/Actor.h"
 #include "BaseWeapon.generated.h"
 
+class UPickUpComponent;
+class UInputMappingContext;
+class UInputAction;
+class ABaseAgent;
 struct FGunRecoilData;
 struct FWeaponData;
 
@@ -19,7 +23,6 @@ class VALORANT_API ABaseWeapon : public AActor
 
 	FWeaponData* WeaponData = nullptr;
 	TArray<FGunRecoilData> RecoilData;
-	int RecoilLevel = 0;
 	float LastFireTime = -9999.0f;
 	// 발사/사용 주기 (1 / FireRate)
 	float FireInterval = 0.08f;
@@ -30,14 +33,39 @@ class VALORANT_API ABaseWeapon : public AActor
 	// 여분 탄약 (장전되어있는 탄창 내 탄약은 제외)
 	int SpareAmmo = 0;
 	
-	UPROPERTY()
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess = "true"))
 	TObjectPtr<USkeletalMeshComponent> WeaponMesh;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess = "true"))
+	TObjectPtr<UPickUpComponent> PickUpModule;
 
-	// UPROPERTY()
-	// TObjectPtr<UWidgetComponent> PickUpUIComponent;
+	UPROPERTY()
+	TObjectPtr<ABaseAgent> Agent;
 
-	// UPROPERTY()
-	// TObjectPtr<USphereComponent> PickUpComponent;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category=Input, meta=(AllowPrivateAccess = "true"))
+	UInputMappingContext* FireMappingContext;
+
+	/** Fire Input Action */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category=Input, meta=(AllowPrivateAccess = "true"))
+	UInputAction* StartFireAction;
+
+	/** EndFire Input Action */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category=Input, meta=(AllowPrivateAccess = "true"))
+	UInputAction* EndFireAction;
+
+	/** StartReload Input Action */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category=Input, meta=(AllowPrivateAccess = "true"))
+	UInputAction* StartReloadAction;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category=Input, meta=(AllowPrivateAccess = "true"))
+	UInputAction* DropAction;
+
+	bool bIsFiring = false;
+	int RecoilLevel = 0;
+	float TotalRecoilOffsetPitch = 0.0f;
+	float TotalRecoilOffsetYaw = 0.0f;
+	FTimerHandle AutoFireHandle;
+	FTimerHandle ReloadHandle;
 
 public:
 	// Sets default values for this component's properties
@@ -47,6 +75,31 @@ protected:
 	// Called when the game starts
 	virtual void BeginPlay() override;
 
-public:
 	virtual void Tick(float DeltaSeconds) override;
+
+	UFUNCTION()
+	void AttachWeapon(ABaseAgent* PickUpAgent);
+
+	UFUNCTION(BlueprintCallable, Category="Weapon")
+	void StartFire();
+	
+	UFUNCTION(BlueprintCallable, Category="Weapon")
+	void Fire();
+
+	UFUNCTION(BlueprintCallable, Category="Weapon")
+	void EndFire();
+
+	UFUNCTION(BlueprintCallable, Category="Weapon")
+	void StartReload();
+
+	UFUNCTION(BlueprintCallable, Category="Weapon")
+	void Reload();
+
+	UFUNCTION(BlueprintCallable, Category="Weapon")
+	void StopReload();
+
+	UFUNCTION(BlueprintCallable, Category="Weapon")
+	void Drop();
+
+public:
 };
