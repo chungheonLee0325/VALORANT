@@ -9,6 +9,8 @@
 
 class AValorantCharacter;
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnDropWeapon, AValorantCharacter*, Character);
+
 UCLASS(Blueprintable, BlueprintType, ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
 class VALORANT_API UValorantWeaponComponent : public USkeletalMeshComponent
 {
@@ -26,12 +28,8 @@ protected:
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 	
 public:
-	UPROPERTY(EditDefaultsOnly, Category=Weapon)
-	int WeaponID = 1;
-	
-	/** Projectile class to spawn */
-	UPROPERTY(EditDefaultsOnly, Category=Projectile)
-	TSubclassOf<class AValorantProjectile> ProjectileClass;
+	UPROPERTY(EditAnywhere, Category=Weapon)
+	int WeaponID = 13;
 
 	/** Sound to play each time we fire */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category=Gameplay)
@@ -40,10 +38,6 @@ public:
 	/** AnimMontage to play each time we fire */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Gameplay)
 	UAnimMontage* FireAnimation;
-
-	/** Gun muzzle's offset from the characters location */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category=Gameplay)
-	FVector MuzzleOffset;
 
 	/** MappingContext */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category=Input, meta=(AllowPrivateAccess = "true"))
@@ -60,7 +54,10 @@ public:
 	/** StartReload Input Action */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category=Input, meta=(AllowPrivateAccess = "true"))
 	const UInputAction* StartReloadAction;
-
+	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category=Input, meta=(AllowPrivateAccess = "true"))
+	const UInputAction* DropAction;
+	
 	/** Attaches the actor to a FirstPersonCharacter */
 	UFUNCTION(BlueprintCallable, Category="Weapon")
 	bool AttachWeapon(AValorantCharacter* TargetCharacter);
@@ -68,7 +65,7 @@ public:
 private:
 	/** The Character holding this weapon*/
 	AValorantCharacter* Character;
-
+	
 	FWeaponData* WeaponData = nullptr;
 	
 	TArray<FGunRecoilData> RecoilData;
@@ -109,4 +106,10 @@ public:
 	// 여분 탄약 (장전되어있는 탄창 내 탄약은 제외)
 	UPROPERTY(BlueprintReadOnly)
 	int SpareAmmo = 0;
+
+	UFUNCTION(BlueprintCallable, Category="Weapon")
+	void Drop();
+
+	UPROPERTY(BlueprintAssignable, Category = "Interaction")
+	FOnDropWeapon OnDropWeapon;
 };

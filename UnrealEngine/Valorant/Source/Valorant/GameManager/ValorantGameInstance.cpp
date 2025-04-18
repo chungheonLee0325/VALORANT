@@ -47,39 +47,39 @@ void UValorantGameInstance::Init()
 		}
 	}
 
-	// Game Effect Data
-	UDataTable* GEffectData = LoadObject<UDataTable>(
-		nullptr, TEXT("/Script/Engine.DataTable'/Game/BluePrint/DataTable/dt_Weapon.dt_Weapon'"));
-	if (nullptr != WeaponData)
-	{
-		TArray<FName> RowNames = GEffectData->GetRowNames();
-
-		for (const FName& RowName : RowNames)
-		{
-			FGameplayEffectData* Row = GEffectData->FindRow<FGameplayEffectData>(RowName, TEXT(""));
-			if (nullptr != Row)
-			{
-				dt_GEffect.Add(Row->EffectID, *Row);
-			}
-		}
-	}
-
-	// Ability Data
-	UDataTable* AbilityData = LoadObject<UDataTable>(
-		nullptr, TEXT("/Script/Engine.DataTable'/Game/BluePrint/DataTable/dt_Weapon.dt_Weapon'"));
-	if (nullptr != WeaponData)
-	{
-		TArray<FName> RowNames = AbilityData->GetRowNames();
-
-		for (const FName& RowName : RowNames)
-		{
-			FAbilityData* Row = AbilityData->FindRow<FAbilityData>(RowName, TEXT(""));
-			if (nullptr != Row)
-			{
-				dt_Ability.Add(Row->AbilityID, *Row);
-			}
-		}
-	}
+	// // Game Effect Data
+	// UDataTable* GEffectData = LoadObject<UDataTable>(
+	// 	nullptr, TEXT("/Script/Engine.DataTable'/Game/BluePrint/DataTable/dt_Weapon.dt_Weapon'"));
+	// if (nullptr != WeaponData)
+	// {
+	// 	TArray<FName> RowNames = GEffectData->GetRowNames();
+	//
+	// 	for (const FName& RowName : RowNames)
+	// 	{
+	// 		FGameplayEffectData* Row = GEffectData->FindRow<FGameplayEffectData>(RowName, TEXT(""));
+	// 		if (nullptr != Row)
+	// 		{
+	// 			dt_GEffect.Add(Row->EffectID, *Row);
+	// 		}
+	// 	}
+	// }
+	//
+	// // Ability Data
+	// UDataTable* AbilityData = LoadObject<UDataTable>(
+	// 	nullptr, TEXT("/Script/Engine.DataTable'/Game/BluePrint/DataTable/dt_Weapon.dt_Weapon'"));
+	// if (nullptr != WeaponData)
+	// {
+	// 	TArray<FName> RowNames = AbilityData->GetRowNames();
+	//
+	// 	for (const FName& RowName : RowNames)
+	// 	{
+	// 		FAbilityData* Row = AbilityData->FindRow<FAbilityData>(RowName, TEXT(""));
+	// 		if (nullptr != Row)
+	// 		{
+	// 			dt_Ability.Add(Row->AbilityID, *Row);
+	// 		}
+	// 	}
+	// }
 }
 
 FAgentData* UValorantGameInstance::GetAgentData(int AgentID)

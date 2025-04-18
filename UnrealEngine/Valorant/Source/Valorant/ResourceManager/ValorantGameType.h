@@ -75,6 +75,9 @@ enum class EWeaponType : uint8
 {
 	None UMETA(DisplayName = "None"),
 
+	// Melee
+	Melee UMETA(DisplayName = "Melee"),
+	
 	// Sidearms
 	Classic UMETA(DisplayName = "Classic"),
 	Shorty UMETA(DisplayName = "Shorty"),
@@ -98,6 +101,7 @@ enum class EWeaponType : uint8
 
 	// Snipers
 	Marshal UMETA(DisplayName = "Marshal"),
+	Outlaw UMETA(DisplayName = "Outlaw"),
 	Operator UMETA(DisplayName = "Operator"),
 
 	// Heavy Weapons
@@ -270,13 +274,13 @@ struct FWeaponData : public FTableRowBase
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Data")
 	float HeadshotMultiplier = 1.5f;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Data")
+	float LegshotMultiplier = 1.5f;
+
 	// 크레딧 비용
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Data")
 	int32 Cost = 0;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Data")
-	TArray<FGunRecoilData> GunRecoilMap;
-
+	
 	// 무기 대미지 이펙트
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Data")
 	TSubclassOf<UGameplayEffect> DamageEffectClass = nullptr;
@@ -284,6 +288,9 @@ struct FWeaponData : public FTableRowBase
 	// 무기 관련 태그들
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Data")
 	TArray<FGameplayTag> WeaponTags;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Data")
+	TArray<FGunRecoilData> GunRecoilMap;
 };
 
 // GameplayEffectData

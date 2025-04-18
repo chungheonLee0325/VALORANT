@@ -7,6 +7,7 @@
 #include "Logging/LogMacros.h"
 #include "ValorantCharacter.generated.h"
 
+class UValorantPickUpComponent;
 class UInputComponent;
 class USkeletalMeshComponent;
 class UCameraComponent;
@@ -44,7 +45,10 @@ class AValorantCharacter : public ACharacter
 	/** Look Input Action */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	class UInputAction* LookAction;
-	
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	const UInputAction* InteractionAction;
+
 public:
 	AValorantCharacter();
 
@@ -54,19 +58,33 @@ protected:
 
 	/** Called for looking input */
 	void Look(const FInputActionValue& Value);
+	
+	void Interaction();
 
 protected:
+	virtual void BeginPlay() override;
 	// APawn interface
 	virtual void NotifyControllerChanged() override;
+	
 	virtual void SetupPlayerInputComponent(UInputComponent* InputComponent) override;
 	// End of APawn interface
 
 public:
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
+	UCapsuleComponent* InteractionCapsule;
+	
 	/** Returns Mesh1P subobject **/
 	USkeletalMeshComponent* GetMesh1P() const { return Mesh1P; }
 	/** Returns FirstPersonCameraComponent subobject **/
 	UCameraComponent* GetFirstPersonCameraComponent() const { return FirstPersonCameraComponent; }
 
+	UPROPERTY()
+	UValorantPickUpComponent* FindPickUpComponent;
+	UFUNCTION()
+	void OnFindInteraction(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
+	UFUNCTION()
+	void OnInteractionCapsuleEndOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
+	
 	/*
 	 *	KBD: 현재 누적된 반동값 (뭔가를 발사 중이 아닌 경우 Tick에서 서서히 회복)
 	 */
