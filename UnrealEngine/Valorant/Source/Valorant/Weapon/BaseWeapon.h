@@ -19,7 +19,7 @@ class VALORANT_API ABaseWeapon : public AActor
 	GENERATED_BODY()
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Weapon", meta = (AllowPrivateAccess = "true"))
-	int WeaponID = 12;
+	int WeaponID = 13;
 
 	FWeaponData* WeaponData = nullptr;
 	TArray<FGunRecoilData> RecoilData;
