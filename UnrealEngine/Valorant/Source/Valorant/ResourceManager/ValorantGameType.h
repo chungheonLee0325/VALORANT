@@ -2,6 +2,7 @@
 
 #include <Engine/DataTable.h>
 #include "CoreMinimal.h"
+#include "GameplayAbilitySet.h"
 #include "Engine/DamageEvents.h"
 #include "UObject/ObjectMacros.h"
 #include "GameplayTagContainer.h"
@@ -238,6 +239,10 @@ struct FAgentData : public FTableRowBase
 	// 에이전트 특성 태그
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Data")
 	TArray<FGameplayTag> AgentTags;
+
+	// Agent Attribute Set
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Data")
+	TSubclassOf<UGameplayAbilitySet> AttributeSetClass;
 };
 
 USTRUCT(BlueprintType)
