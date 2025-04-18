@@ -7,6 +7,7 @@
 #include "Valorant/AbilitySystem/ValorantGameplayTags.h"
 #include "AgentBaseWidget.generated.h"
 
+class AAgentPlayerController;
 class UAgentAbilitySystemComponent;
 struct FGameplayTag;
 class UImage;
@@ -67,17 +68,12 @@ public:
 	void SetASC(UAgentAbilitySystemComponent* _asc) { ASC = _asc; }
 
 	UFUNCTION(BlueprintCallable)
-	void InitDisplayAgentData(const int32 health, const int32 armor, const int32 speed);
+	void BindToDelegatePC(AAgentPlayerController* pc);
 
 	UFUNCTION(BlueprintCallable)
-	void UpdateDisplayHealth(const int32 health);
+	void UpdateDisplayHealth(const float health);
 	UFUNCTION(BlueprintCallable)
-	void UpdateDisplayArmor(const int32 armor);
+	void UpdateDisplayArmor(const float armor);
 	UFUNCTION(BlueprintCallable)
-	void UpdateDisplaySpeed(const int32 speed);
-	
-	UFUNCTION()
-	void UpdateDisplaySkill(const FGameplayTag skillTag, const FName skillName);
-
-	
+	void UpdateDisplaySpeed(const float speed);
 };

@@ -13,10 +13,10 @@ GAMEPLAYATTRIBUTE_VALUE_GETTER(PropertyName) \
 GAMEPLAYATTRIBUTE_VALUE_SETTER(PropertyName) \
 GAMEPLAYATTRIBUTE_VALUE_INITTER(PropertyName)
 
-// DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnAgentHealthChanged, float, newHealth);
-// DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnAgentMaxHealthChanged, float, newMaxHealth);
-// DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnAgentArmorChanged, float, newArmor);
-// DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnAgentMoveSpeedChanged, float, newSpeed);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnHealthChanged, float, newHealth);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnMaxHealthChanged, float, newMaxHealth);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnArmorChanged, float, newArmor);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnMoveSpeedChanged, float, newSpeed);
 
 UCLASS()
 class VALORANT_API UBaseAttributeSet : public UAttributeSet
@@ -45,15 +45,36 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Agent", ReplicatedUsing = OnRep_MoveSpeed)
 	FGameplayAttributeData MoveSpeed;
 	PLAY_ATTRIBUTE_ACCESSORS(UBaseAttributeSet, MoveSpeed);
-	
-	// UPROPERTY(BlueprintAssignable)
-	// FOnAgentHealthChanged OnAgentHealthChanged;
-	// UPROPERTY(BlueprintAssignable)
-	// FOnAgentMaxHealthChanged OnAgentMaxHealthChanged;
-	// UPROPERTY(BlueprintAssignable)
-	// FOnAgentArmorChanged OnAgentArmorChanged;
-	// UPROPERTY(BlueprintAssignable)
-	// FOnAgentMoveSpeedChanged OnAgentMoveSpeedChanged;
+
+	//통합 델리게이트
+	UPROPERTY(BlueprintAssignable)
+	FOnHealthChanged OnHealthChanged;
+	UPROPERTY(BlueprintAssignable)
+	FOnMaxHealthChanged OnMaxHealthChanged;
+	UPROPERTY(BlueprintAssignable)
+	FOnArmorChanged OnArmorChanged;
+	UPROPERTY(BlueprintAssignable)
+	FOnMoveSpeedChanged OnMoveSpeedChanged;
+
+	//수동 변경 델리게이트
+	UPROPERTY(BlueprintAssignable)
+	FOnHealthChanged OnHealthChanged_Manual;
+	UPROPERTY(BlueprintAssignable)
+	FOnMaxHealthChanged OnMaxHealthChanged_Manual;
+	UPROPERTY(BlueprintAssignable)
+	FOnArmorChanged OnArmorChanged_Manual;
+	UPROPERTY(BlueprintAssignable)
+	FOnMoveSpeedChanged OnMoveSpeedChanged_Manual;
+
+	//이펙트 변경 델리게이트
+	UPROPERTY(BlueprintAssignable)
+	FOnHealthChanged OnHealthChanged_FromGE;
+	UPROPERTY(BlueprintAssignable)
+	FOnMaxHealthChanged OnMaxHealthChanged_FromGE;
+	UPROPERTY(BlueprintAssignable)
+	FOnArmorChanged OnArmorChanged_FromGE;
+	UPROPERTY(BlueprintAssignable)
+	FOnMoveSpeedChanged OnMoveSpeedChanged_FromGE;	
 	
 public:
 	virtual void PreAttributeChange(const FGameplayAttribute& Attribute, float& NewValue) override;
@@ -79,4 +100,6 @@ protected:
 
 	UFUNCTION()
 	virtual void OnRep_MoveSpeed(const FGameplayAttributeData& OldMoveSpeed);
+
+	virtual void ClampAttribute(const FGameplayAttribute& attribute, float& newValue) const;
 };

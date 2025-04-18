@@ -4,14 +4,33 @@
 #include "AgentPlayerController.h"
 
 #include "AgentPlayerState.h"
+#include "AbilitySystem/AgentAbilitySystemComponent.h"
+#include "AbilitySystem/Attributes/BaseAttributeSet.h"
 #include "Agent/BaseAgent.h"
 #include "Blueprint/UserWidget.h"
 #include "Valorant/GameManager/ValorantGameInstance.h"
 #include "Widget/AgentBaseWidget.h"
+
+void AAgentPlayerController::OnPossess(APawn* InPawn)
+{
+	Super::OnPossess(InPawn);
+	
+	InitCacheGAS();
+}
+
+void AAgentPlayerController::OnRep_PlayerState()
+{
+	Super::OnRep_PlayerState();
+
+	InitCacheGAS();
+}
+
 void AAgentPlayerController::BeginPlay()
 {
 	Super::BeginPlay();
-
+	// UE_LOG(LogTemp, Warning, TEXT("PC, BeginPlay → %s, LocalRole=%d, IsLocal=%d"),
+	// *GetName(), (int32)GetLocalRole(), IsLocalController());
+	
 	if (IsLocalController())
 	{
 		m_GameInstance = Cast<UValorantGameInstance>(GetGameInstance());
@@ -23,26 +42,70 @@ void AAgentPlayerController::BeginPlay()
 			return;
 		}
 		
+		player->BindToDelegatePC(this);
+		
 		if (AgentWidgetClass == nullptr)
 		{
 			UE_LOG(LogTemp,Error,TEXT("PlayerController에 AgentWidget 좀 넣어주세요."));
 			return;
 		}
-
-		UE_LOG(LogTemp, Warning,TEXT("pc비긴플레이에서 위젯생성"));
-		AgentWidget = CreateWidget<UAgentBaseWidget>(this, AgentWidgetClass);
-		if (AgentWidget)
-		{
-			AgentWidget->AddToViewport();
-		}
+		
+		// AgentWidget = CreateWidget<UAgentBaseWidget>(this, AgentWidgetClass);
+		// if (AgentWidget)
+		// {
+		// 	AgentWidget->AddToViewport();
+		// 	AgentWidget->SetASC(CachedASC);
+		// 	AgentWidget->BindToDelegatePC(this);
+		// }
 	}
 }
 
-void AAgentPlayerController::InitUI(const int32 health, const int32 armor, const int32 speed)
+void AAgentPlayerController::InitCacheGAS()
 {
-	ABaseAgent* player = Cast<ABaseAgent>(GetPawn());
-	AgentWidget->SetASC(player->GetASC());
-	AgentWidget->InitDisplayAgentData(health, armor, speed);
+	if (AAgentPlayerState* ps = GetPlayerState<AAgentPlayerState>())
+	{
+		CachedASC = Cast<UAgentAbilitySystemComponent>(ps->GetAbilitySystemComponent());
+		CachedABS = ps->GetBaseAttributeSet();
+	}
+
+	if (CachedASC == nullptr)
+	{
+		UE_LOG(LogTemp,Error,TEXT("PC, ASC 없음"));
+		return;
+	}
+	if (CachedABS == nullptr)
+	{
+		UE_LOG(LogTemp,Error,TEXT("PC, ABS 없음"));
+		return;
+	}
+	
+	CachedABS->OnHealthChanged.AddDynamic(this,&AAgentPlayerController::HandleHealthChanged);
+	CachedABS->OnMaxHealthChanged.AddDynamic(this,&AAgentPlayerController::HandleMaxHealthChanged);
+	CachedABS->OnArmorChanged.AddDynamic(this,&AAgentPlayerController::HandleArmorChanged);
+	CachedABS->OnMoveSpeedChanged.AddDynamic(this,&AAgentPlayerController::HandleMoveSpeedChanged);
 }
 
+void AAgentPlayerController::HandleHealthChanged(float NewHealth)
+{
+	//UE_LOG(LogTemp,Display,TEXT("PC, Health Changed"));
+	OnHealthChanged_PC.Broadcast(NewHealth);
+}
+
+void AAgentPlayerController::HandleMaxHealthChanged(float NewMaxHealth)
+{
+	//UE_LOG(LogTemp,Display,TEXT("PC, MaxHealth Changed"));
+	OnMaxHealthChanged_PC.Broadcast(NewMaxHealth);
+}
+
+void AAgentPlayerController::HandleArmorChanged(float NewArmor)
+{
+	//UE_LOG(LogTemp,Display,TEXT("PC, Armor Changed"));
+	OnArmorChanged_PC.Broadcast(NewArmor);
+}
+
+void AAgentPlayerController::HandleMoveSpeedChanged(float NewSpeed)
+{
+	//UE_LOG(LogTemp,Display,TEXT("PC, MoveSpeed Changed"));
+	OnMoveSpeedChanged_PC.Broadcast(NewSpeed);
+}
 

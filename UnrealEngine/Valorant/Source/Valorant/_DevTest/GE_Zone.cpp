@@ -42,6 +42,11 @@ void AGE_Zone::OnActorxBeginOverlap(UPrimitiveComponent* OverlappedComponent, AA
 	UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
 	Text->SetVisibility(true);
+
+	if (!HasAuthority())
+	{
+		return;
+	}
 	
 	FTimerHandle TimerHandle;
 	GetWorld()->GetTimerManager().SetTimer(TimerHandle, [this]()

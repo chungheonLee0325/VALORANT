@@ -50,8 +50,7 @@ ABaseAgent::ABaseAgent()
 	ThirdPersonMesh->SetCanEverAffectNavigation(false);
 
 	GetCharacterMovement()->GetNavAgentPropertiesRef().bCanCrouch = true;
-	GetCharacterMovement()->CrouchedHalfHeight = GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight();
-	//MovementComponent = CreateDefaultSubobject<UAgentInputComponent>("MovementComponent");
+	GetCharacterMovement()->SetCrouchedHalfHeight(GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight());
 }
 
 void ABaseAgent::AddCameraYawInput(float val)
@@ -66,6 +65,7 @@ void ABaseAgent::PossessedBy(AController* NewController)
 {
 	Super::PossessedBy(NewController);
 
+	//국룰 위치
 	InitAgentData();
 }
 
@@ -73,45 +73,23 @@ void ABaseAgent::PossessedBy(AController* NewController)
 void ABaseAgent::OnRep_PlayerState()
 {
 	Super::OnRep_PlayerState();
-	
+
+	//국룰 위치
 	InitAgentData();
-	InitUI();
 }
 
 void ABaseAgent::BeginPlay()
 {
 	Super::BeginPlay();
-
-	if (HasAuthority())
-	{
-		InitUI();
-	}
-	
 	if (IsLocallyControlled())
 	{
-		//UE_LOG(LogTemp, Warning, TEXT("내 캐릭터"));
-		// GetMesh()->SetOwnerNoSee(false);
-		// ThirdPersonMesh->SetOwnerNoSee(true);
-		
 		ThirdPersonMesh->SetVisibility(false);
 		GetMesh()->SetVisibility(true);
 	}
 	else
 	{
-		//UE_LOG(LogTemp, Warning, TEXT("다른 사람 캐릭터"));
 		ThirdPersonMesh->SetVisibility(true);
 		GetMesh()->SetVisibility(false);
-	}
-
-	AAgentPlayerState* PS = GetPlayerState<AAgentPlayerState>();
-	if (PS && PS->GetAbilitySystemComponent())
-	{
-		ASC = Cast<UAgentAbilitySystemComponent>(PS->GetAbilitySystemComponent());
-
-		ASC->GetGameplayAttributeValueChangeDelegate(UBaseAttributeSet::GetHealthAttribute()).AddUObject(this,&ABaseAgent::OnHealthChanged);
-		ASC->GetGameplayAttributeValueChangeDelegate(UBaseAttributeSet::GetMaxHealthAttribute()).AddUObject(this,&ABaseAgent::OnMaxHealthChanged);
-		ASC->GetGameplayAttributeValueChangeDelegate(UBaseAttributeSet::GetArmorAttribute()).AddUObject(this,&ABaseAgent::OnArmorChanged);
-		ASC->GetGameplayAttributeValueChangeDelegate(UBaseAttributeSet::GetMoveSpeedAttribute()).AddUObject(this,&ABaseAgent::OnMoveSpeedChanged);
 	}
 }
 
@@ -131,10 +109,10 @@ void ABaseAgent::InitAgentData()
 	
 	ASC = Cast<UAgentAbilitySystemComponent>(ps->GetAbilitySystemComponent());
 	ASC->InitAbilityActorInfo(ps, this);
-
-
+	
 	if (HasAuthority())
 	{
+		// 스킬 등록 및 값 초기화는 서버에서만 진행
 		ASC->InitializeByAgentData(m_AgentID);
 		
 		UE_LOG(LogTemp, Warning, TEXT("=== ASC 등록된 GA 목록 ==="));
@@ -143,14 +121,14 @@ void ABaseAgent::InitAgentData()
 			if (spec.Ability)
 			{
 				UE_LOG(LogTemp, Warning, TEXT("GA: %s"), *spec.Ability->GetName());
-
+		
 				FString TagString;
 				TArray<FGameplayTag> tags = spec.GetDynamicSpecSourceTags().GetGameplayTagArray();
 				for (const FGameplayTag& Tag : tags)
 				{
 					TagString += Tag.ToString() + TEXT(" ");
 				}
-
+		
 				UE_LOG(LogTemp, Warning, TEXT("태그 목록: %s"), *TagString);
 			}
 		}
@@ -168,37 +146,27 @@ void ABaseAgent::Crouch(bool bClientSimulation)
 	
 }
 
-void ABaseAgent::InitUI()
+void ABaseAgent::BindToDelegatePC(AAgentPlayerController* pc)
 {
-	if (IsLocallyControlled())
-	{
-		AAgentPlayerController* pc = Cast<AAgentPlayerController>(GetController<AAgentPlayerController>());
-		AAgentPlayerState* ps = GetPlayerState<AAgentPlayerState>();
-		if (pc && ps)
-		{
-			pc->InitUI(ps->GetHealth(),ps->GetArmor(),ps->GetMoveSpeed());
-		}
-	}
+	pc->OnHealthChanged_PC.AddDynamic(this, &ABaseAgent::UpdateHealth);
+	pc->OnMaxHealthChanged_PC.AddDynamic(this, &ABaseAgent::UpdateMaxHealth);
+	pc->OnArmorChanged_PC.AddDynamic(this, &ABaseAgent::UpdateArmor);
+	pc->OnMoveSpeedChanged_PC.AddDynamic(this, &ABaseAgent::UpdateMoveSpeed);
 }
 
-// 값 변경시 콜백함수
-void ABaseAgent::OnHealthChanged(const FOnAttributeChangeData& Data)
+void ABaseAgent::UpdateHealth(float NewHealth)
 {
-	float health = Data.NewValue;
 }
 
-void ABaseAgent::OnMaxHealthChanged(const FOnAttributeChangeData& Data)
+void ABaseAgent::UpdateMaxHealth(float NewMaxHealth)
 {
-	float maxhealth = Data.NewValue;
 }
 
-void ABaseAgent::OnArmorChanged(const FOnAttributeChangeData& Data)
+void ABaseAgent::UpdateArmor(float NewArmor)
 {
-	float armor = Data.NewValue;
 }
 
-void ABaseAgent::OnMoveSpeedChanged(const FOnAttributeChangeData& Data)
+void ABaseAgent::UpdateMoveSpeed(float NewSpeed)
 {
-	float movespeed = Data.NewValue;
-	GetCharacterMovement()->MaxWalkSpeed = movespeed;
+	GetCharacterMovement()->MaxWalkSpeed = NewSpeed;
 }

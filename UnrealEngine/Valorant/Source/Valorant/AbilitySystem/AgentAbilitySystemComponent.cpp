@@ -73,9 +73,9 @@ void UAgentAbilitySystemComponent::InitializeAttribute(const FAgentData* agentDa
 	SetNumericAttributeBase(UBaseAttributeSet::GetMaxArmorAttribute(), agentData->MaxArmor);
 	SetNumericAttributeBase(UBaseAttributeSet::GetMoveSpeedAttribute(), agentData->Speed);
 
-	UE_LOG(LogTemp, Warning, TEXT("Health: %f"), GetNumericAttribute(UBaseAttributeSet::GetHealthAttribute()));
-	UE_LOG(LogTemp, Warning, TEXT("Armor: %f"), GetNumericAttribute(UBaseAttributeSet::GetArmorAttribute()));
-	UE_LOG(LogTemp, Warning, TEXT("WalkSpeed: %f"), GetNumericAttribute(UBaseAttributeSet::GetMoveSpeedAttribute()));
+	// UE_LOG(LogTemp, Warning, TEXT("Health: %f"), GetNumericAttribute(UBaseAttributeSet::GetHealthAttribute()));
+	// UE_LOG(LogTemp, Warning, TEXT("Armor: %f"), GetNumericAttribute(UBaseAttributeSet::GetArmorAttribute()));
+	// UE_LOG(LogTemp, Warning, TEXT("WalkSpeed: %f"), GetNumericAttribute(UBaseAttributeSet::GetMoveSpeedAttribute()));
 }
 
 void UAgentAbilitySystemComponent::RegisterAgentAbilities(const FAgentData* agentData)
@@ -102,7 +102,7 @@ void UAgentAbilitySystemComponent::GiveAgentAbility(TSubclassOf<UGameplayAbility
 	UGameplayAbility* ga = abilityClass->GetDefaultObject<UGameplayAbility>();
 	FGameplayAbilitySpec spec(abilityClass, level);
 	//TODO: 스킬에 태그 늘어나면 변경
-	FGameplayTag skillTag = ga->AbilityTags.First();
+	FGameplayTag skillTag = ga->GetAssetTags().First();
 
 	if (!SkillTags.Contains(skillTag))
 	{
@@ -129,7 +129,7 @@ void UAgentAbilitySystemComponent::GiveAgentAbility(TSubclassOf<UGameplayAbility
 	}
 		
 	//GiveAbility 다음 tick에서 spec의 handle이 생성되므로, handle을 리턴값으로 받아줘야 정확함.
-	spec.GetDynamicSpecSourceTags().AddTag(ga->AbilityTags.First());
+	spec.GetDynamicSpecSourceTags().AddTag(ga->GetAssetTags().First());
 	FGameplayAbilitySpecHandle handle = GiveAbility(spec);
 	AgentSkillHandle.Add(handle);
 }
@@ -145,18 +145,3 @@ void UAgentAbilitySystemComponent::ClearAgentAbility(const FGameplayTagContainer
 	}
 }
 
-// void UAgentAbilitySystemComponent::HandleHealthChanged(const FOnAttributeChangeData& Data)
-// {
-// }
-//
-// void UAgentAbilitySystemComponent::HandleMaxHealthChanged(const FOnAttributeChangeData& Data)
-// {
-// }
-//
-// void UAgentAbilitySystemComponent::HandleArmorChanged(const FOnAttributeChangeData& Data)
-// {
-// }
-//
-// void UAgentAbilitySystemComponent::HandleMoveSpeedChanged(const FOnAttributeChangeData& Data)
-// {
-// }

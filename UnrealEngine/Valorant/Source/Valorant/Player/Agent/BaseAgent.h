@@ -4,6 +4,7 @@
 #include "GameFramework/Character.h"
 #include "AbilitySystemInterface.h"
 #include "GameplayEffectTypes.h"
+#include "Player/AgentPlayerController.h"
 #include "Valorant/ResourceManager/ValorantGameType.h"
 #include "BaseAgent.generated.h"
 
@@ -29,6 +30,9 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void SetAgentID(const int32 id) { m_AgentID = id; }
 
+	UFUNCTION(BlueprintCallable)
+	void BindToDelegatePC(AAgentPlayerController* pc);
+
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
 	class UCameraComponent* Camera;
 
@@ -37,7 +41,6 @@ public:
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
 	USkeletalMeshComponent* ThirdPersonMesh;
-
 
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
@@ -56,8 +59,6 @@ protected:
 public:
 	UFUNCTION(BlueprintCallable)
 	void AddCameraYawInput(float val);
-
-
 	
 protected:
 	virtual void PossessedBy(AController* NewController) override;
@@ -71,11 +72,12 @@ protected:
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 	virtual void Crouch(bool bClientSimulation = false) override;
 	
-private:
-	void InitUI();
-	
-	virtual void OnHealthChanged(const FOnAttributeChangeData& Data);
-	virtual void OnMaxHealthChanged(const FOnAttributeChangeData& Data);
-	virtual void OnArmorChanged(const FOnAttributeChangeData& Data);
-	virtual void OnMoveSpeedChanged(const FOnAttributeChangeData& Data);
+	UFUNCTION()
+	void UpdateHealth(float NewHealth);
+	UFUNCTION()
+	void UpdateMaxHealth(float NewMaxHealth);
+	UFUNCTION()
+	void UpdateArmor(float NewArmor);
+	UFUNCTION()
+	void UpdateMoveSpeed(float NewSpeed);
 };

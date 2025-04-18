@@ -48,9 +48,6 @@ private:
 	UPROPERTY(Replicated)
 	int32 m_AgentID;
 
-	UPROPERTY(Replicated)
-	FAgentData m_AgentData;
-
 	//TODO: 데이터를 이렇게 담는 게 맞나?
 	UPROPERTY(Replicated)
 	FString AgentName = "";
@@ -78,9 +75,4 @@ protected:
 	void GiveAgentAbility(TSubclassOf<UGameplayAbility> abilityClass, int32 level);
 	void ClearAgentAbilities();
 	void ClearAgentAbility(const FGameplayTagContainer& tags);
-
-	// void HandleHealthChanged(const FOnAttributeChangeData& Data);
-	// void HandleMaxHealthChanged(const FOnAttributeChangeData& Data);
-	// void HandleArmorChanged(const FOnAttributeChangeData& Data);
-	// void HandleMoveSpeedChanged(const FOnAttributeChangeData& Data);
 };

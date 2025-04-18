@@ -2,6 +2,8 @@
 
 
 #include "BaseAttributeSet.h"
+
+#include "GameplayEffectExtension.h"
 #include "Valorant/Player/Agent/BaseAgent.h"
 #include "Net/UnrealNetwork.h"
 
@@ -14,6 +16,8 @@ UBaseAttributeSet::UBaseAttributeSet()
 void UBaseAttributeSet::PreAttributeChange(const FGameplayAttribute& Attribute, float& NewValue)
 {
 	Super::PreAttributeChange(Attribute, NewValue);
+	
+	ClampAttribute(Attribute,NewValue);
 }
 
 // 호출시점: SetBaseValue(), SetCurrentValue() 등 수동으로 값이 바뀔 시, 속성이 변경된 직후
@@ -22,22 +26,26 @@ void UBaseAttributeSet::PostAttributeChange(const FGameplayAttribute& Attribute,
 {
 	Super::PostAttributeChange(Attribute, OldValue, NewValue);
 	
-	// if (Attribute == GetHealthAttribute())
-	// {
-	// 	OnAgentHealthChanged.Broadcast(NewValue);
-	// }
-	// if (Attribute == GetMaxHealthAttribute())
-	// {
-	// 	OnAgentMaxHealthChanged.Broadcast(NewValue);
-	// }
-	// if (Attribute == GetArmorAttribute())
-	// {
-	// 	OnAgentArmorChanged.Broadcast(NewValue);
-	// }
-	// if (Attribute == GetMoveSpeedAttribute())
-	// {
-	// 	OnAgentMoveSpeedChanged.Broadcast(NewValue);
-	// }
+	if (Attribute == GetHealthAttribute())
+	{
+		OnHealthChanged.Broadcast(NewValue);
+		OnHealthChanged_Manual.Broadcast(NewValue);
+	}
+	if (Attribute == GetMaxHealthAttribute())
+	{
+		OnMaxHealthChanged.Broadcast(NewValue);
+		OnMaxHealthChanged_Manual.Broadcast(NewValue);
+	}
+	if (Attribute == GetArmorAttribute())
+	{
+		OnArmorChanged.Broadcast(NewValue);
+		OnArmorChanged_Manual.Broadcast(NewValue);
+	}
+	if (Attribute == GetMoveSpeedAttribute())
+	{
+		OnMoveSpeedChanged.Broadcast(NewValue);
+		OnMoveSpeedChanged_Manual.Broadcast(NewValue);
+	}
 }
 
 bool UBaseAttributeSet::PreGameplayEffectExecute(struct FGameplayEffectModCallbackData& Data)
@@ -45,11 +53,37 @@ bool UBaseAttributeSet::PreGameplayEffectExecute(struct FGameplayEffectModCallba
 	return Super::PreGameplayEffectExecute(Data);
 }
 
+
 // 호출시점: GE로 인해 속성이 바뀐 직후
 // 용도: 이펙트, 애니메이션 등의 트리거 / 사망 처리 / 태그 조건에 따른 추가 처리
 void UBaseAttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCallbackData& Data)
 {
 	Super::PostGameplayEffectExecute(Data);
+
+	if (Data.EvaluatedData.Attribute == GetHealthAttribute())
+	{
+		int32 newValue = GetHealth();
+		OnHealthChanged.Broadcast(newValue);
+		OnHealthChanged_FromGE.Broadcast(newValue);
+	}
+	else if (Data.EvaluatedData.Attribute == GetMaxHealthAttribute())
+	{
+		int32 newValue = GetMaxHealth();
+		OnMaxHealthChanged.Broadcast(newValue);
+		OnMaxHealthChanged_FromGE.Broadcast(newValue);
+	}
+	else if (Data.EvaluatedData.Attribute == GetArmorAttribute())
+	{
+		int32 newValue = GetArmor();
+		OnArmorChanged.Broadcast(newValue);
+		OnArmorChanged_FromGE.Broadcast(newValue);
+	}
+	else if (Data.EvaluatedData.Attribute == GetMoveSpeedAttribute())
+	{
+		int32 newValue = GetMoveSpeed();
+		OnMoveSpeedChanged.Broadcast(newValue);
+		OnMoveSpeedChanged_FromGE.Broadcast(newValue);
+	}
 }
 
 void UBaseAttributeSet::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -96,4 +130,16 @@ void UBaseAttributeSet::OnRep_Armor(const FGameplayAttributeData& OldArmor)
 void UBaseAttributeSet::OnRep_MoveSpeed(const FGameplayAttributeData& OldMoveSpeed)
 {
 	GAMEPLAYATTRIBUTE_REPNOTIFY(UBaseAttributeSet, MoveSpeed, OldMoveSpeed);
+}
+
+void UBaseAttributeSet::ClampAttribute(const FGameplayAttribute& attribute, float& newValue) const
+{
+	if (attribute == GetHealthAttribute())
+	{
+		newValue = FMath::Clamp(newValue, 0.0f, GetMaxHealth());
+	}
+	else if (attribute == GetArmorAttribute())
+	{
+		newValue = FMath::Clamp(newValue, 0.0f, GetMaxArmor());
+	}
 }
