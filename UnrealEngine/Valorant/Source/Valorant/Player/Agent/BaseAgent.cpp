@@ -83,14 +83,18 @@ void ABaseAgent::PossessedBy(AController* NewController)
 void ABaseAgent::OnRep_PlayerState()
 {
 	Super::OnRep_PlayerState();
-
-	//국룰 위치
-	InitAgentData();
-
-	AAgentPlayerController* pc = Cast<AAgentPlayerController>(GetController());
-	if (pc)
+	
+	if (IsLocallyControlled())
 	{
-		BindToDelegatePC(pc);
+		//국룰 위치
+		InitAgentData();
+		
+		AAgentPlayerController* pc = Cast<AAgentPlayerController>(GetController());
+		if (pc)
+		{
+			// UE_LOG(LogTemp, Warning, TEXT("클라, 델리게이트 바인딩"));
+			BindToDelegatePC(pc);
+		}
 	}
 }
 
@@ -149,7 +153,6 @@ void ABaseAgent::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent
 void ABaseAgent::Crouch(bool bClientSimulation)
 {
 	Super::Crouch(bClientSimulation);
-
 }
 
 void ABaseAgent::BindToDelegatePC(AAgentPlayerController* pc)

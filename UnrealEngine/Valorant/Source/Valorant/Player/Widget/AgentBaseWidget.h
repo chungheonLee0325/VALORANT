@@ -21,7 +21,6 @@ class VALORANT_API UAgentBaseWidget : public UUserWidget
 	GENERATED_BODY()
 
 public:
-	
 	UPROPERTY(meta=(BindWidget))
 	UTextBlock* txt_AgentName;
 
@@ -68,7 +67,7 @@ public:
 	void SetASC(UAgentAbilitySystemComponent* _asc) { ASC = _asc; }
 
 	UFUNCTION(BlueprintCallable)
-	void BindToDelegatePC(AAgentPlayerController* pc);
+	void BindToDelegatePC(UAgentAbilitySystemComponent* _asc, AAgentPlayerController* pc);
 
 	UFUNCTION(BlueprintCallable)
 	void UpdateDisplayHealth(const float health);

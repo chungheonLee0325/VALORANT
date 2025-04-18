@@ -7,15 +7,21 @@
 #include "AbilitySystem/AgentAbilitySystemComponent.h"
 #include "AbilitySystem/Attributes/BaseAttributeSet.h"
 #include "Agent/BaseAgent.h"
-#include "Blueprint/UserWidget.h"
 #include "Valorant/GameManager/ValorantGameInstance.h"
 #include "Widget/AgentBaseWidget.h"
+
 
 void AAgentPlayerController::OnPossess(APawn* InPawn)
 {
 	Super::OnPossess(InPawn);
 	
 	InitCacheGAS();
+
+	if (IsLocalController())
+	{
+		m_GameInstance = Cast<UValorantGameInstance>(GetGameInstance());
+		CreateAgentWidget();
+	}
 }
 
 void AAgentPlayerController::OnRep_PlayerState()
@@ -23,6 +29,12 @@ void AAgentPlayerController::OnRep_PlayerState()
 	Super::OnRep_PlayerState();
 
 	InitCacheGAS();
+
+	if (IsLocalController())
+	{
+		m_GameInstance = Cast<UValorantGameInstance>(GetGameInstance());
+		CreateAgentWidget();
+	}
 }
 
 void AAgentPlayerController::BeginPlay()
@@ -30,25 +42,6 @@ void AAgentPlayerController::BeginPlay()
 	Super::BeginPlay();
 	// UE_LOG(LogTemp, Warning, TEXT("PC, BeginPlay → %s, LocalRole=%d, IsLocal=%d"),
 	// *GetName(), (int32)GetLocalRole(), IsLocalController());
-	
-	if (IsLocalController())
-	{
-		m_GameInstance = Cast<UValorantGameInstance>(GetGameInstance());
-		
-		if (AgentWidgetClass == nullptr)
-		{
-			UE_LOG(LogTemp,Error,TEXT("PlayerController에 AgentWidget 좀 넣어주세요."));
-			return;
-		}
-		
-		// AgentWidget = CreateWidget<UAgentBaseWidget>(this, AgentWidgetClass);
-		// if (AgentWidget)
-		// {
-		// 	AgentWidget->AddToViewport();
-		// 	AgentWidget->SetASC(CachedASC);
-		// 	AgentWidget->BindToDelegatePC(this);
-		// }
-	}
 }
 
 void AAgentPlayerController::InitCacheGAS()
@@ -74,6 +67,20 @@ void AAgentPlayerController::InitCacheGAS()
 	CachedABS->OnMaxHealthChanged.AddDynamic(this,&AAgentPlayerController::HandleMaxHealthChanged);
 	CachedABS->OnArmorChanged.AddDynamic(this,&AAgentPlayerController::HandleArmorChanged);
 	CachedABS->OnMoveSpeedChanged.AddDynamic(this,&AAgentPlayerController::HandleMoveSpeedChanged);
+}
+
+void AAgentPlayerController::CreateAgentWidget()
+{
+	if (AgentWidgetClass == nullptr)
+	{
+		UE_LOG(LogTemp,Error,TEXT("PlayerController에 AgentWidget 좀 넣어주세요."));
+		return;
+	}
+	
+	AgentWidget = CreateWidget<UAgentBaseWidget>(this, AgentWidgetClass);
+	
+	AgentWidget->AddToViewport();
+	AgentWidget->BindToDelegatePC(CachedASC,this);
 }
 
 void AAgentPlayerController::HandleHealthChanged(float NewHealth)

@@ -45,18 +45,20 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	UBaseAttributeSet* CachedABS = nullptr ;
 	
-	UPROPERTY(BlueprintReadWrite)
-	UAgentBaseWidget* AgentWidget = nullptr;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UAgentBaseWidget* AgentWidget;
 
 protected:
 	virtual void OnPossess(APawn* InPawn) override;
 	virtual void OnRep_PlayerState() override;
 	virtual void BeginPlay() override;
-	
-	
+
 private:
 	UFUNCTION()
 	void InitCacheGAS();
+
+	UFUNCTION()
+	void CreateAgentWidget();
 	
 	UFUNCTION()
 	void HandleHealthChanged(float NewHealth);

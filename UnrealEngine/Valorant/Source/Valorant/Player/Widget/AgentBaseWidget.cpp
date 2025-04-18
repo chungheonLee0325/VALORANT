@@ -3,25 +3,23 @@
 
 #include "AgentBaseWidget.h"
 
-#include "GameplayTagContainer.h"
-#include "Components/Image.h"
 #include "Components/TextBlock.h"
 #include "Player/AgentPlayerController.h"
 #include "Valorant/AbilitySystem/AgentAbilitySystemComponent.h"
-#include "Valorant/Player/AgentPlayerState.h"
 
-void UAgentBaseWidget::BindToDelegatePC(AAgentPlayerController* pc)
+void UAgentBaseWidget::BindToDelegatePC(UAgentAbilitySystemComponent* _asc, AAgentPlayerController* pc)
 {
 	pc->OnHealthChanged_PC.AddDynamic(this, &UAgentBaseWidget::UpdateDisplayHealth);
 	pc->OnArmorChanged_PC.AddDynamic(this, &UAgentBaseWidget::UpdateDisplayArmor);
 	pc->OnMoveSpeedChanged_PC.AddDynamic(this, &UAgentBaseWidget::UpdateDisplaySpeed);
 
-	if (ASC == nullptr)
+	if (_asc == nullptr)
 	{
 		UE_LOG(LogTemp, Error, TEXT("AgentWidget, ASC NULL"));
 		return;
 	}
-
+	ASC = _asc;
+	
 	txt_AgentName->SetText(FText::FromString(ASC->GetAgentName()));
 	
 	txt_C->SetText(FText::FromString(ASC->GetSkillCName()));
