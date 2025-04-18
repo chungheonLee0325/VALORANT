@@ -34,15 +34,6 @@ void AAgentPlayerController::BeginPlay()
 	if (IsLocalController())
 	{
 		m_GameInstance = Cast<UValorantGameInstance>(GetGameInstance());
-
-		ABaseAgent* player = Cast<ABaseAgent>(GetPawn());
-		if (player == nullptr)
-		{
-			UE_LOG(LogTemp,Error,TEXT("게임모드 Default Pawn을 BaseAgent로 설정해주세요."));
-			return;
-		}
-		
-		player->BindToDelegatePC(this);
 		
 		if (AgentWidgetClass == nullptr)
 		{

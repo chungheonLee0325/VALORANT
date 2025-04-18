@@ -34,7 +34,7 @@ void AGE_Zone::BeginPlay()
 	if (EffectClass)
 	{
 		NameText->SetText(FText::FromString(EffectClass->GetName()));
-		UE_LOG(LogTemp,Warning,TEXT("%s"),*EffectClass->GetName());
+		//UE_LOG(LogTemp,Warning,TEXT("%s"),*EffectClass->GetName());
 	}
 }
 
@@ -78,7 +78,7 @@ void AGE_Zone::OnActorxBeginOverlap(UPrimitiveComponent* OverlappedComponent, AA
 	FGameplayEffectSpecHandle Spec = asc->MakeOutgoingSpec(EffectClass, 1.f, Context);
 	if (Spec.IsValid())
 	{
-		UE_LOG(LogTemp, Warning, TEXT("Effect적용"));
+		//UE_LOG(LogTemp, Warning, TEXT("Effect적용"));
 		asc->ApplyGameplayEffectSpecToSelf(*Spec.Data.Get());
 	}
 }

@@ -26,13 +26,14 @@ ABaseAgent::ABaseAgent()
 	SpringArm = CreateDefaultSubobject<USpringArmComponent>("Spring Arm");
 	SpringArm->SetupAttachment(GetRootComponent());
 	SpringArm->SetRelativeLocation(FVector(-10, 0, 60));
+	SpringArm->TargetArmLength = 0;
 	
 	Camera = CreateDefaultSubobject<UCameraComponent>("Camera");
 	Camera->SetupAttachment(SpringArm);
 	
 	GetMesh()->SetupAttachment(SpringArm);
 	GetMesh()->SetRelativeScale3D(FVector(.34f));
-	GetMesh()->SetRelativeLocation(FVector(-30,0,-90));
+	GetMesh()->SetRelativeLocation(FVector(10,0,-155));
 	
 	ThirdPersonMesh = CreateDefaultSubobject<USkeletalMeshComponent>("ThirdPersonMesh");
 	ThirdPersonMesh->SetupAttachment(GetRootComponent());
@@ -51,6 +52,9 @@ ABaseAgent::ABaseAgent()
 
 	GetCharacterMovement()->GetNavAgentPropertiesRef().bCanCrouch = true;
 	GetCharacterMovement()->SetCrouchedHalfHeight(GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight());
+
+	ThirdPersonMesh->SetOwnerNoSee(true);
+	GetMesh()->SetOnlyOwnerSee(true);
 }
 
 void ABaseAgent::AddCameraYawInput(float val)
@@ -67,6 +71,12 @@ void ABaseAgent::PossessedBy(AController* NewController)
 
 	//국룰 위치
 	InitAgentData();
+	
+	AAgentPlayerController* pc = Cast<AAgentPlayerController>(NewController);
+	if (pc)
+	{
+		BindToDelegatePC(pc);
+	}
 }
 
 // 클라이언트 전용. 서버로부터 PlayerState를 최초로 받을 때 호출됨
@@ -76,21 +86,17 @@ void ABaseAgent::OnRep_PlayerState()
 
 	//국룰 위치
 	InitAgentData();
+
+	AAgentPlayerController* pc = Cast<AAgentPlayerController>(GetController());
+	if (pc)
+	{
+		BindToDelegatePC(pc);
+	}
 }
 
 void ABaseAgent::BeginPlay()
 {
 	Super::BeginPlay();
-	if (IsLocallyControlled())
-	{
-		ThirdPersonMesh->SetVisibility(false);
-		GetMesh()->SetVisibility(true);
-	}
-	else
-	{
-		ThirdPersonMesh->SetVisibility(true);
-		GetMesh()->SetVisibility(false);
-	}
 }
 
 void ABaseAgent::Tick(float DeltaTime)
@@ -115,23 +121,23 @@ void ABaseAgent::InitAgentData()
 		// 스킬 등록 및 값 초기화는 서버에서만 진행
 		ASC->InitializeByAgentData(m_AgentID);
 		
-		UE_LOG(LogTemp, Warning, TEXT("=== ASC 등록된 GA 목록 ==="));
-		for (const FGameplayAbilitySpec& spec : ASC->GetActivatableAbilities())
-		{
-			if (spec.Ability)
-			{
-				UE_LOG(LogTemp, Warning, TEXT("GA: %s"), *spec.Ability->GetName());
-		
-				FString TagString;
-				TArray<FGameplayTag> tags = spec.GetDynamicSpecSourceTags().GetGameplayTagArray();
-				for (const FGameplayTag& Tag : tags)
-				{
-					TagString += Tag.ToString() + TEXT(" ");
-				}
-		
-				UE_LOG(LogTemp, Warning, TEXT("태그 목록: %s"), *TagString);
-			}
-		}
+		// UE_LOG(LogTemp, Warning, TEXT("=== ASC 등록된 GA 목록 ==="));
+		// for (const FGameplayAbilitySpec& spec : ASC->GetActivatableAbilities())
+		// {
+		// 	if (spec.Ability)
+		// 	{
+		// 		UE_LOG(LogTemp, Warning, TEXT("GA: %s"), *spec.Ability->GetName());
+		//
+		// 		FString TagString;
+		// 		TArray<FGameplayTag> tags = spec.GetDynamicSpecSourceTags().GetGameplayTagArray();
+		// 		for (const FGameplayTag& Tag : tags)
+		// 		{
+		// 			TagString += Tag.ToString() + TEXT(" ");
+		// 		}
+		//
+		// 		UE_LOG(LogTemp, Warning, TEXT("태그 목록: %s"), *TagString);
+		// 	}
+		// }
 	}
 }
 
@@ -168,5 +174,5 @@ void ABaseAgent::UpdateArmor(float NewArmor)
 
 void ABaseAgent::UpdateMoveSpeed(float NewSpeed)
 {
-	//GetCharacterMovement()->MaxWalkSpeed = NewSpeed;
+	GetCharacterMovement()->MaxWalkSpeed = NewSpeed;
 }
