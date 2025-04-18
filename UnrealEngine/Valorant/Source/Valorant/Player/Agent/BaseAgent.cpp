@@ -143,7 +143,7 @@ void ABaseAgent::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent
 void ABaseAgent::Crouch(bool bClientSimulation)
 {
 	Super::Crouch(bClientSimulation);
-	
+
 }
 
 void ABaseAgent::BindToDelegatePC(AAgentPlayerController* pc)
@@ -168,5 +168,5 @@ void ABaseAgent::UpdateArmor(float NewArmor)
 
 void ABaseAgent::UpdateMoveSpeed(float NewSpeed)
 {
-	GetCharacterMovement()->MaxWalkSpeed = NewSpeed;
+	//GetCharacterMovement()->MaxWalkSpeed = NewSpeed;
 }
