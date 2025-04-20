@@ -4,7 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Engine/GameInstance.h"
-#include "Valorant/ResourceManager/ValorantGameType.h"
+#include "ResourceManager/ValorantGameType.h"
 #include "ValorantGameInstance.generated.h"
 
 /**
@@ -16,6 +16,8 @@ class VALORANT_API UValorantGameInstance : public UGameInstance
 	GENERATED_BODY()
 
 public:
+	TSharedPtr<class IOnlineSession, ESPMode::ThreadSafe> OnlineSessionInterface;
+	
 	FAgentData* GetAgentData(int AgentID);
 	FWeaponData* GetWeaponData(int WeaponID);
 	FGameplayEffectData* GetGEffectData(int GEffectID);

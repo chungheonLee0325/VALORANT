@@ -3,8 +3,10 @@
 
 #include "ValorantGameInstance.h"
 
-#include "Valorant/AbilitySystem/ValorantGameplayTags.h"
-#include "Valorant/ResourceManager/ValorantGameType.h"
+#include "OnlineSubsystem.h"
+#include "OnlineSubsystemUtils.h"
+#include "AbilitySystem/ValorantGameplayTags.h"
+#include "ResourceManager/ValorantGameType.h"
 
 void UValorantGameInstance::Init()
 {
@@ -80,6 +82,21 @@ void UValorantGameInstance::Init()
 	// 		}
 	// 	}
 	// }
+
+	IOnlineSubsystem* OnlineSubsystem = Online::GetSubsystem(GetWorld());
+	if (OnlineSubsystem)
+	{
+		OnlineSessionInterface = OnlineSubsystem->GetSessionInterface();
+		if (GEngine)
+		{
+			GEngine->AddOnScreenDebugMessage(
+				-1,
+				15.f,
+				FColor::Red,
+				FString::Printf(TEXT("Subsystem %s"), *OnlineSubsystem->GetSubsystemName().ToString())
+			);
+		}
+	}
 }
 
 FAgentData* UValorantGameInstance::GetAgentData(int AgentID)
