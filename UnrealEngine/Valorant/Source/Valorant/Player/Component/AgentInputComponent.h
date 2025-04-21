@@ -1,0 +1,98 @@
+// Fill out your copyright notice in the Description page of Project Settings.
+
+#pragma once
+
+#include "CoreMinimal.h"
+#include "InputActionValue.h"
+#include "Components/ActorComponent.h"
+#include "AgentInputComponent.generated.h"
+
+class ABaseAgent;
+class UInputMappingContext;
+class UInputAction;
+class UEnhancedInputComponent;
+class UEnhancedInputLocalPlayerSubsystem;
+
+
+UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
+class VALORANT_API UAgentInputComponent : public UActorComponent
+{
+	GENERATED_BODY()
+
+public:
+	UAgentInputComponent();
+
+	// Input Setting
+	/** MappingContext */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	UInputMappingContext* DefaultMappingContext;
+
+	/** Move Input Action */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	UInputAction* MoveAction;
+
+	/** Look Input Action */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	UInputAction* LookAction;
+
+	/** Attack_C Input Action */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	UInputAction* LeftMouseAction;
+
+	/** Attack_S Input Action */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	UInputAction* RightMouseAction;
+
+	/** Jump Input Action */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	UInputAction* JumpAction;
+
+	/** Sprint Input Action */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	UInputAction* ShiftAction;
+
+	/** Attack_S Input Action */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	UInputAction* ReloadAction;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	UInputAction* QAction;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	UInputAction* EAction;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	UInputAction* CAction;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	UInputAction* XAction;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	UInputAction* MapAction;
+	
+	/** Switch Weapon Input Action */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	UInputAction* SwitchWeaponAction;
+
+private:
+	UPROPERTY()
+	UEnhancedInputLocalPlayerSubsystem* InputSubsystem = nullptr;
+
+	UPROPERTY(VisibleAnywhere)
+	ABaseAgent* Agent = nullptr;
+	
+protected:
+	virtual void BeginPlay() override;
+
+public:
+	virtual void TickComponent(float DeltaTime, ELevelTick TickType,
+	                           FActorComponentTickFunction* ThisTickFunction) override;
+
+	void BindInput(UInputComponent* InputComponent);
+	
+	void OnMove(const FInputActionValue& value);
+	void OnLook(const FInputActionValue& value);
+	void JumpStart(const FInputActionValue& InputActionValue);
+	void JumpComplete(const FInputActionValue& InputActionValue);
+	void CrouchStart(const FInputActionValue& InputActionValue);
+	void CrouchComplete(const FInputActionValue& InputActionValue);
+
+	
+};
