@@ -4,7 +4,8 @@
 
 #include "CoreMinimal.h"
 #include "Engine/GameInstance.h"
-#include "Valorant/ResourceManager/ValorantGameType.h"
+#include "Interfaces/OnlineSessionInterface.h"
+#include "ResourceManager/ValorantGameType.h"
 #include "ValorantGameInstance.generated.h"
 
 /**
@@ -16,14 +17,28 @@ class VALORANT_API UValorantGameInstance : public UGameInstance
 	GENERATED_BODY()
 
 public:
+	TSharedPtr<class IOnlineSession, ESPMode::ThreadSafe> SessionInterface;
+	TSharedPtr<FOnlineSessionSearch> SessionSearch;
+
+protected:
+	virtual void Init() override;
+	virtual void Shutdown() override;
+	UFUNCTION(BlueprintCallable, meta=(AllowPrivateAccess = "true"))
+	void CreateSession();
+	void OnCreateSessionComplete(FName SessionName, bool bWasSuccessful);
+	UFUNCTION(BlueprintCallable, meta=(AllowPrivateAccess = "true"))
+	void FindSessions();
+	void OnFindSessionsComplete(bool bWasSuccessful);
+	void DestroySession(FName SessionName);
+	void OnDestroySessionComplete(FName SessionName, bool bWasSuccessful);
+	void OnJoinSessionComplete(FName Name, EOnJoinSessionCompleteResult::Type Arg);
+
+public:
 	FAgentData* GetAgentData(int AgentID);
 	FWeaponData* GetWeaponData(int WeaponID);
 	FGameplayEffectData* GetGEffectData(int GEffectID);
 	FAbilityData* GetAbilityData(int AbilityID);
-
-protected:
-	virtual void Init() override;
-
+	
 private:
 	UPROPERTY()
 	TMap<int32, FAgentData> dt_Agent;

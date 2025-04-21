@@ -22,7 +22,10 @@ public class Valorant : ModuleRules
 			"GameplayAbilities", 
 			"GameplayTags", 
 			"GameplayTasks", 
-			"UMG"
+			"UMG",
+			"OnlineSubsystem",
+			"OnlineSubsystemSteam",
+			"OnlineSubsystemUtils"
 		});
 	}
 }
