@@ -28,10 +28,6 @@ class VALORANT_API ABaseWeapon : public AActor
 	float FireInterval = 0.08f;
 	// 탄창 크기
 	int MagazineSize = 0;
-	// 탄창 내 남은 탄약
-	int MagazineAmmo = 0;
-	// 여분 탄약 (장전되어있는 탄창 내 탄약은 제외)
-	int SpareAmmo = 0;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess = "true"))
 	TObjectPtr<USkeletalMeshComponent> WeaponMesh;
@@ -68,6 +64,13 @@ class VALORANT_API ABaseWeapon : public AActor
 	FTimerHandle ReloadHandle;
 
 public:
+	// 탄창 내 남은 탄약
+	UPROPERTY(BlueprintReadOnly)
+	int MagazineAmmo = 0;
+	// 여분 탄약 (장전되어있는 탄창 내 탄약은 제외)
+	UPROPERTY(BlueprintReadOnly)
+	int SpareAmmo = 0;
+	
 	// Sets default values for this component's properties
 	ABaseWeapon();
 
