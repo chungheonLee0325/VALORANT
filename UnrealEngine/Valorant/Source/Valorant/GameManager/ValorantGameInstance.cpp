@@ -111,19 +111,46 @@ void UValorantGameInstance::Shutdown()
 
 void UValorantGameInstance::CreateSession()
 {
-	if (SessionInterface.IsValid())
+	if (false == SessionInterface.IsValid())
 	{
-		FOnlineSessionSettings SessionSettings;
-		SessionSettings.NumPublicConnections = 2;
-		SessionSettings.bIsLANMatch = false;
-		SessionSettings.bShouldAdvertise = true;
-		SessionSettings.bUsesPresence = true;
-		SessionSettings.bUseLobbiesIfAvailable = true;
-		SessionSettings.bAllowJoinInProgress = true;
-		SessionSettings.BuildUniqueId = 1;
-		SessionSettings.Set(FName(TEXT("MATCH_TYPE")), FString(TEXT("SpikeRush")), EOnlineDataAdvertisementType::ViaOnlineServiceAndPing);
-		SessionInterface->CreateSession(0, NAME_GameSession, SessionSettings);
+		return;
 	}
+
+	FOnlineSessionSettings SessionSettings;
+	// 기본적으로 LANMatch는 비활성화
+	SessionSettings.bIsLANMatch = false;
+	// 게임에 존재할 수 있는 최대 플레이어 수
+	SessionSettings.NumPublicConnections = 8;
+	// Steam 등의 온라인 서비스 사용 시 검색에 노출되도록 설정
+	SessionSettings.bShouldAdvertise = true;
+	// 같은 지역의 플레이어만 참가할 수 있도록 설정 (Steam 다운로드 지역 개인 설정 통일 필요할 수 있음)
+	SessionSettings.bUsesPresence = true;
+	// Lobby 방식 사용 설정
+	SessionSettings.bUseLobbiesIfAvailable = true;
+	// 난입은 불가 (세션이 Pending 상태{메치메이킹 중}일 때만 Join 가능)
+	SessionSettings.bAllowJoinInProgress = false;
+	// 세션에 Steam 친구 등을 초대할 수 있도록 설정
+	SessionSettings.bAllowInvites = true;
+	// 1로 설정하면 여러 유저가 각각 고유의 빌드 ID를 가지고 호스팅 및 게임 참가가 가능하다고 한다
+	SessionSettings.BuildUniqueId = 1;
+
+	// 만약, Subsystem이 NULL이라면,
+	if (true == Online::GetSubsystem(GetWorld())->GetSubsystemName().IsEqual(TEXT("NULL")))
+	{
+		SessionSettings.bIsLANMatch = true;
+		SessionSettings.bUseLobbiesIfAvailable = false;
+	}
+	
+	// 특정 게임 모드로만 검색되고 접속할 수 있도록 Key-Value 방식의 태그를 걸 수도 있다.
+	// 반드시 EOnlineDataAdvertisementType::ViaOnlineServiceAndPing로 설정해야 필터링이 된다.
+	SessionSettings.Set(FName(TEXT("MATCH_TYPE")), FString(TEXT("SpikeRush")), EOnlineDataAdvertisementType::ViaOnlineServiceAndPing);
+	// 상기 옵션으로 세션을 생성한다
+	SessionInterface->CreateSession(0, NAME_GameSession, SessionSettings);
+}
+
+void UValorantGameInstance::OnCreateSessionComplete(FName SessionName, bool bWasSuccessful)
+{
+	NET_LOG(LogTemp, Warning, TEXT("OnCreateSessionComplete SessionName: %s, bWasSuccessful: %hs"), *SessionName.ToString(), bWasSuccessful?"True":"False");
 }
 
 void UValorantGameInstance::FindSessions()
@@ -134,29 +161,26 @@ void UValorantGameInstance::FindSessions()
 	}
 
 	SessionSearch = MakeShareable(new FOnlineSessionSearch());
+	// 기본적으로 LANMatch는 비활성화
 	SessionSearch->bIsLanQuery = false;
+	// 세션 검색 결과는 최대 20개까지 설정
 	SessionSearch->MaxSearchResults = 20;
-	SessionSearch->QuerySettings.Set(SEARCH_LOBBIES, true, EOnlineComparisonOp::Equals);
-	SessionSearch->QuerySettings.Set(FName(TEXT("MATCH_TYPE")), FString(TEXT("SpikeRush")), EOnlineComparisonOp::Equals);
-	SessionInterface->FindSessions(0, SessionSearch.ToSharedRef());
-}
-
-void UValorantGameInstance::OnCreateSessionComplete(FName SessionName, bool bWasSuccessful)
-{
-	NET_LOG(LogTemp, Warning, TEXT("OnCreateSessionComplete SessionName: %s, bWasSuccessful: %hs"), *SessionName.ToString(), bWasSuccessful?"True":"False");
-}
-
-void UValorantGameInstance::DestroySession(const FName SessionName)
-{
-	if (SessionInterface.IsValid() && nullptr != SessionInterface->GetNamedSession(SessionName))
+	
+	// 만약, Subsystem이 NULL이라면,
+	if (true == Online::GetSubsystem(GetWorld())->GetSubsystemName().IsEqual(TEXT("NULL")))
 	{
-		SessionInterface->DestroySession(SessionName);
+		SessionSearch->bIsLanQuery = true;
 	}
-}
-
-void UValorantGameInstance::OnDestroySessionComplete(FName SessionName, bool bWasSuccessful)
-{
-	NET_LOG(LogTemp, Warning, TEXT("OnDestroySessionComplete SessionName: %s, bWasSuccessful: %hs"), *SessionName.ToString(), bWasSuccessful?"True":"False");
+	else
+	{
+		// bUseLobbiesIfAvailable 방식으로 세션을 생성하고 있으므로, 그것만 찾는다.
+		SessionSearch->QuerySettings.Set(SEARCH_LOBBIES, true, EOnlineComparisonOp::Equals);
+	}
+	
+	// Key-Value값(매치타입)이 일치하는 세션만 찾는다.
+	SessionSearch->QuerySettings.Set(FName(TEXT("MATCH_TYPE")), FString(TEXT("SpikeRush")), EOnlineComparisonOp::Equals);
+	// 상기 검색 조건에 맞는 세션만 찾는다.
+	SessionInterface->FindSessions(0, SessionSearch.ToSharedRef());
 }
 
 void UValorantGameInstance::OnFindSessionsComplete(bool bWasSuccessful)
@@ -178,6 +202,22 @@ void UValorantGameInstance::OnFindSessionsComplete(bool bWasSuccessful)
 		UE_LOG(LogTemp, Warning, TEXT("OnFindSessionsComplete SessionID: %s, HostName: %s, NumPlayers: %d, MaxPlayers: %d, bIsLANMatch: %hs"), *SessionID, *HostName, NumPlayers, MaxPlayers, bIsLANMatch?"True":"False");
 			
 	}
+}
+
+void UValorantGameInstance::DestroySession(const FName SessionName)
+{
+	if (SessionInterface.IsValid() && SessionInterface.IsUnique())
+	{
+		if (SessionInterface->GetNamedSession(SessionName))
+		{
+			SessionInterface->DestroySession(SessionName);
+		}
+	}
+}
+
+void UValorantGameInstance::OnDestroySessionComplete(FName SessionName, bool bWasSuccessful)
+{
+	NET_LOG(LogTemp, Warning, TEXT("OnDestroySessionComplete SessionName: %s, bWasSuccessful: %hs"), *SessionName.ToString(), bWasSuccessful?"True":"False");
 }
 
 void UValorantGameInstance::OnJoinSessionComplete(FName SessionName, EOnJoinSessionCompleteResult::Type Result)

@@ -20,19 +20,17 @@ public:
 	TSharedPtr<class IOnlineSession, ESPMode::ThreadSafe> SessionInterface;
 	TSharedPtr<FOnlineSessionSearch> SessionSearch;
 
-	UFUNCTION(BlueprintCallable)
-	void CreateSession();
-
-	UFUNCTION(BlueprintCallable)
-	void FindSessions();
-
 protected:
 	virtual void Init() override;
 	virtual void Shutdown() override;
+	UFUNCTION(BlueprintCallable, meta=(AllowPrivateAccess = "true"))
+	void CreateSession();
 	void OnCreateSessionComplete(FName SessionName, bool bWasSuccessful);
+	UFUNCTION(BlueprintCallable, meta=(AllowPrivateAccess = "true"))
+	void FindSessions();
+	void OnFindSessionsComplete(bool bWasSuccessful);
 	void DestroySession(FName SessionName);
 	void OnDestroySessionComplete(FName SessionName, bool bWasSuccessful);
-	void OnFindSessionsComplete(bool bWasSuccessful);
 	void OnJoinSessionComplete(FName Name, EOnJoinSessionCompleteResult::Type Arg);
 
 public:
