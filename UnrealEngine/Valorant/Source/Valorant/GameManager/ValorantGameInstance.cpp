@@ -9,6 +9,7 @@
 #include "OnlineSessionSettings.h"
 #include "Valorant.h"
 #include "AbilitySystem/ValorantGameplayTags.h"
+#include "Online/OnlineSessionNames.h"
 #include "ResourceManager/ValorantGameType.h"
 
 void UValorantGameInstance::Init()
@@ -120,8 +121,7 @@ void UValorantGameInstance::CreateSession()
 		SessionSettings.bUseLobbiesIfAvailable = true;
 		SessionSettings.bAllowJoinInProgress = true;
 		SessionSettings.BuildUniqueId = 1;
-		
-		SessionSettings.Set(FName("MATCH_TYPE"), FString("SpikeRush"));
+		SessionSettings.Set(FName(TEXT("MATCH_TYPE")), FString(TEXT("SpikeRush")), EOnlineDataAdvertisementType::ViaOnlineServiceAndPing);
 		SessionInterface->CreateSession(0, NAME_GameSession, SessionSettings);
 	}
 }
@@ -136,7 +136,8 @@ void UValorantGameInstance::FindSessions()
 	SessionSearch = MakeShareable(new FOnlineSessionSearch());
 	SessionSearch->bIsLanQuery = false;
 	SessionSearch->MaxSearchResults = 20;
-	SessionSearch->QuerySettings.Set(FName("MATCH_TYPE"), FString("SpikeRush"), EOnlineComparisonOp::Equals);
+	SessionSearch->QuerySettings.Set(SEARCH_LOBBIES, true, EOnlineComparisonOp::Equals);
+	SessionSearch->QuerySettings.Set(FName(TEXT("MATCH_TYPE")), FString(TEXT("SpikeRush")), EOnlineComparisonOp::Equals);
 	SessionInterface->FindSessions(0, SessionSearch.ToSharedRef());
 }
 
@@ -160,12 +161,12 @@ void UValorantGameInstance::OnDestroySessionComplete(FName SessionName, bool bWa
 
 void UValorantGameInstance::OnFindSessionsComplete(bool bWasSuccessful)
 {
-	NET_LOG(LogTemp, Warning, TEXT("OnFindSessionsComplete bWasSuccessful: %hs, Num: "), bWasSuccessful?"True":"False");
+	NET_LOG(LogTemp, Warning, TEXT("OnFindSessionsComplete bWasSuccessful: %hs"), bWasSuccessful?"True":"False");
 	if (false == bWasSuccessful || false == SessionSearch.IsValid())
 	{
 		return;
 	}
-
+	
 	NET_LOG(LogTemp, Warning, TEXT("OnFindSessionsComplete FindSessionNum: %d"), SessionSearch->SearchResults.Num());
 	for (auto SearchResult : SessionSearch->SearchResults)
 	{
