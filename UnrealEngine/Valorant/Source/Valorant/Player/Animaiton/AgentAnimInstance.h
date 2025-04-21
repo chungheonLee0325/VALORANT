@@ -13,4 +13,14 @@ UCLASS()
 class VALORANT_API UAgentAnimInstance : public UAnimInstance
 {
 	GENERATED_BODY()
+public:
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category= Move)
+	float Speed = 0;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category= Move)
+	float Direction = 0;
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category=State)
+	bool bIsInAir = false;
+	
+	virtual  void NativeUpdateAnimation(float DeltaSeconds) override;
 };

@@ -13,6 +13,8 @@
 
 ABaseWeapon::ABaseWeapon()
 {
+	PrimaryActorTick.bCanEverTick = true;
+	
 	WeaponMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("WeaponMesh"));
 	SetRootComponent(WeaponMesh);
 	PickUpModule = CreateDefaultSubobject<UPickUpComponent>(TEXT("PickUpModule"));
@@ -40,7 +42,7 @@ void ABaseWeapon::BeginPlay()
 	}
 
 	// TODO: WeaponID에 맞는 SkeletalMesh 불러오기
-	FStringAssetReference MeshRef(TEXT("/Script/Engine.SkeletalMesh'/Game/Resource/FPWeapon/Mesh/SK_FPGun.SK_FPGun'"));
+	FSoftObjectPath MeshRef(TEXT("/Script/Engine.SkeletalMesh'/Game/Resource/Weapons/BasicPhantom/Mesh/GN_Carbine_Clean_S0_Skelmesh.GN_Carbine_Clean_S0_Skelmesh'"));
 	auto* WeaponMeshAsset = Cast<USkeletalMesh>(StaticLoadObject(USkeletalMesh::StaticClass(), nullptr, *MeshRef.ToString()));
 	if (nullptr == WeaponMeshAsset || nullptr == WeaponMesh)
 	{
@@ -48,11 +50,12 @@ void ABaseWeapon::BeginPlay()
 		return;
 	}
 	WeaponMesh->SetSkeletalMeshAsset(WeaponMeshAsset);
+	WeaponMesh->SetRelativeScale3D(FVector(0.34f));
 	
 	MagazineSize = WeaponData->MagazineSize;
 	MagazineAmmo = MagazineSize;
 	// TODO: 총기별 여분탄약 데이터 추가 필요
-	SpareAmmo = MagazineSize * 3;
+	SpareAmmo = MagazineSize * 5;
 	FireInterval = 1.0f / WeaponData->FireRate;
 	for (auto Element : WeaponData->GunRecoilMap)
 	{
@@ -63,6 +66,19 @@ void ABaseWeapon::BeginPlay()
 void ABaseWeapon::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
+
+	if (Agent && Agent->GetController() && false == bIsFiring && false == FMath::IsNearlyZero(FMath::Abs(TotalRecoilOffsetPitch) + FMath::Abs(TotalRecoilOffsetYaw), 0.05f))
+	{
+		const float SubPitchValue = -FMath::Lerp(TotalRecoilOffsetPitch, 0.0f, 0.88f);
+		TotalRecoilOffsetPitch += SubPitchValue;
+		Agent->AddControllerPitchInput(SubPitchValue);
+
+		const float SubYawValue = -FMath::Lerp(TotalRecoilOffsetYaw, 0.0f, 0.88f);
+		TotalRecoilOffsetYaw += SubYawValue;
+		Agent->AddControllerYawInput(SubYawValue);
+
+		UE_LOG(LogTemp, Warning, TEXT("Recoil Recovery TotalRecoilOffsetPitch : %f, TotalRecoilOffsetYaw : %f"), TotalRecoilOffsetPitch, TotalRecoilOffsetYaw);
+	}
 }
 
 void ABaseWeapon::AttachWeapon(ABaseAgent* PickUpAgent)
@@ -82,7 +98,12 @@ void ABaseWeapon::AttachWeapon(ABaseAgent* PickUpAgent)
 	// 	}
 	// }
 
-	FAttachmentTransformRules AttachmentRules(EAttachmentRule::SnapToTarget, true);
+	FAttachmentTransformRules AttachmentRules(
+		EAttachmentRule::SnapToTarget,
+		EAttachmentRule::SnapToTarget,
+		EAttachmentRule::KeepRelative,
+		true
+	);
 	AttachToComponent(Agent->GetMesh(), AttachmentRules, FName(TEXT("R_WeaponPointSocket")));
 
 	// Set up action bindings
@@ -113,7 +134,7 @@ void ABaseWeapon::StartFire()
 	}
 
 	bIsFiring = true;
-	if (FMath::IsNearlyZero(TotalRecoilOffsetPitch + TotalRecoilOffsetYaw, 0.1f))
+	if (FMath::IsNearlyZero(FMath::Abs(TotalRecoilOffsetPitch) + FMath::Abs(TotalRecoilOffsetYaw), 0.05f))
 	{
 		RecoilLevel = 0;
 		TotalRecoilOffsetPitch = 0.0f;
@@ -186,11 +207,14 @@ void ABaseWeapon::Fire()
 			ActorsToIgnore,
 			EDrawDebugTrace::ForDuration,
 			OutHit,
-			true
+			true,
+			FLinearColor::Red,
+			FLinearColor::Green,
+			2.5f
 		);
 		if (bHit)
 		{
-			DrawDebugPoint(World, OutHit.ImpactPoint, 10, FColor::Green, false, 30);
+			DrawDebugPoint(World, OutHit.ImpactPoint, 5, FColor::Green, false, 30);
 		}
 	}
 	

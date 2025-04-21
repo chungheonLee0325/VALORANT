@@ -55,6 +55,8 @@ protected:
 
 	UPROPERTY(BlueprintReadWrite)
 	float RotOffset = -1.0f;
+
+	bool bIsDead = false;
 	
 public:
 	UFUNCTION(BlueprintCallable)
@@ -72,12 +74,16 @@ protected:
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 	virtual void Crouch(bool bClientSimulation = false) override;
 	
+	virtual void Die();
+	virtual void EnterSpectMode();
+	virtual void Respawn();
+	
 	UFUNCTION()
-	void UpdateHealth(float NewHealth);
+	void UpdateHealth(float newHealth);
 	UFUNCTION()
-	void UpdateMaxHealth(float NewMaxHealth);
+	void UpdateMaxHealth(float newMaxHealth);
 	UFUNCTION()
-	void UpdateArmor(float NewArmor);
+	void UpdateArmor(float newArmor);
 	UFUNCTION()
-	void UpdateMoveSpeed(float NewSpeed);
+	void UpdateMoveSpeed(float newSpeed);
 };
