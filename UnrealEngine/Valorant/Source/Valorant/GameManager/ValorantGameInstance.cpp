@@ -97,7 +97,6 @@ void UValorantGameInstance::Init()
 			SessionInterface->OnDestroySessionCompleteDelegates.AddUObject(this, &UValorantGameInstance::OnDestroySessionComplete);
 			SessionInterface->OnFindSessionsCompleteDelegates.AddUObject(this, &UValorantGameInstance::OnFindSessionsComplete);
 			SessionInterface->OnJoinSessionCompleteDelegates.AddUObject(this, &UValorantGameInstance::OnJoinSessionComplete);
-			CreateSession();
 		}
 	}
 }
@@ -105,11 +104,8 @@ void UValorantGameInstance::Init()
 void UValorantGameInstance::Shutdown()
 {
 	Super::Shutdown();
-
-	if (SessionInterface.IsValid() && nullptr != SessionInterface->GetNamedSession(NAME_GameSession))
-	{
-		SessionInterface->DestroySession(NAME_GameSession);
-	}
+	
+	DestroySession(NAME_GameSession);
 }
 
 void UValorantGameInstance::CreateSession()
@@ -125,24 +121,62 @@ void UValorantGameInstance::CreateSession()
 	}
 }
 
-void UValorantGameInstance::OnCreateSessionComplete(FName Name, bool bArg)
+void UValorantGameInstance::FindSessions()
 {
-	NET_LOG(LogTemp, Warning, TEXT("OnCreateSessionComplete Name: %s, bArg: %hs"), *Name.ToString(), bArg?"True":"False");
+	if (false == SessionInterface.IsValid())
+	{
+		return;
+	}
+
+	SessionSearch = MakeShareable(new FOnlineSessionSearch());
+	SessionSearch->bIsLanQuery = false;
+	SessionSearch->MaxSearchResults = 5;
+	SessionSearch->QuerySettings.Set(TEXT("presence"), true, EOnlineComparisonOp::Equals);
+	SessionInterface->FindSessions(0, SessionSearch.ToSharedRef());
 }
 
-void UValorantGameInstance::OnDestroySessionComplete(FName Name, bool bArg)
+void UValorantGameInstance::OnCreateSessionComplete(FName SessionName, bool bWasSuccessful)
 {
-	NET_LOG(LogTemp, Warning, TEXT("OnDestroySessionComplete Name: %s, bArg: %hs"), *Name.ToString(), bArg?"True":"False");
+	NET_LOG(LogTemp, Warning, TEXT("OnCreateSessionComplete SessionName: %s, bWasSuccessful: %hs"), *SessionName.ToString(), bWasSuccessful?"True":"False");
 }
 
-void UValorantGameInstance::OnFindSessionsComplete(bool bArg)
+void UValorantGameInstance::DestroySession(const FName SessionName)
 {
-	NET_LOG(LogTemp, Warning, TEXT("OnFindSessionsComplete bArg: %hs"), bArg?"True":"False");
+	if (SessionInterface.IsValid() && nullptr != SessionInterface->GetNamedSession(SessionName))
+	{
+		SessionInterface->DestroySession(SessionName);
+	}
 }
 
-void UValorantGameInstance::OnJoinSessionComplete(FName Name, EOnJoinSessionCompleteResult::Type Arg)
+void UValorantGameInstance::OnDestroySessionComplete(FName SessionName, bool bWasSuccessful)
 {
-	NET_LOG(LogTemp, Warning, TEXT("OnJoinSessionComplete Name: %s, Arg: %d"), *Name.ToString(), Arg);
+	NET_LOG(LogTemp, Warning, TEXT("OnDestroySessionComplete SessionName: %s, bWasSuccessful: %hs"), *SessionName.ToString(), bWasSuccessful?"True":"False");
+}
+
+void UValorantGameInstance::OnFindSessionsComplete(bool bWasSuccessful)
+{
+	NET_LOG(LogTemp, Warning, TEXT("OnFindSessionsComplete bWasSuccessful: %hs, Num: "), bWasSuccessful?"True":"False");
+	if (false == bWasSuccessful || false == SessionSearch.IsValid())
+	{
+		return;
+	}
+
+	NET_LOG(LogTemp, Warning, TEXT("OnFindSessionsComplete FindSessionNum: %d"), SessionSearch->SearchResults.Num());
+	for (auto SearchResult : SessionSearch->SearchResults)
+	{
+		FString SessionID = SearchResult.GetSessionIdStr();
+		FString HostName = SearchResult.Session.OwningUserName;
+		int32 NumPlayers = SearchResult.Session.SessionSettings.NumPublicConnections - SearchResult.Session.NumOpenPublicConnections;
+		int32 MaxPlayers = SearchResult.Session.SessionSettings.NumPublicConnections;
+		bool bIsLANMatch = SearchResult.Session.SessionSettings.bIsLANMatch;
+		UE_LOG(LogTemp, Warning, TEXT("OnFindSessionsComplete SessionID: %s, HostName: %s, NumPlayers: %d, MaxPlayers: %d, bIsLANMatch: %hs"), *SessionID, *HostName, NumPlayers, MaxPlayers, bIsLANMatch?"True":"False");
+			
+	}
+}
+
+void UValorantGameInstance::OnJoinSessionComplete(FName SessionName, EOnJoinSessionCompleteResult::Type Result)
+{
+	NET_LOG(LogTemp, Warning, TEXT("OnJoinSessionComplete SessionName: %s, Result: %d"), *SessionName.ToString(), Result);
 }
 
 FAgentData* UValorantGameInstance::GetAgentData(int AgentID)
