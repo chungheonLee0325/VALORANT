@@ -163,19 +163,37 @@ void ABaseAgent::BindToDelegatePC(AAgentPlayerController* pc)
 	pc->OnMoveSpeedChanged_PC.AddDynamic(this, &ABaseAgent::UpdateMoveSpeed);
 }
 
-void ABaseAgent::UpdateHealth(float NewHealth)
+void ABaseAgent::Die()
+{
+	bIsDead = true;
+	UE_LOG(LogTemp, Warning, TEXT("죽음"));
+}
+
+void ABaseAgent::EnterSpectMode()
 {
 }
 
-void ABaseAgent::UpdateMaxHealth(float NewMaxHealth)
+void ABaseAgent::Respawn()
 {
 }
 
-void ABaseAgent::UpdateArmor(float NewArmor)
+void ABaseAgent::UpdateHealth(float newHealth)
+{
+	if (newHealth <= 0.f && bIsDead == false)
+	{
+		Die();
+	}
+}
+
+void ABaseAgent::UpdateMaxHealth(float newMaxHealth)
 {
 }
 
-void ABaseAgent::UpdateMoveSpeed(float NewSpeed)
+void ABaseAgent::UpdateArmor(float newArmor)
 {
-	GetCharacterMovement()->MaxWalkSpeed = NewSpeed;
+}
+
+void ABaseAgent::UpdateMoveSpeed(float newSpeed)
+{
+	GetCharacterMovement()->MaxWalkSpeed = newSpeed;
 }

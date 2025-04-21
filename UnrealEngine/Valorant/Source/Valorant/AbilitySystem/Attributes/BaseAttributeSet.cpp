@@ -62,25 +62,25 @@ void UBaseAttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCallba
 
 	if (Data.EvaluatedData.Attribute == GetHealthAttribute())
 	{
-		int32 newValue = GetHealth();
+		const int32 newValue = GetHealth();
 		OnHealthChanged.Broadcast(newValue);
 		OnHealthChanged_FromGE.Broadcast(newValue);
 	}
 	else if (Data.EvaluatedData.Attribute == GetMaxHealthAttribute())
 	{
-		int32 newValue = GetMaxHealth();
+		const int32 newValue = GetMaxHealth();
 		OnMaxHealthChanged.Broadcast(newValue);
 		OnMaxHealthChanged_FromGE.Broadcast(newValue);
 	}
 	else if (Data.EvaluatedData.Attribute == GetArmorAttribute())
 	{
-		int32 newValue = GetArmor();
+		const int32 newValue = GetArmor();
 		OnArmorChanged.Broadcast(newValue);
 		OnArmorChanged_FromGE.Broadcast(newValue);
 	}
 	else if (Data.EvaluatedData.Attribute == GetMoveSpeedAttribute())
 	{
-		int32 newValue = GetMoveSpeed();
+		const int32 newValue = GetMoveSpeed();
 		OnMoveSpeedChanged.Broadcast(newValue);
 		OnMoveSpeedChanged_FromGE.Broadcast(newValue);
 	}
