@@ -5,6 +5,9 @@
 
 #include "OnlineSubsystem.h"
 #include "OnlineSubsystemUtils.h"
+#include "Interfaces/OnlineSessionInterface.h"
+#include "OnlineSessionSettings.h"
+#include "Valorant.h"
 #include "AbilitySystem/ValorantGameplayTags.h"
 #include "ResourceManager/ValorantGameType.h"
 
@@ -86,17 +89,60 @@ void UValorantGameInstance::Init()
 	IOnlineSubsystem* OnlineSubsystem = Online::GetSubsystem(GetWorld());
 	if (OnlineSubsystem)
 	{
-		OnlineSessionInterface = OnlineSubsystem->GetSessionInterface();
-		if (GEngine)
+		SessionInterface = OnlineSubsystem->GetSessionInterface();
+		NET_LOG(LogTemp, Warning, TEXT("SubsystemName : %s"), *OnlineSubsystem->GetSubsystemName().ToString());
+		if (SessionInterface.IsValid())
 		{
-			GEngine->AddOnScreenDebugMessage(
-				-1,
-				15.f,
-				FColor::Red,
-				FString::Printf(TEXT("Subsystem %s"), *OnlineSubsystem->GetSubsystemName().ToString())
-			);
+			SessionInterface->OnCreateSessionCompleteDelegates.AddUObject(this, &UValorantGameInstance::OnCreateSessionComplete);
+			SessionInterface->OnDestroySessionCompleteDelegates.AddUObject(this, &UValorantGameInstance::OnDestroySessionComplete);
+			SessionInterface->OnFindSessionsCompleteDelegates.AddUObject(this, &UValorantGameInstance::OnFindSessionsComplete);
+			SessionInterface->OnJoinSessionCompleteDelegates.AddUObject(this, &UValorantGameInstance::OnJoinSessionComplete);
+			CreateSession();
 		}
 	}
+}
+
+void UValorantGameInstance::Shutdown()
+{
+	Super::Shutdown();
+
+	if (SessionInterface.IsValid() && nullptr != SessionInterface->GetNamedSession(NAME_GameSession))
+	{
+		SessionInterface->DestroySession(NAME_GameSession);
+	}
+}
+
+void UValorantGameInstance::CreateSession()
+{
+	if (SessionInterface.IsValid())
+	{
+		FOnlineSessionSettings SessionSettings;
+		SessionSettings.NumPublicConnections = 2;
+		SessionSettings.bShouldAdvertise = true;
+		SessionSettings.bUsesPresence = true;
+		SessionSettings.bUseLobbiesIfAvailable = true;
+		SessionInterface->CreateSession(0, NAME_GameSession, SessionSettings);
+	}
+}
+
+void UValorantGameInstance::OnCreateSessionComplete(FName Name, bool bArg)
+{
+	NET_LOG(LogTemp, Warning, TEXT("OnCreateSessionComplete Name: %s, bArg: %hs"), *Name.ToString(), bArg?"True":"False");
+}
+
+void UValorantGameInstance::OnDestroySessionComplete(FName Name, bool bArg)
+{
+	NET_LOG(LogTemp, Warning, TEXT("OnDestroySessionComplete Name: %s, bArg: %hs"), *Name.ToString(), bArg?"True":"False");
+}
+
+void UValorantGameInstance::OnFindSessionsComplete(bool bArg)
+{
+	NET_LOG(LogTemp, Warning, TEXT("OnFindSessionsComplete bArg: %hs"), bArg?"True":"False");
+}
+
+void UValorantGameInstance::OnJoinSessionComplete(FName Name, EOnJoinSessionCompleteResult::Type Arg)
+{
+	NET_LOG(LogTemp, Warning, TEXT("OnJoinSessionComplete Name: %s, Arg: %d"), *Name.ToString(), Arg);
 }
 
 FAgentData* UValorantGameInstance::GetAgentData(int AgentID)
