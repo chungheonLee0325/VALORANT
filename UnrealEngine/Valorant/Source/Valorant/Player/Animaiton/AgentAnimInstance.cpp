@@ -2,9 +2,6 @@
 
 
 #include "AgentAnimInstance.h"
-
-#include "KismetAnimationLibrary.h"
-#include "Kismet/KismetMathLibrary.h"
 #include "Player/Agent/BaseAgent.h"
 
 void UAgentAnimInstance::NativeUpdateAnimation(float DeltaSeconds)

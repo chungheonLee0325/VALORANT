@@ -27,6 +27,7 @@ ABaseAgent::ABaseAgent()
 	SpringArm->SetupAttachment(GetRootComponent());
 	SpringArm->SetRelativeLocation(FVector(-10, 0, 60));
 	SpringArm->TargetArmLength = 0;
+	SpringArm->bUsePawnControlRotation = true;
 	
 	Camera = CreateDefaultSubobject<UCameraComponent>("Camera");
 	Camera->SetupAttachment(SpringArm);
@@ -51,6 +52,7 @@ ABaseAgent::ABaseAgent()
 	ThirdPersonMesh->SetCanEverAffectNavigation(false);
 
 	GetCharacterMovement()->GetNavAgentPropertiesRef().bCanCrouch = true;
+	GetCharacterMovement()->MaxWalkSpeedCrouched = 250.0f;
 	GetCharacterMovement()->SetCrouchedHalfHeight(GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight());
 
 	ThirdPersonMesh->SetOwnerNoSee(true);
