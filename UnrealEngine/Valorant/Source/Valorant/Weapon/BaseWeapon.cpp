@@ -40,7 +40,7 @@ void ABaseWeapon::BeginPlay()
 	}
 
 	// TODO: WeaponID에 맞는 SkeletalMesh 불러오기
-	FStringAssetReference MeshRef(TEXT("/Script/Engine.SkeletalMesh'/Game/Resource/FPWeapon/Mesh/SK_FPGun.SK_FPGun'"));
+	FSoftObjectPath MeshRef(TEXT("/Script/Engine.SkeletalMesh'/Game/Resource/Weapons/BasicPhantom/Mesh/GN_Carbine_Clean_S0_Skelmesh.GN_Carbine_Clean_S0_Skelmesh'"));
 	auto* WeaponMeshAsset = Cast<USkeletalMesh>(StaticLoadObject(USkeletalMesh::StaticClass(), nullptr, *MeshRef.ToString()));
 	if (nullptr == WeaponMeshAsset || nullptr == WeaponMesh)
 	{
@@ -48,6 +48,7 @@ void ABaseWeapon::BeginPlay()
 		return;
 	}
 	WeaponMesh->SetSkeletalMeshAsset(WeaponMeshAsset);
+	WeaponMesh->SetRelativeScale3D(FVector(0.34f));
 	
 	MagazineSize = WeaponData->MagazineSize;
 	MagazineAmmo = MagazineSize;
@@ -82,7 +83,12 @@ void ABaseWeapon::AttachWeapon(ABaseAgent* PickUpAgent)
 	// 	}
 	// }
 
-	FAttachmentTransformRules AttachmentRules(EAttachmentRule::SnapToTarget, true);
+	FAttachmentTransformRules AttachmentRules(
+		EAttachmentRule::SnapToTarget,
+		EAttachmentRule::SnapToTarget,
+		EAttachmentRule::KeepRelative,
+		true
+	);
 	AttachToComponent(Agent->GetMesh(), AttachmentRules, FName(TEXT("R_WeaponPointSocket")));
 
 	// Set up action bindings
