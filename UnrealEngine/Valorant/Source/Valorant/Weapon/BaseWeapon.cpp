@@ -13,6 +13,8 @@
 
 ABaseWeapon::ABaseWeapon()
 {
+	PrimaryActorTick.bCanEverTick = true;
+	
 	WeaponMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("WeaponMesh"));
 	SetRootComponent(WeaponMesh);
 	PickUpModule = CreateDefaultSubobject<UPickUpComponent>(TEXT("PickUpModule"));
@@ -64,6 +66,19 @@ void ABaseWeapon::BeginPlay()
 void ABaseWeapon::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
+
+	if (Agent && Agent->GetController() && false == bIsFiring && false == FMath::IsNearlyZero(FMath::Abs(TotalRecoilOffsetPitch) + FMath::Abs(TotalRecoilOffsetYaw), 0.05f))
+	{
+		const float SubPitchValue = -FMath::Lerp(TotalRecoilOffsetPitch, 0.0f, 0.88f);
+		TotalRecoilOffsetPitch += SubPitchValue;
+		Agent->AddControllerPitchInput(SubPitchValue);
+
+		const float SubYawValue = -FMath::Lerp(TotalRecoilOffsetYaw, 0.0f, 0.88f);
+		TotalRecoilOffsetYaw += SubYawValue;
+		Agent->AddControllerYawInput(SubYawValue);
+
+		UE_LOG(LogTemp, Warning, TEXT("Recoil Recovery TotalRecoilOffsetPitch : %f, TotalRecoilOffsetYaw : %f"), TotalRecoilOffsetPitch, TotalRecoilOffsetYaw);
+	}
 }
 
 void ABaseWeapon::AttachWeapon(ABaseAgent* PickUpAgent)
@@ -119,7 +134,7 @@ void ABaseWeapon::StartFire()
 	}
 
 	bIsFiring = true;
-	if (FMath::IsNearlyZero(TotalRecoilOffsetPitch + TotalRecoilOffsetYaw, 0.1f))
+	if (FMath::IsNearlyZero(FMath::Abs(TotalRecoilOffsetPitch) + FMath::Abs(TotalRecoilOffsetYaw), 0.05f))
 	{
 		RecoilLevel = 0;
 		TotalRecoilOffsetPitch = 0.0f;
