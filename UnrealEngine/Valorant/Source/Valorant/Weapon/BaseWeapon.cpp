@@ -55,7 +55,7 @@ void ABaseWeapon::BeginPlay()
 	MagazineSize = WeaponData->MagazineSize;
 	MagazineAmmo = MagazineSize;
 	// TODO: 총기별 여분탄약 데이터 추가 필요
-	SpareAmmo = MagazineSize * 3;
+	SpareAmmo = MagazineSize * 5;
 	FireInterval = 1.0f / WeaponData->FireRate;
 	for (auto Element : WeaponData->GunRecoilMap)
 	{
@@ -207,11 +207,14 @@ void ABaseWeapon::Fire()
 			ActorsToIgnore,
 			EDrawDebugTrace::ForDuration,
 			OutHit,
-			true
+			true,
+			FLinearColor::Red,
+			FLinearColor::Green,
+			2.5f
 		);
 		if (bHit)
 		{
-			DrawDebugPoint(World, OutHit.ImpactPoint, 10, FColor::Green, false, 30);
+			DrawDebugPoint(World, OutHit.ImpactPoint, 5, FColor::Green, false, 30);
 		}
 	}
 	
