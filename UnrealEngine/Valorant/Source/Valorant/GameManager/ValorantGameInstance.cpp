@@ -117,6 +117,7 @@ void UValorantGameInstance::CreateSession()
 		SessionSettings.bShouldAdvertise = true;
 		SessionSettings.bUsesPresence = true;
 		SessionSettings.bUseLobbiesIfAvailable = true;
+		SessionSettings.Set(FName("MATCH_TYPE"), FString("SpikeRush"));
 		SessionInterface->CreateSession(0, NAME_GameSession, SessionSettings);
 	}
 }
@@ -131,7 +132,7 @@ void UValorantGameInstance::FindSessions()
 	SessionSearch = MakeShareable(new FOnlineSessionSearch());
 	SessionSearch->bIsLanQuery = false;
 	SessionSearch->MaxSearchResults = 5;
-	SessionSearch->QuerySettings.Set(TEXT("presence"), true, EOnlineComparisonOp::Equals);
+	SessionSearch->QuerySettings.Set(FName("MATCH_TYPE"), FString("SpikeRush"), EOnlineComparisonOp::Equals);
 	SessionInterface->FindSessions(0, SessionSearch.ToSharedRef());
 }
 
