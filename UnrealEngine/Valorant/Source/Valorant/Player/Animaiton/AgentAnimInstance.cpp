@@ -22,7 +22,7 @@ void UAgentAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 		// Speed = player->GetVelocity().Size();
 		// Direction = UKismetAnimationLibrary::CalculateDirection(velocity, player->GetActorRotation());
 		
-		UE_LOG(LogTemp,Warning,TEXT("Speed %f"), Speed);
-		UE_LOG(LogTemp,Warning,TEXT("Direction %f"), Direction);
+		// UE_LOG(LogTemp,Warning,TEXT("Speed %f"), Speed);
+		// UE_LOG(LogTemp,Warning,TEXT("Direction %f"), Direction);
 	}
 }
