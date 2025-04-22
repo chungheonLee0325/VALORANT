@@ -29,6 +29,17 @@ void LoadDataTableToMap(const FString& Path, TMap<IDType, RowStructType>& OutMap
 	}
 }
 
+void UValorantGameInstance::FindMatch()
+{
+	if (true == bIsFindingMatch)
+	{
+		return;
+	}
+	
+	bIsFindingMatch = true;
+	FindSessions();
+}
+
 void UValorantGameInstance::Init()
 {
 	Super::Init();
@@ -157,17 +168,35 @@ void UValorantGameInstance::OnFindSessionsComplete(bool bWasSuccessful)
 	{
 		return;
 	}
-	
-	NET_LOG(LogTemp, Warning, TEXT("OnFindSessionsComplete FindSessionNum: %d"), SessionSearch->SearchResults.Num());
-	for (auto SearchResult : SessionSearch->SearchResults)
+
+	const int FindSessionNum = SessionSearch->SearchResults.Num();
+	NET_LOG(LogTemp, Warning, TEXT("OnFindSessionsComplete FindSessionNum: %d"), FindSessionNum);
+	if (0 == FindSessionNum && true == bIsFindingMatch)
 	{
-		FString SessionID = SearchResult.GetSessionIdStr();
-		FString HostName = SearchResult.Session.OwningUserName;
-		int32 NumPlayers = SearchResult.Session.SessionSettings.NumPublicConnections - SearchResult.Session.NumOpenPublicConnections;
-		int32 MaxPlayers = SearchResult.Session.SessionSettings.NumPublicConnections;
-		bool bIsLANMatch = SearchResult.Session.SessionSettings.bIsLANMatch;
-		UE_LOG(LogTemp, Warning, TEXT("OnFindSessionsComplete SessionID: %s, HostName: %s, NumPlayers: %d, MaxPlayers: %d, bIsLANMatch: %hs"), *SessionID, *HostName, NumPlayers, MaxPlayers, bIsLANMatch?"True":"False");
-			
+		// 찾은 세션이 아무것도 없고 현재 매치를 찾는 중이라면 매치를 직접 만든다.
+		CreateSession();
+	}
+	else
+	{
+		for (auto SearchResult : SessionSearch->SearchResults)
+		{
+			FString SessionID = SearchResult.GetSessionIdStr();
+			FString HostName = SearchResult.Session.OwningUserName;
+			const int32 RemSlotCount = SearchResult.Session.NumOpenPublicConnections;
+			const int32 MaxSlotCount = SearchResult.Session.SessionSettings.NumPublicConnections;
+			const int32 NumPlayers = MaxSlotCount - RemSlotCount;
+			const bool bIsLanMatch = SearchResult.Session.SessionSettings.bIsLANMatch;
+			NET_LOG(LogTemp, Warning, TEXT("OnFindSessionsComplete SessionID: %s, HostName: %s, (%d / %d), bIsLANMatch: %hs"), *SessionID, *HostName, NumPlayers, MaxSlotCount, bIsLanMatch?"True":"False");
+			if (RemSlotCount > 0)
+			{
+				auto Session = SearchResult.Session;
+				if (const bool bSuccess = SessionInterface->JoinSession(0, NAME_GameSession, SearchResult))
+				{
+					NET_LOG(LogTemp, Warning, TEXT("OnFindSessionsComplete: Try Join Session"));
+					break;
+				}
+			}
+		}
 	}
 }
 

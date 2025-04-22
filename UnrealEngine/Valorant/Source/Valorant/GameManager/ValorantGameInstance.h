@@ -20,6 +20,10 @@ public:
 	TSharedPtr<class IOnlineSession, ESPMode::ThreadSafe> SessionInterface;
 	TSharedPtr<FOnlineSessionSearch> SessionSearch;
 
+	bool bIsFindingMatch = false;
+	UFUNCTION(BlueprintCallable)
+	void FindMatch();
+	
 protected:
 	virtual void Init() override;
 	virtual void Shutdown() override;
