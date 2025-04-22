@@ -27,6 +27,12 @@ public:
 	
 	UFUNCTION(BlueprintCallable)
 	void SkillCallByTag(const FGameplayTag& inputTag);
+
+	UFUNCTION(BlueprintCallable)
+	void ResisterFollowUpInput(const TArray<FGameplayTag>& tags);
+
+	UFUNCTION(BlueprintCallable)
+	void ClearCurrnetAbility(const FGameplayAbilitySpecHandle& handle);
 	
 	FString GetAgentName() const { return AgentName; }
 	FString GetSkillQName() const { return SkillQName; }
@@ -42,8 +48,21 @@ private:
 		FValorantGameplayTags::Get().InputTag_Ability_X
 	};
 
-	UPROPERTY(Replicated)
-	TArray<FGameplayAbilitySpecHandle> AgentSkillHandle;
+	// 좌클릭 우클릭은 무조건 reserved map 먼저 확인후 nullptr이면 skillHandleMap 검색
+	
+	TMap<FGameplayTag, FGameplayAbilitySpecHandle> ReservedSkillHandleMap;
+	
+	// ToDo : ReservedSkillHandleMap - setter / reset method 필요
+
+	// Set과 병행
+	UPROPERTY()
+	FGameplayAbilitySpecHandle CurrentAbilityHandle;
+
+	// TSet으로 관리
+	// 스킬 시전마다 Set 리셋하고 시작
+	
+	UPROPERTY()
+	TArray<FGameplayTag> FollowUpInputBySkill;
 	
 	UPROPERTY(Replicated)
 	int32 m_AgentID;
@@ -75,4 +94,19 @@ protected:
 	void GiveAgentAbility(TSubclassOf<UGameplayAbility> abilityClass, int32 level);
 	void ClearAgentAbilities();
 	void ClearAgentAbility(const FGameplayTagContainer& tags);
+	void ClearAgentAbility(const FGameplayAbilitySpec* spec);
+
+	//Skill Input
+	void ClearFollowUpInput();
+	
+	bool IsFollowUpInput(const FGameplayTag& inputTag);
+
+	bool TrySkillFollowupInput(const FGameplayTag& inputTag);
+
+	UFUNCTION(BlueprintCallable)
+	bool TrySkillInput(const FGameplayTag& inputTag);
+
+	
+	//TODO: 스킬 충전하는 함수
+	//TODO: 스킬 정보 넘기는 함수
 };

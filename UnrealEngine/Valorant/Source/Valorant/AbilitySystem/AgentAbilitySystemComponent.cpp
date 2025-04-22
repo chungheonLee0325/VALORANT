@@ -42,7 +42,7 @@ void UAgentAbilitySystemComponent::GetLifetimeReplicatedProps(TArray<class FLife
 	DOREPLIFETIME(UAgentAbilitySystemComponent, SkillEName);
 	DOREPLIFETIME(UAgentAbilitySystemComponent, SkillXName);
 	DOREPLIFETIME(UAgentAbilitySystemComponent, m_AgentID);
-	DOREPLIFETIME(UAgentAbilitySystemComponent, AgentSkillHandle);
+	// DOREPLIFETIME(UAgentAbilitySystemComponent, AgentSkillHandle);
 }
 
 /**서버에서만 호출됩니다.*/
@@ -57,12 +57,9 @@ void UAgentAbilitySystemComponent::InitializeByAgentData(int32 agentID)
 	RegisterAgentAbilities(data);
 }
 
-void UAgentAbilitySystemComponent::SkillCallByTag(const FGameplayTag& inputTag)
+void UAgentAbilitySystemComponent::ResisterFollowUpInput(const TArray<FGameplayTag>& tags)
 {
-	FGameplayTagContainer tagCon(inputTag);
-	bool bSuccess = TryActivateAbilitiesByTag(tagCon);
-	
-	UE_LOG(LogTemp, Warning, TEXT("GA TryActivate by Tag: %s → %s"), *inputTag.ToString(), bSuccess ? TEXT("성공") : TEXT("실패"));
+	FollowUpInputBySkill = tags;
 }
 
 void UAgentAbilitySystemComponent::InitializeAttribute(const FAgentData* agentData)
@@ -86,6 +83,15 @@ void UAgentAbilitySystemComponent::RegisterAgentAbilities(const FAgentData* agen
 	GiveAgentAbility(agentData->Ability_X, 1);
 }
 
+void UAgentAbilitySystemComponent::ClearCurrnetAbility(const FGameplayAbilitySpecHandle& handle)
+{
+	if (handle == CurrentAbilityHandle)
+	{
+		CurrentAbilityHandle;
+		ClearFollowUpInput();
+	}
+}
+
 void UAgentAbilitySystemComponent::ClearAgentAbilities()
 {
 	FGameplayTagContainer tagCon;
@@ -101,16 +107,31 @@ void UAgentAbilitySystemComponent::GiveAgentAbility(TSubclassOf<UGameplayAbility
 {
 	UGameplayAbility* ga = abilityClass->GetDefaultObject<UGameplayAbility>();
 	FGameplayAbilitySpec spec(abilityClass, level);
+	
 	//TODO: 스킬에 태그 늘어나면 변경
-	FGameplayTag skillTag = ga->GetAssetTags().First();
+	// FGameplayTag skillTag = ga->GetAssetTags().First();
 
-	if (!SkillTags.Contains(skillTag))
+	bool bIsSkill = false;
+	FGameplayTag skillTag;
+	
+	const FGameplayTagContainer& tagCon = ga->GetAssetTags();
+	for (FGameplayTag tag: tagCon)
 	{
-		UE_LOG(LogTemp, Error, TEXT("AbilityTypeTag %s는 스킬용 태그가 아니므로 등록할 수 없습니다."), *skillTag.ToString());
-		return;
+		if (SkillTags.Contains(tag))
+		{
+			skillTag = tag;		
+			bIsSkill = true;
+			break;
+		}
 	}
 
-	//TODO: 레거시. 프로토 UI에 스킬 네임 전달하기 위함
+	if (bIsSkill == false)
+	{
+		UE_LOG(LogTemp, Error, TEXT("스킬용 태그를 지닌 어빌리티가 아니므로, 등록할 수 없습니다."));
+		return;
+	}
+	
+	//TODO: 레거시. 프로토 UI에 스킬 네임 전달하기 위함 / SkillData로 변경
 	if (skillTag == FValorantGameplayTags::Get().InputTag_Ability_Q)
 	{
 		 SkillQName = abilityClass->GetName();
@@ -127,11 +148,20 @@ void UAgentAbilitySystemComponent::GiveAgentAbility(TSubclassOf<UGameplayAbility
 	{
 		SkillXName = abilityClass->GetName();
 	}
-		
+
+	FGameplayAbilitySpecHandle* existHandle = ReservedSkillHandleMap.Find(skillTag);
+	if (existHandle)
+	{
+		ClearAbility(*existHandle);
+		ReservedSkillHandleMap.Remove(skillTag);
+		UE_LOG(LogTemp,Warning,TEXT("%s 스킬이 이미 존재해요. 제거 후 재등록합니다."),*skillTag.ToString());
+	}
+	
+	spec.GetDynamicSpecSourceTags().AddTag(skillTag);
+	
 	//GiveAbility 다음 tick에서 spec의 handle이 생성되므로, handle을 리턴값으로 받아줘야 정확함.
-	spec.GetDynamicSpecSourceTags().AddTag(ga->GetAssetTags().First());
 	FGameplayAbilitySpecHandle handle = GiveAbility(spec);
-	AgentSkillHandle.Add(handle);
+	ReservedSkillHandleMap.Add(skillTag, handle);
 }
 
 void UAgentAbilitySystemComponent::ClearAgentAbility(const FGameplayTagContainer& tags)
@@ -142,6 +172,61 @@ void UAgentAbilitySystemComponent::ClearAgentAbility(const FGameplayTagContainer
 		{
 			ClearAbility(spec.Handle);
 		}
+	}
+}
+
+void UAgentAbilitySystemComponent::ClearAgentAbility(const FGameplayAbilitySpec* spec)
+{
+	if (spec == nullptr)
+	{
+		UE_LOG(LogTemp,Error,TEXT("SKill Spec is NULL"));
+		return;
+	}
+}
+
+void UAgentAbilitySystemComponent::ClearFollowUpInput()
+{
+	FollowUpInputBySkill.Empty();
+}
+
+bool UAgentAbilitySystemComponent::IsFollowUpInput(const FGameplayTag& inputTag)
+{
+	return FollowUpInputBySkill.Contains(inputTag);
+}
+
+bool UAgentAbilitySystemComponent::TrySkillFollowupInput(const FGameplayTag& inputTag)
+{
+	//TODO: 추후 필요없다고 판단되면 지우기(중복 검사)
+	if (!IsFollowUpInput(inputTag))
+	{
+		return false;
+	}
+
+	//TODO: CurrentSkill X, TSet에 관리되는 스킬 기반으로 변경
+	FGameplayAbilitySpec* spec = FindAbilitySpecFromHandle(CurrentAbilityHandle);
+	if (spec && spec->IsActive())
+	{
+		AbilitySpecInputPressed(*spec);
+		return true;
+	}
+
+	return false;
+}
+
+bool UAgentAbilitySystemComponent::TrySkillInput(const FGameplayTag& inputTag)
+{
+	if (IsFollowUpInput(inputTag))
+	{
+		if (TrySkillFollowupInput(inputTag))
+		{
+			return true;
+		}
+	}
+	
+	if (const FGameplayAbilitySpecHandle* gaHandle = ReservedSkillHandleMap.Find(inputTag))
+	{
+		bool bSuccess = TryActivateAbility(*gaHandle);
+		UE_LOG(LogTemp, Warning, TEXT("GA TryActivate by Tag: %s → %s"), *inputTag.ToString(), bSuccess ? TEXT("성공") : TEXT("실패"));
 	}
 }
 
