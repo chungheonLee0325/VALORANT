@@ -108,7 +108,8 @@ void UValorantGameInstance::CreateSession()
 	// 난입은 불가 (세션이 Pending 상태{메치메이킹 중}일 때만 Join 가능)
 	SessionSettings.bAllowJoinInProgress = false;
 	// 세션에 Steam 친구 등을 초대할 수 있도록 설정
-	SessionSettings.bAllowInvites = true;
+	// fix: 활성화 시 검색이 안되서 비활성화 처리
+	// SessionSettings.bAllowInvites = true;
 	// 1로 설정하면 여러 유저가 각각 고유의 빌드 ID를 가지고 호스팅 및 게임 참가가 가능하다고 한다
 	SessionSettings.BuildUniqueId = 1;
 
