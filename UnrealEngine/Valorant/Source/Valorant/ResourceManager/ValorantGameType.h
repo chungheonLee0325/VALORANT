@@ -336,8 +336,8 @@ struct FAbilityData : public FTableRowBase
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Basic")
 	FText AbilityDescription;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Basic")
-	EAbilitySlotType AbilitySlot = EAbilitySlotType::None;
+	// UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Basic")
+	// EAbilitySlotType AbilitySlot = EAbilitySlotType::None;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Basic")
 	UTexture2D* AbilityIcon = nullptr;
@@ -359,11 +359,12 @@ struct FAbilityData : public FTableRowBase
 
 	// 능력 종류
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Valorant|Ability")
-	EValorantAbilityType AbilityType;
+	//EValorantAbilityType AbilityType = EValorantAbilityType::None;
+	FGameplayTag AbilityKindTag;
     
 	// 능력 충전 코스트 (시그니처는 라운드당 충전 수, 궁극기는 필요 포인트, 구매 비용)
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Valorant|Ability")
-	int32 ChargeCost;
+	int32 ChargeCost = 0;
 
 	// 충전 관련
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Charges")

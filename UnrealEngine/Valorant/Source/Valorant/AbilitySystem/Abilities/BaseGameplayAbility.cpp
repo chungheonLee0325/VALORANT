@@ -2,3 +2,8 @@
 
 
 #include "BaseGameplayAbility.h"
+
+void UBaseGameplayAbility::SetAbilityID(int32 AbilityID)
+{
+	m_AbilityID = AbilityID;
+}

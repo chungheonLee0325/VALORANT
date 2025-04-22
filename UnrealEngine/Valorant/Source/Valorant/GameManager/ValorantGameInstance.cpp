@@ -1,6 +1,5 @@
 ﻿// Fill out your copyright notice in the Description page of Project Settings.
 
-
 #include "ValorantGameInstance.h"
 
 #include "OnlineSubsystem.h"
@@ -12,81 +11,52 @@
 #include "Online/OnlineSessionNames.h"
 #include "ResourceManager/ValorantGameType.h"
 
+template<typename RowStructType, typename IDType>
+void LoadDataTableToMap(const FString& Path, TMap<IDType, RowStructType>& OutMap, IDType RowStructType::* IDMember)
+{
+	UDataTable* DataTable = LoadObject<UDataTable>(nullptr, *Path);
+	if (DataTable)
+	{
+		TArray<FName> RowNames = DataTable->GetRowNames();
+		for (const FName& RowName : RowNames)
+		{
+			RowStructType* Row = DataTable->FindRow<RowStructType>(RowName, TEXT(""));
+			if (Row != nullptr)
+			{
+				OutMap.Add(Row->*IDMember, *Row);
+			}
+		}
+	}
+}
+
 void UValorantGameInstance::Init()
 {
 	Super::Init();
 	
 	FValorantGameplayTags::Get().InitializeNativeTags();
 
-	// Agent Data
-	UDataTable* AgentData = LoadObject<UDataTable>(
-		nullptr, TEXT("/Script/Engine.DataTable'/Game/BluePrint/DataTable/dt_Agent.dt_Agent'"));
-	
-	if (nullptr != AgentData)
-	{
-		TArray<FName> RowNames = AgentData->GetRowNames();
+	// Agent Data Load
+	LoadDataTableToMap<FAgentData, int32>(
+		TEXT("/Script/Engine.DataTable'/Game/BluePrint/DataTable/dt_Agent.dt_Agent'"),
+		dt_Agent,
+		&FAgentData::AgentID
+	);
 
-		for (const FName& RowName : RowNames)
-		{
-			FAgentData* Row = AgentData->FindRow<FAgentData>(RowName, TEXT(""));
-			if (nullptr != Row)
-			{
-				dt_Agent.Add(Row->AgentID, *Row);
-			}
-		}
-	}
+	// Weapon Data Load
+	LoadDataTableToMap<FWeaponData, int32>(
+		TEXT("/Script/Engine.DataTable'/Game/BluePrint/DataTable/dt_Weapon.dt_Weapon'"),
+		dt_Weapon,
+		&FWeaponData::WeaponID
+	);
 
-	// Weapon Data
-	UDataTable* WeaponData = LoadObject<UDataTable>(
-		nullptr, TEXT("/Script/Engine.DataTable'/Game/BluePrint/DataTable/dt_Weapon.dt_Weapon'"));
-	if (nullptr != WeaponData)
-	{
-		TArray<FName> RowNames = WeaponData->GetRowNames();
+	// Agent Data Load
+	LoadDataTableToMap<FAbilityData, int32>(
+		TEXT("/Script/Engine.DataTable'/Game/BluePrint/DataTable/dt_Ability.dt_Ability'"),
+		dt_Ability,
+		&FAbilityData::AbilityID
+	);
 
-		for (const FName& RowName : RowNames)
-		{
-			FWeaponData* Row = WeaponData->FindRow<FWeaponData>(RowName, TEXT(""));
-			if (nullptr != Row)
-			{
-				dt_Weapon.Add(Row->WeaponID, *Row);
-			}
-		}
-	}
-
-	// // Game Effect Data
-	// UDataTable* GEffectData = LoadObject<UDataTable>(
-	// 	nullptr, TEXT("/Script/Engine.DataTable'/Game/BluePrint/DataTable/dt_Weapon.dt_Weapon'"));
-	// if (nullptr != WeaponData)
-	// {
-	// 	TArray<FName> RowNames = GEffectData->GetRowNames();
-	//
-	// 	for (const FName& RowName : RowNames)
-	// 	{
-	// 		FGameplayEffectData* Row = GEffectData->FindRow<FGameplayEffectData>(RowName, TEXT(""));
-	// 		if (nullptr != Row)
-	// 		{
-	// 			dt_GEffect.Add(Row->EffectID, *Row);
-	// 		}
-	// 	}
-	// }
-	//
-	// // Ability Data
-	// UDataTable* AbilityData = LoadObject<UDataTable>(
-	// 	nullptr, TEXT("/Script/Engine.DataTable'/Game/BluePrint/DataTable/dt_Weapon.dt_Weapon'"));
-	// if (nullptr != WeaponData)
-	// {
-	// 	TArray<FName> RowNames = AbilityData->GetRowNames();
-	//
-	// 	for (const FName& RowName : RowNames)
-	// 	{
-	// 		FAbilityData* Row = AbilityData->FindRow<FAbilityData>(RowName, TEXT(""));
-	// 		if (nullptr != Row)
-	// 		{
-	// 			dt_Ability.Add(Row->AbilityID, *Row);
-	// 		}
-	// 	}
-	// }
-
+	// OnlineSubsystem
 	IOnlineSubsystem* OnlineSubsystem = Online::GetSubsystem(GetWorld());
 	if (OnlineSubsystem)
 	{
@@ -206,7 +176,7 @@ void UValorantGameInstance::OnFindSessionsComplete(bool bWasSuccessful)
 
 void UValorantGameInstance::DestroySession(const FName SessionName)
 {
-	if (SessionInterface.IsValid() && SessionInterface.IsUnique())
+	if (SessionInterface.IsValid())
 	{
 		if (SessionInterface->GetNamedSession(SessionName))
 		{

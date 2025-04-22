@@ -13,4 +13,11 @@ UCLASS()
 class VALORANT_API UBaseGameplayAbility : public UGameplayAbility
 {
 	GENERATED_BODY()
+
+public:
+	void SetAbilityID(int32 AbilityID);
+
+protected:
+	UPROPERTY(EditAnywhere)
+	int32 m_AbilityID = 0;
 };

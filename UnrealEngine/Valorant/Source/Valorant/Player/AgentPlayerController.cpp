@@ -107,3 +107,29 @@ void AAgentPlayerController::HandleMoveSpeedChanged(float NewSpeed)
 	OnMoveSpeedChanged_PC.Broadcast(NewSpeed);
 }
 
+void AAgentPlayerController::RequestPurchaseAbility(int AbilityID)
+{
+	if (AbilityID != 0)
+	{
+		Server_RequestPurchaseAbility(AbilityID);
+	}
+}
+
+void AAgentPlayerController::Server_RequestPurchaseAbility_Implementation(int AbilityID)
+{
+	AAgentPlayerState* PS = GetPlayerState<AAgentPlayerState>();
+	if (PS)
+	{
+		PS->Server_PurchaseAbility(AbilityID);
+	}
+}
+
+bool AAgentPlayerController::Server_RequestPurchaseAbility_Validate(int AbilityID)
+{
+	// ToDo 유효성 검사 - 해당 케릭의 스킬 목록이 맞는지...
+	return AbilityID != 0;
+}
+
+void AAgentPlayerController::RequestOpenShopUI()
+{
+}
