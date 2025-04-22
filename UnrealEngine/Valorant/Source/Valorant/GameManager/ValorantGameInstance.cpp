@@ -1,6 +1,5 @@
 ﻿// Fill out your copyright notice in the Description page of Project Settings.
 
-
 #include "ValorantGameInstance.h"
 
 #include "OnlineSubsystem.h"
@@ -12,92 +11,59 @@
 #include "Online/OnlineSessionNames.h"
 #include "ResourceManager/ValorantGameType.h"
 
+template<typename RowStructType, typename IDType>
+void LoadDataTableToMap(const FString& Path, TMap<IDType, RowStructType>& OutMap, IDType RowStructType::* IDMember)
+{
+	UDataTable* DataTable = LoadObject<UDataTable>(nullptr, *Path);
+	if (DataTable)
+	{
+		TArray<FName> RowNames = DataTable->GetRowNames();
+		for (const FName& RowName : RowNames)
+		{
+			RowStructType* Row = DataTable->FindRow<RowStructType>(RowName, TEXT(""));
+			if (Row != nullptr)
+			{
+				OutMap.Add(Row->*IDMember, *Row);
+			}
+		}
+	}
+}
+
 void UValorantGameInstance::Init()
 {
 	Super::Init();
 	
 	FValorantGameplayTags::Get().InitializeNativeTags();
 
-	// Agent Data
-	UDataTable* AgentData = LoadObject<UDataTable>(
-		nullptr, TEXT("/Script/Engine.DataTable'/Game/BluePrint/DataTable/dt_Agent.dt_Agent'"));
-	
-	if (nullptr != AgentData)
-	{
-		TArray<FName> RowNames = AgentData->GetRowNames();
+	// Agent Data Load
+	LoadDataTableToMap<FAgentData, int32>(
+		TEXT("/Script/Engine.DataTable'/Game/BluePrint/DataTable/dt_Agent.dt_Agent'"),
+		dt_Agent,
+		&FAgentData::AgentID
+	);
 
-		for (const FName& RowName : RowNames)
+	// Weapon Data Load
+	LoadDataTableToMap<FWeaponData, int32>(
+		TEXT("/Script/Engine.DataTable'/Game/BluePrint/DataTable/dt_Weapon.dt_Weapon'"),
+		dt_Weapon,
+		&FWeaponData::WeaponID
+	);
+
+	if (false == SessionInterface.IsValid())
+	{
+		// OnlineSubsystem
+		IOnlineSubsystem* OnlineSubsystem = Online::GetSubsystem(GetWorld());
+		if (OnlineSubsystem)
 		{
-			FAgentData* Row = AgentData->FindRow<FAgentData>(RowName, TEXT(""));
-			if (nullptr != Row)
+			SessionInterface = OnlineSubsystem->GetSessionInterface();
+			NET_LOG(LogTemp, Warning, TEXT("SubsystemName : %s"), *OnlineSubsystem->GetSubsystemName().ToString());
+			if (SessionInterface.IsValid())
 			{
-				dt_Agent.Add(Row->AgentID, *Row);
+				SessionInterface->OnCreateSessionCompleteDelegates.AddUObject(this, &UValorantGameInstance::OnCreateSessionComplete);
+				SessionInterface->OnDestroySessionCompleteDelegates.AddUObject(this, &UValorantGameInstance::OnDestroySessionComplete);
+				SessionInterface->OnFindSessionsCompleteDelegates.AddUObject(this, &UValorantGameInstance::OnFindSessionsComplete);
+				SessionInterface->OnJoinSessionCompleteDelegates.AddUObject(this, &UValorantGameInstance::OnJoinSessionComplete);
 			}
-		}
-	}
-
-	// Weapon Data
-	UDataTable* WeaponData = LoadObject<UDataTable>(
-		nullptr, TEXT("/Script/Engine.DataTable'/Game/BluePrint/DataTable/dt_Weapon.dt_Weapon'"));
-	if (nullptr != WeaponData)
-	{
-		TArray<FName> RowNames = WeaponData->GetRowNames();
-
-		for (const FName& RowName : RowNames)
-		{
-			FWeaponData* Row = WeaponData->FindRow<FWeaponData>(RowName, TEXT(""));
-			if (nullptr != Row)
-			{
-				dt_Weapon.Add(Row->WeaponID, *Row);
-			}
-		}
-	}
-
-	// // Game Effect Data
-	// UDataTable* GEffectData = LoadObject<UDataTable>(
-	// 	nullptr, TEXT("/Script/Engine.DataTable'/Game/BluePrint/DataTable/dt_Weapon.dt_Weapon'"));
-	// if (nullptr != WeaponData)
-	// {
-	// 	TArray<FName> RowNames = GEffectData->GetRowNames();
-	//
-	// 	for (const FName& RowName : RowNames)
-	// 	{
-	// 		FGameplayEffectData* Row = GEffectData->FindRow<FGameplayEffectData>(RowName, TEXT(""));
-	// 		if (nullptr != Row)
-	// 		{
-	// 			dt_GEffect.Add(Row->EffectID, *Row);
-	// 		}
-	// 	}
-	// }
-	//
-	// // Ability Data
-	// UDataTable* AbilityData = LoadObject<UDataTable>(
-	// 	nullptr, TEXT("/Script/Engine.DataTable'/Game/BluePrint/DataTable/dt_Weapon.dt_Weapon'"));
-	// if (nullptr != WeaponData)
-	// {
-	// 	TArray<FName> RowNames = AbilityData->GetRowNames();
-	//
-	// 	for (const FName& RowName : RowNames)
-	// 	{
-	// 		FAbilityData* Row = AbilityData->FindRow<FAbilityData>(RowName, TEXT(""));
-	// 		if (nullptr != Row)
-	// 		{
-	// 			dt_Ability.Add(Row->AbilityID, *Row);
-	// 		}
-	// 	}
-	// }
-
-	IOnlineSubsystem* OnlineSubsystem = Online::GetSubsystem(GetWorld());
-	if (OnlineSubsystem)
-	{
-		SessionInterface = OnlineSubsystem->GetSessionInterface();
-		NET_LOG(LogTemp, Warning, TEXT("SubsystemName : %s"), *OnlineSubsystem->GetSubsystemName().ToString());
-		if (SessionInterface.IsValid())
-		{
-			SessionInterface->OnCreateSessionCompleteDelegates.AddUObject(this, &UValorantGameInstance::OnCreateSessionComplete);
-			SessionInterface->OnDestroySessionCompleteDelegates.AddUObject(this, &UValorantGameInstance::OnDestroySessionComplete);
-			SessionInterface->OnFindSessionsCompleteDelegates.AddUObject(this, &UValorantGameInstance::OnFindSessionsComplete);
-			SessionInterface->OnJoinSessionCompleteDelegates.AddUObject(this, &UValorantGameInstance::OnJoinSessionComplete);
 		}
 	}
 }
@@ -111,7 +77,8 @@ void UValorantGameInstance::Shutdown()
 
 void UValorantGameInstance::CreateSession()
 {
-	if (false == SessionInterface.IsValid())
+	const FName SessionName = NAME_GameSession;
+	if (false == SessionInterface.IsValid() && nullptr != SessionInterface->GetNamedSession(SessionName))
 	{
 		return;
 	}
@@ -145,7 +112,7 @@ void UValorantGameInstance::CreateSession()
 	// 반드시 EOnlineDataAdvertisementType::ViaOnlineServiceAndPing로 설정해야 필터링이 된다.
 	SessionSettings.Set(FName(TEXT("MATCH_TYPE")), FString(TEXT("SpikeRush")), EOnlineDataAdvertisementType::ViaOnlineServiceAndPing);
 	// 상기 옵션으로 세션을 생성한다
-	SessionInterface->CreateSession(0, NAME_GameSession, SessionSettings);
+	SessionInterface->CreateSession(0, SessionName, SessionSettings);
 }
 
 void UValorantGameInstance::OnCreateSessionComplete(FName SessionName, bool bWasSuccessful)
@@ -206,10 +173,11 @@ void UValorantGameInstance::OnFindSessionsComplete(bool bWasSuccessful)
 
 void UValorantGameInstance::DestroySession(const FName SessionName)
 {
-	if (SessionInterface.IsValid() && SessionInterface.IsUnique())
+	if (SessionInterface.IsValid())
 	{
 		if (SessionInterface->GetNamedSession(SessionName))
 		{
+			NET_LOG(LogTemp, Warning, TEXT("DestroySession SessionName: %s"), *SessionName.ToString());
 			SessionInterface->DestroySession(SessionName);
 		}
 	}
