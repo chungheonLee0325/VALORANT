@@ -49,18 +49,21 @@ void UValorantGameInstance::Init()
 		&FWeaponData::WeaponID
 	);
 
-	// OnlineSubsystem
-	IOnlineSubsystem* OnlineSubsystem = Online::GetSubsystem(GetWorld());
-	if (OnlineSubsystem)
+	if (false == SessionInterface.IsValid())
 	{
-		SessionInterface = OnlineSubsystem->GetSessionInterface();
-		NET_LOG(LogTemp, Warning, TEXT("SubsystemName : %s"), *OnlineSubsystem->GetSubsystemName().ToString());
-		if (SessionInterface.IsValid())
+		// OnlineSubsystem
+		IOnlineSubsystem* OnlineSubsystem = Online::GetSubsystem(GetWorld());
+		if (OnlineSubsystem)
 		{
-			SessionInterface->OnCreateSessionCompleteDelegates.AddUObject(this, &UValorantGameInstance::OnCreateSessionComplete);
-			SessionInterface->OnDestroySessionCompleteDelegates.AddUObject(this, &UValorantGameInstance::OnDestroySessionComplete);
-			SessionInterface->OnFindSessionsCompleteDelegates.AddUObject(this, &UValorantGameInstance::OnFindSessionsComplete);
-			SessionInterface->OnJoinSessionCompleteDelegates.AddUObject(this, &UValorantGameInstance::OnJoinSessionComplete);
+			SessionInterface = OnlineSubsystem->GetSessionInterface();
+			NET_LOG(LogTemp, Warning, TEXT("SubsystemName : %s"), *OnlineSubsystem->GetSubsystemName().ToString());
+			if (SessionInterface.IsValid())
+			{
+				SessionInterface->OnCreateSessionCompleteDelegates.AddUObject(this, &UValorantGameInstance::OnCreateSessionComplete);
+				SessionInterface->OnDestroySessionCompleteDelegates.AddUObject(this, &UValorantGameInstance::OnDestroySessionComplete);
+				SessionInterface->OnFindSessionsCompleteDelegates.AddUObject(this, &UValorantGameInstance::OnFindSessionsComplete);
+				SessionInterface->OnJoinSessionCompleteDelegates.AddUObject(this, &UValorantGameInstance::OnJoinSessionComplete);
+			}
 		}
 	}
 }
@@ -74,7 +77,8 @@ void UValorantGameInstance::Shutdown()
 
 void UValorantGameInstance::CreateSession()
 {
-	if (false == SessionInterface.IsValid())
+	const FName SessionName = NAME_GameSession;
+	if (false == SessionInterface.IsValid() && nullptr != SessionInterface->GetNamedSession(SessionName))
 	{
 		return;
 	}
@@ -108,7 +112,7 @@ void UValorantGameInstance::CreateSession()
 	// 반드시 EOnlineDataAdvertisementType::ViaOnlineServiceAndPing로 설정해야 필터링이 된다.
 	SessionSettings.Set(FName(TEXT("MATCH_TYPE")), FString(TEXT("SpikeRush")), EOnlineDataAdvertisementType::ViaOnlineServiceAndPing);
 	// 상기 옵션으로 세션을 생성한다
-	SessionInterface->CreateSession(0, NAME_GameSession, SessionSettings);
+	SessionInterface->CreateSession(0, SessionName, SessionSettings);
 }
 
 void UValorantGameInstance::OnCreateSessionComplete(FName SessionName, bool bWasSuccessful)
@@ -173,6 +177,7 @@ void UValorantGameInstance::DestroySession(const FName SessionName)
 	{
 		if (SessionInterface->GetNamedSession(SessionName))
 		{
+			NET_LOG(LogTemp, Warning, TEXT("DestroySession SessionName: %s"), *SessionName.ToString());
 			SessionInterface->DestroySession(SessionName);
 		}
 	}
