@@ -94,37 +94,38 @@ void UValorantGameInstance::CreateSession()
 		return;
 	}
 
-	FOnlineSessionSettings SessionSettings;
+	const TSharedPtr<FOnlineSessionSettings> SessionSettings = MakeShareable(new FOnlineSessionSettings());
 	// 기본적으로 LANMatch는 비활성화
-	SessionSettings.bIsLANMatch = false;
+	SessionSettings->bIsLANMatch = false;
 	// 게임에 존재할 수 있는 최대 플레이어 수
-	SessionSettings.NumPublicConnections = 8;
+	SessionSettings->NumPublicConnections = 8;
 	// Steam 등의 온라인 서비스 사용 시 검색에 노출되도록 설정
-	SessionSettings.bShouldAdvertise = true;
+	SessionSettings->bShouldAdvertise = true;
 	// 같은 지역의 플레이어만 참가할 수 있도록 설정 (Steam 다운로드 지역 개인 설정 통일 필요할 수 있음)
-	SessionSettings.bUsesPresence = true;
+	SessionSettings->bUsesPresence = true;
+	// SessionSettings.bAllowJoinViaPresence = true;
 	// Lobby 방식 사용 설정
-	SessionSettings.bUseLobbiesIfAvailable = true;
+	SessionSettings->bUseLobbiesIfAvailable = true;
 	// 난입은 불가 (세션이 Pending 상태{메치메이킹 중}일 때만 Join 가능)
-	SessionSettings.bAllowJoinInProgress = false;
+	SessionSettings->bAllowJoinInProgress = false;
 	// 세션에 Steam 친구 등을 초대할 수 있도록 설정
 	// fix: 활성화 시 검색이 안되서 비활성화 처리
 	// SessionSettings.bAllowInvites = true;
 	// 1로 설정하면 여러 유저가 각각 고유의 빌드 ID를 가지고 호스팅 및 게임 참가가 가능하다고 한다
-	SessionSettings.BuildUniqueId = 1;
+	// SessionSettings.BuildUniqueId = 1;
 
 	// 만약, Subsystem이 NULL이라면,
 	if (true == Online::GetSubsystem(GetWorld())->GetSubsystemName().IsEqual(TEXT("NULL")))
 	{
-		SessionSettings.bIsLANMatch = true;
-		SessionSettings.bUseLobbiesIfAvailable = false;
+		SessionSettings->bIsLANMatch = true;
+		// SessionSettings->bUseLobbiesIfAvailable = false;
 	}
 	
 	// 특정 게임 모드로만 검색되고 접속할 수 있도록 Key-Value 방식의 태그를 걸 수도 있다.
 	// 반드시 EOnlineDataAdvertisementType::ViaOnlineServiceAndPing로 설정해야 필터링이 된다.
-	SessionSettings.Set(FName(TEXT("MATCH_TYPE")), FString(TEXT("SpikeRush")), EOnlineDataAdvertisementType::ViaOnlineServiceAndPing);
+	SessionSettings->Set(FName(TEXT("MATCH_TYPE")), FString(TEXT("SpikeRush")), EOnlineDataAdvertisementType::ViaOnlineServiceAndPing);
 	// 상기 옵션으로 세션을 생성한다
-	SessionInterface->CreateSession(0, SessionName, SessionSettings);
+	SessionInterface->CreateSession(0, SessionName, *SessionSettings);
 }
 
 void UValorantGameInstance::OnCreateSessionComplete(FName SessionName, bool bWasSuccessful)
@@ -154,6 +155,9 @@ void UValorantGameInstance::FindSessions()
 	{
 		// bUseLobbiesIfAvailable 방식으로 세션을 생성하고 있으므로, 그것만 찾는다.
 		SessionSearch->QuerySettings.Set(SEARCH_LOBBIES, true, EOnlineComparisonOp::Equals);
+		// DEPRECATED: JoinSession 하기 전에 SearchResult.Session.SessionSettings.bUsesPresence = true; 를 켜면 된다.
+		// 원래는 안켜도 되는데, 언리얼 또는 스팀쪽에서 일을 안해줘서 그럼.
+		// SessionSearch->QuerySettings.Set(SEARCH_PRESENCE, true, EOnlineComparisonOp::Equals);
 	}
 	
 	// Key-Value값(매치타입)이 일치하는 세션만 찾는다.
@@ -179,7 +183,7 @@ void UValorantGameInstance::OnFindSessionsComplete(bool bWasSuccessful)
 	}
 	else
 	{
-		for (auto SearchResult : SessionSearch->SearchResults)
+		for (const auto& SearchResult : SessionSearch->SearchResults)
 		{
 			FString SessionID = SearchResult.GetSessionIdStr();
 			FString HostName = SearchResult.Session.OwningUserName;
@@ -190,11 +194,26 @@ void UValorantGameInstance::OnFindSessionsComplete(bool bWasSuccessful)
 			NET_LOG(LogTemp, Warning, TEXT("OnFindSessionsComplete SessionID: %s, HostName: %s, (%d / %d), bIsLANMatch: %hs"), *SessionID, *HostName, NumPlayers, MaxSlotCount, bIsLanMatch?"True":"False");
 			if (RemSlotCount > 0)
 			{
-				auto Session = SearchResult.Session;
-				if (const bool bSuccess = SessionInterface->JoinSession(0, NAME_GameSession, SearchResult))
+				bool bUsesPresence = SearchResult.Session.SessionSettings.bUsesPresence;
+				bool bUseLobbiesIfAvailable = SearchResult.Session.SessionSettings.bUseLobbiesIfAvailable;
+				NET_LOG(LogTemp, Warning, TEXT("Before bUsesPresence: %hs, bUseLobbiesIfAvailable: %hs"), bUsesPresence?"True":"False", bUseLobbiesIfAvailable?"True":"False");
+				const ULocalPlayer* LocalPlayer = GetWorld()->GetFirstLocalPlayerFromController();
+				auto& SearchResultRef = const_cast<FOnlineSessionSearchResult&>(SearchResult);
+				auto& SessionSettings = SearchResultRef.Session.SessionSettings;
+				SessionSettings.bUsesPresence = true;
+				SessionSettings.bUseLobbiesIfAvailable = true;
+				bUsesPresence = SessionSettings.bUsesPresence;
+				bUseLobbiesIfAvailable = SessionSettings.bUseLobbiesIfAvailable;
+				NET_LOG(LogTemp, Warning, TEXT("After bUsesPresence: %hs, bUseLobbiesIfAvailable: %hs"), bUsesPresence?"True":"False", bUseLobbiesIfAvailable?"True":"False");
+				const bool bSuccess = SessionInterface->JoinSession(*LocalPlayer->GetPreferredUniqueNetId(), NAME_GameSession, SearchResult);
+				if (bSuccess) 
 				{
-					NET_LOG(LogTemp, Warning, TEXT("OnFindSessionsComplete: Try Join Session"));
+					NET_LOG(LogTemp, Warning, TEXT("OnFindSessionsComplete: Try Join Session is Success"));
 					break;
+				}
+				else
+				{
+					NET_LOG(LogTemp, Warning, TEXT("OnFindSessionsComplete: Try Join Session is Failed"));
 				}
 			}
 		}
@@ -220,7 +239,29 @@ void UValorantGameInstance::OnDestroySessionComplete(FName SessionName, bool bWa
 
 void UValorantGameInstance::OnJoinSessionComplete(FName SessionName, EOnJoinSessionCompleteResult::Type Result)
 {
-	NET_LOG(LogTemp, Warning, TEXT("OnJoinSessionComplete SessionName: %s, Result: %d"), *SessionName.ToString(), Result);
+	FString ResultString;
+	switch (Result)
+	{
+	case EOnJoinSessionCompleteResult::Success:
+		ResultString = TEXT("Success");
+		break;
+	case EOnJoinSessionCompleteResult::SessionIsFull:
+		ResultString = TEXT("SessionIsFull");
+		break;
+	case EOnJoinSessionCompleteResult::SessionDoesNotExist:
+		ResultString = TEXT("SessionDoesNotExist");
+		break;
+	case EOnJoinSessionCompleteResult::CouldNotRetrieveAddress:
+		ResultString = TEXT("CouldNotRetrieveAddress");
+		break;
+	case EOnJoinSessionCompleteResult::AlreadyInSession:
+		ResultString = TEXT("AlreadyInSession");
+		break;
+	case EOnJoinSessionCompleteResult::UnknownError:
+		ResultString = TEXT("UnknownError");
+		break;
+	}
+	NET_LOG(LogTemp, Warning, TEXT("OnJoinSessionComplete SessionName: %s, Result: %s"), *SessionName.ToString(), *ResultString);
 }
 
 FAgentData* UValorantGameInstance::GetAgentData(int AgentID)
