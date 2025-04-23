@@ -153,6 +153,7 @@ void UAgentAbilitySystemComponent::ResisterFollowUpInput(const TSet<FGameplayTag
 	{
 		UE_LOG(LogTemp,Warning,TEXT("%s 후속 입력 키로 등록"), *tag.GetTagName().ToString());
 	}
+	OnAbilityWaitingStateChanged.Broadcast(true);
 }
 
 bool UAgentAbilitySystemComponent::TrySkillInput(const FGameplayTag& inputTag)
@@ -182,6 +183,7 @@ bool UAgentAbilitySystemComponent::TrySkillInput(const FGameplayTag& inputTag)
 			{
 				//UE_LOG(LogTemp,Warning,TEXT("스킬 후속 입력 성공"));
 				FollowUpInputBySkill.Empty();
+				OnAbilityWaitingStateChanged.Broadcast(false);
 				return true;
 			}
 			else
@@ -218,6 +220,10 @@ void UAgentAbilitySystemComponent::ClearCurrentAbilityHandle(const FGameplayAbil
 	if (CurrentAbilityHandle.IsValid() && CurrentAbilityHandle == handle)
 	{
 		CurrentAbilityHandle = FGameplayAbilitySpecHandle();
+	}
+	else
+	{
+		UE_LOG(LogTemp,Error,TEXT("실제 사용 완료된 Ability와 ASC의 CurrentAbility 변수의 정보가 일치하지 않아요."));
 	}
 }
 
