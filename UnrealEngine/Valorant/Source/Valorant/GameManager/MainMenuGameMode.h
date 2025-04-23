@@ -16,8 +16,4 @@ class VALORANT_API AMainMenuGameMode : public AGameMode
 
 public:
 	AMainMenuGameMode();
-
-protected:
-	virtual void PreLogin(const FString& Options, const FString& Address, const FUniqueNetIdRepl& UniqueId, FString& ErrorMessage) override;
-	virtual void PostLogin(APlayerController* NewPlayer) override;
 };

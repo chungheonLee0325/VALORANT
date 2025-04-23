@@ -74,6 +74,7 @@ void UValorantGameInstance::Init()
 				SessionInterface->OnDestroySessionCompleteDelegates.AddUObject(this, &UValorantGameInstance::OnDestroySessionComplete);
 				SessionInterface->OnFindSessionsCompleteDelegates.AddUObject(this, &UValorantGameInstance::OnFindSessionsComplete);
 				SessionInterface->OnJoinSessionCompleteDelegates.AddUObject(this, &UValorantGameInstance::OnJoinSessionComplete);
+				SessionInterface->OnUpdateSessionCompleteDelegates.AddUObject(this, &UValorantGameInstance::OnUpdateSessionComplete);
 			}
 		}
 	}
@@ -264,6 +265,21 @@ void UValorantGameInstance::OnJoinSessionComplete(FName SessionName, EOnJoinSess
 		break;
 	}
 	NET_LOG(LogTemp, Warning, TEXT("OnJoinSessionComplete SessionName: %s, Result: %s"), *SessionName.ToString(), *ResultString);
+
+	if (EOnJoinSessionCompleteResult::Success != Result)
+	{
+		return;
+	}
+
+	if (true == bIsFindingMatch && false == bIsHostingMatch)
+	{
+		GetWorld()->GetTimerManager().SetTimer(CheckSessionHandle, this, &UValorantGameInstance::CheckJoinSession, 1.0f, true);
+	}
+}
+
+void UValorantGameInstance::OnUpdateSessionComplete(FName SessionName, bool bWasSuccessful)
+{
+	NET_LOG(LogTemp, Warning, TEXT("OnUpdateSessionComplete SessionName: %s, bWasSuccessful: %hs"), *SessionName.ToString(), bWasSuccessful?"True":"False");
 }
 
 void UValorantGameInstance::CheckHostingSession()
@@ -296,7 +312,46 @@ void UValorantGameInstance::CheckHostingSession()
 
 void UValorantGameInstance::StartMatch()
 {
-	GetWorld()->ServerTravel("/Game/Maps/FirstPersonMap?listen", TRAVEL_Absolute, false);
+	GetWorld()->ServerTravel("/Game/Maps/MatchMap?listen", TRAVEL_Absolute, false);
+}
+
+void UValorantGameInstance::CheckJoinSession()
+{
+	const auto* Session = SessionInterface->GetNamedSession(NAME_GameSession);
+	if (Session)
+	{
+		bool bReady = false;
+		Session->SessionSettings.Get(FName(TEXT("bReadyToTravel")), bReady);
+		if (bReady)
+		{
+			NET_LOG(LogTemp, Warning, TEXT("CheckJoinSession: Ready to Travel"));
+			GetWorld()->GetTimerManager().ClearTimer(CheckSessionHandle);
+		}
+		else
+		{
+			NET_LOG(LogTemp, Warning, TEXT("CheckJoinSession: Not Ready to Travel"));
+		}
+	}
+}
+
+void UValorantGameInstance::BroadcastTravel()
+{
+	if (false == SessionInterface.IsValid())
+	{
+		NET_LOG(LogTemp, Warning, TEXT("BroadcastTravel: SessionInterface is Invalid"));
+		return;
+	}
+
+	auto* Session = SessionInterface->GetNamedSession(NAME_GameSession);
+	if (nullptr == Session)
+	{
+		NET_LOG(LogTemp, Warning, TEXT("BroadcastTravel: Session is nullptr"));
+		return;
+	}
+
+	NET_LOG(LogTemp, Warning, TEXT("BroadcastTravel: Try Update Session"));
+	Session->SessionSettings.Set(FName("bReadyToTravel"), true, EOnlineDataAdvertisementType::ViaOnlineServiceAndPing);
+	SessionInterface->UpdateSession(NAME_GameSession, Session->SessionSettings, true);
 }
 
 FAgentData* UValorantGameInstance::GetAgentData(int AgentID)

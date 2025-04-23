@@ -29,6 +29,7 @@ public:
 	int ReqMatchAutoStartPlayerCount = 2;
 	UFUNCTION(BlueprintCallable)
 	void FindMatch();
+	void BroadcastTravel();
 	
 protected:
 	virtual void Init() override;
@@ -42,9 +43,11 @@ protected:
 	void DestroySession(FName SessionName);
 	void OnDestroySessionComplete(FName SessionName, bool bWasSuccessful);
 	void OnJoinSessionComplete(FName Name, EOnJoinSessionCompleteResult::Type Arg);
+	void OnUpdateSessionComplete(FName Name, bool bArg);
 	
 	void CheckHostingSession();
 	void StartMatch();
+	void CheckJoinSession();
 
 public:
 	FAgentData* GetAgentData(int AgentID);
