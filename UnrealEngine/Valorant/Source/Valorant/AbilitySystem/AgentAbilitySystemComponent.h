@@ -12,7 +12,7 @@
 class UGameplayAbilityWithTag;
 class UValorantGameInstance;
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnAbilityWaitingStateChanged, bool, bIsWaitingFollowUpAbility);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnAbilityWaitingStateChanged, bool, bIsWaitingAbility);
 
 UCLASS()
 class VALORANT_API UAgentAbilitySystemComponent : public UAbilitySystemComponent
