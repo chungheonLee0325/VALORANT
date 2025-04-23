@@ -12,7 +12,7 @@
 class UGameplayAbilityWithTag;
 class UValorantGameInstance;
 
-
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnAbilityWaitingStateChanged, bool, bIsWaitingFollowUpAbility);
 
 UCLASS()
 class VALORANT_API UAgentAbilitySystemComponent : public UAbilitySystemComponent
@@ -49,6 +49,10 @@ public:
 	FString GetSkillEName() const { return SkillEName; }
 	FString GetSkillCName() const { return SkillCName; }
 	FString GetSkillXName() const { return SkillXName; }
+
+	UPROPERTY(BlueprintAssignable)
+	FOnAbilityWaitingStateChanged OnAbilityWaitingStateChanged;
+
 	
 private:
 	TSet<FGameplayTag> SkillTags = {
