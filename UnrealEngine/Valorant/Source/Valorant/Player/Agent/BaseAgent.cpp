@@ -13,6 +13,7 @@
 #include "Blueprint/UserWidget.h"
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/SpringArmComponent.h"
+#include "Net/UnrealNetwork.h"
 #include "Player/Component/AgentInputComponent.h"
 #include "Valorant/Player/AgentPlayerController.h"
 #include "Valorant/Player/AgentPlayerState.h"
@@ -60,7 +61,16 @@ ABaseAgent::ABaseAgent()
 	GetMesh()->SetOnlyOwnerSee(true);
 
 	AgentInputComponent = CreateDefaultSubobject<UAgentInputComponent>("InputComponent");
+
+
+	//ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ
+	//             CYT             ♣
+	//ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ
+	// 네트워크 복제 설정
+	bReplicates = true;
+	SetReplicatingMovement(true);
 }
+
 
 // 서버 전용. 캐릭터를 Possess할 때 호출됨. 게임 첫 시작시, BeginPlay 보다 먼저 호출됩니다.
 void ABaseAgent::PossessedBy(AController* NewController)
@@ -104,11 +114,43 @@ void ABaseAgent::BeginPlay()
 	{
 		GetCharacterMovement()->MaxWalkSpeed = PS->GetMoveSpeed();
 	}
+
+	//ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ
+	//             CYT             ♣
+	//ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ
+	// 소유한 플레이어만 시야체크 수행 
+	if (IsLocallyControlled())
+	{
+		GetWorldTimerManager().SetTimer(VisionCheckTimerHandle,this, &ABaseAgent::CheckEnemiesVisibility,VisionCheckFrequency,true);
+	}
 }
 
 void ABaseAgent::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+
+	//ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ
+	//             CYT             ♣
+	//ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ
+	// 마지막으로 본 적들의 타이머 업데이트
+	// if (IsLocallyControlled())
+	// {
+	// 	TArray<ABaseAgent*> ExpiredEnemies;
+	//
+	// 	for (auto& Elem : LastSeenEnemies)
+	// 	{
+	// 		Elem.Value -= DeltaTime;
+	// 		if (Elem.Value <= 0.0f)
+	// 		{
+	// 			ExpiredEnemies.Add(Elem.Key);
+	// 		}
+	// 	}
+	//
+	// 	for (ABaseAgent* Enemy : ExpiredEnemies)
+	// 	{
+	// 		LastSeenEnemies.Remove(Enemy);
+	// 	}
+	// }
 }
 
 void ABaseAgent::InitAgentData()
@@ -196,4 +238,16 @@ void ABaseAgent::UpdateArmor(float newArmor)
 void ABaseAgent::UpdateMoveSpeed(float newSpeed)
 {
 	GetCharacterMovement()->MaxWalkSpeed = newSpeed;
+}
+
+
+//ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ
+//             CYT             ♣
+//ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ
+void ABaseAgent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	DOREPLIFETIME(ABaseAgent , VisibleEnemies)
+	//DOREPLIFETIME(ABaseAgent , LastSeeEnemies)
 }
