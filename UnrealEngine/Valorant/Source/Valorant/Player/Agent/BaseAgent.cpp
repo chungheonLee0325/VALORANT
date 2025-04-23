@@ -7,15 +7,15 @@
 #include "Camera/CameraComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Valorant/AbilitySystem/AgentAbilitySystemComponent.h"
-#include "Valorant/AbilitySystem/Attributes/BaseAttributeSet.h"
-#include "Valorant/GameManager/ValorantGameInstance.h"
-//#include "Valorant/Player/AgentInputComponent.h"
-#include "Blueprint/UserWidget.h"
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/SpringArmComponent.h"
+#include "Kismet/KismetSystemLibrary.h"
+#include "Net/UnrealNetwork.h"
+#include "Player/Component/AgentInputComponent.h"
 #include "Valorant/Player/AgentPlayerController.h"
 #include "Valorant/Player/AgentPlayerState.h"
 #include "Valorant/Player/Widget/AgentBaseWidget.h"
+#include "ValorantObject/BaseInteractor.h"
 
 
 class AAgentPlayerState;
@@ -57,14 +57,18 @@ ABaseAgent::ABaseAgent()
 
 	ThirdPersonMesh->SetOwnerNoSee(true);
 	GetMesh()->SetOnlyOwnerSee(true);
+
+	AgentInputComponent = CreateDefaultSubobject<UAgentInputComponent>("InputComponent");
+
+
+	//ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ
+	//             CYT             ♣
+	//ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ
+	// 네트워크 복제 설정
+	// bReplicates = true;
+	// SetReplicatingMovement(true);
 }
 
-void ABaseAgent::AddCameraYawInput(float val)
-{
-	float pitch = SpringArm->GetRelativeRotation().Pitch;
-	float newPitch = pitch + val * RotOffset;
-	SpringArm->SetRelativeRotation(FRotator(newPitch, 0, 0));
-}
 
 // 서버 전용. 캐릭터를 Possess할 때 호출됨. 게임 첫 시작시, BeginPlay 보다 먼저 호출됩니다.
 void ABaseAgent::PossessedBy(AController* NewController)
@@ -103,11 +107,49 @@ void ABaseAgent::OnRep_PlayerState()
 void ABaseAgent::BeginPlay()
 {
 	Super::BeginPlay();
+	PS = GetPlayerState<AAgentPlayerState>();
+	if (PS)
+	{
+		GetCharacterMovement()->MaxWalkSpeed = PS->GetMoveSpeed();
+	}
+
+	//ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ
+	//             CYT             ♣
+	//ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ
+	// 소유한 플레이어만 시야체크 수행 
+	if (IsLocallyControlled())
+	{
+		//GetWorldTimerManager().SetTimer(VisionCheckTimerHandle,this, &ABaseAgent::CheckEnemiesVisibility,VisionCheckFrequency,true);
+	}
 }
 
 void ABaseAgent::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+	FindInteractable();
+
+	//ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ
+	//             CYT             ♣
+	//ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ
+	// 마지막으로 본 적들의 타이머 업데이트
+	// if (IsLocallyControlled())
+	// {
+	// 	TArray<ABaseAgent*> ExpiredEnemies;
+	//
+	// 	for (auto& Elem : LastSeenEnemies)
+	// 	{
+	// 		Elem.Value -= DeltaTime;
+	// 		if (Elem.Value <= 0.0f)
+	// 		{
+	// 			ExpiredEnemies.Add(Elem.Key);
+	// 		}
+	// 	}
+	//
+	// 	for (ABaseAgent* Enemy : ExpiredEnemies)
+	// 	{
+	// 		LastSeenEnemies.Remove(Enemy);
+	// 	}
+	// }
 }
 
 void ABaseAgent::InitAgentData()
@@ -150,11 +192,8 @@ void ABaseAgent::InitAgentData()
 void ABaseAgent::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
-}
-
-void ABaseAgent::Crouch(bool bClientSimulation)
-{
-	Super::Crouch(bClientSimulation);
+	
+	AgentInputComponent->BindInput(PlayerInputComponent);
 }
 
 void ABaseAgent::BindToDelegatePC(AAgentPlayerController* pc)
@@ -163,6 +202,8 @@ void ABaseAgent::BindToDelegatePC(AAgentPlayerController* pc)
 	pc->OnMaxHealthChanged_PC.AddDynamic(this, &ABaseAgent::UpdateMaxHealth);
 	pc->OnArmorChanged_PC.AddDynamic(this, &ABaseAgent::UpdateArmor);
 	pc->OnMoveSpeedChanged_PC.AddDynamic(this, &ABaseAgent::UpdateMoveSpeed);
+
+	PC = pc;
 }
 
 void ABaseAgent::Die()
@@ -177,6 +218,62 @@ void ABaseAgent::EnterSpectMode()
 
 void ABaseAgent::Respawn()
 {
+}
+
+void ABaseAgent::FindInteractable()
+{
+	const FVector startPos = SpringArm->GetComponentLocation();
+	const FVector endPos = startPos + Camera->GetForwardVector() * FindItemRange;
+	FHitResult hitResult;
+	
+	TArray<TEnumAsByte<EObjectTypeQuery>> objectTypesArray;
+	objectTypesArray.Add(UEngineTypes::ConvertToObjectType(ECC_EngineTraceChannel1));
+	
+	TArray<AActor*> actorsToIgnore;
+	actorsToIgnore.Add(this);
+	
+	if (UKismetSystemLibrary::SphereTraceSingleForObjects(
+	GetWorld(), startPos, endPos, 20.f, objectTypesArray, false
+	, actorsToIgnore, EDrawDebugTrace::None, hitResult, true))
+	{
+		AActor* actor = hitResult.GetActor()->IsA(ABaseInteractor::StaticClass()) ? hitResult.GetActor() : nullptr;
+		if (actor)
+		{
+			LookingActor = Cast<ABaseInteractor>(actor);
+			LookingActor->InteractActive(true);
+		}
+	}
+	else
+	{
+		if (LookingActor)
+		{
+			// UE_LOG(LogTemp,Warning,TEXT("%s를 그만볼래"),*LookingActor->GetActorNameOrLabel());
+			LookingActor->InteractActive(false);
+			LookingActor = nullptr;
+		}
+	}
+
+	// if (GetWorld()->SweepSingleByChannel(
+	// 		hitResult,
+	// 		startPos,
+	// 		endPos,
+	// 		FQuat::Identity,
+	// 		ECC_Visibility,
+	// 		FCollisionShape::MakeSphere(20.0f)))
+	// {
+	// 	AActor* actor = hitResult.GetActor()->IsA(ABaseWeapon::StaticClass()) ? hitResult.GetActor() : nullptr;
+	// 	if (actor)
+	// 	{
+	// 		LookingActor = actor;
+	// 		UE_LOG(LogTemp,Warning,TEXT("%s를 보고 있음"),*LookingActor->GetActorNameOrLabel());
+	// 	}
+	// 	else
+	// 	{
+	// 		LookingActor = nullptr;
+	// 	}
+	// }
+	
+	// TODO: 스파이크 / 문 순서로 추가
 }
 
 void ABaseAgent::UpdateHealth(float newHealth)
@@ -199,3 +296,15 @@ void ABaseAgent::UpdateMoveSpeed(float newSpeed)
 {
 	GetCharacterMovement()->MaxWalkSpeed = newSpeed;
 }
+
+
+//ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ
+//             CYT             ♣
+//ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ
+// void ABaseAgent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+// {
+// 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+//
+// 	DOREPLIFETIME(ABaseAgent , VisibleEnemies)
+// 	//DOREPLIFETIME(ABaseAgent , LastSeeEnemies)
+// }

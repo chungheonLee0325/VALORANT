@@ -15,6 +15,9 @@ struct FValorantGameplayTags
 	FGameplayTag InputTag_Ability_E;
 	FGameplayTag InputTag_Ability_C;
 	FGameplayTag InputTag_Ability_X;
+
+	FGameplayTag InputTag_Default_LeftClick;
+	FGameplayTag InputTag_Default_RightClick;
 	
 	static FValorantGameplayTags& Get();
 	void InitializeNativeTags();

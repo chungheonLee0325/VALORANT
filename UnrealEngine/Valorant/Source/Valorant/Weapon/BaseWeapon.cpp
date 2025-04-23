@@ -19,6 +19,8 @@ ABaseWeapon::ABaseWeapon()
 	SetRootComponent(WeaponMesh);
 	PickUpModule = CreateDefaultSubobject<UPickUpComponent>(TEXT("PickUpModule"));
 	PickUpModule->SetupAttachment(GetRootComponent());
+
+	InteractWidget->SetupAttachment(RootComponent);
 }
 
 void ABaseWeapon::BeginPlay()

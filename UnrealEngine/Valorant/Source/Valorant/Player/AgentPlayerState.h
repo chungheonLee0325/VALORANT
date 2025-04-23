@@ -38,7 +38,13 @@ public:
 	
 	UFUNCTION(BlueprintCallable, Category = "Agent|BaseAttributes")
 	float GetMoveSpeed() const;
-		
+
+	// 서버에서 스킬 구매 로직 (PlayerController로부터 RPC 호출됨)
+	UFUNCTION(Server, Reliable, WithValidation)
+	void Server_PurchaseAbility(int32 AbilityID);
+
+	int32 GetAbilityStack(int32 AbilityID) const;
+	int32 ReduceAbilityStack(int32 AbilityID);
 protected:
 	virtual void BeginPlay() override;
 	
@@ -48,4 +54,17 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
 	UBaseAttributeSet* BaseAttributeSet;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
+	UValorantGameInstance* m_GameInstance = nullptr;
+
+private:
+	UPROPERTY(EditDefaultsOnly)
+	int32 CurrentCredit = 0;
+
+	UPROPERTY(EditDefaultsOnly)
+	int32 MaxCredit = 100;
+
+	// AbilityID, Stack
+	UPROPERTY(EditDefaultsOnly)
+	TMap<int32, int32> AbilityStacks; 
 };

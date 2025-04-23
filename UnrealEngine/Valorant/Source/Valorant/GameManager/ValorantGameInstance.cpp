@@ -60,12 +60,19 @@ void UValorantGameInstance::Init()
 		&FWeaponData::WeaponID
 	);
 
+	// Agent Data Load
+	LoadDataTableToMap<FAbilityData, int32>(
+		TEXT("/Script/Engine.DataTable'/Game/BluePrint/DataTable/dt_Ability.dt_Ability'"),
+		dt_Ability,
+		&FAbilityData::AbilityID
+	);
+	// OnlineSubsystem
 	if (false == SessionInterface.IsValid())
 	{
-		// OnlineSubsystem
 		IOnlineSubsystem* OnlineSubsystem = Online::GetSubsystem(GetWorld());
 		if (OnlineSubsystem)
 		{
+			// OnlineSubsystem
 			SessionInterface = OnlineSubsystem->GetSessionInterface();
 			NET_LOG(LogTemp, Warning, TEXT("SubsystemName : %s"), *OnlineSubsystem->GetSubsystemName().ToString());
 			if (SessionInterface.IsValid())

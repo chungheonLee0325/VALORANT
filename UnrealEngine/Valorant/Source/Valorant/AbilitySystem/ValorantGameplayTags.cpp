@@ -21,4 +21,6 @@ void FValorantGameplayTags::InitializeNativeTags()
 	REGISTER_TAG(InputTag_Ability_E, "Input.Skill.E");
 	REGISTER_TAG(InputTag_Ability_C, "Input.Skill.C");
 	REGISTER_TAG(InputTag_Ability_X, "Input.Skill.X");
+	REGISTER_TAG(InputTag_Default_LeftClick, "Input.Default.LeftClick");
+	REGISTER_TAG(InputTag_Default_RightClick, "Input.Default.RightClick");
 }
