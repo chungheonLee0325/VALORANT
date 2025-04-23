@@ -317,6 +317,11 @@ void UValorantGameInstance::StartMatch()
 
 void UValorantGameInstance::CheckJoinSession()
 {
+	if (false == SessionInterface.IsValid())
+	{
+		return;
+	}
+	
 	const auto* Session = SessionInterface->GetNamedSession(NAME_GameSession);
 	if (Session)
 	{
@@ -326,6 +331,17 @@ void UValorantGameInstance::CheckJoinSession()
 		{
 			NET_LOG(LogTemp, Warning, TEXT("CheckJoinSession: Ready to Travel"));
 			GetWorld()->GetTimerManager().ClearTimer(CheckSessionHandle);
+			FString ConnectString;
+			bool bSuccess = SessionInterface->GetResolvedConnectString(NAME_GameSession, ConnectString);
+			if (bSuccess)
+			{
+				NET_LOG(LogTemp, Warning, TEXT("CheckJoinSession: ClientTravel to %s"), *ConnectString);
+				GetFirstLocalPlayerController()->ClientTravel(ConnectString, TRAVEL_Absolute, false);
+			}	
+			else
+			{
+				NET_LOG(LogTemp, Warning, TEXT("CheckJoinSession: GetResolvedConnectString Failed"));
+			}
 		}
 		else
 		{
