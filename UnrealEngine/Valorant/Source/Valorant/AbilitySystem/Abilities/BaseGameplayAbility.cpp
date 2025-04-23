@@ -95,3 +95,8 @@ void UBaseGameplayAbility::CancelAbility(const FGameplayAbilitySpecHandle Handle
 		asc->ClearCurrentAbilityHandle(Handle);
 	}
 }
+
+void UBaseGameplayAbility::SetAbilityID(int32 AbilityID)
+{
+	m_AbilityID = AbilityID;
+}

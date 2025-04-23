@@ -24,9 +24,27 @@ AAgentPlayerState::AAgentPlayerState()
 	SetMinNetUpdateFrequency(33.f);
 }
 
+int32 AAgentPlayerState::GetAbilityStack(int32 AbilityID) const
+{
+	const int32* Stack = AbilityStacks.Find(AbilityID);
+	return Stack ? *Stack : 0;
+}
+
+int32 AAgentPlayerState::ReduceAbilityStack(int32 AbilityID)
+{
+	int32* Stack = AbilityStacks.Find(AbilityID);
+	if (Stack == nullptr || *Stack == 0)
+	{
+		return 0;
+	}
+	return AbilityStacks[AbilityID]--;
+}
+
 void AAgentPlayerState::BeginPlay()
 {
 	Super::BeginPlay();
+
+	m_GameInstance = Cast<UValorantGameInstance>(GetGameInstance());
 }
 
 UAbilitySystemComponent* AAgentPlayerState::GetAbilitySystemComponent() const
@@ -56,6 +74,47 @@ float AAgentPlayerState::GetArmor() const
 float AAgentPlayerState::GetMoveSpeed() const
 {
 	return BaseAttributeSet->GetMoveSpeed();
+}
+
+void AAgentPlayerState::Server_PurchaseAbility_Implementation(int32 AbilityID)
+{
+	if (!GetAbilitySystemComponent() || !GetBaseAttributeSet()) return;
+
+	FAbilityData* AbilityData = m_GameInstance->GetAbilityData(AbilityID);
+	// 1. 비용 확인
+	int32 Cost = AbilityData->ChargeCost;
+
+	if (CurrentCredit >= Cost)
+	{
+		// 2. 비용 차감 
+		CurrentCredit -= Cost;
+
+		// 3. 어빌리티 부여
+		// FGameplayAbilitySpec AbilitySpec(AbilityData->AbilityClass, 1, INDEX_NONE, this); // Level 1, InputID 없음
+		// //AbilitySpec.Ability;
+		// GetAbilitySystemComponent()->GiveAbility(AbilitySpec);
+		
+		
+		int32* Stack = AbilityStacks.Find(AbilityID);
+		if (Stack == nullptr)
+		{
+			AbilityStacks.Add(AbilityID, 0);
+		}
+		AbilityStacks[AbilityID]++;
+
+		// TODO: 클라이언트에 구매 성공/실패 피드백 (RPC 또는 Replicated 변수 사용)
+		UE_LOG(LogTemp, Log, TEXT("Player %s purchased skill %s"), *GetName(), *AbilityData->AbilityName);
+	}
+	else
+	{
+		// TODO: 클라이언트에 구매 실패 피드백 (크레딧 부족)
+		UE_LOG(LogTemp, Log, TEXT("Player %s failed to purchase skill %s: Insufficient credits"), *GetName(), *AbilityData->AbilityName);
+	}
+}
+
+bool AAgentPlayerState::Server_PurchaseAbility_Validate(int32 SkillID)
+{
+	return SkillID != 0;
 }
 
 

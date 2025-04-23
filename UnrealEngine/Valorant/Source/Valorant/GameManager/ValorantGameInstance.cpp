@@ -49,20 +49,31 @@ void UValorantGameInstance::Init()
 		&FWeaponData::WeaponID
 	);
 
+	// Agent Data Load
+	LoadDataTableToMap<FAbilityData, int32>(
+		TEXT("/Script/Engine.DataTable'/Game/BluePrint/DataTable/dt_Ability.dt_Ability'"),
+		dt_Ability,
+		&FAbilityData::AbilityID
+	);
+	// OnlineSubsystem
 	if (false == SessionInterface.IsValid())
 	{
-		// OnlineSubsystem
 		IOnlineSubsystem* OnlineSubsystem = Online::GetSubsystem(GetWorld());
 		if (OnlineSubsystem)
 		{
-			SessionInterface = OnlineSubsystem->GetSessionInterface();
-			NET_LOG(LogTemp, Warning, TEXT("SubsystemName : %s"), *OnlineSubsystem->GetSubsystemName().ToString());
-			if (SessionInterface.IsValid())
+			// OnlineSubsystem
+			IOnlineSubsystem* OnlineSubsystem = Online::GetSubsystem(GetWorld());
+			if (OnlineSubsystem)
 			{
-				SessionInterface->OnCreateSessionCompleteDelegates.AddUObject(this, &UValorantGameInstance::OnCreateSessionComplete);
-				SessionInterface->OnDestroySessionCompleteDelegates.AddUObject(this, &UValorantGameInstance::OnDestroySessionComplete);
-				SessionInterface->OnFindSessionsCompleteDelegates.AddUObject(this, &UValorantGameInstance::OnFindSessionsComplete);
-				SessionInterface->OnJoinSessionCompleteDelegates.AddUObject(this, &UValorantGameInstance::OnJoinSessionComplete);
+				SessionInterface = OnlineSubsystem->GetSessionInterface();
+				NET_LOG(LogTemp, Warning, TEXT("SubsystemName : %s"), *OnlineSubsystem->GetSubsystemName().ToString());
+				if (SessionInterface.IsValid())
+				{
+					SessionInterface->OnCreateSessionCompleteDelegates.AddUObject(this, &UValorantGameInstance::OnCreateSessionComplete);
+					SessionInterface->OnDestroySessionCompleteDelegates.AddUObject(this, &UValorantGameInstance::OnDestroySessionComplete);
+					SessionInterface->OnFindSessionsCompleteDelegates.AddUObject(this, &UValorantGameInstance::OnFindSessionsComplete);
+					SessionInterface->OnJoinSessionCompleteDelegates.AddUObject(this, &UValorantGameInstance::OnJoinSessionComplete);
+				}
 			}
 		}
 	}
