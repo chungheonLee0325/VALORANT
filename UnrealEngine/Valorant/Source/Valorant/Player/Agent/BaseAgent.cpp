@@ -67,8 +67,8 @@ ABaseAgent::ABaseAgent()
 	//             CYT             ♣
 	//ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ
 	// 네트워크 복제 설정
-	bReplicates = true;
-	SetReplicatingMovement(true);
+	// bReplicates = true;
+	// SetReplicatingMovement(true);
 }
 
 
@@ -121,7 +121,7 @@ void ABaseAgent::BeginPlay()
 	// 소유한 플레이어만 시야체크 수행 
 	if (IsLocallyControlled())
 	{
-		GetWorldTimerManager().SetTimer(VisionCheckTimerHandle,this, &ABaseAgent::CheckEnemiesVisibility,VisionCheckFrequency,true);
+		//GetWorldTimerManager().SetTimer(VisionCheckTimerHandle,this, &ABaseAgent::CheckEnemiesVisibility,VisionCheckFrequency,true);
 	}
 }
 
@@ -244,10 +244,10 @@ void ABaseAgent::UpdateMoveSpeed(float newSpeed)
 //ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ
 //             CYT             ♣
 //ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ
-void ABaseAgent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
-{
-	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
-
-	DOREPLIFETIME(ABaseAgent , VisibleEnemies)
-	//DOREPLIFETIME(ABaseAgent , LastSeeEnemies)
-}
+// void ABaseAgent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+// {
+// 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+//
+// 	DOREPLIFETIME(ABaseAgent , VisibleEnemies)
+// 	//DOREPLIFETIME(ABaseAgent , LastSeeEnemies)
+// }
