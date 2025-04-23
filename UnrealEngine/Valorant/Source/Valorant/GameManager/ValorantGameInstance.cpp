@@ -179,6 +179,8 @@ void UValorantGameInstance::OnFindSessionsComplete(bool bWasSuccessful)
 	if (0 == FindSessionNum && true == bIsFindingMatch)
 	{
 		// 찾은 세션이 아무것도 없고 현재 매치를 찾는 중이라면 매치를 직접 만든다.
+		bIsHostingMatch = true;
+		GetWorld()->GetTimerManager().SetTimer(CheckSessionHandle, this, &UValorantGameInstance::CheckHostingSession, 1.0f, true);
 		CreateSession();
 	}
 	else
@@ -262,6 +264,33 @@ void UValorantGameInstance::OnJoinSessionComplete(FName SessionName, EOnJoinSess
 		break;
 	}
 	NET_LOG(LogTemp, Warning, TEXT("OnJoinSessionComplete SessionName: %s, Result: %s"), *SessionName.ToString(), *ResultString);
+}
+
+void UValorantGameInstance::CheckHostingSession()
+{
+	if (false == SessionInterface.IsValid())
+	{
+		NET_LOG(LogTemp, Warning, TEXT("CheckHostingSession: SessionInterface is Invalid"));
+		return;
+	}
+
+	const auto* Session = SessionInterface->GetNamedSession(NAME_GameSession);
+	if (nullptr == Session)
+	{
+		NET_LOG(LogTemp, Warning, TEXT("CheckHostingSession: Session is nullptr"));
+		return;
+	}
+	
+	const int32 RemSlotCount = Session->NumOpenPublicConnections;
+	MaxPlayerCount = Session->SessionSettings.NumPublicConnections;
+	CurrentPlayerCount = MaxPlayerCount - RemSlotCount;
+	NET_LOG(LogTemp, Warning, TEXT("CheckHostingSession: (%d / %d)"), CurrentPlayerCount, MaxPlayerCount);
+
+	if (ReqMatchAutoStartPlayerCount <= CurrentPlayerCount)
+	{
+		NET_LOG(LogTemp, Warning, TEXT("CheckHostingSession: 매치 자동 시작을 위해 필요한 인원 수가 충족됨"));
+		GetWorld()->GetTimerManager().ClearTimer(CheckSessionHandle);
+	}
 }
 
 FAgentData* UValorantGameInstance::GetAgentData(int AgentID)

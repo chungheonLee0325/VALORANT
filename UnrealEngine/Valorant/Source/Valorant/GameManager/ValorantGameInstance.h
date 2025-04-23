@@ -20,7 +20,13 @@ public:
 	TSharedPtr<class IOnlineSession, ESPMode::ThreadSafe> SessionInterface;
 	TSharedPtr<FOnlineSessionSearch> SessionSearch;
 
+	FTimerHandle CheckSessionHandle;
 	bool bIsFindingMatch = false;
+	bool bIsHostingMatch = false;
+	int CurrentPlayerCount = 0;
+	int MaxPlayerCount = 0;
+	// TODO: 추후 삭제, 테스트를 위해 사용
+	int ReqMatchAutoStartPlayerCount = 2;
 	UFUNCTION(BlueprintCallable)
 	void FindMatch();
 	
@@ -36,6 +42,8 @@ protected:
 	void DestroySession(FName SessionName);
 	void OnDestroySessionComplete(FName SessionName, bool bWasSuccessful);
 	void OnJoinSessionComplete(FName Name, EOnJoinSessionCompleteResult::Type Arg);
+	
+	void CheckHostingSession();
 
 public:
 	FAgentData* GetAgentData(int AgentID);
