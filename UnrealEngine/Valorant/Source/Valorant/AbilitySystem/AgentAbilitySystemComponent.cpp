@@ -152,8 +152,8 @@ void UAgentAbilitySystemComponent::ResisterFollowUpInput(const TSet<FGameplayTag
 	for (FGameplayTag tag: tags)
 	{
 		UE_LOG(LogTemp,Warning,TEXT("%s 후속 입력 키로 등록"), *tag.GetTagName().ToString());
-		OnAbilityWaitingStateChanged.Broadcast(true);
 	}
+	OnAbilityWaitingStateChanged.Broadcast(true);
 }
 
 bool UAgentAbilitySystemComponent::TrySkillInput(const FGameplayTag& inputTag)
