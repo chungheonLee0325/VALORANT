@@ -64,7 +64,6 @@ private:
 	UPROPERTY(VisibleAnywhere)
 	FGameplayAbilitySpecHandle CurrentAbilityHandle;
 	
-	//TODO: 스킬 시전마다 Set 리셋하고 시작
 	UPROPERTY(VisibleAnywhere)
 	TSet<FGameplayTag> FollowUpInputBySkill;
 	

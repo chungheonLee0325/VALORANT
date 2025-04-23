@@ -62,18 +62,14 @@ void UValorantGameInstance::Init()
 		if (OnlineSubsystem)
 		{
 			// OnlineSubsystem
-			IOnlineSubsystem* OnlineSubsystem = Online::GetSubsystem(GetWorld());
-			if (OnlineSubsystem)
+			SessionInterface = OnlineSubsystem->GetSessionInterface();
+			NET_LOG(LogTemp, Warning, TEXT("SubsystemName : %s"), *OnlineSubsystem->GetSubsystemName().ToString());
+			if (SessionInterface.IsValid())
 			{
-				SessionInterface = OnlineSubsystem->GetSessionInterface();
-				NET_LOG(LogTemp, Warning, TEXT("SubsystemName : %s"), *OnlineSubsystem->GetSubsystemName().ToString());
-				if (SessionInterface.IsValid())
-				{
-					SessionInterface->OnCreateSessionCompleteDelegates.AddUObject(this, &UValorantGameInstance::OnCreateSessionComplete);
-					SessionInterface->OnDestroySessionCompleteDelegates.AddUObject(this, &UValorantGameInstance::OnDestroySessionComplete);
-					SessionInterface->OnFindSessionsCompleteDelegates.AddUObject(this, &UValorantGameInstance::OnFindSessionsComplete);
-					SessionInterface->OnJoinSessionCompleteDelegates.AddUObject(this, &UValorantGameInstance::OnJoinSessionComplete);
-				}
+				SessionInterface->OnCreateSessionCompleteDelegates.AddUObject(this, &UValorantGameInstance::OnCreateSessionComplete);
+				SessionInterface->OnDestroySessionCompleteDelegates.AddUObject(this, &UValorantGameInstance::OnDestroySessionComplete);
+				SessionInterface->OnFindSessionsCompleteDelegates.AddUObject(this, &UValorantGameInstance::OnFindSessionsComplete);
+				SessionInterface->OnJoinSessionCompleteDelegates.AddUObject(this, &UValorantGameInstance::OnJoinSessionComplete);
 			}
 		}
 	}

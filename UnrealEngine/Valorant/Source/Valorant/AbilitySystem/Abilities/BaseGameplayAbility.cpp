@@ -27,6 +27,7 @@ void UBaseGameplayAbility::ActivateAbility(const FGameplayAbilitySpecHandle Hand
 		}
 		else
 		{
+			// Handle
 			EndAbility(Handle, ActorInfo, ActivationInfo,true,false);
 		}
 	}
@@ -43,17 +44,17 @@ void UBaseGameplayAbility::InputPressed(const FGameplayAbilitySpecHandle Handle,
 	Super::InputPressed(Handle, ActorInfo, ActivationInfo);
 	UE_LOG(LogTemp, Warning, TEXT("스킬 InputPressed"));
 
-	//TODO: (필요하다면) 후속 입력 키에 따른 분기 작성
+	//(필요하다면) 후속 입력 키에 따른 분기 작성
 	if (CurrentFollowUpInputTag.IsValid())
 	{
 		if (CurrentFollowUpInputTag == FValorantGameplayTags::Get().InputTag_Default_LeftClick)
 		{
-			UE_LOG(LogTemp, Warning, TEXT("스킬 분기, 좌클릭"));
+			// Handle 
 			return;
 		}
 		if (CurrentFollowUpInputTag == FValorantGameplayTags::Get().InputTag_Default_RightClick)
 		{
-			UE_LOG(LogTemp, Warning, TEXT("스킬 분기, 우클릭"));
+			// Handle
 			return;
 		}
 	}
@@ -65,6 +66,7 @@ void UBaseGameplayAbility::InputReleased(const FGameplayAbilitySpecHandle Handle
 	const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo)
 {
 	Super::InputReleased(Handle, ActorInfo, ActivationInfo);
+	// Handle
 	UE_LOG(LogTemp, Warning, TEXT("스킬 InputReleased"));
 }
 
