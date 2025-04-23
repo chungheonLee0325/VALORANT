@@ -9,14 +9,14 @@
 #include "Valorant/AbilitySystem/AgentAbilitySystemComponent.h"
 #include "Valorant/AbilitySystem/Attributes/BaseAttributeSet.h"
 #include "Valorant/GameManager/ValorantGameInstance.h"
-//#include "Valorant/Player/AgentInputComponent.h"
-#include "Blueprint/UserWidget.h"
+
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/SpringArmComponent.h"
+#include "Kismet/KismetSystemLibrary.h"
 #include "Player/Component/AgentInputComponent.h"
 #include "Valorant/Player/AgentPlayerController.h"
 #include "Valorant/Player/AgentPlayerState.h"
-#include "Valorant/Player/Widget/AgentBaseWidget.h"
+#include "ValorantObject/BaseInteractor.h"
 
 
 class AAgentPlayerState;
@@ -109,6 +109,7 @@ void ABaseAgent::BeginPlay()
 void ABaseAgent::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+	FindInteractable();
 }
 
 void ABaseAgent::InitAgentData()
@@ -161,6 +162,8 @@ void ABaseAgent::BindToDelegatePC(AAgentPlayerController* pc)
 	pc->OnMaxHealthChanged_PC.AddDynamic(this, &ABaseAgent::UpdateMaxHealth);
 	pc->OnArmorChanged_PC.AddDynamic(this, &ABaseAgent::UpdateArmor);
 	pc->OnMoveSpeedChanged_PC.AddDynamic(this, &ABaseAgent::UpdateMoveSpeed);
+
+	PC = pc;
 }
 
 void ABaseAgent::Die()
@@ -175,6 +178,62 @@ void ABaseAgent::EnterSpectMode()
 
 void ABaseAgent::Respawn()
 {
+}
+
+void ABaseAgent::FindInteractable()
+{
+	const FVector startPos = SpringArm->GetComponentLocation();
+	const FVector endPos = startPos + Camera->GetForwardVector() * FindItemRange;
+	FHitResult hitResult;
+	
+	TArray<TEnumAsByte<EObjectTypeQuery>> objectTypesArray;
+	objectTypesArray.Add(UEngineTypes::ConvertToObjectType(ECC_EngineTraceChannel1));
+	
+	TArray<AActor*> actorsToIgnore;
+	actorsToIgnore.Add(this);
+	
+	if (UKismetSystemLibrary::SphereTraceSingleForObjects(
+	GetWorld(), startPos, endPos, 20.f, objectTypesArray, false
+	, actorsToIgnore, EDrawDebugTrace::None, hitResult, true))
+	{
+		AActor* actor = hitResult.GetActor()->IsA(ABaseInteractor::StaticClass()) ? hitResult.GetActor() : nullptr;
+		if (actor)
+		{
+			LookingActor = Cast<ABaseInteractor>(actor);
+			LookingActor->InteractActive(true);
+		}
+	}
+	else
+	{
+		if (LookingActor)
+		{
+			// UE_LOG(LogTemp,Warning,TEXT("%s를 그만볼래"),*LookingActor->GetActorNameOrLabel());
+			LookingActor->InteractActive(false);
+			LookingActor = nullptr;
+		}
+	}
+
+	// if (GetWorld()->SweepSingleByChannel(
+	// 		hitResult,
+	// 		startPos,
+	// 		endPos,
+	// 		FQuat::Identity,
+	// 		ECC_Visibility,
+	// 		FCollisionShape::MakeSphere(20.0f)))
+	// {
+	// 	AActor* actor = hitResult.GetActor()->IsA(ABaseWeapon::StaticClass()) ? hitResult.GetActor() : nullptr;
+	// 	if (actor)
+	// 	{
+	// 		LookingActor = actor;
+	// 		UE_LOG(LogTemp,Warning,TEXT("%s를 보고 있음"),*LookingActor->GetActorNameOrLabel());
+	// 	}
+	// 	else
+	// 	{
+	// 		LookingActor = nullptr;
+	// 	}
+	// }
+	
+	// TODO: 스파이크 / 문 순서로 추가
 }
 
 void ABaseAgent::UpdateHealth(float newHealth)

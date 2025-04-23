@@ -8,6 +8,7 @@
 #include "Valorant/ResourceManager/ValorantGameType.h"
 #include "BaseAgent.generated.h"
 
+class ABaseInteractor;
 class AAgentPlayerState;
 class UAgentBaseWidget;
 class USpringArmComponent;
@@ -51,16 +52,25 @@ protected:
 	UValorantGameInstance* m_GameInstance;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	AAgentPlayerState* PS = nullptr;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	AAgentPlayerController* PC = nullptr;
+	
+	TWeakObjectPtr<UAgentAbilitySystemComponent> ASC;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	int32 m_AgentID = 0;
 	
 	FAgentData* m_AgentData = nullptr;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	AAgentPlayerState* PS = nullptr;
-	
-	TWeakObjectPtr<UAgentAbilitySystemComponent> ASC;
-
 	bool bIsDead = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float FindItemRange = 250.0f;
+
+	UPROPERTY()
+	ABaseInteractor* LookingActor = nullptr;
 
 protected:
 	virtual void PossessedBy(AController* NewController) override;
@@ -68,15 +78,15 @@ protected:
 	
 	virtual void BeginPlay() override;
 	virtual void Tick(float DeltaTime) override;
-	
-	virtual void InitAgentData();
-	
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 	
+	virtual void InitAgentData();
 	
 	virtual void Die();
 	virtual void EnterSpectMode();
 	virtual void Respawn();
+
+	void FindInteractable();
 	
 	UFUNCTION()
 	void UpdateHealth(float newHealth);
