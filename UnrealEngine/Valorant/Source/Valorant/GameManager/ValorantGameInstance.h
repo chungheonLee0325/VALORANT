@@ -44,6 +44,7 @@ protected:
 	void OnJoinSessionComplete(FName Name, EOnJoinSessionCompleteResult::Type Arg);
 	
 	void CheckHostingSession();
+	void StartMatch();
 
 public:
 	FAgentData* GetAgentData(int AgentID);

@@ -290,7 +290,13 @@ void UValorantGameInstance::CheckHostingSession()
 	{
 		NET_LOG(LogTemp, Warning, TEXT("CheckHostingSession: 매치 자동 시작을 위해 필요한 인원 수가 충족됨"));
 		GetWorld()->GetTimerManager().ClearTimer(CheckSessionHandle);
+		StartMatch();
 	}
+}
+
+void UValorantGameInstance::StartMatch()
+{
+	GetWorld()->ServerTravel("/Game/Maps/FirstPersonMap?listen", TRAVEL_Absolute, false);
 }
 
 FAgentData* UValorantGameInstance::GetAgentData(int AgentID)
