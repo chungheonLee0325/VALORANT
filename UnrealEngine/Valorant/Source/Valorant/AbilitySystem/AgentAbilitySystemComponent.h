@@ -21,18 +21,28 @@ class VALORANT_API UAgentAbilitySystemComponent : public UAbilitySystemComponent
 
 public:
 	UAgentAbilitySystemComponent();
-
+	
 	/**서버에서만 호출됩니다.*/
 	void InitializeByAgentData(int32 agentID);
+
+	//Ability 등록 및 해제
+	void RegisterAgentAbilities(const FAgentData* agentData);
 	
 	UFUNCTION(BlueprintCallable)
-	void SkillCallByTag(const FGameplayTag& inputTag);
+	void SetAgentAbility(TSubclassOf<UGameplayAbility> abilityClass, int32 level);
 
 	UFUNCTION(BlueprintCallable)
-	void ResisterFollowUpInput(const TArray<FGameplayTag>& tags);
+	void ResetAgentAbilities();
+	
+	//Skill
+	UFUNCTION(BlueprintCallable)
+	void ResisterFollowUpInput(const TSet<FGameplayTag>& tags);
 
 	UFUNCTION(BlueprintCallable)
-	void ClearCurrnetAbility(const FGameplayAbilitySpecHandle& handle);
+	bool TrySkillInput(const FGameplayTag& inputTag);
+
+	UFUNCTION(BlueprintCallable)
+	void ClearCurrentAbilityHandle(const FGameplayAbilitySpecHandle handle);
 	
 	FString GetAgentName() const { return AgentName; }
 	FString GetSkillQName() const { return SkillQName; }
@@ -47,27 +57,21 @@ private:
 		FValorantGameplayTags::Get().InputTag_Ability_C,
 		FValorantGameplayTags::Get().InputTag_Ability_X
 	};
-
-	// 좌클릭 우클릭은 무조건 reserved map 먼저 확인후 nullptr이면 skillHandleMap 검색
 	
+	UPROPERTY(VisibleAnywhere)
 	TMap<FGameplayTag, FGameplayAbilitySpecHandle> ReservedSkillHandleMap;
 	
-	// ToDo : ReservedSkillHandleMap - setter / reset method 필요
-
-	// Set과 병행
-	UPROPERTY()
+	UPROPERTY(VisibleAnywhere)
 	FGameplayAbilitySpecHandle CurrentAbilityHandle;
-
-	// TSet으로 관리
-	// 스킬 시전마다 Set 리셋하고 시작
 	
-	UPROPERTY()
-	TArray<FGameplayTag> FollowUpInputBySkill;
+	//TODO: 스킬 시전마다 Set 리셋하고 시작
+	UPROPERTY(VisibleAnywhere)
+	TSet<FGameplayTag> FollowUpInputBySkill;
 	
 	UPROPERTY(Replicated)
 	int32 m_AgentID;
 
-	//TODO: 데이터를 이렇게 담는 게 맞나?
+	//TODO: 스킬 데이터 따로 담기
 	UPROPERTY(Replicated)
 	FString AgentName = "";
 	UPROPERTY(Replicated)
@@ -89,24 +93,12 @@ protected:
 	//AttributeSet
 	void InitializeAttribute(const FAgentData* agentData);
 
-	//Ability
-	void RegisterAgentAbilities(const FAgentData* agentData);
-	void GiveAgentAbility(TSubclassOf<UGameplayAbility> abilityClass, int32 level);
-	void ClearAgentAbilities();
-	void ClearAgentAbility(const FGameplayTagContainer& tags);
-	void ClearAgentAbility(const FGameplayAbilitySpec* spec);
-
 	//Skill Input
-	void ClearFollowUpInput();
-	
 	bool IsFollowUpInput(const FGameplayTag& inputTag);
 
 	bool TrySkillFollowupInput(const FGameplayTag& inputTag);
-
-	UFUNCTION(BlueprintCallable)
-	bool TrySkillInput(const FGameplayTag& inputTag);
-
 	
 	//TODO: 스킬 충전하는 함수
 	//TODO: 스킬 정보 넘기는 함수
 };
+
