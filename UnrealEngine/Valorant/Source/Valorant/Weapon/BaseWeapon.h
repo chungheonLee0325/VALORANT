@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+#include "ValorantObject/BaseInteractor.h"
 #include "BaseWeapon.generated.h"
 
 class UPickUpComponent;
@@ -14,7 +15,7 @@ struct FGunRecoilData;
 struct FWeaponData;
 
 UCLASS(config=Game)
-class VALORANT_API ABaseWeapon : public AActor
+class VALORANT_API ABaseWeapon : public ABaseInteractor
 {
 	GENERATED_BODY()
 
