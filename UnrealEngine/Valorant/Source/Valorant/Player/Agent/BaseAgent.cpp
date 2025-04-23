@@ -13,6 +13,7 @@
 #include "Blueprint/UserWidget.h"
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/SpringArmComponent.h"
+#include "Player/Component/AgentInputComponent.h"
 #include "Valorant/Player/AgentPlayerController.h"
 #include "Valorant/Player/AgentPlayerState.h"
 #include "Valorant/Player/Widget/AgentBaseWidget.h"
@@ -57,13 +58,8 @@ ABaseAgent::ABaseAgent()
 
 	ThirdPersonMesh->SetOwnerNoSee(true);
 	GetMesh()->SetOnlyOwnerSee(true);
-}
 
-void ABaseAgent::AddCameraYawInput(float val)
-{
-	float pitch = SpringArm->GetRelativeRotation().Pitch;
-	float newPitch = pitch + val * RotOffset;
-	SpringArm->SetRelativeRotation(FRotator(newPitch, 0, 0));
+	AgentInputComponent = CreateDefaultSubobject<UAgentInputComponent>("InputComponent");
 }
 
 // 서버 전용. 캐릭터를 Possess할 때 호출됨. 게임 첫 시작시, BeginPlay 보다 먼저 호출됩니다.
@@ -103,6 +99,11 @@ void ABaseAgent::OnRep_PlayerState()
 void ABaseAgent::BeginPlay()
 {
 	Super::BeginPlay();
+	PS = GetPlayerState<AAgentPlayerState>();
+	if (PS)
+	{
+		GetCharacterMovement()->MaxWalkSpeed = PS->GetMoveSpeed();
+	}
 }
 
 void ABaseAgent::Tick(float DeltaTime)
@@ -150,11 +151,8 @@ void ABaseAgent::InitAgentData()
 void ABaseAgent::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
-}
-
-void ABaseAgent::Crouch(bool bClientSimulation)
-{
-	Super::Crouch(bClientSimulation);
+	
+	AgentInputComponent->BindInput(PlayerInputComponent);
 }
 
 void ABaseAgent::BindToDelegatePC(AAgentPlayerController* pc)

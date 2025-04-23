@@ -74,3 +74,6 @@ Plugins/**/Intermediate/*
 DerivedDataCache/*
 
 .idea/
+UnrealEngine/Valorant/Source/.vscode/c_cpp_properties.json
+UnrealEngine/Valorant/Source/.vscode/launch.json
+UnrealEngine/Valorant/Source/.vscode/settings.json

@@ -8,6 +8,7 @@
 #include "Valorant/ResourceManager/ValorantGameType.h"
 #include "BaseAgent.generated.h"
 
+class AAgentPlayerState;
 class UAgentBaseWidget;
 class USpringArmComponent;
 class UValorantGameInstance;
@@ -42,26 +43,25 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
 	USkeletalMeshComponent* ThirdPersonMesh;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
+	UAgentInputComponent* AgentInputComponent;
+
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	UValorantGameInstance* m_GameInstance;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	int32 m_AgentID = 0;
-
+	
 	FAgentData* m_AgentData = nullptr;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	AAgentPlayerState* PS = nullptr;
 	
 	TWeakObjectPtr<UAgentAbilitySystemComponent> ASC;
 
-	UPROPERTY(BlueprintReadWrite)
-	float RotOffset = -1.0f;
-
 	bool bIsDead = false;
-	
-public:
-	UFUNCTION(BlueprintCallable)
-	void AddCameraYawInput(float val);
-	
+
 protected:
 	virtual void PossessedBy(AController* NewController) override;
 	virtual void OnRep_PlayerState() override;
@@ -72,7 +72,7 @@ protected:
 	virtual void InitAgentData();
 	
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
-	virtual void Crouch(bool bClientSimulation = false) override;
+	
 	
 	virtual void Die();
 	virtual void EnterSpectMode();

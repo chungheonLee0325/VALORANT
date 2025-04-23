@@ -35,6 +35,17 @@ public:
 	UPROPERTY(BlueprintAssignable)
 	FOnMoveSpeedChanged_PC OnMoveSpeedChanged_PC;
 
+	// 클라이언트에서 호출 -> 서버로 스킬 구매 요청
+	UFUNCTION(BlueprintCallable, Category = "Shop")
+	void RequestPurchaseAbility(int AbilityID);
+
+	// 서버에서 실행될 실제 구매 요청 함수 (위 함수 내부에서 호출)
+	UFUNCTION(Server, Reliable, WithValidation)
+	void Server_RequestPurchaseAbility(int AbilityID);
+
+	// ToDo : 상점 UI 열기 요청
+	UFUNCTION(BlueprintCallable, Category = "UI")
+	void RequestOpenShopUI(); 
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	class UValorantGameInstance* m_GameInstance;
