@@ -46,11 +46,18 @@ public:
 	void SetAgentID(const int32 id) { m_AgentID = id; }
 
 	UFUNCTION(BlueprintCallable)
-	void SetIsRun(bool _bIsRun) { bIsRun = _bIsRun; }
+	bool GetIsRun() const { return  bIsRun; }
 	UFUNCTION(BlueprintCallable)
-	void SetEffectSpeedMultiplier(float newEffectSpeed) { EffectSpeedMultiplier = newEffectSpeed; }
+	void SetIsRun(const bool _bIsRun) { bIsRun = _bIsRun; }
+	
 	UFUNCTION(BlueprintCallable)
-	void SetEquipSpeedMultiplier(float newEquipSpeed) { EquipSpeedMultiplier = newEquipSpeed; }
+	float GetEffectSpeedMulitiplier() const { return EffectSpeedMultiplier; }
+	UFUNCTION(BlueprintCallable)
+	void SetEffectSpeedMultiplier(const float newEffectSpeed) { EffectSpeedMultiplier = newEffectSpeed; }
+	UFUNCTION(BlueprintCallable)
+	float GetEquipSpeedMuliplier() const { return EquipSpeedMultiplier; }
+	UFUNCTION(BlueprintCallable)
+	void SetEquipSpeedMultiplier(const float newEquipSpeed) { EquipSpeedMultiplier = newEquipSpeed; }
 
 	UFUNCTION(BlueprintCallable)
 	void BindToDelegatePC(AAgentPlayerController* pc);

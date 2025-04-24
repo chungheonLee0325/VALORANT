@@ -13,7 +13,7 @@ class UAgentBaseWidget;
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnHealthChanged_PC, float, newHealth);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnMaxHealthChanged_PC, float, newMaxHealth);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnArmorChanged_PC, float, newArmor);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnMoveSpeedChanged_PC, float, newSpeed);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnEffectSpeedChanged_PC, float, newSpeed);
 
 UCLASS()
 class VALORANT_API AAgentPlayerController : public APlayerController
@@ -33,7 +33,7 @@ public:
 	UPROPERTY(BlueprintAssignable)
 	FOnArmorChanged_PC OnArmorChanged_PC;
 	UPROPERTY(BlueprintAssignable)
-	FOnMoveSpeedChanged_PC OnMoveSpeedChanged_PC;
+	FOnEffectSpeedChanged_PC OnEffectSpeedChanged_PC;
 
 	// 클라이언트에서 호출 -> 서버로 스킬 구매 요청
 	UFUNCTION(BlueprintCallable, Category = "Shop")
@@ -78,6 +78,6 @@ private:
 	UFUNCTION(BlueprintCallable)
 	void HandleArmorChanged(float NewArmor);
 	UFUNCTION()
-	void HandleMoveSpeedChanged(float NewSpeed);
+	void HandleEffectSpeedChanged(float NewSpeed);
 	
 };
