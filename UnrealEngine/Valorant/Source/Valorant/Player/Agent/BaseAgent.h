@@ -46,6 +46,13 @@ public:
 	void SetAgentID(const int32 id) { m_AgentID = id; }
 
 	UFUNCTION(BlueprintCallable)
+	void SetIsRun(bool _bIsRun) { bIsRun = _bIsRun; }
+	UFUNCTION(BlueprintCallable)
+	void SetEffectSpeedMultiplier(float newEffectSpeed) { EffectSpeedMultiplier = newEffectSpeed; }
+	UFUNCTION(BlueprintCallable)
+	void SetEquipSpeedMultiplier(float newEquipSpeed) { EquipSpeedMultiplier = newEquipSpeed; }
+
+	UFUNCTION(BlueprintCallable)
 	void BindToDelegatePC(AAgentPlayerController* pc);
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
@@ -108,10 +115,7 @@ public:
 	// // 네트워크 복제 설정
 	// virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 	
-	
-	
-	
-	
+
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	UValorantGameInstance* m_GameInstance;
@@ -129,8 +133,15 @@ protected:
 	
 	FAgentData* m_AgentData = nullptr;
 
+	bool bIsRun = true;
 	bool bIsDead = false;
 
+	float BaseRunSpeed = 675.0f;
+	float BaseWalkSpeed = 330.0f;
+	
+	float EquipSpeedMultiplier = 1.0f;
+	float EffectSpeedMultiplier = 1.0f;
+	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	float FindItemRange = 250.0f;
 
@@ -144,6 +155,9 @@ protected:
 	virtual void BeginPlay() override;
 	virtual void Tick(float DeltaTime) override;
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
+	
+	virtual void OnStartCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust) override;
+	virtual void OnEndCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust) override;
 	
 	virtual void InitAgentData();
 	
@@ -160,5 +174,5 @@ protected:
 	UFUNCTION()
 	void UpdateArmor(float newArmor);
 	UFUNCTION()
-	void UpdateMoveSpeed(float newSpeed);
+	void UpdateEffectSpeed(float newEffectSpeed);
 };

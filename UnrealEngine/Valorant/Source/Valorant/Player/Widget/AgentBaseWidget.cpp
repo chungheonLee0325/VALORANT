@@ -11,7 +11,7 @@ void UAgentBaseWidget::BindToDelegatePC(UAgentAbilitySystemComponent* _asc, AAge
 {
 	pc->OnHealthChanged_PC.AddDynamic(this, &UAgentBaseWidget::UpdateDisplayHealth);
 	pc->OnArmorChanged_PC.AddDynamic(this, &UAgentBaseWidget::UpdateDisplayArmor);
-	pc->OnMoveSpeedChanged_PC.AddDynamic(this, &UAgentBaseWidget::UpdateDisplaySpeed);
+	pc->OnEffectSpeedChanged_PC.AddDynamic(this, &UAgentBaseWidget::UpdateDisplaySpeed);
 
 	if (_asc == nullptr)
 	{

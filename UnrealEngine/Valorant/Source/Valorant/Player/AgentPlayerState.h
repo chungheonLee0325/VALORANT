@@ -37,7 +37,7 @@ public:
 	float GetArmor() const;
 	
 	UFUNCTION(BlueprintCallable, Category = "Agent|BaseAttributes")
-	float GetMoveSpeed() const;
+	float GetEffectSpeed() const;
 
 	// 서버에서 스킬 구매 로직 (PlayerController로부터 RPC 호출됨)
 	UFUNCTION(Server, Reliable, WithValidation)

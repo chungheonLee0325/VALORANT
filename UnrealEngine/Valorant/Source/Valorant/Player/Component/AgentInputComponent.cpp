@@ -62,8 +62,14 @@ void UAgentInputComponent::BindInput(UInputComponent* InputComponent)
 
 		if (ShiftAction)
 		{
-			eic->BindAction(ShiftAction, ETriggerEvent::Started, this, &UAgentInputComponent::CrouchStart);
-			eic->BindAction(ShiftAction, ETriggerEvent::Started, this, &UAgentInputComponent::CrouchComplete);
+			eic->BindAction(ShiftAction, ETriggerEvent::Started, this, &UAgentInputComponent::WalkStart);
+			eic->BindAction(ShiftAction, ETriggerEvent::Completed, this, &UAgentInputComponent::WalkComplete);
+		}
+
+		if (CtrlAction)
+		{
+			eic->BindAction(CtrlAction, ETriggerEvent::Started, this, &UAgentInputComponent::CrouchStart);
+			eic->BindAction(CtrlAction, ETriggerEvent::Completed, this, &UAgentInputComponent::CrouchComplete);
 		}
 	}
 }
@@ -108,7 +114,7 @@ void UAgentInputComponent::CrouchStart(const FInputActionValue& InputActionValue
 {
 	if (Agent)
 	{
-		Agent->Crouch();
+		//Agent->Crouch();
 	}
 }
 
@@ -116,6 +122,19 @@ void UAgentInputComponent::CrouchComplete(const FInputActionValue& InputActionVa
 {
 	if (Agent)
 	{
-		Agent->UnCrouch();
+		//Agent->UnCrouch();
 	}
+}
+
+void UAgentInputComponent::WalkStart(const FInputActionValue& InputActionValue)
+{
+	if (Agent)
+	{
+		Agent->SetIsRun(false);
+	}
+}
+
+void UAgentInputComponent::WalkComplete(const FInputActionValue& InputActionValue)
+{
+		Agent->SetIsRun(true);
 }

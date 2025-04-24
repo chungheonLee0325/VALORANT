@@ -52,15 +52,14 @@ ABaseAgent::ABaseAgent()
 	ThirdPersonMesh->SetCanEverAffectNavigation(false);
 
 	GetCharacterMovement()->GetNavAgentPropertiesRef().bCanCrouch = true;
-	GetCharacterMovement()->MaxWalkSpeedCrouched = 250.0f;
-	GetCharacterMovement()->SetCrouchedHalfHeight(GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight());
+	GetCharacterMovement()->MaxWalkSpeedCrouched = 150.0f;
+	// GetCharacterMovement()->SetCrouchedHalfHeight(GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight());
 
 	ThirdPersonMesh->SetOwnerNoSee(true);
 	GetMesh()->SetOnlyOwnerSee(true);
 
 	AgentInputComponent = CreateDefaultSubobject<UAgentInputComponent>("InputComponent");
-
-
+	
 	//ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ
 	//             CYT             ♣
 	//ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ
@@ -107,11 +106,6 @@ void ABaseAgent::OnRep_PlayerState()
 void ABaseAgent::BeginPlay()
 {
 	Super::BeginPlay();
-	PS = GetPlayerState<AAgentPlayerState>();
-	if (PS)
-	{
-		GetCharacterMovement()->MaxWalkSpeed = PS->GetMoveSpeed();
-	}
 
 	//ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ
 	//             CYT             ♣
@@ -127,6 +121,16 @@ void ABaseAgent::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 	FindInteractable();
+
+	float baseSpeed = BaseRunSpeed;
+
+	if (!bIsRun)
+	{
+		baseSpeed = BaseWalkSpeed;
+	}
+	
+	GetCharacterMovement()->MaxWalkSpeed = baseSpeed * EffectSpeedMultiplier * EquipSpeedMultiplier;
+	
 
 	//ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ
 	//             CYT             ♣
@@ -196,12 +200,24 @@ void ABaseAgent::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent
 	AgentInputComponent->BindInput(PlayerInputComponent);
 }
 
+void ABaseAgent::OnStartCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust)
+{
+	Super::OnStartCrouch(HalfHeightAdjust, ScaledHalfHeightAdjust);
+
+}
+
+void ABaseAgent::OnEndCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust)
+{
+	Super::OnEndCrouch(HalfHeightAdjust, ScaledHalfHeightAdjust);
+	
+}
+
 void ABaseAgent::BindToDelegatePC(AAgentPlayerController* pc)
 {
 	pc->OnHealthChanged_PC.AddDynamic(this, &ABaseAgent::UpdateHealth);
 	pc->OnMaxHealthChanged_PC.AddDynamic(this, &ABaseAgent::UpdateMaxHealth);
 	pc->OnArmorChanged_PC.AddDynamic(this, &ABaseAgent::UpdateArmor);
-	pc->OnMoveSpeedChanged_PC.AddDynamic(this, &ABaseAgent::UpdateMoveSpeed);
+	pc->OnEffectSpeedChanged_PC.AddDynamic(this, &ABaseAgent::UpdateEffectSpeed);
 
 	PC = pc;
 }
@@ -292,9 +308,10 @@ void ABaseAgent::UpdateArmor(float newArmor)
 {
 }
 
-void ABaseAgent::UpdateMoveSpeed(float newSpeed)
+void ABaseAgent::UpdateEffectSpeed(float newSpeed)
 {
-	GetCharacterMovement()->MaxWalkSpeed = newSpeed;
+	UE_LOG(LogTemp,Warning,TEXT("%f"), newSpeed);
+	EffectSpeedMultiplier = newSpeed;
 }
 
 
