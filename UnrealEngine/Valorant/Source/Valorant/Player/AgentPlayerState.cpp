@@ -71,9 +71,9 @@ float AAgentPlayerState::GetArmor() const
 	return BaseAttributeSet->GetArmor();
 }
 
-float AAgentPlayerState::GetMoveSpeed() const
+float AAgentPlayerState::GetEffectSpeed() const
 {
-	return BaseAttributeSet->GetMoveSpeed();
+	return BaseAttributeSet->GetEffectSpeedMultiplier();
 }
 
 void AAgentPlayerState::Server_PurchaseAbility_Implementation(int32 AbilityID)

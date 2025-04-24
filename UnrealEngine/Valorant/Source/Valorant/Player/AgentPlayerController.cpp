@@ -66,7 +66,7 @@ void AAgentPlayerController::InitCacheGAS()
 	CachedABS->OnHealthChanged.AddDynamic(this,&AAgentPlayerController::HandleHealthChanged);
 	CachedABS->OnMaxHealthChanged.AddDynamic(this,&AAgentPlayerController::HandleMaxHealthChanged);
 	CachedABS->OnArmorChanged.AddDynamic(this,&AAgentPlayerController::HandleArmorChanged);
-	CachedABS->OnMoveSpeedChanged.AddDynamic(this,&AAgentPlayerController::HandleMoveSpeedChanged);
+	CachedABS->OnEffectSpeedChanged.AddDynamic(this,&AAgentPlayerController::HandleEffectSpeedChanged);
 }
 
 void AAgentPlayerController::CreateAgentWidget()
@@ -101,10 +101,10 @@ void AAgentPlayerController::HandleArmorChanged(float NewArmor)
 	OnArmorChanged_PC.Broadcast(NewArmor);
 }
 
-void AAgentPlayerController::HandleMoveSpeedChanged(float NewSpeed)
+void AAgentPlayerController::HandleEffectSpeedChanged(float NewSpeed)
 {
 	//UE_LOG(LogTemp,Display,TEXT("PC, MoveSpeed Changed"));
-	OnMoveSpeedChanged_PC.Broadcast(NewSpeed);
+	OnEffectSpeedChanged_PC.Broadcast(NewSpeed);
 }
 
 void AAgentPlayerController::RequestPurchaseAbility(int AbilityID)
