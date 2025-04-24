@@ -19,14 +19,14 @@ class UAgentAbilitySystemComponent;
 //ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ
 //             CYT             ♣
 //ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ
-// 시야 감지 상태 (적이보임, 적이보이지않음 , 마지막보인적의위치
-// UENUM(BlueprintType)
-// enum class EEnemyVisibility : uint8
-// {
-// 	NotVisible,
-// 	Visible,
-// 	LastKnownPosition,
-// };
+//시야 감지 상태 (적이보임, 적이보이지않음 , 마지막보인적의위치)
+UENUM(BlueprintType)
+enum class EAgentVisibility : uint8
+{
+	Visible,
+	Hidden,
+	LastKnown,
+};
 
 
 UCLASS()
@@ -80,49 +80,49 @@ public:
 	//ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ
 	//             CYT             ♣
 	//ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ
-	// 미니맵의 위치를 가져오는 함수
-	// UFUNCTION(BlueprintCallable,Category="Minimap")
-	// FVector2D GetMinimapPosition() const;
- //
-	// // 적 시야 상태 변경 함수
-	// UFUNCTION(BlueprintCallable,Category="Minimap")
-	// void SetEnemyVisibility(ABaseAgent* Enemy,EEnemyVisibility NewVisibility);
-	//
-	// // 미니맵에 표시될 캐릭터아이콘
- //    UPROPERTY(EditDefaultsOnly,Category= "Minimap")
-	// UTexture2D* MinimapIcon;
- //
-	// // 마지막으로 본 위치 물음표아이콘
- //    UPROPERTY(EditDefaultsOnly,Category= "Minimap")
-	// UTexture2D* LastKnownPositionIcon;
- //
-	// // 물음표 지속시간
-	// UPROPERTY(EditDefaultsOnly,Category= "Vision")
-	// float LastKnownPositionDuration = 5.0f;
- //
-	// //시야 체크 주기
-	// UPROPERTY(EditDefaultsOnly,Category= "Vision")
-	// float VisionCheckFrequency = 0.1f;
-	//
-	// // 현재 시야에 있는 적들 추적
-	// UPROPERTY(Replicated)
-	// TArray<ABaseAgent*> VisibleEnemies;
- //
-	// // 마지막으로 본 적들 (물음표 표시)
-	// //UPROPERTY(Replicated)
-	// //TMap<ABaseAgent*,float> LastSeenEnemies;
- //
-	// // 시야 체크 타이머 핸들
-	// FTimerHandle VisionCheckTimerHandle;
- //
-	// // 적 시야 체크 함수
-	// void CheckEnemiesVisibility();
- //
-	// // 적이 시야에 있는지 확인하는 함수
-	// bool IsEnemyVisible(ABaseAgent* Enemy) const;
- //
-	// // 네트워크 복제 설정
-	// virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
+	// 에이전트의 현재 미니맵 가시성 상태
+	UPROPERTY(Replicated,BlueprintReadWrite,Category="Minimap")
+	EAgentVisibility MinimapVisibility;
+
+	// 에이전트가 마지막으로 보인 시간 (네트워크 복제)
+	UPROPERTY(Replicated)
+	float LastVisibleTime;
+
+	// 물음표 상태로 표시되는 시간 (에디터에서 변경 가능)
+	UPROPERTY(EditAnywhere,Category="Minimap")
+	float QuestionMarkDuration = 5.0f;
+
+	// 팀 ID (적팀과 같은팀은 같은 아이디 사용하게 하자) - (네트워크 복제)
+	UPROPERTY(Replicated,BlueprintReadWrite)
+	int32 TeamID;
+
+	// 에이전트 아이콘 (에디터에서 변경 가능)
+	UPROPERTY(EditAnywhere,Category="Minimap")
+	UTexture2D* AgentIcon;
+
+	// 물음표 아이콘 (에디터에서 변경 가능)
+	UPROPERTY(EditAnywhere,Category="Minimap")
+	UTexture2D* QuestionMarkIcon;
+
+	// 다른 팀 플레이어에게 보이는지 체크
+	bool IsVisibleToTeam(int32 ViewerTeamID) const;
+
+	// 미니맵 시각화 상태를 업데이트
+	void UpdateMinimapVisibility();
+
+	// 미니맵에 표시할 아이콘 가져오기 - (BP 호출)
+	UFUNCTION(BlueprintCallable, Category="Minimap")
+	UTexture2D* GetAgentIcon(int32 ViewerTeamID) const;
+
+	// 적 플레이어 시야에 보이는지 체크하는 함수 - (BP 호출)
+	UFUNCTION(BlueprintCallable, Category="Vision")
+	bool IsVisibleToOpponents() const;
+
+	// 네트워크 복제 속성 설정 - (언리얼 네트워크 이용)
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+	
+
 	
 
 protected:
@@ -192,3 +192,5 @@ protected:
 	UFUNCTION()
 	void UpdateEffectSpeed(float newEffectSpeed);
 };
+
+
