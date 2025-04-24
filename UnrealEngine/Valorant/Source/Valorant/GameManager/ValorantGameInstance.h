@@ -26,7 +26,7 @@ public:
 	int CurrentPlayerCount = 0;
 	int MaxPlayerCount = 0;
 	// TODO: 추후 삭제, 테스트를 위해 사용
-	int ReqMatchAutoStartPlayerCount = 2;
+	int ReqMatchAutoStartPlayerCount = 4;
 	UFUNCTION(BlueprintCallable)
 	void FindMatch();
 	void BroadcastTravel();
