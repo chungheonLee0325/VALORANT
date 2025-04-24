@@ -9,6 +9,7 @@
 #include "Valorant/AbilitySystem/AgentAbilitySystemComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/SpringArmComponent.h"
+#include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "Net/UnrealNetwork.h"
 #include "Player/Component/AgentInputComponent.h"
@@ -64,9 +65,10 @@ ABaseAgent::ABaseAgent()
 	//ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ
 	//             CYT             ♣
 	//ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ
-	// 네트워크 복제 설정
-	// bReplicates = true;
-	// SetReplicatingMovement(true);
+	// 상태 숨김 초기화
+	MinimapVisibility = EAgentVisibility::Hidden;
+	// 마지막 시야 시간 0으로 초기화
+	LastVisibleTime = 0.0f;
 }
 
 
@@ -116,11 +118,7 @@ void ABaseAgent::BeginPlay()
 	//ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ
 	//             CYT             ♣
 	//ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ
-	// 소유한 플레이어만 시야체크 수행 
-	if (IsLocallyControlled())
-	{
-		//GetWorldTimerManager().SetTimer(VisionCheckTimerHandle,this, &ABaseAgent::CheckEnemiesVisibility,VisionCheckFrequency,true);
-	}
+	
 }
 
 void ABaseAgent::Tick(float DeltaTime)
@@ -131,25 +129,7 @@ void ABaseAgent::Tick(float DeltaTime)
 	//ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ
 	//             CYT             ♣
 	//ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ
-	// 마지막으로 본 적들의 타이머 업데이트
-	// if (IsLocallyControlled())
-	// {
-	// 	TArray<ABaseAgent*> ExpiredEnemies;
-	//
-	// 	for (auto& Elem : LastSeenEnemies)
-	// 	{
-	// 		Elem.Value -= DeltaTime;
-	// 		if (Elem.Value <= 0.0f)
-	// 		{
-	// 			ExpiredEnemies.Add(Elem.Key);
-	// 		}
-	// 	}
-	//
-	// 	for (ABaseAgent* Enemy : ExpiredEnemies)
-	// 	{
-	// 		LastSeenEnemies.Remove(Enemy);
-	// 	}
-	// }
+	
 }
 
 void ABaseAgent::InitAgentData()
@@ -298,13 +278,96 @@ void ABaseAgent::UpdateMoveSpeed(float newSpeed)
 }
 
 
+
 //ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ
 //             CYT             ♣
 //ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ
-// void ABaseAgent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
-// {
-// 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
-//
-// 	DOREPLIFETIME(ABaseAgent , VisibleEnemies)
-// 	//DOREPLIFETIME(ABaseAgent , LastSeeEnemies)
-// }
+// 네트워크 복제 설정
+void ABaseAgent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	// 네트워크로 복제할 변수 등록 (가시성상태 , 마지막시야 확인시간 , 팀ID)
+	DOREPLIFETIME(ABaseAgent, MinimapVisibility);
+	DOREPLIFETIME(ABaseAgent, LastVisibleTime);
+	DOREPLIFETIME(ABaseAgent, TeamID);
+	
+}
+
+// 특정 플레이어에게 보이는지 체크
+bool ABaseAgent::IsVisibleToTeam(int32 ViewerTeamID) const
+{
+	// 같은 팀은 항상 보이게
+	if (TeamID == ViewerTeamID)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("같은팀 "))
+		return true;
+	}
+	// 적팀 시야 체크
+
+	// 현재 월드의 모든 에이전트 가져오자
+	// TArray<AActor*> AllAgents;
+	// UGameplayStatics::GetAllActorsOfClass(GetWorld(), ACharacter::StaticClass(), AllAgents);
+	// 각 플레이어 에이전트에 대해 체크
+	// for (AActor* Agent : AllAgents)
+	// {
+	// 	ABaseAgent* PlayerAgent = Cast<ABaseAgent>(Agent);
+		// 유효한 플레이어 지정된 팀ID 일치하는지 확인
+		// if (PlayerAgent && PlayerAgent->TeamID == ViewerTeamID)
+		// {
+			// 이플레이어의 시야에 현재 에이전트가 있는지 //@@TODO YT
+			// if (PlayerAgent->IsLineOfSightBlocked(this))
+			// {
+			// 	// 한명이라도 볼 수 있으면 보이는 것으로 판단
+			// 	UE_LOG(LogTemp, Warning, TEXT("다른팀 보일랑말랑"));
+			// 	return true;
+			// }
+	// 	}
+	// }
+	// UE_LOG(LogTemp, Warning, TEXT("다른팀 안보임"));
+	return false;
+}
+
+// 미니맵 가시성 상태 업데이트
+void ABaseAgent::UpdateMinimapVisibility()
+{
+	// 서버에서만 실행 (권한 있는 쪽에서만 상태 변경)
+	if (GetLocalRole() != ROLE_Authority)
+	{
+		return;
+	}
+
+	// 게임의 현재 시간 가져오기 
+	float CurrentTime = UGameplayStatics::GetTimeSeconds(GetWorld());
+
+	// 시야에서 사라진 후 경과 시간 계산
+	float TimeSinceLastSeen = CurrentTime - LastVisibleTime;
+
+	// 현재 상태에 따른 업데이트 로직
+	if (MinimapVisibility == EAgentVisibility::Visible)
+	{
+		// 현재 보이는 상태인테 시야에서 벗어났다면 물음표 상태로 변경
+		if (!IsVisibleToOpponents())
+		{
+			MinimapVisibility = EAgentVisibility::LastKnown;
+			// 마지막 본 시간 업데이트
+			LastVisibleTime = CurrentTime;
+		}
+	}
+	// 물음표 상태일때 업데이트 로직 
+	else if (MinimapVisibility == EAgentVisibility::LastKnown)
+	{
+		// 물음표 상태인데 다시 시야에 들어왔다면 Visible 상태 변경
+		if (IsVisibleToOpponents())
+		{
+			MinimapVisibility = EAgentVisibility::Visible;
+		}
+		// 물음표 표시 시간이 지났다면 Hidden 상태로 변경
+		else if (TimeSinceLastSeen > QuestionMarkDuration)
+		{
+			MinimapVisibility = EAgentVisibility::Hidden;
+		}
+	}
+	// 숨김 상태일때
+	
+}
