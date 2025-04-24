@@ -41,10 +41,10 @@ void UBaseAttributeSet::PostAttributeChange(const FGameplayAttribute& Attribute,
 		OnArmorChanged.Broadcast(NewValue);
 		OnArmorChanged_Manual.Broadcast(NewValue);
 	}
-	if (Attribute == GetMoveSpeedAttribute())
+	if (Attribute == GetEffectSpeedMultiplierAttribute())
 	{
-		OnMoveSpeedChanged.Broadcast(NewValue);
-		OnMoveSpeedChanged_Manual.Broadcast(NewValue);
+		OnEffectSpeedChanged.Broadcast(NewValue);
+		OnEffectSpeedChanged_Manual.Broadcast(NewValue);
 	}
 }
 
@@ -78,11 +78,11 @@ void UBaseAttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCallba
 		OnArmorChanged.Broadcast(newValue);
 		OnArmorChanged_FromGE.Broadcast(newValue);
 	}
-	else if (Data.EvaluatedData.Attribute == GetMoveSpeedAttribute())
+	else if (Data.EvaluatedData.Attribute == GetEffectSpeedMultiplierAttribute())
 	{
-		const int32 newValue = GetMoveSpeed();
-		OnMoveSpeedChanged.Broadcast(newValue);
-		OnMoveSpeedChanged_FromGE.Broadcast(newValue);
+		const int32 newValue = GetEffectSpeedMultiplier();
+		OnEffectSpeedChanged.Broadcast(newValue);
+		OnEffectSpeedChanged_FromGE.Broadcast(newValue);
 	}
 }
 
@@ -92,7 +92,7 @@ void UBaseAttributeSet::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& Ou
 	DOREPLIFETIME_CONDITION_NOTIFY(UBaseAttributeSet, Health,COND_None, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UBaseAttributeSet, MaxHealth,COND_None, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UBaseAttributeSet, Armor,COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UBaseAttributeSet, MoveSpeed,COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UBaseAttributeSet, EffectSpeedMultiplier,COND_None, REPNOTIFY_Always);
 }
 
 void UBaseAttributeSet::AdjustAttributeForMaxChange(FGameplayAttributeData& AffectedAttribute,
@@ -127,9 +127,9 @@ void UBaseAttributeSet::OnRep_Armor(const FGameplayAttributeData& OldArmor)
 	GAMEPLAYATTRIBUTE_REPNOTIFY(UBaseAttributeSet, Armor, OldArmor);
 }
 
-void UBaseAttributeSet::OnRep_MoveSpeed(const FGameplayAttributeData& OldMoveSpeed)
+void UBaseAttributeSet::OnRep_EffectSpeed(const FGameplayAttributeData& OldEffectSpeed)
 {
-	GAMEPLAYATTRIBUTE_REPNOTIFY(UBaseAttributeSet, MoveSpeed, OldMoveSpeed);
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UBaseAttributeSet, EffectSpeedMultiplier, OldEffectSpeed);
 }
 
 void UBaseAttributeSet::ClampAttribute(const FGameplayAttribute& attribute, float& newValue) const
