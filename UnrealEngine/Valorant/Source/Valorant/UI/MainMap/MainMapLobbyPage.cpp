@@ -1,11 +1,12 @@
 ﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 
-#include "LobbyPageUI.h"
+#include "MainMapLobbyPage.h"
 
+#include "MainMapMenuUI.h"
 #include "GameManager/SubsystemSteamManager.h"
 
-void ULobbyPageUI::NativeConstruct()
+void UMainMapLobbyPage::NativeConstruct()
 {
 	Super::NativeConstruct();
 
@@ -13,9 +14,20 @@ void ULobbyPageUI::NativeConstruct()
 	{
 		SubsystemManager->OnFindFirstSteamSessionComplete.AddUObject(this, &ThisClass::JoinMatch);
 	}
+
+	if (MenuUI)
+	{
+		MenuUI->SetTitle(TEXT("로비"));
+	}
 }
 
-void ULobbyPageUI::FindMatch()
+void UMainMapLobbyPage::Init(UMainMapCoreUI* InitCoreUI)
+{
+	Super::Init(InitCoreUI);
+	MenuUI->Init(CoreUI);
+}
+
+void UMainMapLobbyPage::OnClickedButtonStart()
 {
 	if (true == bIsFindingMatch)
 	{
@@ -29,7 +41,7 @@ void ULobbyPageUI::FindMatch()
 	}
 }
 
-void ULobbyPageUI::JoinMatch(const FOnlineSessionSearchResult& OnlineSessionSearchResult, bool bArg)
+void UMainMapLobbyPage::JoinMatch(const FOnlineSessionSearchResult& OnlineSessionSearchResult, bool bArg)
 {
 	if (false == bIsFindingMatch)
 	{
