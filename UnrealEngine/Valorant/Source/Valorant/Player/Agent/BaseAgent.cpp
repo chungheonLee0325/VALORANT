@@ -106,14 +106,6 @@ void ABaseAgent::OnRep_PlayerState()
 	}
 }
 
-void ABaseAgent::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const
-{
-	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
-
-	DOREPLIFETIME(ABaseAgent, bIsRun);
-	DOREPLIFETIME(ABaseAgent, bIsDead);
-}
-
 void ABaseAgent::BeginPlay()
 {
 	Super::BeginPlay();
@@ -338,6 +330,7 @@ void ABaseAgent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifeti
 	DOREPLIFETIME(ABaseAgent, MinimapVisibility);
 	DOREPLIFETIME(ABaseAgent, LastVisibleTime);
 	DOREPLIFETIME(ABaseAgent, TeamID);
+	DOREPLIFETIME(ABaseAgent, bIsRun);
 	
 }
 
@@ -378,43 +371,43 @@ bool ABaseAgent::IsVisibleToTeam(int32 ViewerTeamID) const
 // 미니맵 가시성 상태 업데이트
 void ABaseAgent::UpdateMinimapVisibility()
 {
-	// 서버에서만 실행 (권한 있는 쪽에서만 상태 변경)
-	if (GetLocalRole() != ROLE_Authority)
-	{
-		return;
-	}
-
-	// 게임의 현재 시간 가져오기 
-	float CurrentTime = UGameplayStatics::GetTimeSeconds(GetWorld());
-
-	// 시야에서 사라진 후 경과 시간 계산
-	float TimeSinceLastSeen = CurrentTime - LastVisibleTime;
-
-	// 현재 상태에 따른 업데이트 로직
-	if (MinimapVisibility == EAgentVisibility::Visible)
-	{
-		// 현재 보이는 상태인테 시야에서 벗어났다면 물음표 상태로 변경
-		if (!IsVisibleToOpponents())
-		{
-			MinimapVisibility = EAgentVisibility::LastKnown;
-			// 마지막 본 시간 업데이트
-			LastVisibleTime = CurrentTime;
-		}
-	}
-	// 물음표 상태일때 업데이트 로직 
-	else if (MinimapVisibility == EAgentVisibility::LastKnown)
-	{
-		// 물음표 상태인데 다시 시야에 들어왔다면 Visible 상태 변경
-		if (IsVisibleToOpponents())
-		{
-			MinimapVisibility = EAgentVisibility::Visible;
-		}
-		// 물음표 표시 시간이 지났다면 Hidden 상태로 변경
-		else if (TimeSinceLastSeen > QuestionMarkDuration)
-		{
-			MinimapVisibility = EAgentVisibility::Hidden;
-		}
-	}
+	// // 서버에서만 실행 (권한 있는 쪽에서만 상태 변경)
+	// if (GetLocalRole() != ROLE_Authority)
+	// {
+	// 	return;
+	// }
+	//
+	// // 게임의 현재 시간 가져오기 
+	// float CurrentTime = UGameplayStatics::GetTimeSeconds(GetWorld());
+	//
+	// // 시야에서 사라진 후 경과 시간 계산
+	// float TimeSinceLastSeen = CurrentTime - LastVisibleTime;
+	//
+	// // 현재 상태에 따른 업데이트 로직
+	// if (MinimapVisibility == EAgentVisibility::Visible)
+	// {
+	// 	// 현재 보이는 상태인테 시야에서 벗어났다면 물음표 상태로 변경
+	// 	if (!IsVisibleToOpponents())
+	// 	{
+	// 		MinimapVisibility = EAgentVisibility::LastKnown;
+	// 		// 마지막 본 시간 업데이트
+	// 		LastVisibleTime = CurrentTime;
+	// 	}
+	// }
+	// // 물음표 상태일때 업데이트 로직 
+	// else if (MinimapVisibility == EAgentVisibility::LastKnown)
+	// {
+	// 	// 물음표 상태인데 다시 시야에 들어왔다면 Visible 상태 변경
+	// 	if (IsVisibleToOpponents())
+	// 	{
+	// 		MinimapVisibility = EAgentVisibility::Visible;
+	// 	}
+	// 	// 물음표 표시 시간이 지났다면 Hidden 상태로 변경
+	// 	else if (TimeSinceLastSeen > QuestionMarkDuration)
+	// 	{
+	// 		MinimapVisibility = EAgentVisibility::Hidden;
+	// 	}
+	// }
 	// 숨김 상태일때
 	
 }
