@@ -48,7 +48,7 @@ public:
 	UFUNCTION(BlueprintCallable)
 	bool GetIsRun() const { return  bIsRun; }
 	UFUNCTION(BlueprintCallable)
-	void SetIsRun(const bool _bIsRun) { bIsRun = _bIsRun; }
+	void SetIsRun(const bool _bIsRun);
 	
 	UFUNCTION(BlueprintCallable)
 	float GetEffectSpeedMulitiplier() const { return EffectSpeedMultiplier; }
@@ -74,6 +74,8 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
 	UAgentInputComponent* AgentInputComponent;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category= "Anim")
+	UAnimMontage* AM_Die;
 
 	//ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ
 	//             CYT             ♣
@@ -140,7 +142,9 @@ protected:
 	
 	FAgentData* m_AgentData = nullptr;
 
+	UPROPERTY(Replicated)
 	bool bIsRun = true;
+	UPROPERTY(Replicated)
 	bool bIsDead = false;
 
 	float BaseRunSpeed = 675.0f;
@@ -158,10 +162,15 @@ protected:
 protected:
 	virtual void PossessedBy(AController* NewController) override;
 	virtual void OnRep_PlayerState() override;
+
+	virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;
 	
 	virtual void BeginPlay() override;
 	virtual void Tick(float DeltaTime) override;
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
+
+	UFUNCTION(Server, Reliable)
+	void Server_SetIsRun(const bool _bIsRun);
 	
 	virtual void OnStartCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust) override;
 	virtual void OnEndCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust) override;

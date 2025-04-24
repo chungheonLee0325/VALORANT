@@ -4,6 +4,7 @@
 #include "BaseAgent.h"
 #include "AbilitySystemComponent.h"
 #include "EnhancedInputComponent.h"
+#include "Valorant.h"
 #include "Camera/CameraComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Valorant/AbilitySystem/AgentAbilitySystemComponent.h"
@@ -103,6 +104,14 @@ void ABaseAgent::OnRep_PlayerState()
 	}
 }
 
+void ABaseAgent::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	DOREPLIFETIME(ABaseAgent, bIsRun);
+	DOREPLIFETIME(ABaseAgent, bIsDead);
+}
+
 void ABaseAgent::BeginPlay()
 {
 	Super::BeginPlay();
@@ -120,8 +129,7 @@ void ABaseAgent::BeginPlay()
 void ABaseAgent::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
-	FindInteractable();
-
+	
 	float baseSpeed = BaseRunSpeed;
 
 	if (!bIsRun)
@@ -131,6 +139,10 @@ void ABaseAgent::Tick(float DeltaTime)
 	
 	GetCharacterMovement()->MaxWalkSpeed = baseSpeed * EffectSpeedMultiplier * EquipSpeedMultiplier;
 	
+	if (IsLocallyControlled())
+	{
+		FindInteractable();
+	}
 
 	//ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ
 	//             CYT             ♣
@@ -200,6 +212,23 @@ void ABaseAgent::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent
 	AgentInputComponent->BindInput(PlayerInputComponent);
 }
 
+void ABaseAgent::SetIsRun(const bool _bIsRun)
+{
+	if (HasAuthority())
+	{
+		bIsRun = _bIsRun;
+	}
+	else
+	{
+		Server_SetIsRun(_bIsRun);
+	}
+}
+
+void ABaseAgent::Server_SetIsRun_Implementation(const bool _bIsRun)
+{
+	bIsRun = _bIsRun;
+}
+
 void ABaseAgent::OnStartCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust)
 {
 	Super::OnStartCrouch(HalfHeightAdjust, ScaledHalfHeightAdjust);
@@ -226,6 +255,7 @@ void ABaseAgent::Die()
 {
 	bIsDead = true;
 	UE_LOG(LogTemp, Warning, TEXT("죽음"));
+	ThirdPersonMesh->PlayAnimation(AM_Die,false);
 }
 
 void ABaseAgent::EnterSpectMode()
@@ -310,7 +340,7 @@ void ABaseAgent::UpdateArmor(float newArmor)
 
 void ABaseAgent::UpdateEffectSpeed(float newSpeed)
 {
-	UE_LOG(LogTemp,Warning,TEXT("%f"), newSpeed);
+	NET_LOG(LogTemp,Warning,TEXT("%f dp"), newSpeed);
 	EffectSpeedMultiplier = newSpeed;
 }
 
