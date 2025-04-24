@@ -4,7 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Valorant/AbilitySystem/Abilities/BaseGameplayAbility.h"
-#include "GA_Jett_E_Tailwind.generated.h"
+#include "Jett_E_Tailwind.generated.h"
 
 class UGameplayEffect;
 class UAbilityTask_WaitGameplayEvent; // Forward declaration
@@ -12,12 +12,12 @@ class UAbilityTask_WaitGameplayEvent; // Forward declaration
  * 
  */
 UCLASS()
-class VALORANT_API UGA_Jett_E_Tailwind : public UBaseGameplayAbility
+class VALORANT_API UJett_E_Tailwind : public UBaseGameplayAbility
 {
 	GENERATED_BODY()
 
 public:
-	UGA_Jett_E_Tailwind();
+	UJett_E_Tailwind();
 
 	/** Returns true if this ability can be activated right now. Has no side effects */
 	virtual bool CanActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
