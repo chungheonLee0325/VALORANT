@@ -24,7 +24,7 @@ public:
 	bool bIsFindingMatch = false;
 	bool bIsHostingMatch = false;
 	int CurrentPlayerCount = 0;
-	int MaxPlayerCount = 0;
+	int MaxPlayerCount = 8;
 	// TODO: 추후 삭제, 테스트를 위해 사용
 	int ReqMatchAutoStartPlayerCount = 4;
 	UFUNCTION(BlueprintCallable)

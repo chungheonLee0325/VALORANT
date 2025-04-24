@@ -305,7 +305,7 @@ void UValorantGameInstance::CheckHostingSession()
 	}
 	
 	const int32 RemSlotCount = Session->NumOpenPublicConnections;
-	MaxPlayerCount = Session->SessionSettings.NumPublicConnections;
+	// MaxPlayerCount = Session->SessionSettings.NumPublicConnections;
 	CurrentPlayerCount = MaxPlayerCount - RemSlotCount;
 	NET_LOG(LogTemp, Warning, TEXT("CheckHostingSession: (%d / %d)"), CurrentPlayerCount, MaxPlayerCount);
 
