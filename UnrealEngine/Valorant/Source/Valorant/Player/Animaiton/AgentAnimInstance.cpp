@@ -2,6 +2,8 @@
 
 
 #include "AgentAnimInstance.h"
+
+#include "GameFramework/CharacterMovementComponent.h"
 #include "Player/Agent/BaseAgent.h"
 
 void UAgentAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
@@ -18,11 +20,11 @@ void UAgentAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 		Speed = FVector::DotProduct(velocity, forward);
 		FVector right = player->GetActorRightVector();
 		Direction = FVector::DotProduct(velocity, right);
+
+		// UE_LOG(LogTemp, Warning, TEXT("Speed %f"),Speed);
+		// UE_LOG(LogTemp, Warning, TEXT("Dir %f"),Direction);
 		
-		// Speed = player->GetVelocity().Size();
-		// Direction = UKismetAnimationLibrary::CalculateDirection(velocity, player->GetActorRotation());
-		
-		// UE_LOG(LogTemp,Warning,TEXT("Speed %f"), Speed);
-		// UE_LOG(LogTemp,Warning,TEXT("Direction %f"), Direction);
+		bIsCrouch = player->bIsCrouched;
+		bIsInAir = player->GetCharacterMovement()->IsFalling();
 	}
 }
