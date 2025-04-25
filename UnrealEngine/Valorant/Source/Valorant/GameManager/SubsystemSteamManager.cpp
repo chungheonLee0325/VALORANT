@@ -277,6 +277,7 @@ void USubsystemSteamManager::CheckHostingSession()
 	if (nullptr == Session)
 	{
 		UE_LOG(LogSubsystemSteam, Warning, TEXT("%hs Called, Session is nullptr"), __FUNCTION__);
+		GetWorld()->GetTimerManager().ClearTimer(CheckSessionHandle);
 		return;
 	}
 	
@@ -298,6 +299,7 @@ void USubsystemSteamManager::CheckJoinSession()
 	if (nullptr == Session)
 	{
 		UE_LOG(LogSubsystemSteam, Warning, TEXT("%hs Called, Session is nullptr"), __FUNCTION__);
+		GetWorld()->GetTimerManager().ClearTimer(CheckSessionHandle);
 		return;
 	}
 	

@@ -4,6 +4,8 @@
 #include "MainMapLobbyPage.h"
 
 #include "MainMapMenuUI.h"
+#include "Components/Button.h"
+#include "Components/WidgetSwitcher.h"
 #include "GameManager/SubsystemSteamManager.h"
 
 void UMainMapLobbyPage::NativeConstruct()
@@ -30,25 +32,41 @@ void UMainMapLobbyPage::Init(UMainMapCoreUI* InitCoreUI)
 
 void UMainMapLobbyPage::OnClickedButtonStart()
 {
-	if (true == bIsFindingMatch)
+	if (true == bIsFindingSession)
 	{
 		return;
 	}
 	
 	if (USubsystemSteamManager* SubsystemManager = GetGameInstance()->GetSubsystem<USubsystemSteamManager>())
 	{
-		bIsFindingMatch = true;
+		bIsProgressMatchMaking = true;
+		bIsFindingSession = true;
+		WidgetSwitcher->SetActiveWidgetIndex(1);
 		SubsystemManager->FindSessions();
 	}
 }
 
+void UMainMapLobbyPage::OnClickedButtonCancel()
+{
+	if (bIsHostingSession)
+	{
+		if (USubsystemSteamManager* SubsystemManager = GetGameInstance()->GetSubsystem<USubsystemSteamManager>())
+		{
+			bIsHostingSession = false;
+			SubsystemManager->DestroySession();
+		}
+	}
+	bIsProgressMatchMaking = false;
+	WidgetSwitcher->SetActiveWidgetIndex(0);
+}
+
 void UMainMapLobbyPage::OnFindFirstSteamSessionComplete(const FOnlineSessionSearchResult& OnlineSessionSearchResult, bool bArg)
 {
-	if (false == bIsFindingMatch)
+	if (false == bIsFindingSession)
 	{
 		return;
 	}
-	bIsFindingMatch = false;
+	bIsFindingSession = false;
 
 	UE_LOG(LogTemp, Warning, TEXT("bArg: %hs"), bArg?"True":"False");
 	
@@ -64,11 +82,11 @@ void UMainMapLobbyPage::OnFindFirstSteamSessionComplete(const FOnlineSessionSear
 void UMainMapLobbyPage::OnFindSteamSessionComplete(const TArray<FOnlineSessionSearchResult>& OnlineSessionSearchResults,
 	bool bArg)
 {
-	if (false == bIsFindingMatch)
+	if (false == bIsFindingSession)
 	{
 		return;
 	}
-	bIsFindingMatch = false;
+	bIsFindingSession = false;
 
 	UE_LOG(LogTemp, Warning, TEXT("%hs Called, Num: %d, bArg: %hs"), __FUNCTION__, OnlineSessionSearchResults.Num(), bArg?"True":"False");
 
@@ -81,6 +99,7 @@ void UMainMapLobbyPage::OnFindSteamSessionComplete(const TArray<FOnlineSessionSe
 			if (bArg)
 			{
 				// 세션이 하나도 없으니 자신이 세션을 직접 만든다.
+				bIsHostingSession = true;
 				SubsystemManager->CreateSession();
 			}
 		}
