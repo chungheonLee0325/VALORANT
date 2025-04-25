@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from AI_Class.Server.recoil import recoil_router
+from AI_Class.Server.router import recoil_router
 from AI_Class.Server.report import report_router
 
 app = FastAPI(
