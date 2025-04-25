@@ -3,6 +3,8 @@
 
 #include "MatchGameMode.h"
 
+#include "OnlineSessionSettings.h"
+#include "SubsystemSteamManager.h"
 #include "Valorant.h"
 #include "GameManager/ValorantGameInstance.h"
 
@@ -13,9 +15,31 @@ AMatchGameMode::AMatchGameMode()
 void AMatchGameMode::BeginPlay()
 {
 	Super::BeginPlay();
-	NET_LOG(LogTemp, Warning, TEXT("AMatchGameMode::BeginPlay"));
+	
 	ValorantGameInstance = Cast<UValorantGameInstance>(GetGameInstance());
-	ValorantGameInstance->BroadcastTravel();
+
+	if (const USubsystemSteamManager* SubsystemManager = GetGameInstance()->GetSubsystem<USubsystemSteamManager>())
+	{
+		const IOnlineSessionPtr SessionInterface = SubsystemManager->GetSessionInterface();
+		if (!SessionInterface.IsValid())
+		{
+			NET_LOG(LogTemp, Warning, TEXT("%hs Called, SessionInterface is not valid"), __FUNCTION__);
+			return;
+		}
+		auto* Session = SubsystemManager->GetNamedOnlineSession();
+		if (nullptr == Session)
+		{
+			NET_LOG(LogTemp, Warning, TEXT("%hs Called, Session is nullptr"), __FUNCTION__);
+			return;
+		}
+		Session->SessionSettings.Set(FName("bReadyToTravel"), true, EOnlineDataAdvertisementType::ViaOnlineServiceAndPing);
+		SessionInterface->UpdateSession(NAME_GameSession, Session->SessionSettings, true);
+		NET_LOG(LogTemp, Warning, TEXT("%hs Called, Try UpdateSession Completed"), __FUNCTION__);
+	}
+	else
+	{
+		NET_LOG(LogTemp, Warning, TEXT("%hs Called, SubsystemManager is nullptr"), __FUNCTION__);
+	}
 }
 
 void AMatchGameMode::PreLogin(const FString& Options, const FString& Address, const FUniqueNetIdRepl& UniqueId,
