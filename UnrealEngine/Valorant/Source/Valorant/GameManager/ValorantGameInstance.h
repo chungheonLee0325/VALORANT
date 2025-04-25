@@ -17,8 +17,8 @@ class VALORANT_API UValorantGameInstance : public UGameInstance
 	GENERATED_BODY()
 
 public:
-	TSharedPtr<class IOnlineSession, ESPMode::ThreadSafe> SessionInterface;
-	TSharedPtr<FOnlineSessionSearch> SessionSearch;
+	// TSharedPtr<class IOnlineSession, ESPMode::ThreadSafe> SessionInterface;
+	// TSharedPtr<FOnlineSessionSearch> SessionSearch;
 
 	FTimerHandle CheckSessionHandle;
 	bool bIsFindingMatch = false;
@@ -26,28 +26,13 @@ public:
 	int CurrentPlayerCount = 0;
 	int MaxPlayerCount = 8;
 	// TODO: 추후 삭제, 테스트를 위해 사용
-	int ReqMatchAutoStartPlayerCount = 4;
-	UFUNCTION(BlueprintCallable)
-	void FindMatch();
+	int ReqMatchAutoStartPlayerCount = 2;
 	void BroadcastTravel();
 	
 protected:
 	virtual void Init() override;
-	virtual void Shutdown() override;
-	UFUNCTION(BlueprintCallable, meta=(AllowPrivateAccess = "true"))
-	void CreateSession();
-	void OnCreateSessionComplete(FName SessionName, bool bWasSuccessful);
-	UFUNCTION(BlueprintCallable, meta=(AllowPrivateAccess = "true"))
-	void FindSessions();
 	void OnFindSessionsComplete(bool bWasSuccessful);
-	void DestroySession(FName SessionName);
-	void OnDestroySessionComplete(FName SessionName, bool bWasSuccessful);
-	void OnJoinSessionComplete(FName Name, EOnJoinSessionCompleteResult::Type Arg);
 	void OnUpdateSessionComplete(FName Name, bool bArg);
-	
-	void CheckHostingSession();
-	void StartMatch();
-	void CheckJoinSession();
 
 public:
 	FAgentData* GetAgentData(int AgentID);
