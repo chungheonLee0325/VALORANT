@@ -21,6 +21,7 @@ public:
 	TObjectPtr<UMainMapMenuUI> MenuUI = nullptr;
 	
  	bool bIsFindingMatch = false;
+	bool bIsHostingMatch = false;
 	
 	virtual void NativeConstruct() override;
 	virtual void Init(UMainMapCoreUI* InitCoreUI) override;
@@ -28,5 +29,6 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void OnClickedButtonStart();
 
-	void JoinMatch(const FOnlineSessionSearchResult& OnlineSessionSearchResult, bool bArg);
+	void OnFindFirstSteamSessionComplete(const FOnlineSessionSearchResult& OnlineSessionSearchResult, bool bArg);
+	void OnFindSteamSessionComplete(const TArray<FOnlineSessionSearchResult>& OnlineSessionSearchResults, bool bArg);
 };
