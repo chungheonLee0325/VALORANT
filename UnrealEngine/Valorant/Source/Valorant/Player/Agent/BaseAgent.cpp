@@ -9,6 +9,7 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Valorant/AbilitySystem/AgentAbilitySystemComponent.h"
 #include "Components/CapsuleComponent.h"
+#include "Components/TimelineComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetSystemLibrary.h"
@@ -53,14 +54,20 @@ ABaseAgent::ABaseAgent()
 	ThirdPersonMesh->SetGenerateOverlapEvents(false);
 	ThirdPersonMesh->SetCanEverAffectNavigation(false);
 
+	GetCapsuleComponent()->SetCapsuleHalfHeight(72.0f);
+	BaseCapsuleHalfHeight = GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight();
+
 	GetCharacterMovement()->GetNavAgentPropertiesRef().bCanCrouch = true;
-	GetCharacterMovement()->MaxWalkSpeedCrouched = 150.0f;
-	// GetCharacterMovement()->SetCrouchedHalfHeight(GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight());
+	GetCharacterMovement()->MaxWalkSpeedCrouched = 330.0f;
+	GetCharacterMovement()->SetCrouchedHalfHeight(BaseCapsuleHalfHeight);
 
 	ThirdPersonMesh->SetOwnerNoSee(true);
 	GetMesh()->SetOnlyOwnerSee(true);
 
 	AgentInputComponent = CreateDefaultSubobject<UAgentInputComponent>("InputComponent");
+
+	TL_Crouch = CreateDefaultSubobject<UTimelineComponent>("TL_Crouch");
+
 	
 	//ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ
 	//             CYT             ♣
@@ -110,6 +117,14 @@ void ABaseAgent::BeginPlay()
 {
 	Super::BeginPlay();
 
+	if (CrouchCurve)
+	{
+		FOnTimelineFloat CrouchOffset;
+		CrouchOffset.BindUFunction(this, FName("HandleCrouchProgress"));
+		TL_Crouch->AddInterpFloat(CrouchCurve, CrouchOffset);
+	}
+
+	TL_Crouch->SetTimelineLengthMode(ETimelineLengthMode::TL_LastKeyFrame);
 	//ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ
 	//             CYT             ♣
 	//ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ
@@ -204,13 +219,22 @@ void ABaseAgent::Server_SetIsRun_Implementation(const bool _bIsRun)
 void ABaseAgent::OnStartCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust)
 {
 	Super::OnStartCrouch(HalfHeightAdjust, ScaledHalfHeightAdjust);
-
+	//NET_LOG(LogTemp,Warning,TEXT("OnStartCrouch"));
+	TL_Crouch->PlayFromStart();
 }
 
 void ABaseAgent::OnEndCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust)
 {
 	Super::OnEndCrouch(HalfHeightAdjust, ScaledHalfHeightAdjust);
-	
+	//NET_LOG(LogTemp,Warning,TEXT("OnEndCrouch"));
+	TL_Crouch->Reverse();
+}
+
+void ABaseAgent::HandleCrouchProgress(float Value)
+{
+	float newHalfHeight = BaseCapsuleHalfHeight - Value;
+	//NET_LOG(LogTemp,Warning,TEXT("HandleCrouchProgress %f"), newHalfHeight);
+	GetCapsuleComponent()->SetCapsuleHalfHeight(newHalfHeight,true);
 }
 
 void ABaseAgent::BindToDelegatePC(AAgentPlayerController* pc)
@@ -331,7 +355,6 @@ void ABaseAgent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifeti
 	DOREPLIFETIME(ABaseAgent, LastVisibleTime);
 	DOREPLIFETIME(ABaseAgent, TeamID);
 	DOREPLIFETIME(ABaseAgent, bIsRun);
-	
 }
 
 // 특정 플레이어에게 보이는지 체크

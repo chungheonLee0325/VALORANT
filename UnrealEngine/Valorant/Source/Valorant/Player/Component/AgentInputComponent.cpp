@@ -98,23 +98,29 @@ void UAgentInputComponent::JumpStart(const FInputActionValue& InputActionValue)
 {
 	if (Agent)
 	{
+		if (Agent->bIsCrouched)
+		{
+			Agent->UnCrouch();
+			UE_LOG(LogTemp, Warning, TEXT("앉기 중 점프"));
+		}
+		
 		Agent->Jump();
 	}
 }
 
 void UAgentInputComponent::JumpComplete(const FInputActionValue& InputActionValue)
 {
-	if (Agent)
-	{
-		Agent->StopJumping();
-	}
+	// if (Agent)
+	// {
+	// 	Agent->StopJumping();
+	// }
 }
 
 void UAgentInputComponent::CrouchStart(const FInputActionValue& InputActionValue)
 {
 	if (Agent)
 	{
-		//Agent->Crouch();
+		Agent->Crouch();
 	}
 }
 
@@ -122,7 +128,7 @@ void UAgentInputComponent::CrouchComplete(const FInputActionValue& InputActionVa
 {
 	if (Agent)
 	{
-		//Agent->UnCrouch();
+		Agent->UnCrouch();
 	}
 }
 
@@ -136,5 +142,8 @@ void UAgentInputComponent::WalkStart(const FInputActionValue& InputActionValue)
 
 void UAgentInputComponent::WalkComplete(const FInputActionValue& InputActionValue)
 {
+	if (Agent)
+	{
 		Agent->SetIsRun(true);
+	}
 }

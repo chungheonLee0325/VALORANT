@@ -8,6 +8,7 @@
 #include "Valorant/ResourceManager/ValorantGameType.h"
 #include "BaseAgent.generated.h"
 
+class UTimelineComponent;
 class ABaseInteractor;
 class AAgentPlayerState;
 class UAgentBaseWidget;
@@ -76,6 +77,12 @@ public:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category= "Anim")
 	UAnimMontage* AM_Die;
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category= "Crouch")
+	UTimelineComponent* TL_Crouch;
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category= "Crouch")
+	UCurveFloat* CrouchCurve;
 
 	//ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ
 	//             CYT             ♣
@@ -140,11 +147,13 @@ protected:
 	int32 m_AgentID = 0;
 	
 	FAgentData* m_AgentData = nullptr;
-
+	
 	UPROPERTY(Replicated)
 	bool bIsRun = true;
 	UPROPERTY(Replicated)
 	bool bIsDead = false;
+
+	float BaseCapsuleHalfHeight = 0.0f;
 
 	float BaseRunSpeed = 675.0f;
 	float BaseWalkSpeed = 330.0f;
@@ -157,6 +166,8 @@ protected:
 
 	UPROPERTY()
 	ABaseInteractor* LookingActor = nullptr;
+
+public:
 
 protected:
 	virtual void PossessedBy(AController* NewController) override;
@@ -171,6 +182,8 @@ protected:
 	
 	virtual void OnStartCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust) override;
 	virtual void OnEndCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust) override;
+	UFUNCTION()
+	void HandleCrouchProgress(float Value);
 	
 	virtual void InitAgentData();
 	
