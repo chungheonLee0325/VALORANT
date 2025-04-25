@@ -326,7 +326,7 @@ void USubsystemSteamManager::CheckJoinSession()
 }
 void USubsystemSteamManager::StartMatch()
 {
-	GetWorld()->ServerTravel(TEXT("*/Game/Maps/MatchMap?listen"));
+	GetWorld()->ServerTravel(TEXT("/Game/Maps/MatchMap?listen"));
 }
 
 FNamedOnlineSession* USubsystemSteamManager::GetNamedOnlineSession(FName SessionName)
