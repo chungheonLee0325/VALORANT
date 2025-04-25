@@ -1,6 +1,5 @@
 from fastapi import APIRouter
 from pydantic import BaseModel
-from Server.utils import 
 
 report_router = APIRouter(prefix="/report", tags=["AI REPORT"])
 
