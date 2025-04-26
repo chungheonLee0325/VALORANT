@@ -8,6 +8,7 @@
 #include "ResourceManager/ValorantGameType.h"
 #include "ValorantGameInstance.generated.h"
 
+class ULoadingTestUI;
 /**
  * 
  */
@@ -49,4 +50,23 @@ private:
 	TMap<int32, FGameplayEffectData> dt_GEffect;
 	UPROPERTY()
 	TMap<int32, FAbilityData> dt_Ability;
+
+	/*
+	 *	LoadingScreen
+	 */
+public:
+	UFUNCTION()
+	virtual void BeginLoadingScreen(const FString& MapName);
+	UFUNCTION()
+	virtual void EndLoadingScreen(UWorld* InLoadedWorld);
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	TSubclassOf<UUserWidget> GameStartUpLoadingWidgetClass;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	TSubclassOf<UUserWidget> LobbyToSelectLoadingWidgetClass;
+
+private:
+	UPROPERTY()
+	UUserWidget* CurrentLoadingWidget;
 };

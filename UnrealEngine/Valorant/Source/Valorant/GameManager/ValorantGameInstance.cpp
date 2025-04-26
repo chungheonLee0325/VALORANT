@@ -2,15 +2,17 @@
 
 #include "ValorantGameInstance.h"
 
+#include "MoviePlayer.h"
 #include "OnlineSubsystem.h"
 #include "OnlineSubsystemUtils.h"
-#include "Interfaces/OnlineSessionInterface.h"
-#include "OnlineSessionSettings.h"
 #include "SubsystemSteamManager.h"
 #include "Valorant.h"
 #include "AbilitySystem/ValorantGameplayTags.h"
-#include "Online/OnlineSessionNames.h"
+#include "Blueprint/UserWidget.h"
+#include "GameFramework/PlayerController.h" 
+#include "Interfaces/OnlineSessionInterface.h"
 #include "ResourceManager/ValorantGameType.h"
+#include "UI/SLoadingScreen.h"
 
 template<typename RowStructType, typename IDType>
 void LoadDataTableToMap(const FString& Path, TMap<IDType, RowStructType>& OutMap, IDType RowStructType::* IDMember)
@@ -33,6 +35,9 @@ void LoadDataTableToMap(const FString& Path, TMap<IDType, RowStructType>& OutMap
 void UValorantGameInstance::Init()
 {
 	Super::Init();
+
+	FCoreUObjectDelegates::PreLoadMap.AddUObject(this, &UValorantGameInstance::BeginLoadingScreen);
+	FCoreUObjectDelegates::PostLoadMapWithWorld.AddUObject(this, &UValorantGameInstance::EndLoadingScreen);
 	
 	FValorantGameplayTags::Get().InitializeNativeTags();
 
@@ -56,7 +61,7 @@ void UValorantGameInstance::Init()
 		dt_Ability,
 		&FAbilityData::AbilityID
 	);
-
+	
 	// OnlineSubsystem
 	const IOnlineSessionPtr SessionInterface = USubsystemSteamManager::GetSessionInterface();
 	if (SessionInterface.IsValid())
@@ -185,4 +190,53 @@ FAbilityData* UValorantGameInstance::GetAbilityData(int AbilityID)
 	}
 	UE_LOG(LogTemp, Error, TEXT("해당 ID의 데이터를 로드할 수 없습니다. AbilityID:%d"),AbilityID);
 	return nullptr;
+}
+
+void UValorantGameInstance::BeginLoadingScreen(const FString& MapName)
+{
+	UE_LOG(LogTemp, Warning, TEXT("BeginLoadingScreen MapName: %s"), *MapName);
+	if (!IsRunningDedicatedServer())
+	{
+		TSubclassOf<UUserWidget> WidgetClass;
+		if (MapName.Contains(TEXT("MatchMap")))
+		{
+			WidgetClass = LobbyToSelectLoadingWidgetClass;
+		}
+		else
+		{
+			WidgetClass = GameStartUpLoadingWidgetClass;
+		}
+		
+		if (CurrentLoadingWidget)
+		{
+			CurrentLoadingWidget->RemoveFromParent();
+			CurrentLoadingWidget = nullptr;
+		}
+		
+		CurrentLoadingWidget = CreateWidget<UUserWidget>(this, WidgetClass);
+		if (CurrentLoadingWidget)
+		{
+			FLoadingScreenAttributes LoadingScreen;
+			LoadingScreen.WidgetLoadingScreen = CurrentLoadingWidget->TakeWidget();
+			LoadingScreen.bAllowInEarlyStartup = false;
+			LoadingScreen.PlaybackType = MT_Normal;
+			LoadingScreen.bAllowEngineTick = false;
+			LoadingScreen.bWaitForManualStop = false;
+			LoadingScreen.bAutoCompleteWhenLoadingCompletes = true;
+			LoadingScreen.MinimumLoadingScreenDisplayTime = 5.f;
+
+			GetMoviePlayer()->SetupLoadingScreen(LoadingScreen);
+		}
+	}
+}
+
+void UValorantGameInstance::EndLoadingScreen(UWorld* InLoadedWorld)
+{
+	UE_LOG(LogTemp, Warning, TEXT("EndLoadingScreen"));
+
+	if (CurrentLoadingWidget)
+	{
+		CurrentLoadingWidget->RemoveFromParent();
+		CurrentLoadingWidget = nullptr;
+	}
 }
