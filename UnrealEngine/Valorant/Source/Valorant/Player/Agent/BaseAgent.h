@@ -7,6 +7,7 @@
 #include "Player/AgentPlayerController.h"
 #include "Player/Animaiton/AgentAnimInstance.h"
 #include "Valorant/ResourceManager/ValorantGameType.h"
+#include "Weapon/BaseWeapon.h"
 #include "BaseAgent.generated.h"
 
 class UAgentAnimInstance;
@@ -134,8 +135,17 @@ public:
 	UFUNCTION()
 	void OnRep_WeaponState();
 
-
 	UFUNCTION(BlueprintCallable)
+	ABaseWeapon* GetPrimaryWeapon() const { return PrimaryWeapon; }
+	UFUNCTION(BlueprintCallable)
+	void SetPrimaryWeapon(ABaseWeapon* newWeapon) { PrimaryWeapon = newWeapon; }
+	
+	UFUNCTION(BlueprintCallable)
+	ABaseWeapon* GetSecondWeapon() const { return SecondWeapon; }
+	UFUNCTION()
+	void SetSecondWeapon(ABaseWeapon* newWeapon) { SecondWeapon = newWeapon; }
+	
+	UFUNCTION(BlueprintCallable) 
 	float GetEffectSpeedMulitiplier() const { return EffectSpeedMultiplier; }
 	UFUNCTION(BlueprintCallable)
 	void SetEffectSpeedMultiplier(const float newEffectSpeed) { EffectSpeedMultiplier = newEffectSpeed; }
@@ -143,7 +153,6 @@ public:
 	float GetEquipSpeedMuliplier() const { return EquipSpeedMultiplier; }
 	UFUNCTION(BlueprintCallable)
 	void SetEquipSpeedMultiplier(const float newEquipSpeed) { EquipSpeedMultiplier = newEquipSpeed; }
-
 
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
@@ -189,11 +198,11 @@ protected:
 	UPROPERTY()
 	ABaseInteractor* LookingActor = nullptr;
 
-	UPROPERTY()
+	UPROPERTY(VisibleAnywhere)
 	ABaseWeapon* PrimaryWeapon = nullptr;
-	UPROPERTY()
+	UPROPERTY(VisibleAnywhere)
 	ABaseWeapon* SecondWeapon = nullptr;
-	UPROPERTY()
+	UPROPERTY(VisibleAnywhere)
 	ABaseWeapon* MeleeWeapon = nullptr;
 
 protected:
