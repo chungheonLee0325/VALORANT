@@ -6,6 +6,8 @@
 #include "MainMapWidget.h"
 #include "MainMapLobbyPage.generated.h"
 
+class UButton;
+class UWidgetSwitcher;
 class UMainMapMenuUI;
 class UMainMapCoreUI;
 /**
@@ -19,8 +21,17 @@ class VALORANT_API UMainMapLobbyPage : public UMainMapWidget
 public:
 	UPROPERTY(BlueprintReadOnly, meta=(BindWidget))
 	TObjectPtr<UMainMapMenuUI> MenuUI = nullptr;
+
+	UPROPERTY(BlueprintReadOnly, meta=(BindWidget))
+	TObjectPtr<UButton> ButtonStart = nullptr;
 	
- 	bool bIsFindingMatch = false;
+	UPROPERTY(BlueprintReadOnly, meta=(BindWidget))
+	TObjectPtr<UWidgetSwitcher> WidgetSwitcher = nullptr;
+
+	UPROPERTY(BlueprintReadOnly)
+	bool bIsProgressMatchMaking = false;
+ 	bool bIsFindingSession = false;
+	bool bIsHostingSession = false;
 	
 	virtual void NativeConstruct() override;
 	virtual void Init(UMainMapCoreUI* InitCoreUI) override;
@@ -28,5 +39,9 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void OnClickedButtonStart();
 
-	void JoinMatch(const FOnlineSessionSearchResult& OnlineSessionSearchResult, bool bArg);
+	UFUNCTION(BlueprintCallable)
+	void OnClickedButtonCancel();
+
+	void OnFindFirstSteamSessionComplete(const FOnlineSessionSearchResult& OnlineSessionSearchResult, bool bArg);
+	void OnFindSteamSessionComplete(const TArray<FOnlineSessionSearchResult>& OnlineSessionSearchResults, bool bArg);
 };
