@@ -21,6 +21,8 @@ public:
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category=State)
 	bool bIsInAir = false;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category=State)
+	bool bIsCrouch = false;
 	
 	virtual  void NativeUpdateAnimation(float DeltaSeconds) override;
 };

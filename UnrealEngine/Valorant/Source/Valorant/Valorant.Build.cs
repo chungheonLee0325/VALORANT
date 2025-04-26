@@ -25,7 +25,9 @@ public class Valorant : ModuleRules
 			"UMG",
 			"OnlineSubsystem",
 			"OnlineSubsystemSteam",
-			"OnlineSubsystemUtils"
+			"OnlineSubsystemUtils",
+			"HTTP",
+			"Json"
 		});
 	}
 }
