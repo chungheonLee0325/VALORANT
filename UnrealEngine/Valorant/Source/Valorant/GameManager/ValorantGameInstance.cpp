@@ -120,12 +120,6 @@ void UValorantGameInstance::BeginLoadingScreen(const FString& MapName)
 void UValorantGameInstance::EndLoadingScreen(UWorld* InLoadedWorld)
 {
 	UE_LOG(LogTemp, Warning, TEXT("EndLoadingScreen"));
-
-	if (CurrentLoadingWidget)
-	{
-		CurrentLoadingWidget->RemoveFromParent();
-		CurrentLoadingWidget = nullptr;
-	}
 }
 
 void UValorantGameInstance::OnFindSessionsComplete(bool bWasSuccessful)
