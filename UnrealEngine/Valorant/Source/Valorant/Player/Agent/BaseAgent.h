@@ -5,9 +5,12 @@
 #include "AbilitySystemInterface.h"
 #include "GameplayEffectTypes.h"
 #include "Player/AgentPlayerController.h"
+#include "Player/Animaiton/AgentAnimInstance.h"
 #include "Valorant/ResourceManager/ValorantGameType.h"
 #include "BaseAgent.generated.h"
 
+class UAgentAnimInstance;
+class ABaseWeapon;
 class UTimelineComponent;
 class ABaseInteractor;
 class AAgentPlayerState;
@@ -37,31 +40,6 @@ class VALORANT_API ABaseAgent : public ACharacter
 
 public:
 	ABaseAgent();
-
-	UFUNCTION(BlueprintCallable)
-	UAgentAbilitySystemComponent* GetASC() const { return ASC.Get(); }
-
-	UFUNCTION(BlueprintCallable)
-	int32 GetAgentID() const { return m_AgentID; }
-	UFUNCTION(BlueprintCallable)
-	void SetAgentID(const int32 id) { m_AgentID = id; }
-
-	UFUNCTION(BlueprintCallable)
-	bool GetIsRun() const { return  bIsRun; }
-	UFUNCTION(BlueprintCallable)
-	void SetIsRun(const bool _bIsRun);
-	
-	UFUNCTION(BlueprintCallable)
-	float GetEffectSpeedMulitiplier() const { return EffectSpeedMultiplier; }
-	UFUNCTION(BlueprintCallable)
-	void SetEffectSpeedMultiplier(const float newEffectSpeed) { EffectSpeedMultiplier = newEffectSpeed; }
-	UFUNCTION(BlueprintCallable)
-	float GetEquipSpeedMuliplier() const { return EquipSpeedMultiplier; }
-	UFUNCTION(BlueprintCallable)
-	void SetEquipSpeedMultiplier(const float newEquipSpeed) { EquipSpeedMultiplier = newEquipSpeed; }
-
-	UFUNCTION(BlueprintCallable)
-	void BindToDelegatePC(AAgentPlayerController* pc);
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
 	class UCameraComponent* Camera;
@@ -129,7 +107,43 @@ public:
 	// 네트워크 복제 속성 설정 - (언리얼 네트워크 이용)
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
+	UFUNCTION(BlueprintCallable)
+	void BindToDelegatePC(AAgentPlayerController* pc);
 	
+	UFUNCTION(BlueprintCallable)
+	UAgentAbilitySystemComponent* GetASC() const { return ASC.Get(); }
+
+	UFUNCTION(BlueprintCallable)
+	int32 GetAgentID() const { return m_AgentID; }
+	UFUNCTION(BlueprintCallable)
+	void SetAgentID(const int32 id) { m_AgentID = id; }
+
+	UFUNCTION(BlueprintCallable)
+	bool GetIsRun() const { return  bIsRun; }
+	UFUNCTION(BlueprintCallable)
+	void SetIsRun(const bool _bIsRun);
+	UFUNCTION(Server, Reliable)
+	void Server_SetIsRun(const bool _bIsRun);
+
+	UFUNCTION(BlueprintCallable)
+	uint8 GetWeaponState() const { return ABP_1P->WeaponState; }
+	UFUNCTION(BlueprintCallable)
+	void SetWeaponState(const uint8 newState);
+	UFUNCTION(Server, Reliable)
+	void Server_SetWeaponState(uint8 newState);
+	UFUNCTION()
+	void OnRep_WeaponState();
+
+
+	UFUNCTION(BlueprintCallable)
+	float GetEffectSpeedMulitiplier() const { return EffectSpeedMultiplier; }
+	UFUNCTION(BlueprintCallable)
+	void SetEffectSpeedMultiplier(const float newEffectSpeed) { EffectSpeedMultiplier = newEffectSpeed; }
+	UFUNCTION(BlueprintCallable)
+	float GetEquipSpeedMuliplier() const { return EquipSpeedMultiplier; }
+	UFUNCTION(BlueprintCallable)
+	void SetEquipSpeedMultiplier(const float newEquipSpeed) { EquipSpeedMultiplier = newEquipSpeed; }
+
 
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
@@ -147,6 +161,14 @@ protected:
 	int32 m_AgentID = 0;
 	
 	FAgentData* m_AgentData = nullptr;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UAgentAnimInstance* ABP_1P = nullptr;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UAgentAnimInstance* ABP_3P = nullptr;
+	
+	UPROPERTY(Replicated, ReplicatedUsing=OnRep_WeaponState)
+	uint8 WeaponState = 3;
 	
 	UPROPERTY(Replicated)
 	bool bIsRun = true;
@@ -167,7 +189,12 @@ protected:
 	UPROPERTY()
 	ABaseInteractor* LookingActor = nullptr;
 
-public:
+	UPROPERTY()
+	ABaseWeapon* PrimaryWeapon = nullptr;
+	UPROPERTY()
+	ABaseWeapon* SecondWeapon = nullptr;
+	UPROPERTY()
+	ABaseWeapon* MeleeWeapon = nullptr;
 
 protected:
 	virtual void PossessedBy(AController* NewController) override;
@@ -176,14 +203,11 @@ protected:
 	virtual void BeginPlay() override;
 	virtual void Tick(float DeltaTime) override;
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
-
-	UFUNCTION(Server, Reliable)
-	void Server_SetIsRun(const bool _bIsRun);
 	
-	virtual void OnStartCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust) override;
-	virtual void OnEndCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust) override;
 	UFUNCTION()
 	void HandleCrouchProgress(float Value);
+	virtual void OnStartCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust) override;
+	virtual void OnEndCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust) override;
 	
 	virtual void InitAgentData();
 	
@@ -191,6 +215,10 @@ protected:
 	virtual void EnterSpectMode();
 	virtual void Respawn();
 
+	// UFUNCTION()
+	// void OnFindInteraction(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
+	// UFUNCTION()
+	// void OnInteractionCapsuleEndOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
 	void FindInteractable();
 	
 	UFUNCTION()

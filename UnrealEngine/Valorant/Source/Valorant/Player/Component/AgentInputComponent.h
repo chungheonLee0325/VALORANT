@@ -52,6 +52,13 @@ public:
 	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	UInputAction* ReloadAction;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	UInputAction* Num_1Action;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	UInputAction* Num_2Action;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	UInputAction* Num_3Action;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	UInputAction* QAction;
@@ -93,4 +100,9 @@ public:
 	void CrouchComplete(const FInputActionValue& InputActionValue);
 	void WalkStart(const FInputActionValue& InputActionValue);
 	void WalkComplete(const FInputActionValue& InputActionValue);
+
+	void WeaponChange(const FInputActionValue& value);
+	void Weapon1(const FInputActionValue& InputActionValue);
+	void Weapon2(const FInputActionValue& InputActionValue);
+	void Weapon3(const FInputActionValue& InputActionValue);
 };
