@@ -49,11 +49,6 @@ public:
 	int MaxPlayerCount = 8;
 	// TODO: 추후 삭제, 테스트를 위해 사용
 	int ReqMatchAutoStartPlayerCount = 2;
-	void BroadcastTravel();
-	
-protected:
-	void OnFindSessionsComplete(bool bWasSuccessful);
-	void OnUpdateSessionComplete(FName Name, bool bArg);
 
 	/*
 	 *	DataTable
