@@ -13,16 +13,27 @@ UCLASS()
 class VALORANT_API UAgentAnimInstance : public UAnimInstance
 {
 	GENERATED_BODY()
+	
 public:
+	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category= Move)
 	float Speed = 0;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category= Move)
 	float Direction = 0;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category= Look)
+	float Pitch = 0;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category= Look)
+	float Yaw = 0;
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category=State)
 	bool bIsInAir = false;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category=State)
 	bool bIsCrouch = false;
 	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category=Weapon)
+	uint8 WeaponState = 3;
+	
 	virtual  void NativeUpdateAnimation(float DeltaSeconds) override;
+
+	void SetWeaponState(const uint8 newState) { WeaponState = newState; }
 };

@@ -71,6 +71,12 @@ void UAgentInputComponent::BindInput(UInputComponent* InputComponent)
 			eic->BindAction(CtrlAction, ETriggerEvent::Started, this, &UAgentInputComponent::CrouchStart);
 			eic->BindAction(CtrlAction, ETriggerEvent::Completed, this, &UAgentInputComponent::CrouchComplete);
 		}
+		if (Num_1Action && Num_2Action && Num_3Action)
+		{
+			eic->BindAction(Num_1Action, ETriggerEvent::Started, this, &UAgentInputComponent::Weapon1);
+			eic->BindAction(Num_2Action, ETriggerEvent::Started, this, &UAgentInputComponent::Weapon2);
+			eic->BindAction(Num_3Action, ETriggerEvent::Started, this, &UAgentInputComponent::Weapon3);
+		}
 	}
 }
 
@@ -145,5 +151,35 @@ void UAgentInputComponent::WalkComplete(const FInputActionValue& InputActionValu
 	if (Agent)
 	{
 		Agent->SetIsRun(true);
+	}
+}
+
+void UAgentInputComponent::WeaponChange(const FInputActionValue& value)
+{
+	uint8 state = Agent->GetWeaponState();
+	Agent->SetWeaponState((state +1) % 3);
+}
+
+void UAgentInputComponent::Weapon1(const FInputActionValue& InputActionValue)
+{
+	if (Agent)
+	{
+		Agent->SetWeaponState(1);
+	}
+}
+
+void UAgentInputComponent::Weapon2(const FInputActionValue& InputActionValue)
+{
+	if (Agent)
+	{
+		Agent->SetWeaponState(2);
+	}
+}
+
+void UAgentInputComponent::Weapon3(const FInputActionValue& InputActionValue)
+{
+	if (Agent)
+	{
+		Agent->SetWeaponState(3);
 	}
 }

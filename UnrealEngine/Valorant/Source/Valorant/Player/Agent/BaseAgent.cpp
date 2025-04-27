@@ -14,6 +14,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "Net/UnrealNetwork.h"
+#include "Player/Animaiton/AgentAnimInstance.h"
 #include "Player/Component/AgentInputComponent.h"
 #include "Valorant/Player/AgentPlayerController.h"
 #include "Valorant/Player/AgentPlayerState.h"
@@ -116,6 +117,9 @@ void ABaseAgent::OnRep_PlayerState()
 void ABaseAgent::BeginPlay()
 {
 	Super::BeginPlay();
+	
+	ABP_1P = Cast<UAgentAnimInstance>(GetMesh()->GetAnimInstance());
+	ABP_3P = Cast<UAgentAnimInstance>(ThirdPersonMesh->GetAnimInstance());
 
 	if (CrouchCurve)
 	{
@@ -192,6 +196,16 @@ void ABaseAgent::InitAgentData()
 	}
 }
 
+void ABaseAgent::BindToDelegatePC(AAgentPlayerController* pc)
+{
+	pc->OnHealthChanged_PC.AddDynamic(this, &ABaseAgent::UpdateHealth);
+	pc->OnMaxHealthChanged_PC.AddDynamic(this, &ABaseAgent::UpdateMaxHealth);
+	pc->OnArmorChanged_PC.AddDynamic(this, &ABaseAgent::UpdateArmor);
+	pc->OnEffectSpeedChanged_PC.AddDynamic(this, &ABaseAgent::UpdateEffectSpeed);
+
+	PC = pc;
+}
+
 void ABaseAgent::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
@@ -216,6 +230,39 @@ void ABaseAgent::Server_SetIsRun_Implementation(const bool _bIsRun)
 	bIsRun = _bIsRun;
 }
 
+void ABaseAgent::SetWeaponState(const uint8 newState)
+{
+	if (HasAuthority())
+	{
+		WeaponState = newState;
+		ABP_1P->WeaponState = WeaponState;
+		ABP_3P->WeaponState = WeaponState;
+	}
+	else
+	{
+		Server_SetWeaponState(newState);
+	}
+}
+
+void ABaseAgent::Server_SetWeaponState_Implementation(uint8 newState)
+{
+	WeaponState = newState;
+	ABP_1P->WeaponState = WeaponState;
+	ABP_3P->WeaponState = WeaponState;
+}
+
+void ABaseAgent::OnRep_WeaponState()
+{
+	if (ABP_1P)
+	{
+		ABP_1P->WeaponState = WeaponState;
+	}
+	if (ABP_3P)
+	{
+		ABP_3P->WeaponState = WeaponState;
+	}
+}
+
 void ABaseAgent::OnStartCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust)
 {
 	Super::OnStartCrouch(HalfHeightAdjust, ScaledHalfHeightAdjust);
@@ -235,16 +282,6 @@ void ABaseAgent::HandleCrouchProgress(float Value)
 	float newHalfHeight = BaseCapsuleHalfHeight - Value;
 	//NET_LOG(LogTemp,Warning,TEXT("HandleCrouchProgress %f"), newHalfHeight);
 	GetCapsuleComponent()->SetCapsuleHalfHeight(newHalfHeight,true);
-}
-
-void ABaseAgent::BindToDelegatePC(AAgentPlayerController* pc)
-{
-	pc->OnHealthChanged_PC.AddDynamic(this, &ABaseAgent::UpdateHealth);
-	pc->OnMaxHealthChanged_PC.AddDynamic(this, &ABaseAgent::UpdateMaxHealth);
-	pc->OnArmorChanged_PC.AddDynamic(this, &ABaseAgent::UpdateArmor);
-	pc->OnEffectSpeedChanged_PC.AddDynamic(this, &ABaseAgent::UpdateEffectSpeed);
-
-	PC = pc;
 }
 
 void ABaseAgent::Die()
@@ -355,6 +392,7 @@ void ABaseAgent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifeti
 	DOREPLIFETIME(ABaseAgent, LastVisibleTime);
 	DOREPLIFETIME(ABaseAgent, TeamID);
 	DOREPLIFETIME(ABaseAgent, bIsRun);
+	DOREPLIFETIME(ABaseAgent, WeaponState);
 }
 
 // 특정 플레이어에게 보이는지 체크
@@ -387,26 +425,26 @@ bool ABaseAgent::IsVisibleToTeam(int32 ViewerTeamID) const
 			// }
 	// 	}
 	// }
-	// UE_LOG(LogTemp, Warning, TEXT("다른팀 안보임"));
+	 UE_LOG(LogTemp, Warning, TEXT("다른팀 안보임"));
 	return false;
 }
 
 // 미니맵 가시성 상태 업데이트
 void ABaseAgent::UpdateMinimapVisibility()
 {
-	// // 서버에서만 실행 (권한 있는 쪽에서만 상태 변경)
-	// if (GetLocalRole() != ROLE_Authority)
-	// {
-	// 	return;
-	// }
-	//
-	// // 게임의 현재 시간 가져오기 
-	// float CurrentTime = UGameplayStatics::GetTimeSeconds(GetWorld());
-	//
-	// // 시야에서 사라진 후 경과 시간 계산
-	// float TimeSinceLastSeen = CurrentTime - LastVisibleTime;
-	//
-	// // 현재 상태에 따른 업데이트 로직
+	// 서버에서만 실행 (권한 있는 쪽에서만 상태 변경)
+	if (GetLocalRole() != ROLE_Authority)
+	{
+		return;
+	}
+	
+	// 게임의 현재 시간 가져오기 
+	float CurrentTime = UGameplayStatics::GetTimeSeconds(GetWorld());
+	
+	// 시야에서 사라진 후 경과 시간 계산
+	float TimeSinceLastSeen = CurrentTime - LastVisibleTime;
+	
+	// 현재 상태에 따른 업데이트 로직
 	// if (MinimapVisibility == EAgentVisibility::Visible)
 	// {
 	// 	// 현재 보이는 상태인테 시야에서 벗어났다면 물음표 상태로 변경
@@ -431,6 +469,6 @@ void ABaseAgent::UpdateMinimapVisibility()
 	// 		MinimapVisibility = EAgentVisibility::Hidden;
 	// 	}
 	// }
-	// 숨김 상태일때
-	
+	// //숨김 상태일때
+	//
 }

@@ -5,6 +5,7 @@
 
 #include "OnlineSessionSettings.h"
 #include "OnlineSubsystem.h"
+#include "ValorantGameInstance.h"
 #include "Online/OnlineSessionNames.h"
 
 // Custom Log
@@ -277,6 +278,7 @@ void USubsystemSteamManager::CheckHostingSession()
 	if (nullptr == Session)
 	{
 		UE_LOG(LogSubsystemSteam, Warning, TEXT("%hs Called, Session is nullptr"), __FUNCTION__);
+		GetWorld()->GetTimerManager().ClearTimer(CheckSessionHandle);
 		return;
 	}
 	
@@ -298,6 +300,7 @@ void USubsystemSteamManager::CheckJoinSession()
 	if (nullptr == Session)
 	{
 		UE_LOG(LogSubsystemSteam, Warning, TEXT("%hs Called, Session is nullptr"), __FUNCTION__);
+		GetWorld()->GetTimerManager().ClearTimer(CheckSessionHandle);
 		return;
 	}
 	
@@ -326,7 +329,7 @@ void USubsystemSteamManager::CheckJoinSession()
 }
 void USubsystemSteamManager::StartMatch()
 {
-	GetWorld()->ServerTravel(TEXT("*/Game/Maps/MatchMap?listen"));
+	GetWorld()->ServerTravel(TEXT("/Game/Maps/MatchMap?listen"));
 }
 
 FNamedOnlineSession* USubsystemSteamManager::GetNamedOnlineSession(FName SessionName)

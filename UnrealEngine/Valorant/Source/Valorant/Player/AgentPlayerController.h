@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "MatchPlayerController.h"
 
 #include "AgentPlayerController.generated.h"
 
@@ -16,7 +17,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnArmorChanged_PC, float, newArmor)
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnEffectSpeedChanged_PC, float, newSpeed);
 
 UCLASS()
-class VALORANT_API AAgentPlayerController : public APlayerController
+class VALORANT_API AAgentPlayerController : public AMatchPlayerController
 {
 	GENERATED_BODY()
 

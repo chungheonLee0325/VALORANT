@@ -3,19 +3,53 @@
 
 #include "MatchGameMode.h"
 
+#include "OnlineSessionSettings.h"
+#include "SubsystemSteamManager.h"
 #include "Valorant.h"
 #include "GameManager/ValorantGameInstance.h"
+#include "Player/MatchPlayerController.h"
 
 AMatchGameMode::AMatchGameMode()
 {
+	// PlayerControllerClass = AMatchPlayerController::StaticClass();
 }
 
 void AMatchGameMode::BeginPlay()
 {
 	Super::BeginPlay();
-	NET_LOG(LogTemp, Warning, TEXT("AMatchGameMode::BeginPlay"));
+	
 	ValorantGameInstance = Cast<UValorantGameInstance>(GetGameInstance());
-	ValorantGameInstance->BroadcastTravel();
+
+	SubsystemManager = GetGameInstance()->GetSubsystem<USubsystemSteamManager>();
+	if (SubsystemManager == nullptr)
+	{
+		NET_LOG(LogTemp, Warning, TEXT("%hs Called, SubsystemManager is nullptr"), __FUNCTION__);
+		return;
+	}
+	
+	const IOnlineSessionPtr SessionInterface = SubsystemManager->GetSessionInterface();
+	if (!SessionInterface.IsValid())
+	{
+		NET_LOG(LogTemp, Warning, TEXT("%hs Called, SessionInterface is not valid"), __FUNCTION__);
+		return;
+	}
+	auto* Session = SubsystemManager->GetNamedOnlineSession();
+	if (nullptr == Session)
+	{
+		NET_LOG(LogTemp, Warning, TEXT("%hs Called, Session is nullptr"), __FUNCTION__);
+	}
+	else
+	{
+		Session->SessionSettings.Set(FName("bReadyToTravel"), true, EOnlineDataAdvertisementType::ViaOnlineServiceAndPing);
+		SessionInterface->UpdateSession(NAME_GameSession, Session->SessionSettings, true);
+		NET_LOG(LogTemp, Warning, TEXT("%hs Called, Try UpdateSession Completed"), __FUNCTION__);
+	}
+
+	RequiredPlayerCount = SubsystemManager->ReqMatchAutoStartPlayerCount;
+	if (LoggedInPlayerNum >= RequiredPlayerCount)
+	{
+		StartSelectPhase();
+	}
 }
 
 void AMatchGameMode::PreLogin(const FString& Options, const FString& Address, const FUniqueNetIdRepl& UniqueId,
@@ -31,4 +65,23 @@ void AMatchGameMode::PostLogin(APlayerController* NewPlayer)
 	const auto Address = NewPlayer->GetPlayerNetworkAddress();
 	const auto UniqueId = NewPlayer->GetUniqueID();
 	NET_LOG(LogTemp, Warning, TEXT("AMainMenuGameMode::PostLogin Address: %s, UniqueId: %d"), *Address, UniqueId);
+	auto* Controller = Cast<AMatchPlayerController>(NewPlayer);
+	Controller->SetGameMode(this);
+	PlayerControllerSet.Add(Controller);
+}
+
+void AMatchGameMode::OnControllerBeginPlay(AMatchPlayerController* Controller)
+{
+	if (++LoggedInPlayerNum >= RequiredPlayerCount)
+	{
+		StartSelectPhase();
+	}
+}
+
+void AMatchGameMode::StartSelectPhase()
+{
+	for (auto* Controller : PlayerControllerSet)
+	{
+		Controller->ClientRPC_DisplaySelectUI();
+	}
 }
