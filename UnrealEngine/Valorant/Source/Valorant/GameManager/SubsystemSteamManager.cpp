@@ -5,6 +5,7 @@
 
 #include "OnlineSessionSettings.h"
 #include "OnlineSubsystem.h"
+#include "ValorantGameInstance.h"
 #include "Online/OnlineSessionNames.h"
 
 // Custom Log
