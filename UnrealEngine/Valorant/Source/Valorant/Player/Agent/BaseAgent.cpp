@@ -4,6 +4,7 @@
 #include "BaseAgent.h"
 #include "AbilitySystemComponent.h"
 #include "EnhancedInputComponent.h"
+#include "MapTestAgent.h"
 #include "Valorant.h"
 #include "Camera/CameraComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
@@ -117,7 +118,7 @@ void ABaseAgent::OnRep_PlayerState()
 void ABaseAgent::BeginPlay()
 {
 	Super::BeginPlay();
-	
+
 	ABP_1P = Cast<UAgentAnimInstance>(GetMesh()->GetAnimInstance());
 	ABP_3P = Cast<UAgentAnimInstance>(ThirdPersonMesh->GetAnimInstance());
 
@@ -129,9 +130,6 @@ void ABaseAgent::BeginPlay()
 	}
 
 	TL_Crouch->SetTimelineLengthMode(ETimelineLengthMode::TL_LastKeyFrame);
-	//ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ
-	//             CYT             ♣
-	//ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ
 	
 }
 
@@ -152,10 +150,6 @@ void ABaseAgent::Tick(float DeltaTime)
 	{
 		FindInteractable();
 	}
-
-	//ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ
-	//             CYT             ♣
-	//ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ
 	
 }
 
@@ -407,8 +401,8 @@ bool ABaseAgent::IsVisibleToTeam(int32 ViewerTeamID) const
 	// 적팀 시야 체크
 
 	// 현재 월드의 모든 에이전트 가져오자
-	// TArray<AActor*> AllAgents;
-	// UGameplayStatics::GetAllActorsOfClass(GetWorld(), ACharacter::StaticClass(), AllAgents);
+	//TArray<AActor*> AllAgents;
+	//UGameplayStatics::GetAllActorsOfClass(GetWorld(), ACharacter::StaticClass(), AllAgents);
 	// 각 플레이어 에이전트에 대해 체크
 	// for (AActor* Agent : AllAgents)
 	// {
@@ -444,31 +438,90 @@ void ABaseAgent::UpdateMinimapVisibility()
 	// 시야에서 사라진 후 경과 시간 계산
 	float TimeSinceLastSeen = CurrentTime - LastVisibleTime;
 	
-	// 현재 상태에 따른 업데이트 로직
-	// if (MinimapVisibility == EAgentVisibility::Visible)
-	// {
-	// 	// 현재 보이는 상태인테 시야에서 벗어났다면 물음표 상태로 변경
-	// 	if (!IsVisibleToOpponents())
-	// 	{
-	// 		MinimapVisibility = EAgentVisibility::LastKnown;
-	// 		// 마지막 본 시간 업데이트
-	// 		LastVisibleTime = CurrentTime;
-	// 	}
-	// }
-	// // 물음표 상태일때 업데이트 로직 
-	// else if (MinimapVisibility == EAgentVisibility::LastKnown)
-	// {
-	// 	// 물음표 상태인데 다시 시야에 들어왔다면 Visible 상태 변경
-	// 	if (IsVisibleToOpponents())
-	// 	{
-	// 		MinimapVisibility = EAgentVisibility::Visible;
-	// 	}
-	// 	// 물음표 표시 시간이 지났다면 Hidden 상태로 변경
-	// 	else if (TimeSinceLastSeen > QuestionMarkDuration)
-	// 	{
-	// 		MinimapVisibility = EAgentVisibility::Hidden;
-	// 	}
-	// }
-	// //숨김 상태일때
-	//
+	//현재 상태에 따른 업데이트 로직
+	if (MinimapVisibility == EAgentVisibility::Visible)
+	{
+		// 현재 보이는 상태인테 시야에서 벗어났다면 물음표 상태로 변경
+		if (!IsVisibleToOpponents())
+		{
+			MinimapVisibility = EAgentVisibility::LastKnown;
+			// 마지막 본 시간 업데이트
+			LastVisibleTime = CurrentTime;
+		}
+	}
+	// 물음표 상태일때 업데이트 로직 
+	else if (MinimapVisibility == EAgentVisibility::LastKnown)
+	{
+		// 물음표 상태인데 다시 시야에 들어왔다면 Visible 상태 변경
+		if (IsVisibleToOpponents())
+		{
+			MinimapVisibility = EAgentVisibility::Visible;
+		}
+		// 물음표 표시 시간이 지났다면 Hidden 상태로 변경
+		else if (TimeSinceLastSeen > QuestionMarkDuration)
+		{
+			MinimapVisibility = EAgentVisibility::Hidden;
+		}
+	}
+	//숨김 상태인데 다시 시야에 들어왔다면 Visible로 상타로 변경
+	else if (MinimapVisibility == EAgentVisibility::Hidden)
+	{
+		if (IsVisibleToOpponents())
+		{
+			MinimapVisibility = EAgentVisibility::Visible;
+		}
+	}
+}
+
+// 미니맵에 표시될 아이콘 가져오기
+UTexture2D* ABaseAgent::GetAgentIcon(int32 ViewerTeamID) const
+{
+	// 같은 팀이면 항상 기본 아이콘 표시 (팀원은 항상 미니맵에 표시)
+	if (TeamID == ViewerTeamID)
+	{
+		return AgentIcon;
+	}
+
+	// 다른팀에 대한 표시 규칙
+	switch (MinimapVisibility)
+	{
+		// 기본시야에 보이는경우 에이전트 아이콘으로 표시
+		case EAgentVisibility::Visible: return AgentIcon;
+		// 마지막으로 본위치 물음표 아이콘으로 표시
+		case EAgentVisibility::LastKnown: return QuestionMarkIcon;
+		// 숨김 상태 아이콘 표시 없음
+		case EAgentVisibility::Hidden: default: return nullptr;
+	}
+}
+
+bool ABaseAgent::IsVisibleToOpponents() const
+{
+	// 모든 플레이어 컨트롤러 Actor 배열로 가져오기
+	TArray<AActor*> FoundActors;
+	UGameplayStatics::GetAllActorsOfClass
+	(GetWorld(),APlayerController::StaticClass(),FoundActors);
+
+	// 각 Actor를 APlayController로 캐스팅하여 검사 
+	for (AActor* Actor : FoundActors)
+	{
+		APlayerController* Plc = Cast<APlayerController>(Actor);
+		if (!Plc)
+		{
+			continue;
+		}
+		AMapTestAgent* PlayerAgent = Cast<AMapTestAgent>(Plc->GetPawn());
+		// 같은 팀이면 진행
+		if (!PlayerAgent || PlayerAgent->TeamID == TeamID)
+		{
+			continue;
+		}
+		// 플레이어가 이 에이전트 볼 수 있는지 체크
+		if(!PlayerAgent->IsLineOfSightBlocked(this))
+		{
+			// 한명이라도 볼수 있다면 true 반환
+			return true;
+		}
+	}
+	// 아무도 볼수 없다면 false 반환 
+	return false;
 }

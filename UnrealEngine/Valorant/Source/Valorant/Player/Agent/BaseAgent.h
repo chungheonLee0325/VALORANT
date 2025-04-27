@@ -84,12 +84,12 @@ public:
 	int32 TeamID;
 	
 	// // 에이전트 아이콘 (에디터에서 변경 가능)
-	// UPROPERTY(EditAnywhere,Category="Minimap")
-	// UTexture2D* AgentIcon;
-	//
+	UPROPERTY(EditAnywhere,Category="Minimap")
+	UTexture2D* AgentIcon;
+	
 	// // 물음표 아이콘 (에디터에서 변경 가능)
-	// UPROPERTY(EditAnywhere,Category="Minimap")
-	// UTexture2D* QuestionMarkIcon;
+	UPROPERTY(EditAnywhere,Category="Minimap")
+	UTexture2D* QuestionMarkIcon;
 
 	// 다른 팀 플레이어에게 보이는지 체크
 	bool IsVisibleToTeam(int32 ViewerTeamID) const;
@@ -98,12 +98,12 @@ public:
 	void UpdateMinimapVisibility();
 
 	// // 미니맵에 표시할 아이콘 가져오기 - (BP 호출)
-	// UFUNCTION(BlueprintCallable, Category="Minimap")
-	// UTexture2D* GetAgentIcon(int32 ViewerTeamID) const;
-	//
+	UFUNCTION(BlueprintCallable, Category="Minimap")
+	UTexture2D* GetAgentIcon(int32 ViewerTeamID) const;
+	
 	// 적 플레이어 시야에 보이는지 체크하는 함수 - (BP 호출)
-	// UFUNCTION(BlueprintCallable, Category="Vision")
-	// bool IsVisibleToOpponents() const;
+	UFUNCTION(BlueprintCallable, Category="Vision")
+	bool IsVisibleToOpponents() const;
 
 	// 네트워크 복제 속성 설정 - (언리얼 네트워크 이용)
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
