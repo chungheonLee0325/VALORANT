@@ -82,6 +82,18 @@ void AMatchGameMode::StartSelectPhase()
 {
 	for (auto* Controller : PlayerControllerSet)
 	{
-		Controller->ClientRPC_DisplaySelectUI();
+		Controller->ClientRPC_DisplaySelectUI(true);
+	}
+}
+
+void AMatchGameMode::OnLockIn(AMatchPlayerController* Player, int AgentId)
+{
+	if (++LockedInPlayerNum >= RequiredPlayerCount)
+	{
+		NET_LOG(LogTemp, Warning, TEXT("%hs Called, All Players Completed Lock In"), __FUNCTION__);
+		for (auto* Controller : PlayerControllerSet)
+		{
+			Controller->ClientRPC_DisplaySelectUI(false);
+		}
 	}
 }

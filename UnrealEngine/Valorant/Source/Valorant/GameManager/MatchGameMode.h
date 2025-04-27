@@ -50,8 +50,10 @@ private:
 	EMatchPhase CurrentMatchPhase = EMatchPhase::Phase_Select;
 	UPROPERTY(BlueprintReadOnly, Category="Gameflow", meta=(AllowPrivateAccess))
 	TSet<AMatchPlayerController*> PlayerControllerSet;
+	int LockedInPlayerNum = 0;
 	
 public:
 	void OnControllerBeginPlay(AMatchPlayerController* Controller);
 	void StartSelectPhase();
+	void OnLockIn(AMatchPlayerController* Player, int AgentId);
 };

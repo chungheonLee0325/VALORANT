@@ -36,5 +36,7 @@ public:
 	UFUNCTION(Server, Reliable)
 	void ServerRPC_NotifyBeginPlay();
 	UFUNCTION(Client, Reliable)
-	void ClientRPC_DisplaySelectUI();
+	void ClientRPC_DisplaySelectUI(bool bDisplay);
+	UFUNCTION(Server, Reliable)
+	void ServerRPC_LockIn();
 };

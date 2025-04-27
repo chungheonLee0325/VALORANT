@@ -5,7 +5,6 @@
 
 #include "Valorant.h"
 #include "Blueprint/UserWidget.h"
-#include "Elements/Columns/TypedElementAlertColumns.h"
 #include "GameManager/MatchGameMode.h"
 
 AMatchPlayerController::AMatchPlayerController()
@@ -34,14 +33,28 @@ void AMatchPlayerController::ServerRPC_NotifyBeginPlay_Implementation()
 	GameMode->OnControllerBeginPlay(this);
 }
 
-void AMatchPlayerController::ClientRPC_DisplaySelectUI_Implementation()
+void AMatchPlayerController::ClientRPC_DisplaySelectUI_Implementation(bool bDisplay)
 {
-	SelectUIWidget = CreateWidget(this, SelectUIWidgetClass);
-	if (nullptr == SelectUIWidget)
+	if (bDisplay)
 	{
-		NET_LOG(LogTemp, Warning, TEXT("%hs Called, SelectUIWidget is nullptr"), __FUNCTION__);
-		return;
-	}
+		SelectUIWidget = CreateWidget(this, SelectUIWidgetClass);
+		if (nullptr == SelectUIWidget)
+		{
+			NET_LOG(LogTemp, Warning, TEXT("%hs Called, SelectUIWidget is nullptr"), __FUNCTION__);
+			return;
+		}
 
-	SelectUIWidget->AddToViewport();
+		SelectUIWidget->AddToViewport();
+	}
+	else
+	{
+		// Pawn 생성하고 세팅하는 동안 로딩 화면 표시
+		SelectUIWidget->RemoveFromParent();
+		SelectUIWidget = nullptr;
+	}
+}
+
+void AMatchPlayerController::ServerRPC_LockIn_Implementation()
+{
+	GameMode->OnLockIn(this, 0);
 }
