@@ -425,26 +425,26 @@ bool ABaseAgent::IsVisibleToTeam(int32 ViewerTeamID) const
 			// }
 	// 	}
 	// }
-	// UE_LOG(LogTemp, Warning, TEXT("다른팀 안보임"));
+	 UE_LOG(LogTemp, Warning, TEXT("다른팀 안보임"));
 	return false;
 }
 
 // 미니맵 가시성 상태 업데이트
 void ABaseAgent::UpdateMinimapVisibility()
 {
-	// // 서버에서만 실행 (권한 있는 쪽에서만 상태 변경)
-	// if (GetLocalRole() != ROLE_Authority)
-	// {
-	// 	return;
-	// }
-	//
-	// // 게임의 현재 시간 가져오기 
-	// float CurrentTime = UGameplayStatics::GetTimeSeconds(GetWorld());
-	//
-	// // 시야에서 사라진 후 경과 시간 계산
-	// float TimeSinceLastSeen = CurrentTime - LastVisibleTime;
-	//
-	// // 현재 상태에 따른 업데이트 로직
+	// 서버에서만 실행 (권한 있는 쪽에서만 상태 변경)
+	if (GetLocalRole() != ROLE_Authority)
+	{
+		return;
+	}
+	
+	// 게임의 현재 시간 가져오기 
+	float CurrentTime = UGameplayStatics::GetTimeSeconds(GetWorld());
+	
+	// 시야에서 사라진 후 경과 시간 계산
+	float TimeSinceLastSeen = CurrentTime - LastVisibleTime;
+	
+	// 현재 상태에 따른 업데이트 로직
 	// if (MinimapVisibility == EAgentVisibility::Visible)
 	// {
 	// 	// 현재 보이는 상태인테 시야에서 벗어났다면 물음표 상태로 변경
@@ -469,6 +469,6 @@ void ABaseAgent::UpdateMinimapVisibility()
 	// 		MinimapVisibility = EAgentVisibility::Hidden;
 	// 	}
 	// }
-	// 숨김 상태일때
-	
+	// //숨김 상태일때
+	//
 }
