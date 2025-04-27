@@ -25,4 +25,18 @@ public:
 
 	// Called to bind functionality to input
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
+
+	// 시야 각도
+	UPROPERTY(EditAnywhere, Category= "Vision")
+	float VisionAngle = 90.0f;
+
+	// 특정 위치가 이 플레이어 시야에 있는지 확인 
+	bool IsPositionIsVision(const FVector& TargetPosition) const;
+
+	// 다른 에이전트를 감지하는 함수
+	void DetectAgents();
+
+	// 레이캐스트로 시야 차단 여부 확인
+	bool IsLineOfSightBlocked(const AActor* TargetActor) const;
+	
 };
