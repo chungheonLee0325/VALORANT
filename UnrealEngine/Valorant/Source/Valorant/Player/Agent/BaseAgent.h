@@ -115,7 +115,7 @@ public:
 	// UFUNCTION(BlueprintCallable, Category="Minimap")
 	// UTexture2D* GetAgentIcon(int32 ViewerTeamID) const;
 	//
-	// // 적 플레이어 시야에 보이는지 체크하는 함수 - (BP 호출)
+	// 적 플레이어 시야에 보이는지 체크하는 함수 - (BP 호출)
 	// UFUNCTION(BlueprintCallable, Category="Vision")
 	// bool IsVisibleToOpponents() const;
 
