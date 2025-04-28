@@ -4,14 +4,14 @@
 
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
-#include "MatchMapSelectUI.generated.h"
+#include "MatchMapSelectAgentUI.generated.h"
 
 class UTextBlock;
 /**
  * 
  */
 UCLASS()
-class VALORANT_API UMatchMapSelectUI : public UUserWidget
+class VALORANT_API UMatchMapSelectAgentUI : public UUserWidget
 {
 	GENERATED_BODY()
 
