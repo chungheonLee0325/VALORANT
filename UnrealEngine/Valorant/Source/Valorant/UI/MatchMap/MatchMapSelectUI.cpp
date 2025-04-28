@@ -4,6 +4,7 @@
 #include "MatchMapSelectUI.h"
 
 #include "Valorant.h"
+#include "GameManager/SubsystemSteamManager.h"
 #include "Player/AgentPlayerController.h"
 
 void UMatchMapSelectUI::NativeConstruct()

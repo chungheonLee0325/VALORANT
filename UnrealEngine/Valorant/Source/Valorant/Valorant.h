@@ -30,7 +30,8 @@
 		{ \
 			Prefix = TEXT("[UNKNOWN] "); \
 		} \
-		UE_LOG(CategoryName, Verbosity, TEXT("%s%s"), *Prefix, *FString::Printf(Format, ##__VA_ARGS__)); \
+		FString Nickname = USubsystemSteamManager::GetDisplayName(); \
+		UE_LOG(CategoryName, Verbosity, TEXT("%s%s: %s"), *Prefix, *Nickname, *FString::Printf(Format, ##__VA_ARGS__)); \
 	}
 
 #define SCREEN_LOG(Format, ...) \
