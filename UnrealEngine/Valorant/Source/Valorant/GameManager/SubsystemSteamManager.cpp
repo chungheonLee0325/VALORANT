@@ -5,7 +5,7 @@
 
 #include "OnlineSessionSettings.h"
 #include "OnlineSubsystem.h"
-#include "ValorantGameInstance.h"
+#include "Interfaces/OnlineIdentityInterface.h"
 #include "Online/OnlineSessionNames.h"
 
 // Custom Log
@@ -19,7 +19,7 @@ USubsystemSteamManager::USubsystemSteamManager() :
 {
 }
 
-IOnlineSessionPtr USubsystemSteamManager::GetSessionInterface()
+/* static */ IOnlineSessionPtr USubsystemSteamManager::GetSessionInterface()
 {
 	const IOnlineSubsystem* OnlineSubsystem = IOnlineSubsystem::Get();
 	if (OnlineSubsystem && OnlineSubsystem->GetSessionInterface())
@@ -28,6 +28,21 @@ IOnlineSessionPtr USubsystemSteamManager::GetSessionInterface()
 	}
 	UE_LOG(LogSubsystemSteam, Error, TEXT("Invalid Session Interface"));
 	return nullptr;
+}
+
+/* static */  FString USubsystemSteamManager::GetDisplayName(const int UniquePlayerID)
+{
+	const IOnlineSubsystem* OnlineSubsystem = IOnlineSubsystem::Get();
+	if (OnlineSubsystem)
+	{
+		const IOnlineIdentityPtr IdentityInterface = OnlineSubsystem->GetIdentityInterface();
+		if (IdentityInterface.IsValid())
+		{
+			FString Nickname = IdentityInterface->GetPlayerNickname(UniquePlayerID);
+			return Nickname;
+		}
+	}
+	return FString("UNKNOWN");
 }
 
 void USubsystemSteamManager::CreateSession()
@@ -252,6 +267,7 @@ void USubsystemSteamManager::DestroySession()
 		OnDestroySteamSessionComplete.Broadcast(false);
 	}
 }
+
 void USubsystemSteamManager::OnDestroySessionComplete_Internal(FName SessionName, bool bWasSuccessful)
 {
 	LOG_DARK_YELLOW(TEXT("%hs Called, SessionName %s"), __FUNCTION__, *SessionName.ToString());

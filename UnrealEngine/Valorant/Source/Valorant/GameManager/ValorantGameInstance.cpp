@@ -68,6 +68,7 @@ void UValorantGameInstance::Init()
 	/*
 	 *	OnlineSubsystem
 	 */
+	Nickname = USubsystemSteamManager::GetDisplayName();
 	const IOnlineSessionPtr SessionInterface = USubsystemSteamManager::GetSessionInterface();
 	if (SessionInterface.IsValid())
 	{
