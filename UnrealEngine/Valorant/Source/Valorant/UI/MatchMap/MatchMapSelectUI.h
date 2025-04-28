@@ -6,6 +6,7 @@
 #include "Blueprint/UserWidget.h"
 #include "MatchMapSelectUI.generated.h"
 
+class UTextBlock;
 /**
  * 
  */
@@ -19,4 +20,9 @@ protected:
 
 	UFUNCTION(BlueprintCallable)
 	void OnClickedButtonLockIn();
+
+	UPROPERTY(meta=(BindWidget))
+	TObjectPtr<UTextBlock> TextBlockRemTime = nullptr;
+	UFUNCTION()
+	void UpdateTime(float Time);
 };

@@ -3,15 +3,24 @@
 
 #include "MatchGameState.h"
 
+#include "MatchGameMode.h"
 #include "SubsystemSteamManager.h"
 #include "Valorant.h"
-#include "GameFramework/PlayerState.h"
+#include "Net/UnrealNetwork.h"
+#include "Player/AgentPlayerController.h"
 #include "Player/MatchPlayerController.h"
 
 void AMatchGameState::BeginPlay()
 {
 	Super::BeginPlay();
 	NET_LOG(LogTemp, Warning, TEXT("%hs Called"), __FUNCTION__);
+}
+
+void AMatchGameState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+	DOREPLIFETIME(AMatchGameState, RoundSubState);
+	DOREPLIFETIME(AMatchGameState, RemainRoundStateTime);
 }
 
 void AMatchGameState::HandleMatchIsWaitingToStart()
@@ -28,18 +37,6 @@ void AMatchGameState::HandleMatchHasStarted()
 	// 모든 플레이어가 다 맵 로딩(PlayerController BeginPlay)을 마치고 매치가 본격적으로 시작된 단계
 	Super::HandleMatchHasStarted();
 	NET_LOG(LogTemp, Warning, TEXT("%hs Called"), __FUNCTION__);
-	
-	// 캐릭터 선택 UI를 띄우라고 한다
-	if (HasAuthority())
-	{
-		for (const auto PS : PlayerArray)
-		{
-			if (auto* PC = Cast<AMatchPlayerController>(PS->GetOwner()))
-			{
-				PC->ClientRPC_DisplaySelectUI(true);
-			}
-		}
-	}
 }
 
 void AMatchGameState::HandleMatchHasEnded()
@@ -53,4 +50,82 @@ void AMatchGameState::HandleLeavingMap()
 {
 	Super::HandleLeavingMap();
 	NET_LOG(LogTemp, Warning, TEXT("%hs Called"), __FUNCTION__);
+}
+
+void AMatchGameState::OnRep_RoundSubState()
+{
+	NET_LOG(LogTemp, Warning, TEXT("%hs Called"), __FUNCTION__);
+	if (RoundSubState == ERoundSubState::RSS_SelectAgent)
+	{
+		HandleRoundSubState_SelectAgent();
+	}
+	else if (RoundSubState == ERoundSubState::RSS_PreRound)
+	{
+		HandleRoundSubState_PreRound();
+	}
+	else if (RoundSubState == ERoundSubState::RSS_InRound)
+	{
+		HandleRoundSubState_InRound();
+	}
+	else if (RoundSubState == ERoundSubState::RSS_EndPhase)
+	{
+		HandleRoundSubState_EndRound();
+	}
+}
+
+void AMatchGameState::OnRep_RemainRoundStateTime()
+{
+	OnRemainRoundStateTimeChanged.Broadcast(RemainRoundStateTime);
+}
+
+void AMatchGameState::HandleRoundSubState_SelectAgent()
+{
+	AAgentPlayerController* PC = Cast<AAgentPlayerController>(GetWorld()->GetFirstPlayerController());
+	if (nullptr == PC)
+	{
+		NET_LOG(LogTemp, Warning, TEXT("%hs Called, PC is nullptr"), __FUNCTION__);
+		return;
+	}
+	NET_LOG(LogTemp, Warning, TEXT("%hs Called"), __FUNCTION__);
+	PC->ClientRPC_DisplaySelectUI(true);
+}
+
+void AMatchGameState::HandleRoundSubState_PreRound()
+{
+	AAgentPlayerController* PC = Cast<AAgentPlayerController>(GetWorld()->GetFirstPlayerController());
+	if (nullptr == PC)
+	{
+		NET_LOG(LogTemp, Warning, TEXT("%hs Called, PC is nullptr"), __FUNCTION__);
+		return;
+	}
+	NET_LOG(LogTemp, Warning, TEXT("%hs Called"), __FUNCTION__);
+	PC->ClientRPC_DisplaySelectUI(false);
+}
+
+void AMatchGameState::HandleRoundSubState_InRound()
+{
+	NET_LOG(LogTemp, Warning, TEXT("%hs Called"), __FUNCTION__);
+}
+
+void AMatchGameState::HandleRoundSubState_EndRound()
+{
+	NET_LOG(LogTemp, Warning, TEXT("%hs Called"), __FUNCTION__);
+}
+
+void AMatchGameState::SetRoundSubState(ERoundSubState NewRoundSubState)
+{
+	if (GetLocalRole() == ROLE_Authority)
+	{
+		RoundSubState = NewRoundSubState;
+		OnRep_RoundSubState();
+	}
+}
+
+void AMatchGameState::SetRemainRoundStateTime(float NewRemainRoundStateTime)
+{
+	if (GetLocalRole() == ROLE_Authority)
+	{
+		RemainRoundStateTime = NewRemainRoundStateTime;
+		OnRep_RemainRoundStateTime();
+	}
 }

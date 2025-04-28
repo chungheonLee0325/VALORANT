@@ -4,12 +4,17 @@
 #include "MatchMapSelectUI.h"
 
 #include "Valorant.h"
+#include "Components/TextBlock.h"
+#include "GameManager/MatchGameState.h"
 #include "GameManager/SubsystemSteamManager.h"
 #include "Player/AgentPlayerController.h"
 
 void UMatchMapSelectUI::NativeConstruct()
 {
 	Super::NativeConstruct();
+
+	auto* GameState = Cast<AMatchGameState>(GetWorld()->GetGameState());
+	GameState->OnRemainRoundStateTimeChanged.AddDynamic(this, &UMatchMapSelectUI::UpdateTime);
 }
 
 void UMatchMapSelectUI::OnClickedButtonLockIn()
@@ -22,4 +27,9 @@ void UMatchMapSelectUI::OnClickedButtonLockIn()
 	}
 
 	Controller->ServerRPC_LockIn();
+}
+
+void UMatchMapSelectUI::UpdateTime(float Time)
+{
+	TextBlockRemTime->SetText(FText::FromString(FString::Printf(TEXT("%d"), static_cast<int>(Time))));
 }
