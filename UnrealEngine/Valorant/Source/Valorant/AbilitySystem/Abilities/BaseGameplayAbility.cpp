@@ -21,6 +21,8 @@ void UBaseGameplayAbility::ActivateAbility(const FGameplayAbilitySpecHandle Hand
 	UAgentAbilitySystemComponent* asc = Cast<UAgentAbilitySystemComponent>(GetAbilitySystemComponentFromActorInfo());
 	if (asc)
 	{
+		asc->SetCurrentAbilityHandle(Handle);
+		
 		if (FollowUpInputTags.IsEmpty() == false)
 		{
 			asc->ResisterFollowUpInput(FollowUpInputTags);
@@ -49,17 +51,16 @@ void UBaseGameplayAbility::InputPressed(const FGameplayAbilitySpecHandle Handle,
 	{
 		if (CurrentFollowUpInputTag == FValorantGameplayTags::Get().InputTag_Default_LeftClick)
 		{
-			// Handle 
-			return;
+			//TODO: Handle
+			EndAbility(Handle, ActorInfo, ActivationInfo,true,false);
 		}
 		if (CurrentFollowUpInputTag == FValorantGameplayTags::Get().InputTag_Default_RightClick)
 		{
-			// Handle
-			return;
+			//TODO: Handle
+			EndAbility(Handle, ActorInfo, ActivationInfo,true,false);
 		}
 	}
 	
-	EndAbility(Handle, ActorInfo, ActivationInfo,true,false);
 }
 
 void UBaseGameplayAbility::InputReleased(const FGameplayAbilitySpecHandle Handle,

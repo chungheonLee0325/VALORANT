@@ -4,6 +4,7 @@
 #include "AgentAbilitySystemComponent.h"
 
 #include "GameplayTagsManager.h"
+#include "Valorant.h"
 #include "Abilities/BaseGameplayAbility.h"
 #include "Attributes/BaseAttributeSet.h"
 #include "Net/UnrealNetwork.h"
@@ -121,12 +122,12 @@ void UAgentAbilitySystemComponent::SetAgentAbility(TSubclassOf<UGameplayAbility>
 		UE_LOG(LogTemp,Warning,TEXT("%s 스킬이 이미 존재해요. 제거 후 재등록합니다."),*skillTag.ToString());
 	}
 
-	//현재는 Tmap을 기반으로 스킬을 탐색하기 때문에, 당장 사용되지는 않습니다.
+	// 현재는 Tmap을 기반으로 스킬을 탐색하기 때문에, 당장 사용되지는 않습니다.
 	spec.GetDynamicSpecSourceTags().AddTag(skillTag);
 	
-	//GiveAbility 다음 tick에서 spec의 handle이 생성되므로, handle을 리턴값으로 받아줘야 정확함.
 	FGameplayAbilitySpecHandle handle = GiveAbility(spec);
 	ReservedSkillHandleMap.Add(skillTag, handle);
+	Client_ReserveSkill(skillTag, handle);
 
 	// UE_LOG(LogTemp,Warning,TEXT("%s 스킬 등록."),*skillTag.ToString());
 }
@@ -136,13 +137,20 @@ void UAgentAbilitySystemComponent::ResetAgentAbilities()
 	UE_LOG(LogTemp,Warning,TEXT("모든 스킬 리셋"));
 	
 	TArray<FGameplayTag> tagsToRemove;
-	ReservedSkillHandleMap.GetKeys(tagsToRemove);
-
+	
+	Client_ResetSkill(tagsToRemove);
+	
 	for (const FGameplayTag& tag : tagsToRemove)
 	{
 		ClearAbility(ReservedSkillHandleMap[tag]);
 		ReservedSkillHandleMap.Remove(tag);
 	}
+
+}
+
+void UAgentAbilitySystemComponent::SetCurrentAbilityHandle(const FGameplayAbilitySpecHandle handle)
+{
+	CurrentAbilityHandle = handle;
 }
 
 void UAgentAbilitySystemComponent::ResisterFollowUpInput(const TSet<FGameplayTag>& tags)
@@ -163,13 +171,12 @@ bool UAgentAbilitySystemComponent::TrySkillInput(const FGameplayTag& inputTag)
 		{
 			if (TryActivateAbility(*gaHandle))
 			{
-				//UE_LOG(LogTemp,Warning,TEXT("스킬 일반 입력 성공"));
-				CurrentAbilityHandle = *gaHandle;
+				UE_LOG(LogTemp,Warning,TEXT("스킬 일반 입력 성공"));
 				return true;
 			}
 			else
 			{
-				UE_LOG(LogTemp,Warning,TEXT("스킬 일반 입력 실패"));
+				NET_LOG(LogTemp,Warning,TEXT("스킬 일반 입력 실패"));
 				return false;
 			}
 		}
@@ -180,20 +187,20 @@ bool UAgentAbilitySystemComponent::TrySkillInput(const FGameplayTag& inputTag)
 		{
 			if (TrySkillFollowupInput(inputTag))
 			{
-				//UE_LOG(LogTemp,Warning,TEXT("스킬 후속 입력 성공"));
+				UE_LOG(LogTemp,Warning,TEXT("스킬 후속 입력 성공"));
 				FollowUpInputBySkill.Empty();
 				OnAbilityWaitingStateChanged.Broadcast(false);
 				return true;
 			}
 			else
 			{
-				UE_LOG(LogTemp,Warning,TEXT("스킬 후속 입력 실패"));
+				NET_LOG(LogTemp,Warning,TEXT("스킬 후속 입력 실패"));
 				return false;
 			}
 		}
 		else
 		{
-			UE_LOG(LogTemp, Warning, TEXT("후속 입력 대기 중이라 일반 입력 [%s] 무시됨"), *inputTag.ToString());
+			NET_LOG(LogTemp, Warning, TEXT("후속 입력 대기 중이라 일반 입력 [%s] 무시됨"), *inputTag.ToString());
 			return false;
 		}
 	}
@@ -202,27 +209,48 @@ bool UAgentAbilitySystemComponent::TrySkillInput(const FGameplayTag& inputTag)
 	return false;
 }
 
-//TODO: 추후 NotifyEnd로 옮기기
 void UAgentAbilitySystemComponent::ClearCurrentAbilityHandle(const FGameplayAbilitySpecHandle handle)
 {
 	if (!CurrentAbilityHandle.IsValid())
 	{
-		//UE_LOG(LogTemp, Warning, TEXT("CurrentAbilityHandle은 이미 무효상태입니다."));
+		UE_LOG(LogTemp, Warning, TEXT("CurrentAbilityHandle은 이미 무효상태입니다."));
 		return;
 	}
 	if (!handle.IsValid())
 	{
-		//UE_LOG(LogTemp, Warning, TEXT("handle 이미 무효상태입니다."));
+		UE_LOG(LogTemp, Warning, TEXT("handle 이미 무효상태입니다."));
 		return;
 	}
 	
-	if (CurrentAbilityHandle.IsValid() && CurrentAbilityHandle == handle)
+	if (CurrentAbilityHandle == handle)
 	{
 		CurrentAbilityHandle = FGameplayAbilitySpecHandle();
 	}
 	else
 	{
 		UE_LOG(LogTemp,Error,TEXT("실제 사용 완료된 Ability와 ASC의 CurrentAbility 변수의 정보가 일치하지 않아요."));
+	}
+}
+
+void UAgentAbilitySystemComponent::Client_ReserveSkill_Implementation(const FGameplayTag& skillTag,
+	const FGameplayAbilitySpecHandle& handle)
+{
+	if (ReservedSkillHandleMap.Contains(skillTag))
+	{
+		ReservedSkillHandleMap.Remove(skillTag);
+	}
+
+	ReservedSkillHandleMap.Add(skillTag, handle);
+	NET_LOG(LogTemp, Warning, TEXT("SkillHandleMap 동기화: %s 등록됨"), *skillTag.ToString());
+}
+
+void UAgentAbilitySystemComponent::Client_ResetSkill_Implementation(const TArray<FGameplayTag>& tagsToRemove)
+{
+	for (const FGameplayTag& tag : tagsToRemove)
+	{
+		ClearAbility(ReservedSkillHandleMap[tag]);
+		ReservedSkillHandleMap.Remove(tag);
+		NET_LOG(LogTemp, Warning, TEXT("SkillHandleMap 스킬 해제됨"), *tag.ToString());
 	}
 }
 
