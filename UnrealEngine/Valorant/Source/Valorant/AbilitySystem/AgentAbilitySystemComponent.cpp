@@ -127,6 +127,7 @@ void UAgentAbilitySystemComponent::SetAgentAbility(TSubclassOf<UGameplayAbility>
 	
 	FGameplayAbilitySpecHandle handle = GiveAbility(spec);
 	ReservedSkillHandleMap.Add(skillTag, handle);
+	
 	Client_ReserveSkill(skillTag, handle);
 
 	// UE_LOG(LogTemp,Warning,TEXT("%s 스킬 등록."),*skillTag.ToString());
@@ -171,12 +172,12 @@ bool UAgentAbilitySystemComponent::TrySkillInput(const FGameplayTag& inputTag)
 		{
 			if (TryActivateAbility(*gaHandle))
 			{
-				UE_LOG(LogTemp,Warning,TEXT("스킬 일반 입력 성공"));
-				return true;
+				// UE_LOG(LogTemp,Warning,TEXT("스킬 일반 입력 성공"));
+				// return true;
 			}
 			else
 			{
-				NET_LOG(LogTemp,Warning,TEXT("스킬 일반 입력 실패"));
+				// NET_LOG(LogTemp,Warning,TEXT("스킬 일반 입력 실패"));
 				return false;
 			}
 		}
@@ -187,20 +188,20 @@ bool UAgentAbilitySystemComponent::TrySkillInput(const FGameplayTag& inputTag)
 		{
 			if (TrySkillFollowupInput(inputTag))
 			{
-				UE_LOG(LogTemp,Warning,TEXT("스킬 후속 입력 성공"));
+				// UE_LOG(LogTemp,Warning,TEXT("스킬 후속 입력 성공"));
 				FollowUpInputBySkill.Empty();
 				OnAbilityWaitingStateChanged.Broadcast(false);
 				return true;
 			}
 			else
 			{
-				NET_LOG(LogTemp,Warning,TEXT("스킬 후속 입력 실패"));
+				// NET_LOG(LogTemp,Warning,TEXT("스킬 후속 입력 실패"));
 				return false;
 			}
 		}
 		else
 		{
-			NET_LOG(LogTemp, Warning, TEXT("후속 입력 대기 중이라 일반 입력 [%s] 무시됨"), *inputTag.ToString());
+			// NET_LOG(LogTemp, Warning, TEXT("후속 입력 대기 중이라 일반 입력 [%s] 무시됨"), *inputTag.ToString());
 			return false;
 		}
 	}
@@ -221,6 +222,8 @@ void UAgentAbilitySystemComponent::ClearCurrentAbilityHandle(const FGameplayAbil
 		UE_LOG(LogTemp, Warning, TEXT("handle 이미 무효상태입니다."));
 		return;
 	}
+
+	
 	
 	if (CurrentAbilityHandle == handle)
 	{
