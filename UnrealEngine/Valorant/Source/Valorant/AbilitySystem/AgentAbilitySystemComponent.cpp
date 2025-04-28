@@ -3,6 +3,8 @@
 
 #include "AgentAbilitySystemComponent.h"
 
+#include <GameManager/SubsystemSteamManager.h>
+
 #include "GameplayTagsManager.h"
 #include "Valorant.h"
 #include "Abilities/BaseGameplayAbility.h"
