@@ -6,6 +6,7 @@
 #include "Valorant.h"
 #include "Blueprint/UserWidget.h"
 #include "GameManager/MatchGameMode.h"
+#include "GameManager/SubsystemSteamManager.h"
 
 AMatchPlayerController::AMatchPlayerController()
 {
@@ -14,7 +15,11 @@ AMatchPlayerController::AMatchPlayerController()
 void AMatchPlayerController::BeginPlay()
 {
 	Super::BeginPlay();
-	ServerRPC_NotifyBeginPlay();
+	if (IsLocalPlayerController())
+	{
+		const FString Nickname = USubsystemSteamManager::GetDisplayName();
+		ServerRPC_NotifyBeginPlay(Nickname);
+	}
 }
 
 void AMatchPlayerController::SetGameMode(AMatchGameMode* MatchGameMode)
@@ -22,7 +27,7 @@ void AMatchPlayerController::SetGameMode(AMatchGameMode* MatchGameMode)
 	this->GameMode = MatchGameMode;
 }
 
-void AMatchPlayerController::ServerRPC_NotifyBeginPlay_Implementation()
+void AMatchPlayerController::ServerRPC_NotifyBeginPlay_Implementation(const FString& Nickname)
 {
 	if (nullptr == GameMode)
 	{
@@ -30,7 +35,7 @@ void AMatchPlayerController::ServerRPC_NotifyBeginPlay_Implementation()
 		return;
 	}
 
-	GameMode->OnControllerBeginPlay(this);
+	GameMode->OnControllerBeginPlay(this, Nickname);
 }
 
 void AMatchPlayerController::ClientRPC_DisplaySelectUI_Implementation(bool bDisplay)
@@ -49,8 +54,11 @@ void AMatchPlayerController::ClientRPC_DisplaySelectUI_Implementation(bool bDisp
 	else
 	{
 		// Pawn 생성하고 세팅하는 동안 로딩 화면 표시
-		SelectUIWidget->RemoveFromParent();
-		SelectUIWidget = nullptr;
+		if (SelectUIWidget)
+		{
+			SelectUIWidget->RemoveFromParent();
+			SelectUIWidget = nullptr;
+		}
 	}
 }
 

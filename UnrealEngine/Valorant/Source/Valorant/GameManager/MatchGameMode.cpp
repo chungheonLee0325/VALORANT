@@ -46,14 +46,10 @@ void AMatchGameMode::BeginPlay()
 	}
 
 	RequiredPlayerCount = SubsystemManager->ReqMatchAutoStartPlayerCount;
-	if (LoggedInPlayerNum >= RequiredPlayerCount)
-	{
-		StartSelectPhase();
-	}
 }
 
 void AMatchGameMode::PreLogin(const FString& Options, const FString& Address, const FUniqueNetIdRepl& UniqueId,
-	FString& ErrorMessage)
+                              FString& ErrorMessage)
 {
 	Super::PreLogin(Options, Address, UniqueId, ErrorMessage);
 	NET_LOG(LogTemp, Warning, TEXT("AMainMenuGameMode::PreLogin Options: %s, Address: %s, UniqueId: %s, ErrorMessage: %s"), *Options, *Address, *(UniqueId.IsValid() ? UniqueId->ToString() : FString(TEXT("INVALID"))), *ErrorMessage);
@@ -67,33 +63,37 @@ void AMatchGameMode::PostLogin(APlayerController* NewPlayer)
 	NET_LOG(LogTemp, Warning, TEXT("AMainMenuGameMode::PostLogin Address: %s, UniqueId: %d"), *Address, UniqueId);
 	auto* Controller = Cast<AMatchPlayerController>(NewPlayer);
 	Controller->SetGameMode(this);
-	PlayerControllerSet.Add(Controller);
+}
+bool AMatchGameMode::ReadyToStartMatch_Implementation()
+{
+	return LoggedInPlayerNum >= RequiredPlayerCount;
 }
 
-void AMatchGameMode::OnControllerBeginPlay(AMatchPlayerController* Controller)
+void AMatchGameMode::OnControllerBeginPlay(AMatchPlayerController* Controller, const FString& Nickname)
 {
-	if (++LoggedInPlayerNum >= RequiredPlayerCount)
-	{
-		StartSelectPhase();
-	}
-}
-
-void AMatchGameMode::StartSelectPhase()
-{
-	for (auto* Controller : PlayerControllerSet)
-	{
-		Controller->ClientRPC_DisplaySelectUI(true);
-	}
+	FMatchPlayer PlayerInfo;
+	PlayerInfo.Controller = Controller;
+	PlayerInfo.Nickname = Nickname;
+	PlayerInfo.bIsTeamA = MatchPlayers.Num() % 2 == 0;
+	MatchPlayers.Add(PlayerInfo);
+	++LoggedInPlayerNum;
 }
 
 void AMatchGameMode::OnLockIn(AMatchPlayerController* Player, int AgentId)
 {
+	for (auto& PlayerInfo : MatchPlayers)
+	{
+		if (PlayerInfo.Controller == Player)
+		{
+			Player->ClientRPC_DisplaySelectUI(false);
+			PlayerInfo.SelectedAgentID = AgentId;
+			break;
+		}
+	}
+	
 	if (++LockedInPlayerNum >= RequiredPlayerCount)
 	{
 		NET_LOG(LogTemp, Warning, TEXT("%hs Called, All Players Completed Lock In"), __FUNCTION__);
-		for (auto* Controller : PlayerControllerSet)
-		{
-			Controller->ClientRPC_DisplaySelectUI(false);
-		}
+		SetMatchState(MatchState::InProgress);
 	}
 }
