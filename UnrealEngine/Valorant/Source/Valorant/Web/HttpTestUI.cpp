@@ -15,10 +15,10 @@ void UHttpTestUI::SendRequest()
 	auto* HttpManager = UHttpManager::GetInstance();
 	HttpManager->OnHttpResponseReceived.AddDynamic(this, &UHttpTestUI::OnHttpResponseReceived);
 
-	FString Url = "127.0.0.1:8000/report/generation";
+	FString Url = "http://192.168.10.90:8080/test/v1";
 	FHttpQuery Query;
-	Query.AddQuery("damage", "3500");
-	Query.AddQuery("test", "wow");
+	Query.AddQuery("input", "9999");
+	// Query.AddQuery("test", "wow");
 	Url = Query.AppendToURL(Url);
 	HttpManager->SendRequest(Url);
 	

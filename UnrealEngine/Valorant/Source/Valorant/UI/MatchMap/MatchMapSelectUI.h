@@ -16,4 +16,7 @@ class VALORANT_API UMatchMapSelectUI : public UUserWidget
 
 protected:
 	virtual void NativeConstruct() override;
+
+	UFUNCTION(BlueprintCallable)
+	void OnClickedButtonLockIn();
 };

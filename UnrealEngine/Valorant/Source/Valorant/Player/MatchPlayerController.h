@@ -4,9 +4,10 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/PlayerController.h"
-#include "GameManager/MatchGameMode.h"
 #include "MatchPlayerController.generated.h"
 
+class USubsystemSteamManager;
+class AMatchGameMode;
 /**
  * 
  */
@@ -25,7 +26,6 @@ private:
 	// GameMode의 PostLogin 단계에서 주입된다
 	UPROPERTY()
 	TObjectPtr<AMatchGameMode> GameMode = nullptr;
-
 	UPROPERTY(EditDefaultsOnly)
 	TSubclassOf<UUserWidget> SelectUIWidgetClass;
 	UPROPERTY()
@@ -34,7 +34,9 @@ private:
 public:
 	void SetGameMode(AMatchGameMode* MatchGameMode);
 	UFUNCTION(Server, Reliable)
-	void ServerRPC_NotifyBeginPlay();
+	void ServerRPC_NotifyBeginPlay(const FString& Nickname);
 	UFUNCTION(Client, Reliable)
-	void ClientRPC_DisplaySelectUI();
+	void ClientRPC_DisplaySelectUI(bool bDisplay);
+	UFUNCTION(Server, Reliable)
+	void ServerRPC_LockIn();
 };

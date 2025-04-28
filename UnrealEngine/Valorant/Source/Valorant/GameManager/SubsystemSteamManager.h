@@ -46,6 +46,8 @@ public:
 	void JoinSession(const FOnlineSessionSearchResult& SessionResult);
 	void DestroySession();
 
+	static FString GetDisplayName(int UniquePlayerID = 0);
+	
 	// SessionName에 해당하는 NamedOnlineSession 반환
 	static FNamedOnlineSession* GetNamedOnlineSession(FName SessionName = NAME_GameSession);
 

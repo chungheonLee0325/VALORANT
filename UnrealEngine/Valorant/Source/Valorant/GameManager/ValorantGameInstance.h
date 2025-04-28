@@ -42,6 +42,7 @@ private:
 	 *	OnlineSubsystem
 	 */
 public:
+	FString Nickname = "UNKNOWN";
 	FTimerHandle CheckSessionHandle;
 	bool bIsFindingMatch = false;
 	bool bIsHostingMatch = false;
