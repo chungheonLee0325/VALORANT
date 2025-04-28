@@ -349,6 +349,23 @@ void ABaseAgent::FindInteractable()
 	// TODO: 스파이크 / 문 순서로 추가
 }
 
+void ABaseAgent::ServerApplyGE_Implementation(TSubclassOf<UGameplayEffect> geClass)
+{
+	if (!geClass)
+	{
+		NET_LOG(LogTemp,Error,TEXT("올바른 게임이펙트를 넣어주세요."));
+		return;
+	}
+
+	FGameplayEffectContextHandle Context = ASC->MakeEffectContext();
+	FGameplayEffectSpecHandle SpecHandle = ASC->MakeOutgoingSpec(geClass, 1.f, Context);
+
+	if (SpecHandle.IsValid())
+	{
+		ASC->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
+	}
+}
+
 void ABaseAgent::UpdateHealth(float newHealth)
 {
 	if (newHealth <= 0.f && bIsDead == false)
@@ -370,7 +387,6 @@ void ABaseAgent::UpdateEffectSpeed(float newSpeed)
 	NET_LOG(LogTemp,Warning,TEXT("%f dp"), newSpeed);
 	EffectSpeedMultiplier = newSpeed;
 }
-
 
 
 //ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ

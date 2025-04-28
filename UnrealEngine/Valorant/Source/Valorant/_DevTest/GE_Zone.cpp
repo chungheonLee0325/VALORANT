@@ -4,6 +4,7 @@
 #include "GE_Zone.h"
 
 #include "AbilitySystemComponent.h"
+#include "Valorant.h"
 #include "Components/BoxComponent.h"
 #include "Components/TextRenderComponent.h"
 #include "Valorant/Player/AgentPlayerState.h"
@@ -42,11 +43,6 @@ void AGE_Zone::OnActorxBeginOverlap(UPrimitiveComponent* OverlappedComponent, AA
 	UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
 	Text->SetVisibility(true);
-
-	if (!HasAuthority())
-	{
-		return;
-	}
 	
 	FTimerHandle TimerHandle;
 	GetWorld()->GetTimerManager().SetTimer(TimerHandle, [this]()
@@ -71,16 +67,25 @@ void AGE_Zone::OnActorxBeginOverlap(UPrimitiveComponent* OverlappedComponent, AA
 	{
 		return;
 	}
-
-	FGameplayEffectContextHandle Context = asc->MakeEffectContext();
-	Context.AddSourceObject(this);
-
-	FGameplayEffectSpecHandle Spec = asc->MakeOutgoingSpec(EffectClass, 1.f, Context);
-	if (Spec.IsValid())
+	
+	if (agent->IsLocallyControlled())
 	{
-		//UE_LOG(LogTemp, Warning, TEXT("Effect적용"));
-		asc->ApplyGameplayEffectSpecToSelf(*Spec.Data.Get());
+		agent->ServerApplyGE(EffectClass);
 	}
+
+	// if (HasAuthority() == false)
+	// {
+	// 	return;
+	// }
+	// FGameplayEffectContextHandle Context = asc->MakeEffectContext();
+	// Context.AddSourceObject(this);
+	//
+	// FGameplayEffectSpecHandle Spec = asc->MakeOutgoingSpec(EffectClass, 1.f, Context);
+	// if (Spec.IsValid())
+	// {
+	// 	NET_LOG(LogTemp, Warning, TEXT("Effect적용"));
+	// 	asc->ApplyGameplayEffectSpecToSelf(*Spec.Data.Get());
+	// }
 }
 
 // Called every frame

@@ -4,6 +4,7 @@
 #include "BaseAttributeSet.h"
 
 #include "GameplayEffectExtension.h"
+#include "Valorant.h"
 #include "Valorant/Player/Agent/BaseAgent.h"
 #include "Net/UnrealNetwork.h"
 
@@ -15,6 +16,11 @@ UBaseAttributeSet::UBaseAttributeSet()
 // 용도: 최종적으로 값을 점검 (e.g. 최대값을 넘지 않도록 제한 / 비율 유지)
 void UBaseAttributeSet::PreAttributeChange(const FGameplayAttribute& Attribute, float& NewValue)
 {
+	if (GetOwningAbilitySystemComponent()->GetOwnerRole() != ROLE_Authority)
+	{
+		return;
+	}
+	
 	Super::PreAttributeChange(Attribute, NewValue);
 	
 	ClampAttribute(Attribute,NewValue);
@@ -24,12 +30,18 @@ void UBaseAttributeSet::PreAttributeChange(const FGameplayAttribute& Attribute, 
 // 용도: UI 업데이트
 void UBaseAttributeSet::PostAttributeChange(const FGameplayAttribute& Attribute, float OldValue, float NewValue)
 {
+	if (GetOwningAbilitySystemComponent()->GetOwnerRole() != ROLE_Authority)
+	{
+		return;
+	}
+	
 	Super::PostAttributeChange(Attribute, OldValue, NewValue);
 	
 	if (Attribute == GetHealthAttribute())
 	{
 		OnHealthChanged.Broadcast(NewValue);
 		OnHealthChanged_Manual.Broadcast(NewValue);
+		//NET_LOG(LogTemp,Warning,TEXT("OnHealthChanged_Manual %f"),Health.GetCurrentValue());
 	}
 	if (Attribute == GetMaxHealthAttribute())
 	{
@@ -63,25 +75,22 @@ void UBaseAttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCallba
 	if (Data.EvaluatedData.Attribute == GetHealthAttribute())
 	{
 		const int32 newValue = GetHealth();
-		OnHealthChanged.Broadcast(newValue);
 		OnHealthChanged_FromGE.Broadcast(newValue);
+		//NET_LOG(LogTemp,Warning,TEXT("OnHealthChanged_FromGE %f"),Health.GetCurrentValue());
 	}
 	else if (Data.EvaluatedData.Attribute == GetMaxHealthAttribute())
 	{
 		const int32 newValue = GetMaxHealth();
-		OnMaxHealthChanged.Broadcast(newValue);
 		OnMaxHealthChanged_FromGE.Broadcast(newValue);
 	}
 	else if (Data.EvaluatedData.Attribute == GetArmorAttribute())
 	{
 		const int32 newValue = GetArmor();
-		OnArmorChanged.Broadcast(newValue);
 		OnArmorChanged_FromGE.Broadcast(newValue);
 	}
 	else if (Data.EvaluatedData.Attribute == GetEffectSpeedMultiplierAttribute())
 	{
 		const int32 newValue = GetEffectSpeedMultiplier();
-		OnEffectSpeedChanged.Broadcast(newValue);
 		OnEffectSpeedChanged_FromGE.Broadcast(newValue);
 	}
 }
@@ -114,22 +123,25 @@ void UBaseAttributeSet::OnRep_Health(const FGameplayAttributeData& OldHealth)
 {
 	// ReplicatedUsing으로 인해 값이 변경되는 경우, gas에 내장되어있는 델리게이트(값의 변화를 감지하는 델리게이트)가 호출되지않음.
 	// 그 델리게이트 함수가 호출될 수 있도록 연결해주는 역할을 하는 것이 아래 메서드.
-	GAMEPLAYATTRIBUTE_REPNOTIFY(UBaseAttributeSet, Health, OldHealth);
+	//GAMEPLAYATTRIBUTE_REPNOTIFY(UBaseAttributeSet, Health, OldHealth);
+	
+	//NET_LOG(LogTemp,Warning,TEXT("UBaseAttributeSet::OnRep_Health %f"),Health.GetCurrentValue());
+	OnHealthChanged.Broadcast(Health.GetCurrentValue());
 }
 
 void UBaseAttributeSet::OnRep_MaxHealth(const FGameplayAttributeData& OldMaxHealth)
 {
-	GAMEPLAYATTRIBUTE_REPNOTIFY(UBaseAttributeSet, MaxHealth, OldMaxHealth);
+	OnMaxHealthChanged.Broadcast(MaxHealth.GetCurrentValue());
 }
 
 void UBaseAttributeSet::OnRep_Armor(const FGameplayAttributeData& OldArmor)
 {
-	GAMEPLAYATTRIBUTE_REPNOTIFY(UBaseAttributeSet, Armor, OldArmor);
+	OnArmorChanged.Broadcast(Armor.GetCurrentValue());
 }
 
 void UBaseAttributeSet::OnRep_EffectSpeed(const FGameplayAttributeData& OldEffectSpeed)
 {
-	GAMEPLAYATTRIBUTE_REPNOTIFY(UBaseAttributeSet, EffectSpeedMultiplier, OldEffectSpeed);
+	OnEffectSpeedChanged.Broadcast(EffectSpeedMultiplier.GetCurrentValue());
 }
 
 void UBaseAttributeSet::ClampAttribute(const FGameplayAttribute& attribute, float& newValue) const
