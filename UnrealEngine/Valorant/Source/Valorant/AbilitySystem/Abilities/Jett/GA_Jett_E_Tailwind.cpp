@@ -49,11 +49,14 @@ bool UGA_Jett_E_Tailwind::CanActivateAbility(const FGameplayAbilitySpecHandle Ha
 		return false;
 	}
 
-	// Check for sufficient charges
-	ACharacter* Character = Cast<ACharacter>(ActorInfo->AvatarActor.Get());
-	if (0 == GetAbilityStack(Character, m_AbilityID))
+	// Check for sufficient charges - ToDo : 현재 서버에만 갯수 동기화중, 변경전까진 서버에서만 검사
+	if (!IsLocallyControlled())
 	{
-		return false;
+		ACharacter* Character = Cast<ACharacter>(ActorInfo->AvatarActor.Get());
+		if (0 == GetAbilityStack(Character, m_AbilityID))
+		{
+			return false;
+		}
 	}
 
 	return true;

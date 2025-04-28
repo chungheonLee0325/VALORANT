@@ -119,6 +119,9 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void SetAgentID(const int32 id) { m_AgentID = id; }
 
+	UFUNCTION(Server, Reliable)
+	void ServerApplyGE(TSubclassOf<UGameplayEffect> geClass);
+
 	UFUNCTION(BlueprintCallable)
 	bool GetIsRun() const { return  bIsRun; }
 	UFUNCTION(BlueprintCallable)

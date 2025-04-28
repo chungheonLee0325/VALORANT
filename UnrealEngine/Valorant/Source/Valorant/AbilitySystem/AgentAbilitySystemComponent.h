@@ -36,14 +36,18 @@ public:
 	
 	//Skill
 	UFUNCTION(BlueprintCallable)
+	void SetCurrentAbilityHandle(const FGameplayAbilitySpecHandle handle);
+	
+	UFUNCTION(BlueprintCallable)
+	void ClearCurrentAbilityHandle(const FGameplayAbilitySpecHandle handle);
+
+	UFUNCTION(BlueprintCallable)
 	void ResisterFollowUpInput(const TSet<FGameplayTag>& tags);
 
 	UFUNCTION(BlueprintCallable)
 	bool TrySkillInput(const FGameplayTag& inputTag);
 
-	UFUNCTION(BlueprintCallable)
-	void ClearCurrentAbilityHandle(const FGameplayAbilitySpecHandle handle);
-	
+	//TODO: 스킬 Data 가지고 있기
 	FString GetAgentName() const { return AgentName; }
 	FString GetSkillQName() const { return SkillQName; }
 	FString GetSkillEName() const { return SkillEName; }
@@ -95,6 +99,12 @@ protected:
 	
 	//AttributeSet
 	void InitializeAttribute(const FAgentData* agentData);
+
+	//Skill
+	UFUNCTION(Client, Reliable)
+	void Client_ReserveSkill(const FGameplayTag& skillTag, const FGameplayAbilitySpecHandle& handle);
+	UFUNCTION(Client, Reliable)
+	void Client_ResetSkill(const TArray<FGameplayTag>& tagsToRemove);
 
 	//Skill Input
 	bool IsFollowUpInput(const FGameplayTag& inputTag);
