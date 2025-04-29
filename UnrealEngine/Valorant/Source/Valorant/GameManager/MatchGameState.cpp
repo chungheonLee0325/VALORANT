@@ -63,6 +63,10 @@ void AMatchGameState::OnRep_RoundSubState()
 	{
 		HandleRoundSubState_PreRound();
 	}
+	else if (RoundSubState == ERoundSubState::RSS_BuyPhase)
+	{
+		HandleRoundSubState_BuyPhase();
+	}
 	else if (RoundSubState == ERoundSubState::RSS_InRound)
 	{
 		HandleRoundSubState_InRound();
@@ -100,6 +104,19 @@ void AMatchGameState::HandleRoundSubState_PreRound()
 	}
 	NET_LOG(LogTemp, Warning, TEXT("%hs Called"), __FUNCTION__);
 	PC->ClientRPC_DisplaySelectUI(false);
+	PC->ClientRPC_DisplayHud(true);
+}
+
+void AMatchGameState::HandleRoundSubState_BuyPhase()
+{
+	AAgentPlayerController* PC = Cast<AAgentPlayerController>(GetWorld()->GetFirstPlayerController());
+	if (nullptr == PC)
+	{
+		NET_LOG(LogTemp, Warning, TEXT("%hs Called, PC is nullptr"), __FUNCTION__);
+		return;
+	}
+	NET_LOG(LogTemp, Warning, TEXT("%hs Called"), __FUNCTION__);
+	PC->ClientRPC_DisplayHud(true);
 }
 
 void AMatchGameState::HandleRoundSubState_InRound()

@@ -49,6 +49,7 @@ protected:
 	void OnRep_RemainRoundStateTime();
 	void HandleRoundSubState_SelectAgent();
 	void HandleRoundSubState_PreRound();
+	void HandleRoundSubState_BuyPhase();
 	void HandleRoundSubState_InRound();
 	void HandleRoundSubState_EndRound();
 

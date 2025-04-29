@@ -62,6 +62,35 @@ void AMatchPlayerController::ClientRPC_DisplaySelectUI_Implementation(bool bDisp
 	}
 }
 
+void AMatchPlayerController::ClientRPC_DisplayHud_Implementation(bool bDisplay)
+{
+	if (bDisplay)
+	{
+		if (Hud)
+		{
+			// 이미 존재하면 굳이 또 생성하지 않는다
+			return;
+		}
+		Hud = CreateWidget(this, HudClass);
+		if (nullptr == Hud)
+		{
+			NET_LOG(LogTemp, Warning, TEXT("%hs Called, SelectUIWidget is nullptr"), __FUNCTION__);
+			return;
+		}
+
+		Hud->AddToViewport();
+	}
+	else
+	{
+		// Pawn 생성하고 세팅하는 동안 로딩 화면 표시
+		if (Hud)
+		{
+			Hud->RemoveFromParent();
+			Hud = nullptr;
+		}
+	}
+}
+
 void AMatchPlayerController::ServerRPC_LockIn_Implementation()
 {
 	GameMode->OnLockIn(this, 0);

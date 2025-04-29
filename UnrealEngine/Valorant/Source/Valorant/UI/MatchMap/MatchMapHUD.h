@@ -6,6 +6,7 @@
 #include "Blueprint/UserWidget.h"
 #include "MatchMapHUD.generated.h"
 
+class UTextBlock;
 /**
  * 
  */
@@ -13,4 +14,13 @@ UCLASS()
 class VALORANT_API UMatchMapHUD : public UUserWidget
 {
 	GENERATED_BODY()
+
+protected:
+	virtual void NativeConstruct() override;
+	UFUNCTION()
+	void UpdateTime(float Time);
+	
+public:
+	UPROPERTY(meta=(BindWidget))
+	TObjectPtr<UTextBlock> TextBlockTime = nullptr;
 };

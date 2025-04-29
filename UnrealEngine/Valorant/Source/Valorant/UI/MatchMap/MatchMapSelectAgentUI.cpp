@@ -31,5 +31,9 @@ void UMatchMapSelectAgentUI::OnClickedButtonLockIn()
 
 void UMatchMapSelectAgentUI::UpdateTime(float Time)
 {
+	if (nullptr == TextBlockRemTime)
+	{
+		return;
+	}
 	TextBlockRemTime->SetText(FText::FromString(FString::Printf(TEXT("%d"), static_cast<int>(Time))));
 }

@@ -30,6 +30,10 @@ private:
 	TSubclassOf<UUserWidget> SelectUIWidgetClass;
 	UPROPERTY()
 	TObjectPtr<UUserWidget> SelectUIWidget = nullptr;
+	UPROPERTY(EditDefaultsOnly)
+	TSubclassOf<UUserWidget> HudClass;
+	UPROPERTY()
+	TObjectPtr<UUserWidget> Hud = nullptr;
 
 public:
 	void SetGameMode(AMatchGameMode* MatchGameMode);
@@ -37,6 +41,8 @@ public:
 	void ServerRPC_NotifyBeginPlay(const FString& Nickname);
 	UFUNCTION(Client, Reliable)
 	void ClientRPC_DisplaySelectUI(bool bDisplay);
+	UFUNCTION(Client, Reliable)
+	void ClientRPC_DisplayHud(bool bDisplay);
 	UFUNCTION(Server, Reliable)
 	void ServerRPC_LockIn();
 };
