@@ -68,12 +68,26 @@ void UValorantGameInstance::Init()
 	/*
 	 *	OnlineSubsystem
 	 */
-	Nickname = USubsystemSteamManager::GetDisplayName();
 	const IOnlineSessionPtr SessionInterface = USubsystemSteamManager::GetSessionInterface();
 	if (SessionInterface.IsValid())
 	{
-		const FName SubsystemName = Online::GetSubsystem(GetWorld())->GetSubsystemName();
-		UE_LOG(LogTemp, Warning, TEXT("SubsystemName : %s"), *SubsystemName.ToString());
+		const auto* OnlineSubsystem = Online::GetSubsystem(GetWorld());
+		if (OnlineSubsystem)
+		{
+			const FName SubsystemName = OnlineSubsystem->GetSubsystemName();
+			UE_LOG(LogTemp, Warning, TEXT("SubsystemName : %s"), *SubsystemName.ToString());
+
+			const IOnlineIdentityPtr IdentityInterface = OnlineSubsystem->GetIdentityInterface();
+			if (IdentityInterface.IsValid())
+			{
+				const auto UniquePlayerId = IdentityInterface->GetUniquePlayerId(0);
+				const FString Nickname = IdentityInterface->GetPlayerNickname(0);
+				const auto LoginStatus = IdentityInterface->GetLoginStatus(0);
+				UE_LOG(LogTemp, Warning, TEXT("UniquePlayerId : %s"), *UniquePlayerId->ToString());
+				UE_LOG(LogTemp, Warning, TEXT("Nickname : %s"), *Nickname);
+				UE_LOG(LogTemp, Warning, TEXT("LoginStatus : %s"), ELoginStatus::ToString(LoginStatus));
+			}
+		}
 	}
 }
 
