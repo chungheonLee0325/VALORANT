@@ -18,6 +18,6 @@ void UMatchMapHUD::UpdateTime(float Time)
 {
 	const int Minute = static_cast<int>(Time / 60);
 	const int Seconds = static_cast<int>(Time) % 60;
-	const FString TimeStr = FString::Printf(TEXT("%02d:%02d"), Minute, Seconds);
+	const FString TimeStr = FString::Printf(TEXT("%d:%02d"), Minute, Seconds);
 	TextBlockTime->SetText(FText::FromString(TimeStr));
 }
