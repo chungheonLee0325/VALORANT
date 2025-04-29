@@ -171,7 +171,7 @@ void AMatchGameMode::HandleRoundSubState_EndPhase()
 	// 일정 시간 후에 라운드 재시작
 	MaxTime = EndPhaseTime;
 	GetWorld()->GetTimerManager().ClearTimer(RoundTimerHandle);
-	GetWorld()->GetTimerManager().SetTimer(RoundTimerHandle, this, &AMatchGameMode::StartPreRound, EndPhaseTime);
+	GetWorld()->GetTimerManager().SetTimer(RoundTimerHandle, this, &AMatchGameMode::StartBuyPhase, EndPhaseTime);
 }
 
 void AMatchGameMode::SetRoundSubState(ERoundSubState NewRoundSubState)
