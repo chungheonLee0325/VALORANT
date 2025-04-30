@@ -19,6 +19,7 @@ class UBaseGameplayAbility;
 UAgentAbilitySystemComponent::UAgentAbilitySystemComponent()
 {
 	PrimaryComponentTick.bCanEverTick = true;
+	SetIsReplicated(true);
 }
 
 void UAgentAbilitySystemComponent::BeginPlay()
@@ -30,6 +31,7 @@ void UAgentAbilitySystemComponent::BeginPlay()
 	SkillTags.Add(tagManager.RequestGameplayTag("Input.Skill.E"));
 	SkillTags.Add(tagManager.RequestGameplayTag("Input.Skill.X"));
 	SkillTags.Add(tagManager.RequestGameplayTag("Input.Skill.C"));
+	
 }
 
 void UAgentAbilitySystemComponent::TickComponent(float DeltaTime, ELevelTick TickType,
@@ -47,6 +49,7 @@ void UAgentAbilitySystemComponent::GetLifetimeReplicatedProps(TArray<class FLife
 	DOREPLIFETIME(UAgentAbilitySystemComponent, m_Ability_E);
 	DOREPLIFETIME(UAgentAbilitySystemComponent, m_Ability_Q);
 	DOREPLIFETIME(UAgentAbilitySystemComponent, m_Ability_X);
+	DOREPLIFETIME(UAgentAbilitySystemComponent, CurrentAbilityHandle);
 }
 
 /**서버에서만 호출됩니다.*/
@@ -224,7 +227,11 @@ void UAgentAbilitySystemComponent::ClearCurrentAbilityHandle(const FGameplayAbil
 	}
 	else
 	{
-		UE_LOG(LogTemp,Error,TEXT("실제 사용 완료된 Ability와 ASC의 CurrentAbility 변수의 정보가 일치하지 않아요."));
+		FGameplayAbilitySpec* CurrentSpec = FindAbilitySpecFromHandle(CurrentAbilityHandle);
+		FGameplayAbilitySpec* InputSpec = FindAbilitySpecFromHandle(handle);
+		
+		NET_LOG(LogTemp, Error, TEXT("CurrentHandle: %s, 입력 Handle: %s"), *CurrentSpec->Ability->GetName(), *InputSpec->Ability->GetName());
+		NET_LOG(LogTemp, Error, TEXT("실제 사용 완료된 Ability와 ASC의 CurrentAbilityHandle이 일치하지 않습니다."));
 	}
 }
 

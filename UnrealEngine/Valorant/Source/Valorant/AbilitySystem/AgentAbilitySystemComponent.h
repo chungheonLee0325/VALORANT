@@ -74,7 +74,7 @@ private:
 	// UPROPERTY(VisibleAnywhere)
 	// TMap<FGameplayTag, FGameplayAbilitySpecHandle> ReservedSkillHandleMap;
 	
-	UPROPERTY(VisibleAnywhere)
+	UPROPERTY(VisibleAnywhere, Replicated)
 	FGameplayAbilitySpecHandle CurrentAbilityHandle;
 	
 	UPROPERTY(VisibleAnywhere)
