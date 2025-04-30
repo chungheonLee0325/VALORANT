@@ -42,22 +42,18 @@ void UAgentAbilitySystemComponent::GetLifetimeReplicatedProps(TArray<class FLife
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 	
-	DOREPLIFETIME(UAgentAbilitySystemComponent, AgentName);
-	DOREPLIFETIME(UAgentAbilitySystemComponent, SkillQName);
-	DOREPLIFETIME(UAgentAbilitySystemComponent, SkillCName);
-	DOREPLIFETIME(UAgentAbilitySystemComponent, SkillEName);
-	DOREPLIFETIME(UAgentAbilitySystemComponent, SkillXName);
 	DOREPLIFETIME(UAgentAbilitySystemComponent, m_AgentID);
-	// DOREPLIFETIME(UAgentAbilitySystemComponent, AgentSkillHandle);
+	DOREPLIFETIME(UAgentAbilitySystemComponent, m_Ability_C);
+	DOREPLIFETIME(UAgentAbilitySystemComponent, m_Ability_E);
+	DOREPLIFETIME(UAgentAbilitySystemComponent, m_Ability_Q);
+	DOREPLIFETIME(UAgentAbilitySystemComponent, m_Ability_X);
 }
 
 /**서버에서만 호출됩니다.*/
 void UAgentAbilitySystemComponent::InitializeByAgentData(int32 agentID)
 {
-	UValorantGameInstance* gi = Cast<UValorantGameInstance>(GetWorld()->GetGameInstance());
-	FAgentData* data = gi->GetAgentData(agentID);
-
-	AgentName = data->AgentName;
+	m_GameInstance = Cast<UValorantGameInstance>(GetWorld()->GetGameInstance());
+	FAgentData* data = m_GameInstance->GetAgentData(agentID);
 	
 	InitializeAttribute(data);
 	RegisterAgentAbilities(data);
@@ -77,21 +73,20 @@ void UAgentAbilitySystemComponent::InitializeAttribute(const FAgentData* agentDa
 
 void UAgentAbilitySystemComponent::RegisterAgentAbilities(const FAgentData* agentData)
 {
-	SetAgentAbility(agentData->Ability_Q, 1);
-	SetAgentAbility(agentData->Ability_C, 1);
-	SetAgentAbility(agentData->Ability_E, 1);
-	SetAgentAbility(agentData->Ability_X, 1);
+	NET_LOG(LogTemp,Warning,TEXT("Ability ID : %d(C), %d(E), %d(Q), %d(X)"), agentData->AbilityID_C, agentData->AbilityID_E,agentData->AbilityID_Q, agentData->AbilityID_X);
+	SetAgentAbility(agentData->AbilityID_C, 1);
+	SetAgentAbility(agentData->AbilityID_E, 1);
+	SetAgentAbility(agentData->AbilityID_Q, 1);
+	SetAgentAbility(agentData->AbilityID_X, 1);
 }
 
-//TODO: 인자에 const FGameplayTag& tag 추가를 고려해볼 것.
-void UAgentAbilitySystemComponent::SetAgentAbility(TSubclassOf<UGameplayAbility> abilityClass, int32 level)
+void UAgentAbilitySystemComponent::SetAgentAbility(int32 abilityID, int32 level)
 {
+	FAbilityData* abilityData = m_GameInstance->GetAbilityData(abilityID);
+	TSubclassOf<UGameplayAbility> abilityClass = abilityData->AbilityClass;
+	// NET_LOG(LogTemp,Warning,TEXT("ability Name: %s"),*abilityClass->GetName());
+	
 	UGameplayAbility* ga = abilityClass->GetDefaultObject<UGameplayAbility>();
-	FGameplayAbilitySpec spec(abilityClass, level);
-	
-	bool bIsSkill = false;
-	FGameplayTag skillTag;
-	
 	const FGameplayTagContainer& tagCon = ga->GetAssetTags();
 
 	if (tagCon.IsEmpty())
@@ -100,37 +95,52 @@ void UAgentAbilitySystemComponent::SetAgentAbility(TSubclassOf<UGameplayAbility>
 		return;
 	}
 
-	for (FGameplayTag tag: tagCon)
+	bool bIsSkill = false;
+	FGameplayTag skillTag;
+
+	for (const FGameplayTag& tag : tagCon)
 	{
-		if (SkillTags.Contains(tag))
+		NET_LOG(LogTemp,Warning,TEXT("tag: %s"), *tag.GetTagName().ToString());
+		const FGameplayTag* foundTag = SkillTags.Find(tag);
+		if (foundTag)
 		{
-			skillTag = tag;		
+			if (*foundTag == FValorantGameplayTags::Get().InputTag_Ability_C)
+			{
+				m_Ability_C = *abilityData;
+			}
+			else if (*foundTag == FValorantGameplayTags::Get().InputTag_Ability_E)
+			{
+				m_Ability_E = *abilityData;
+			}
+			else if (*foundTag == FValorantGameplayTags::Get().InputTag_Ability_Q)
+			{
+				m_Ability_Q = *abilityData;
+			}
+			else if (*foundTag == FValorantGameplayTags::Get().InputTag_Ability_X)
+			{
+				m_Ability_X = *abilityData;
+			}
 			bIsSkill = true;
-			break;
 		}
 	}
 
 	if (bIsSkill == false)
 	{
-		UE_LOG(LogTemp, Error, TEXT("%s는 Input.Skill.~ 를 지닌 어빌리티가 아니므로, 등록할 수 없습니다."), *this->GetName());
+		UE_LOG(LogTemp, Error, TEXT("%s는 Input.Skill.~ 태그를 지닌 어빌리티가 아니므로, 등록할 수 없습니다."), *abilityClass->GetName());
 		return;
 	}
 
-	FGameplayAbilitySpecHandle* existHandle = ReservedSkillHandleMap.Find(skillTag);
-	if (existHandle)
-	{
-		ClearAbility(*existHandle);
-		ReservedSkillHandleMap.Remove(skillTag);
-		UE_LOG(LogTemp,Warning,TEXT("%s 스킬이 이미 존재해요. 제거 후 재등록합니다."),*skillTag.ToString());
-	}
-
-	// 현재는 Tmap을 기반으로 스킬을 탐색하기 때문에, 당장 사용되지는 않습니다.
+	// FGameplayAbilitySpecHandle* existHandle = ReservedSkillHandleMap.Find(skillTag);
+	// if (existHandle)
+	// {
+	// 	ClearAbility(*existHandle);
+	// 	ReservedSkillHandleMap.Remove(skillTag);
+	// 	UE_LOG(LogTemp,Warning,TEXT("%s 스킬이 이미 존재해요. 제거 후 재등록합니다."),*skillTag.ToString());
+	// }
+	
+	FGameplayAbilitySpec spec(abilityClass, level);
 	spec.GetDynamicSpecSourceTags().AddTag(skillTag);
-	
-	FGameplayAbilitySpecHandle handle = GiveAbility(spec);
-	ReservedSkillHandleMap.Add(skillTag, handle);
-	
-	Client_ReserveSkill(skillTag, handle);
+	GiveAbility(spec);
 
 	// UE_LOG(LogTemp,Warning,TEXT("%s 스킬 등록."),*skillTag.ToString());
 }
@@ -139,16 +149,10 @@ void UAgentAbilitySystemComponent::ResetAgentAbilities()
 {
 	UE_LOG(LogTemp,Warning,TEXT("모든 스킬 리셋"));
 	
-	TArray<FGameplayTag> tagsToRemove;
-	
-	Client_ResetSkill(tagsToRemove);
-	
-	for (const FGameplayTag& tag : tagsToRemove)
+	for (const FGameplayAbilitySpec& spec: GetActivatableAbilities())
 	{
-		ClearAbility(ReservedSkillHandleMap[tag]);
-		ReservedSkillHandleMap.Remove(tag);
+		ClearAbility(spec.Handle);
 	}
-
 }
 
 void UAgentAbilitySystemComponent::SetCurrentAbilityHandle(const FGameplayAbilitySpecHandle handle)
@@ -170,19 +174,8 @@ bool UAgentAbilitySystemComponent::TrySkillInput(const FGameplayTag& inputTag)
 {
 	if (FollowUpInputBySkill.IsEmpty())
 	{
-		if (const FGameplayAbilitySpecHandle* gaHandle = ReservedSkillHandleMap.Find(inputTag))
-		{
-			if (TryActivateAbility(*gaHandle))
-			{
-				// UE_LOG(LogTemp,Warning,TEXT("스킬 일반 입력 성공"));
-				// return true;
-			}
-			else
-			{
-				// NET_LOG(LogTemp,Warning,TEXT("스킬 일반 입력 실패"));
-				return false;
-			}
-		}
+		FGameplayTagContainer tagCon(inputTag);
+		TryActivateAbilitiesByTag(tagCon);
 	}
 	else
 	{
@@ -203,7 +196,7 @@ bool UAgentAbilitySystemComponent::TrySkillInput(const FGameplayTag& inputTag)
 		}
 		else
 		{
-			// NET_LOG(LogTemp, Warning, TEXT("후속 입력 대기 중이라 일반 입력 [%s] 무시됨"), *inputTag.ToString());
+			NET_LOG(LogTemp, Warning, TEXT("후속 입력 대기 중이라 일반 입력 [%s] 무시됨"), *inputTag.ToString());
 			return false;
 		}
 	}
@@ -216,7 +209,7 @@ void UAgentAbilitySystemComponent::ClearCurrentAbilityHandle(const FGameplayAbil
 {
 	if (!CurrentAbilityHandle.IsValid())
 	{
-		UE_LOG(LogTemp, Warning, TEXT("CurrentAbilityHandle은 이미 무효상태입니다."));
+		UE_LOG(LogTemp, Warning, TEXT("CurrentAbilityHandle이 무효 상태입니다."));
 		return;
 	}
 	if (!handle.IsValid())
@@ -224,8 +217,6 @@ void UAgentAbilitySystemComponent::ClearCurrentAbilityHandle(const FGameplayAbil
 		UE_LOG(LogTemp, Warning, TEXT("handle 이미 무효상태입니다."));
 		return;
 	}
-
-	
 	
 	if (CurrentAbilityHandle == handle)
 	{
@@ -237,26 +228,13 @@ void UAgentAbilitySystemComponent::ClearCurrentAbilityHandle(const FGameplayAbil
 	}
 }
 
-void UAgentAbilitySystemComponent::Client_ReserveSkill_Implementation(const FGameplayTag& skillTag,
+void UAgentAbilitySystemComponent::Net_ReserveSkill_Implementation(const FGameplayTag& skillTag,
 	const FGameplayAbilitySpecHandle& handle)
 {
-	if (ReservedSkillHandleMap.Contains(skillTag))
-	{
-		ReservedSkillHandleMap.Remove(skillTag);
-	}
-
-	ReservedSkillHandleMap.Add(skillTag, handle);
-	NET_LOG(LogTemp, Warning, TEXT("SkillHandleMap 동기화: %s 등록됨"), *skillTag.ToString());
 }
 
-void UAgentAbilitySystemComponent::Client_ResetSkill_Implementation(const TArray<FGameplayTag>& tagsToRemove)
+void UAgentAbilitySystemComponent::Net_ResetSkill_Implementation(const TArray<FGameplayTag>& tagsToRemove)
 {
-	for (const FGameplayTag& tag : tagsToRemove)
-	{
-		ClearAbility(ReservedSkillHandleMap[tag]);
-		ReservedSkillHandleMap.Remove(tag);
-		NET_LOG(LogTemp, Warning, TEXT("SkillHandleMap 스킬 해제됨"), *tag.ToString());
-	}
 }
 
 bool UAgentAbilitySystemComponent::IsFollowUpInput(const FGameplayTag& inputTag)
@@ -277,7 +255,7 @@ bool UAgentAbilitySystemComponent::TrySkillFollowupInput(const FGameplayTag& inp
 	{
 		if (UBaseGameplayAbility* ga = Cast<UBaseGameplayAbility>(spec->Ability))
 		{
-			ga->CurrentFollowUpInputTag = inputTag;
+			ga->SetCurrentFollowUpInput(inputTag);
 		}
 		
 		AbilitySpecInputPressed(*spec);

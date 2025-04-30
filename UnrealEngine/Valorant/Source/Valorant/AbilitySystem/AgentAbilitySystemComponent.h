@@ -29,12 +29,21 @@ public:
 	void RegisterAgentAbilities(const FAgentData* agentData);
 	
 	UFUNCTION(BlueprintCallable)
-	void SetAgentAbility(TSubclassOf<UGameplayAbility> abilityClass, int32 level);
+	void SetAgentAbility(int32 abilityID, int32 level);
 
 	UFUNCTION(BlueprintCallable)
 	void ResetAgentAbilities();
+
+	UFUNCTION(BlueprintCallable)
+	FAbilityData GetAbility_C() { return m_Ability_C; }
+	UFUNCTION(BlueprintCallable)
+	FAbilityData GetAbility_E() { return m_Ability_E; }
+	UFUNCTION(BlueprintCallable)
+	FAbilityData GetAbility_Q() { return m_Ability_Q; }
+	UFUNCTION(BlueprintCallable)
+	FAbilityData GetAbility_X() { return m_Ability_X; }
+
 	
-	//Skill
 	UFUNCTION(BlueprintCallable)
 	void SetCurrentAbilityHandle(const FGameplayAbilitySpecHandle handle);
 	
@@ -47,27 +56,23 @@ public:
 	UFUNCTION(BlueprintCallable)
 	bool TrySkillInput(const FGameplayTag& inputTag);
 
-	//TODO: 스킬 Data 가지고 있기
-	FString GetAgentName() const { return AgentName; }
-	FString GetSkillQName() const { return SkillQName; }
-	FString GetSkillEName() const { return SkillEName; }
-	FString GetSkillCName() const { return SkillCName; }
-	FString GetSkillXName() const { return SkillXName; }
-
 	UPROPERTY(BlueprintAssignable)
 	FOnAbilityWaitingStateChanged OnAbilityWaitingStateChanged;
 
 	
 private:
+	UPROPERTY()
+	UValorantGameInstance* m_GameInstance = nullptr;
+	
 	TSet<FGameplayTag> SkillTags = {
-		FValorantGameplayTags::Get().InputTag_Ability_Q,
-		FValorantGameplayTags::Get().InputTag_Ability_E,
 		FValorantGameplayTags::Get().InputTag_Ability_C,
+		FValorantGameplayTags::Get().InputTag_Ability_E,
+		FValorantGameplayTags::Get().InputTag_Ability_Q,
 		FValorantGameplayTags::Get().InputTag_Ability_X
 	};
 	
-	UPROPERTY(VisibleAnywhere)
-	TMap<FGameplayTag, FGameplayAbilitySpecHandle> ReservedSkillHandleMap;
+	// UPROPERTY(VisibleAnywhere)
+	// TMap<FGameplayTag, FGameplayAbilitySpecHandle> ReservedSkillHandleMap;
 	
 	UPROPERTY(VisibleAnywhere)
 	FGameplayAbilitySpecHandle CurrentAbilityHandle;
@@ -77,18 +82,15 @@ private:
 	
 	UPROPERTY(Replicated)
 	int32 m_AgentID;
-
-	//TODO: 스킬 데이터 따로 담기
+	
 	UPROPERTY(Replicated)
-	FString AgentName = "";
+	FAbilityData m_Ability_C;
 	UPROPERTY(Replicated)
-	FString SkillQName = "";
+	FAbilityData m_Ability_E;
 	UPROPERTY(Replicated)
-	FString SkillEName = "";
+	FAbilityData m_Ability_Q;
 	UPROPERTY(Replicated)
-	FString SkillCName = "";
-	UPROPERTY(Replicated)
-	FString SkillXName = "";
+	FAbilityData m_Ability_X;
 
 protected:
 	virtual void BeginPlay() override;
@@ -101,17 +103,14 @@ protected:
 	void InitializeAttribute(const FAgentData* agentData);
 
 	//Skill
-	UFUNCTION(Client, Reliable)
-	void Client_ReserveSkill(const FGameplayTag& skillTag, const FGameplayAbilitySpecHandle& handle);
-	UFUNCTION(Client, Reliable)
-	void Client_ResetSkill(const TArray<FGameplayTag>& tagsToRemove);
+	UFUNCTION(NetMulticast, Reliable)
+	void Net_ReserveSkill(const FGameplayTag& skillTag, const FGameplayAbilitySpecHandle& handle);
+	UFUNCTION(NetMulticast, Reliable)
+	void Net_ResetSkill(const TArray<FGameplayTag>& tagsToRemove);
 
 	//Skill Input
 	bool IsFollowUpInput(const FGameplayTag& inputTag);
 
 	bool TrySkillFollowupInput(const FGameplayTag& inputTag);
-	
-	//TODO: 스킬 충전하는 함수
-	//TODO: 스킬 정보 넘기는 함수
 };
 

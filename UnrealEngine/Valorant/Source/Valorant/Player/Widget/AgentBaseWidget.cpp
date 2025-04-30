@@ -19,13 +19,6 @@ void UAgentBaseWidget::BindToDelegatePC(UAgentAbilitySystemComponent* _asc, AAge
 		return;
 	}
 	ASC = _asc;
-	
-	txt_AgentName->SetText(FText::FromString(ASC->GetAgentName()));
-	
-	txt_C->SetText(FText::FromString(ASC->GetSkillCName()));
-	txt_E->SetText(FText::FromString(ASC->GetSkillEName()));
-	txt_Q->SetText(FText::FromString(ASC->GetSkillQName()));
-	txt_X->SetText(FText::FromString(ASC->GetSkillXName()));
 }
 
 void UAgentBaseWidget::UpdateDisplayHealth(const float health)

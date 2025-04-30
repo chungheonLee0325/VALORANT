@@ -29,8 +29,8 @@ void UBaseGameplayAbility::ActivateAbility(const FGameplayAbilitySpecHandle Hand
 		}
 		else
 		{
-			// Handle
-			EndAbility(Handle, ActorInfo, ActivationInfo,true,false);
+			Active_General();
+			EndAbility(Handle,ActorInfo,ActivationInfo,true,false);
 		}
 	}
 	else
@@ -45,19 +45,38 @@ void UBaseGameplayAbility::InputPressed(const FGameplayAbilitySpecHandle Handle,
 {
 	Super::InputPressed(Handle, ActorInfo, ActivationInfo);
 	UE_LOG(LogTemp, Warning, TEXT("스킬 InputPressed"));
-
-	//(필요하다면) 후속 입력 키에 따른 분기 작성
+	
 	if (CurrentFollowUpInputTag.IsValid())
 	{
 		if (CurrentFollowUpInputTag == FValorantGameplayTags::Get().InputTag_Default_LeftClick)
 		{
-			//TODO: Handle
-			EndAbility(Handle, ActorInfo, ActivationInfo,true,false);
+			Active_Left_Click();
+			EndAbility(Handle,ActorInfo,ActivationInfo,true,false);
 		}
-		if (CurrentFollowUpInputTag == FValorantGameplayTags::Get().InputTag_Default_RightClick)
+		else if (CurrentFollowUpInputTag == FValorantGameplayTags::Get().InputTag_Default_RightClick)
 		{
-			//TODO: Handle
-			EndAbility(Handle, ActorInfo, ActivationInfo,true,false);
+			Active_Right_Click();
+			EndAbility(Handle,ActorInfo,ActivationInfo,true,false);
+		}
+		else if (CurrentFollowUpInputTag == FValorantGameplayTags::Get().InputTag_Ability_C)
+		{
+			Active_C_Click();
+			EndAbility(Handle,ActorInfo,ActivationInfo,true,false);
+		}
+		else if (CurrentFollowUpInputTag == FValorantGameplayTags::Get().InputTag_Ability_E)
+		{
+			Active_E_Click();
+			EndAbility(Handle,ActorInfo,ActivationInfo,true,false);
+		}
+		else if (CurrentFollowUpInputTag == FValorantGameplayTags::Get().InputTag_Ability_Q)
+		{
+			Active_Q_Click();
+			EndAbility(Handle,ActorInfo,ActivationInfo,true,false);
+		}
+		else if (CurrentFollowUpInputTag == FValorantGameplayTags::Get().InputTag_Ability_X)
+		{
+			Active_X_Click();
+			EndAbility(Handle,ActorInfo,ActivationInfo,true,false);
 		}
 	}
 	
@@ -67,7 +86,6 @@ void UBaseGameplayAbility::InputReleased(const FGameplayAbilitySpecHandle Handle
 	const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo)
 {
 	Super::InputReleased(Handle, ActorInfo, ActivationInfo);
-	// Handle
 	UE_LOG(LogTemp, Warning, TEXT("스킬 InputReleased"));
 }
 
@@ -77,6 +95,8 @@ void UBaseGameplayAbility::EndAbility(const FGameplayAbilitySpecHandle Handle,
 {
 	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
 	UE_LOG(LogTemp, Warning, TEXT("스킬 EndAbility"));
+
+	CurrentFollowUpInputTag = FGameplayTag(); 
 	
 	UAgentAbilitySystemComponent* asc = Cast<UAgentAbilitySystemComponent>(GetAbilitySystemComponentFromActorInfo());
 	if (asc)
@@ -92,11 +112,41 @@ void UBaseGameplayAbility::CancelAbility(const FGameplayAbilitySpecHandle Handle
 	Super::CancelAbility(Handle, ActorInfo, ActivationInfo, bReplicateCancelAbility);
 	UE_LOG(LogTemp, Warning, TEXT("스킬 CancelAbility"));
 
+	CurrentFollowUpInputTag = FGameplayTag();
+	
 	UAgentAbilitySystemComponent* asc = Cast<UAgentAbilitySystemComponent>(GetAbilitySystemComponentFromActorInfo());
 	if (asc)
 	{
 		asc->ClearCurrentAbilityHandle(Handle);
 	}
+}
+
+void UBaseGameplayAbility::Active_General()
+{
+}
+
+void UBaseGameplayAbility::Active_Left_Click()
+{
+}
+
+void UBaseGameplayAbility::Active_Right_Click()
+{
+}
+
+void UBaseGameplayAbility::Active_C_Click()
+{
+}
+
+void UBaseGameplayAbility::Active_E_Click()
+{
+}
+
+void UBaseGameplayAbility::Active_Q_Click()
+{
+}
+
+void UBaseGameplayAbility::Active_X_Click()
+{
 }
 
 void UBaseGameplayAbility::SetAbilityID(int32 AbilityID)
