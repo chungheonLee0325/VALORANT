@@ -33,6 +33,7 @@ void UBaseGameplayAbility::ActivateAbility(const FGameplayAbilitySpecHandle Hand
 		else
 		{
 			Active_General();
+			// EndAbility(Handle,ActorInfo,ActivationInfo,true,false);
 		}
 	}
 	else
@@ -75,7 +76,7 @@ void UBaseGameplayAbility::InputPressed(const FGameplayAbilitySpecHandle Handle,
 			Active_X_Click();
 		}
 		
-		EndAbility(Handle,ActorInfo,ActivationInfo,true,false);
+		// EndAbility(Handle,ActorInfo,ActivationInfo,true,false);
 	}
 	
 }
