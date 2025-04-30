@@ -4,6 +4,8 @@
 #include "MiniMapWidget.h"
 
 #include "GameFramework/CharacterMovementComponent.h"
+#include "Kismet/GameplayStatics.h"
+#include "Player/Agent/MapTestAgent.h"
 
 void UMiniMapWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
 {
@@ -32,8 +34,31 @@ FVector2D UMiniMapWidget::WorldMinimapPosition(const FVector& WorldPosition) con
 // 미니맵 아이콘 업데이트 
 void UMiniMapWidget::UpdateMinimapIcons()
 {
+	// 로컬 플레이어 가져오기 
+	APlayerController* PlayerController = GetOwningPlayer();
+	// 플레이어 컨트롤러가 없으면 중단 
+	if (!PlayerController)
+	{
+		return;
+	}
+
+	// 로컬 플레이어 캐릭터 가져오기
+	AMapTestAgent* LocalPlayer = Cast<AMapTestAgent>(PlayerController->GetPawn());
+	if (!LocalPlayer)
+	{
+		return;
+	}
 	
+	// 로컬 플레이어의 팀 ID 가져오기
+	int32 LocalTeamID = LocalPlayer->TeamID;
+
+	// 월드의 모든 에이전트 찾기
+	TArray<AActor*> AllAgents;
+	UGameplayStatics::GetAllActorsOfClass(GetWorld(),ABaseAgent::StaticClass(),AllAgents);
+
+	//
 }
+
 
 
 
