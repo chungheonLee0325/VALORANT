@@ -6,7 +6,17 @@
 #include "Blueprint/UserWidget.h"
 #include "MatchMapHUD.generated.h"
 
+class UWidgetSwitcher;
 class UTextBlock;
+
+UENUM(BlueprintType)
+enum class EMatchAnnouncement : uint8
+{
+	EMA_Won,
+	EMA_Lost,
+	EMA_BuyPhase
+};
+
 /**
  * 
  */
@@ -21,6 +31,13 @@ protected:
 	void UpdateTime(float Time);
 	UFUNCTION()
 	void UpdateScore(int TeamBlueScore, int TeamRedScore);
+	UFUNCTION()
+	void OnGameStateChanged(const FString& MatchStateStr, const FString& RoundSubStateStr);
+
+	FTimerHandle AnnouncementTimerHandle;
+	UFUNCTION()
+	void DisplayAnnouncement(EMatchAnnouncement MatchAnnouncement, const float DisplayTime);
+	void HideAnnouncement();
 	
 public:
 	UPROPERTY(meta=(BindWidget))
@@ -29,7 +46,9 @@ public:
 	TObjectPtr<UTextBlock> TextBlockBlueScore = nullptr;
 	UPROPERTY(meta=(BindWidget))
 	TObjectPtr<UTextBlock> TextBlockRedScore = nullptr;
-
+	UPROPERTY(meta=(BindWidget))
+	TObjectPtr<UWidgetSwitcher> WidgetSwitcherAnnouncement = nullptr;
+	
 /*
  *	Debug
  */
