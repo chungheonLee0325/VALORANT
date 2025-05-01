@@ -33,7 +33,7 @@ void AAgentPlayerController::OnRep_PlayerState()
 	if (IsLocalController())
 	{
 		m_GameInstance = Cast<UValorantGameInstance>(GetGameInstance());
-		CreateAgentWidget();
+		// CreateAgentWidget();
 	}
 }
 
@@ -78,7 +78,6 @@ void AAgentPlayerController::CreateAgentWidget()
 	}
 	
 	AgentWidget = CreateWidget<UAgentBaseWidget>(this, AgentWidgetClass);
-	
 	AgentWidget->AddToViewport();
 	AgentWidget->BindToDelegatePC(CachedASC,this);
 }
