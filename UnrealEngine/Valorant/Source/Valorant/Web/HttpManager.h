@@ -73,10 +73,10 @@ public:
 	FOnHttpResponseReceived OnHttpResponseReceived;
 
 	UFUNCTION(BlueprintCallable)
-	void SendRequest(const FString& URL, const FString& Verb = TEXT("GET"), const FString& Content = TEXT(""));
+	virtual void SendRequest(const FString& URL, const FString& Verb = TEXT("GET"), const FString& Content = TEXT(""));
 
 private:
 	static UHttpManager* Singleton;
 	
-	void OnResponseReceived(FHttpRequestPtr Request, FHttpResponsePtr Response, bool bWasSuccessful);
+	virtual void OnResponseReceived(FHttpRequestPtr Request, FHttpResponsePtr Response, bool bWasSuccessful);
 };

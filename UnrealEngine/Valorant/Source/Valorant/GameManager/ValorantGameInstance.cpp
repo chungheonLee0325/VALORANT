@@ -11,6 +11,7 @@
 #include "Blueprint/UserWidget.h"
 #include "GameFramework/PlayerController.h" 
 #include "ResourceManager/ValorantGameType.h"
+#include "Web/DatabaseManager.h"
 
 template<typename RowStructType, typename IDType>
 void LoadDataTableToMap(const FString& Path, TMap<IDType, RowStructType>& OutMap, IDType RowStructType::* IDMember)
@@ -86,6 +87,8 @@ void UValorantGameInstance::Init()
 				UE_LOG(LogTemp, Warning, TEXT("UniquePlayerId : %s"), *UniquePlayerId->ToString());
 				UE_LOG(LogTemp, Warning, TEXT("Nickname : %s"), *Nickname);
 				UE_LOG(LogTemp, Warning, TEXT("LoginStatus : %s"), ELoginStatus::ToString(LoginStatus));
+				auto* DatabaseManager = Cast<UDatabaseManager>(UDatabaseManager::GetInstance());
+				DatabaseManager->FetchOrCreateUser();
 			}
 		}
 	}
