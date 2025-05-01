@@ -12,6 +12,7 @@ void UMatchMapHUD::NativeConstruct()
 
 	auto* GameState = Cast<AMatchGameState>(GetWorld()->GetGameState());
 	GameState->OnRemainRoundStateTimeChanged.AddDynamic(this, &UMatchMapHUD::UpdateTime);
+	GameState->OnTeamScoreChanged.AddDynamic(this, &UMatchMapHUD::UpdateScore);
 }
 
 void UMatchMapHUD::UpdateTime(float Time)
@@ -20,4 +21,10 @@ void UMatchMapHUD::UpdateTime(float Time)
 	const int Seconds = static_cast<int>(Time) % 60;
 	const FString TimeStr = FString::Printf(TEXT("%d:%02d"), Minute, Seconds);
 	TextBlockTime->SetText(FText::FromString(TimeStr));
+}
+
+void UMatchMapHUD::UpdateScore(int TeamBlueScore, int TeamRedScore)
+{
+	TextBlockBlueScore->SetText(FText::FromString(FString::Printf(TEXT("%d"), TeamBlueScore)));
+	TextBlockRedScore->SetText(FText::FromString(FString::Printf(TEXT("%d"), TeamRedScore)));
 }

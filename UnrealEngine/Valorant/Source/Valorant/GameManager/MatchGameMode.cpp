@@ -132,6 +132,7 @@ void AMatchGameMode::StartInRound()
 void AMatchGameMode::StartEndPhase()
 {
 	SetRoundSubState(ERoundSubState::RSS_EndPhase);
+	IncreaseTeamScore(true);
 }
 
 void AMatchGameMode::HandleRoundSubState_SelectAgent()
@@ -160,6 +161,13 @@ void AMatchGameMode::HandleRoundSubState_BuyPhase()
 
 void AMatchGameMode::HandleRoundSubState_InRound()
 {
+	// TODO: 스파이크가 설치되면 기존 타이머 Clear 및 Set 필요
+	
+	// TODO: 킬이 발생하면 라운드 종료 요건 만족하는지 판단 후 즉시 EndPhase로 전환 (스파이크 해제도 마찬가지)
+	// 공격팀 승리 조건: 수비팀이 먼저 전멸되거나 스파이크 설치 후 폭파 성공
+	// 수비팀 승리 조건: 공격팀이 먼저 전멸, 스파이크 해제, 라운드 시간 초과
+	// 만약, 동시에 전멸되는 경우 스파이크 설치 유무에 따라 승리 진영이 달라진다 (미설치->수비승리, 설치->공격승리)
+	
 	// 일정 시간 후에 라운드 종료
 	MaxTime = InRoundTime;
 	GetWorld()->GetTimerManager().ClearTimer(RoundTimerHandle);
@@ -168,7 +176,11 @@ void AMatchGameMode::HandleRoundSubState_InRound()
 
 void AMatchGameMode::HandleRoundSubState_EndPhase()
 {
+	// TODO: 라운드 상황에 따라 BuyPhase로 전환할 것인지 InRound로 전환할 것인지 아예 매치가 끝난 상태로 전환할 것인지 판단
+	// 공수교대(->InRound) 조건: 3라운드가 끝나고 4라운드 시작되는 시점
+	// 매치 종료 조건: 4승을 먼저 달성한 팀이 있는 경우 (6전 4선승제, 만약 3:3일 경우 단판 승부전)
 	// 일정 시간 후에 라운드 재시작
+	
 	MaxTime = EndPhaseTime;
 	GetWorld()->GetTimerManager().ClearTimer(RoundTimerHandle);
 	GetWorld()->GetTimerManager().SetTimer(RoundTimerHandle, this, &AMatchGameMode::StartBuyPhase, EndPhaseTime);
@@ -210,4 +222,22 @@ void AMatchGameMode::SetRoundSubState(ERoundSubState NewRoundSubState)
 		RemainRoundStateTime = MaxTime;
 		MatchGameState->SetRemainRoundStateTime(RemainRoundStateTime);
 	}
+}
+
+void AMatchGameMode::IncreaseTeamScore(bool bIsTeamBlue)
+{
+	if (bIsTeamBlue)
+	{
+		++TeamBlueScore;
+	}
+	else
+	{
+		++TeamRedScore;
+	}
+	AMatchGameState* MatchGameState = GetGameState<AMatchGameState>();
+	if (nullptr == MatchGameState)
+	{
+		NET_LOG(LogTemp, Warning, TEXT("%hs Called, MatchGameState is nullptr"), __FUNCTION__);
+	}
+	MatchGameState->SetTeamScore(TeamBlueScore, TeamRedScore);
 }

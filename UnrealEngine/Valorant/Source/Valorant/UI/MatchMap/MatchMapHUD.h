@@ -19,8 +19,14 @@ protected:
 	virtual void NativeConstruct() override;
 	UFUNCTION()
 	void UpdateTime(float Time);
+	UFUNCTION()
+	void UpdateScore(int TeamBlueScore, int TeamRedScore);
 	
 public:
 	UPROPERTY(meta=(BindWidget))
 	TObjectPtr<UTextBlock> TextBlockTime = nullptr;
+	UPROPERTY(meta=(BindWidget))
+	TObjectPtr<UTextBlock> TextBlockBlueScore = nullptr;
+	UPROPERTY(meta=(BindWidget))
+	TObjectPtr<UTextBlock> TextBlockRedScore = nullptr;
 };

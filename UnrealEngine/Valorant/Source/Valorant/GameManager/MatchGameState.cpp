@@ -21,6 +21,8 @@ void AMatchGameState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutL
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 	DOREPLIFETIME(AMatchGameState, RoundSubState);
 	DOREPLIFETIME(AMatchGameState, RemainRoundStateTime);
+	DOREPLIFETIME(AMatchGameState, TeamBlueScore);
+	DOREPLIFETIME(AMatchGameState, TeamRedScore);
 }
 
 void AMatchGameState::HandleMatchIsWaitingToStart()
@@ -129,9 +131,14 @@ void AMatchGameState::HandleRoundSubState_EndRound()
 	NET_LOG(LogTemp, Warning, TEXT("%hs Called"), __FUNCTION__);
 }
 
+void AMatchGameState::OnRep_TeamScore()
+{
+	OnTeamScoreChanged.Broadcast(TeamBlueScore, TeamRedScore);
+}
+
 void AMatchGameState::SetRoundSubState(ERoundSubState NewRoundSubState)
 {
-	if (GetLocalRole() == ROLE_Authority)
+	if (HasAuthority())
 	{
 		RoundSubState = NewRoundSubState;
 		OnRep_RoundSubState();
@@ -140,9 +147,19 @@ void AMatchGameState::SetRoundSubState(ERoundSubState NewRoundSubState)
 
 void AMatchGameState::SetRemainRoundStateTime(float NewRemainRoundStateTime)
 {
-	if (GetLocalRole() == ROLE_Authority)
+	if (HasAuthority())
 	{
 		RemainRoundStateTime = NewRemainRoundStateTime;
 		OnRep_RemainRoundStateTime();
+	}
+}
+
+void AMatchGameState::SetTeamScore(int NewTeamBlueScore, int NewTeamRedScore)
+{
+	if (HasAuthority())
+	{
+		this->TeamBlueScore = NewTeamBlueScore;
+		this->TeamRedScore = NewTeamRedScore;
+		OnRep_TeamScore();
 	}
 }

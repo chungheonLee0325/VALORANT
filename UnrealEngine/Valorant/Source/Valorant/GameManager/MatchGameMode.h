@@ -77,10 +77,11 @@ protected:
 	float MaxTime = 0.0f;
 	float RemainRoundStateTime = 0.0f;
 	float SelectAgentTime = 60.0f;
-	float PreRoundTime = 45.0f;
-	float BuyPhaseTime = 30.0f;
-	float InRoundTime = 100.0f;
-	float EndPhaseTime = 10.0f;
+	float PreRoundTime = 15.0f;		// org: 45.0f
+	float BuyPhaseTime = 10.0f;		// org: 30.0f
+	float InRoundTime = 20.0f;		// org: 100.0f
+	float EndPhaseTime = 10.0f;		// org: 10.0f
+	float SpikeActiveTime = 15.0f;	// org: 45.0f
 	
 	virtual bool ReadyToStartMatch_Implementation() override;
 	virtual void HandleMatchHasStarted() override;
@@ -95,4 +96,11 @@ protected:
 	void HandleRoundSubState_InRound();
 	void HandleRoundSubState_EndPhase();
 	void SetRoundSubState(ERoundSubState NewRoundSubState);
+
+	int TotalRound = 6;
+	int CurrentRound = 1;
+	int RequiredScore = 4;
+	int TeamBlueScore = 0;
+	int TeamRedScore = 0;
+	void IncreaseTeamScore(bool bIsTeamBlue);
 };
