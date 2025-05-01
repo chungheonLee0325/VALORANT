@@ -29,4 +29,17 @@ public:
 	TObjectPtr<UTextBlock> TextBlockBlueScore = nullptr;
 	UPROPERTY(meta=(BindWidget))
 	TObjectPtr<UTextBlock> TextBlockRedScore = nullptr;
+
+/*
+ *	Debug
+ */
+public:
+	UPROPERTY(meta=(BindWidget))
+	TObjectPtr<UTextBlock> TextBlockMatchStateDbg = nullptr;
+	UPROPERTY(meta=(BindWidget))
+	TObjectPtr<UTextBlock> TextBlockRoundSubStateDbg = nullptr;
+
+protected:
+	UFUNCTION()
+	void DebugGameState(const FString& MatchStateStr, const FString& RoundSubStateStr);
 };

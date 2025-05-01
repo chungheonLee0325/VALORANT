@@ -13,6 +13,7 @@ void UMatchMapHUD::NativeConstruct()
 	auto* GameState = Cast<AMatchGameState>(GetWorld()->GetGameState());
 	GameState->OnRemainRoundStateTimeChanged.AddDynamic(this, &UMatchMapHUD::UpdateTime);
 	GameState->OnTeamScoreChanged.AddDynamic(this, &UMatchMapHUD::UpdateScore);
+	GameState->OnGameStateChanged.AddDynamic(this, &UMatchMapHUD::DebugGameState);
 }
 
 void UMatchMapHUD::UpdateTime(float Time)
@@ -27,4 +28,10 @@ void UMatchMapHUD::UpdateScore(int TeamBlueScore, int TeamRedScore)
 {
 	TextBlockBlueScore->SetText(FText::FromString(FString::Printf(TEXT("%d"), TeamBlueScore)));
 	TextBlockRedScore->SetText(FText::FromString(FString::Printf(TEXT("%d"), TeamRedScore)));
+}
+
+void UMatchMapHUD::DebugGameState(const FString& MatchStateStr, const FString& RoundSubStateStr)
+{
+	TextBlockMatchStateDbg->SetText(FText::FromString(TEXT("MatchState: ") + MatchStateStr));
+	TextBlockRoundSubStateDbg->SetText(FText::FromString(TEXT("RoundSubState: ") + RoundSubStateStr));
 }

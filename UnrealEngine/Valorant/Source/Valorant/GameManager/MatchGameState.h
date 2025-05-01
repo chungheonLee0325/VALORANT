@@ -11,6 +11,7 @@ enum class ERoundSubState : uint8;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FRemainRoundStateTimeChanged, float, Time);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FTeamScoreChanged, int, TeamBlueScore, int, TeamRedScore);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FGameStateChanged, const FString&, MatchStateStr, const FString&, RoundSubStateStr);
 
 /**
  * 
@@ -35,6 +36,7 @@ protected:
 public:
 	FRemainRoundStateTimeChanged OnRemainRoundStateTimeChanged;
 	FTeamScoreChanged OnTeamScoreChanged;
+	FGameStateChanged OnGameStateChanged;
 	
 protected:
 	virtual void BeginPlay() override;
