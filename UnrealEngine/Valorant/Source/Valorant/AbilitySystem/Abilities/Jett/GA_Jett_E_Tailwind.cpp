@@ -50,7 +50,8 @@ bool UGA_Jett_E_Tailwind::CanActivateAbility(const FGameplayAbilitySpecHandle Ha
 	}
 
 	// Check for sufficient charges - ToDo : 현재 서버에만 갯수 동기화중, 변경전까진 서버에서만 검사
-	if (!IsLocallyControlled())
+	AActor* Avatar = CurrentActorInfo->AvatarActor.Get();
+	if (Avatar->GetLocalRole() == ROLE_Authority)
 	{
 		ACharacter* Character = Cast<ACharacter>(ActorInfo->AvatarActor.Get());
 		if (0 == GetAbilityStack(Character, m_AbilityID))
@@ -84,9 +85,9 @@ void UGA_Jett_E_Tailwind::ActivateAbility(const FGameplayAbilitySpecHandle Handl
 	// 최종 확인
 	if (!CommitAbility(Handle, ActorInfo, ActivationInfo))
 	{
-	     UE_LOG(LogTemp, Warning, TEXT("Failed to commit ability Tailwind"));
-	    EndAbility(Handle, ActorInfo, ActivationInfo, true, true); // Cancel if commit fails
-	    return;
+		UE_LOG(LogTemp, Warning, TEXT("Failed to commit ability Tailwind"));
+		EndAbility(Handle, ActorInfo, ActivationInfo, true, true); // Cancel if commit fails
+		return;
 	}
 
 	// Cost 소모

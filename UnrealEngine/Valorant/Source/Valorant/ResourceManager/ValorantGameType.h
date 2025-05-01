@@ -226,19 +226,19 @@ struct FAgentData : public FTableRowBase
 
 	// 스킬 C
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Data")
-	TSubclassOf<UGameplayAbility> Ability_C = nullptr;
+	int32 AbilityID_C = 0;
 
 	// 스킬 Q
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Data")
-	TSubclassOf<UGameplayAbility> Ability_Q = nullptr;
+	int32 AbilityID_Q = 0;
 
 	// 스킬 E
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Data")
-	TSubclassOf<UGameplayAbility> Ability_E = nullptr;
+	int32 AbilityID_E = 0;
 
 	// 궁극기 X
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Data")
-	TSubclassOf<UGameplayAbility> Ability_X = nullptr;
+	int32 AbilityID_X = 0;
 
 	// 에이전트 특성 태그
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Data")
@@ -388,8 +388,8 @@ struct FAbilityData : public FTableRowBase
 	TArray<int> AppliedEffectIDs; // GameplayEffectData 테이블의 행 ID를 참조
 
 	// 기타 속성들 (스킬별 특성)
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Custom")
-	TMap<FString, float> CustomParameters;
+	// UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Custom")
+	// TMap<FString, float> CustomParameters;
 
 	// 태그 관련
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Tags")
