@@ -22,6 +22,8 @@ protected:
 
 	UFUNCTION(BlueprintCallable)
 	void OnClickedButtonLockIn();
+	UFUNCTION()
+	void OnClickedAgentSelectButton(int AgentId);
 
 	UPROPERTY(meta=(BindWidget))
 	TObjectPtr<UGridPanel> GridPanelAgentList = nullptr;

@@ -3,6 +3,7 @@
 
 #include "MatchMapSelectAgentUI.h"
 
+#include "AgentSelectButton.h"
 #include "Valorant.h"
 #include "Components/Button.h"
 #include "Components/ButtonSlot.h"
@@ -43,6 +44,11 @@ void UMatchMapSelectAgentUI::OnClickedButtonLockIn()
 	Controller->ServerRPC_LockIn();
 }
 
+void UMatchMapSelectAgentUI::OnClickedAgentSelectButton(int AgentId)
+{
+	NET_LOG(LogTemp, Warning, TEXT("%hs Called, AgentId: %d"), __FUNCTION__, AgentId);
+}
+
 void UMatchMapSelectAgentUI::UpdateTime(float Time)
 {
 	if (nullptr == TextBlockRemTime)
@@ -68,8 +74,11 @@ void UMatchMapSelectAgentUI::FillAgentList()
 				bBreak = true;
 				break;
 			}
-			UButton* AgentButton = NewObject<UButton>(this);
+			UAgentSelectButton* AgentButton = NewObject<UAgentSelectButton>(this);
+			AgentButton->Init(Data->AgentID);
+			AgentButton->OnAgentSelectButtonClicked.AddDynamic(this, &UMatchMapSelectAgentUI::OnClickedAgentSelectButton);
 			auto* GridSlot = GridPanelAgentList->AddChildToGrid(AgentButton, Row, Col);
+			
 			FMargin Margin;
 			if (Row != 0) Margin.Top = 10.f;
 			if (Col != 0) Margin.Left = 10.f;
