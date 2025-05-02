@@ -3,14 +3,14 @@
 
 #include "MatchMapSelectAgentUI.h"
 
-#include "AgentSelectButton.h"
 #include "Valorant.h"
-#include "Components/Button.h"
 #include "Components/ButtonSlot.h"
 #include "Components/GridPanel.h"
 #include "Components/GridSlot.h"
 #include "Components/Image.h"
 #include "Components/TextBlock.h"
+#include "CustomWidget/AgentSelectButton.h"
+#include "CustomWidget/TeamSelectAgentBox.h"
 #include "GameManager/MatchGameState.h"
 #include "GameManager/SubsystemSteamManager.h"
 #include "GameManager/ValorantGameInstance.h"
@@ -25,6 +25,7 @@ void UMatchMapSelectAgentUI::NativeConstruct()
 	GameState->OnRemainRoundStateTimeChanged.AddDynamic(this, &UMatchMapSelectAgentUI::UpdateTime);
 	GetOwningPlayer()->SetShowMouseCursor(true);
 	FillAgentList();
+	FillTeamList();
 }
 
 void UMatchMapSelectAgentUI::NativeDestruct()
@@ -56,6 +57,10 @@ void UMatchMapSelectAgentUI::OnClickedAgentSelectButton(int AgentId)
 
 	NET_LOG(LogTemp, Warning, TEXT("%hs Called, AgentId: %d"), __FUNCTION__, AgentId);
 	PlayerState->ServerRPC_NotifyAgentSelected(AgentId);
+}
+
+void UMatchMapSelectAgentUI::OnSelectedAgentChanged(const FString& PlayerNickname, int SelectedAgentID)
+{
 }
 
 void UMatchMapSelectAgentUI::UpdateTime(float Time)
@@ -146,5 +151,21 @@ void UMatchMapSelectAgentUI::FillAgentList()
 			ButtonSlot->SetPadding(FMargin(0.f));
 		}
 		if (bBreak) break;
+	}
+}
+
+void UMatchMapSelectAgentUI::FillTeamList()
+{
+	auto* GameState = Cast<AMatchGameState>(GetWorld()->GetGameState());
+	const auto* MyMPS = GetOwningPlayer()->GetPlayerState<AMatchPlayerState>();
+	for (const auto PS : GameState->PlayerArray)
+	{
+		auto* MPS = Cast<AMatchPlayerState>(PS);
+		if (MPS->bIsBlueTeam == MyMPS->bIsBlueTeam)
+		{
+			MPS->OnSelectedAgentChanged.AddDynamic(this, &UMatchMapSelectAgentUI::OnSelectedAgentChanged);
+			UTeamSelectAgentBox* TeamSelectAgentBox = NewObject<UTeamSelectAgentBox>(this);
+			TeamSelectAgentBoxMap.Add(MPS->DisplayName, TeamSelectAgentBox);
+		}
 	}
 }
