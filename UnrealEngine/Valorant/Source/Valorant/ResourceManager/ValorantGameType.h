@@ -249,6 +249,9 @@ struct FAgentData : public FTableRowBase
 	TSubclassOf<UGameplayAbilitySet> AttributeSetClass;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Data")
+	FString LocalName;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Data")
 	FString Description;
 };
 

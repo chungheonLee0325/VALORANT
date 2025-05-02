@@ -6,6 +6,7 @@
 #include "Blueprint/UserWidget.h"
 #include "MatchMapSelectAgentUI.generated.h"
 
+class UGridPanel;
 class UTextBlock;
 /**
  * 
@@ -23,7 +24,11 @@ protected:
 	void OnClickedButtonLockIn();
 
 	UPROPERTY(meta=(BindWidget))
+	TObjectPtr<UGridPanel> GridPanelAgentList = nullptr;
+	UPROPERTY(meta=(BindWidget))
 	TObjectPtr<UTextBlock> TextBlockRemTime = nullptr;
 	UFUNCTION()
 	void UpdateTime(float Time);
+
+	void FillAgentList();
 };

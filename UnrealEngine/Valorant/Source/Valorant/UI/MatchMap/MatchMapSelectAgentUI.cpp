@@ -4,9 +4,15 @@
 #include "MatchMapSelectAgentUI.h"
 
 #include "Valorant.h"
+#include "Components/Button.h"
+#include "Components/ButtonSlot.h"
+#include "Components/GridPanel.h"
+#include "Components/GridSlot.h"
+#include "Components/Image.h"
 #include "Components/TextBlock.h"
 #include "GameManager/MatchGameState.h"
 #include "GameManager/SubsystemSteamManager.h"
+#include "GameManager/ValorantGameInstance.h"
 #include "Player/AgentPlayerController.h"
 
 void UMatchMapSelectAgentUI::NativeConstruct()
@@ -16,6 +22,7 @@ void UMatchMapSelectAgentUI::NativeConstruct()
 	auto* GameState = Cast<AMatchGameState>(GetWorld()->GetGameState());
 	GameState->OnRemainRoundStateTimeChanged.AddDynamic(this, &UMatchMapSelectAgentUI::UpdateTime);
 	GetOwningPlayer()->SetShowMouseCursor(true);
+	FillAgentList();
 }
 
 void UMatchMapSelectAgentUI::NativeDestruct()
@@ -43,4 +50,83 @@ void UMatchMapSelectAgentUI::UpdateTime(float Time)
 		return;
 	}
 	TextBlockRemTime->SetText(FText::FromString(FString::Printf(TEXT("%d"), static_cast<int>(Time))));
+}
+
+void UMatchMapSelectAgentUI::FillAgentList()
+{
+	auto* GameInstance = GetGameInstance<UValorantGameInstance>();
+	GridPanelAgentList->ClearChildren();
+	int Idx = 1;
+	for (int Row = 0; Row < 3; ++Row)
+	{
+		bool bBreak = false;
+		for (int Col = 0; Col < 4; ++Col)
+		{
+			const auto* Data = GameInstance->GetAgentData(Idx++);
+			if (nullptr == Data)
+			{
+				bBreak = true;
+				break;
+			}
+			UButton* AgentButton = NewObject<UButton>(this);
+			auto* GridSlot = GridPanelAgentList->AddChildToGrid(AgentButton, Row, Col);
+			FMargin Margin;
+			if (Row != 0) Margin.Top = 10.f;
+			if (Col != 0) Margin.Left = 10.f;
+			GridSlot->SetPadding(Margin);
+			GridSlot->SetHorizontalAlignment(HAlign_Fill);
+			GridSlot->SetVerticalAlignment(VAlign_Fill);
+			
+			FButtonStyle Style;
+			Style.Normal.DrawAs = ESlateBrushDrawType::RoundedBox;
+			Style.Normal.TintColor = FSlateColor(FLinearColor(0.495466f, 0.495466f, 0.495466f, 0.1f));
+			Style.Normal.OutlineSettings.Color = FSlateColor(FLinearColor::White);
+			Style.Normal.OutlineSettings.CornerRadii = FVector4(0.f);
+			Style.Normal.OutlineSettings.RoundingType = ESlateBrushRoundingType::FixedRadius;
+			Style.Normal.OutlineSettings.Width = 1.f;
+			Style.Normal.OutlineSettings.bUseBrushTransparency = false;
+			Style.NormalPadding = FMargin(5.f);
+			
+			Style.Hovered.DrawAs = ESlateBrushDrawType::RoundedBox;
+			Style.Hovered.TintColor = FSlateColor(FLinearColor(0.724268f, 0.724268f, 0.724268f, 1.0f));
+			Style.Hovered.OutlineSettings.Color = FSlateColor(FLinearColor::White);
+			Style.Hovered.OutlineSettings.CornerRadii = FVector4(4.f);
+			Style.Hovered.OutlineSettings.RoundingType = ESlateBrushRoundingType::FixedRadius;
+			Style.Hovered.OutlineSettings.Width = 1.f;
+			Style.Hovered.OutlineSettings.bUseBrushTransparency = true;
+
+			Style.Pressed.DrawAs = ESlateBrushDrawType::RoundedBox;
+			Style.Pressed.TintColor = FSlateColor(FLinearColor(0.384266f, 0.384266f, 0.384266f, 1.0f));
+			Style.Pressed.OutlineSettings.Color = FSlateColor(FLinearColor::White);
+			Style.Pressed.OutlineSettings.CornerRadii = FVector4(4.f);
+			Style.Pressed.OutlineSettings.RoundingType = ESlateBrushRoundingType::FixedRadius;
+			Style.Pressed.OutlineSettings.Width = 1.f;
+			Style.Pressed.OutlineSettings.bUseBrushTransparency = true;
+			Style.PressedPadding = FMargin(5.f);
+			
+			AgentButton->SetStyle(Style);
+			
+			const FString& AgentName = Data->AgentName;
+			UImage* ThumbImage = NewObject<UImage>(this);
+			UTexture2D* Texture = Cast<UTexture2D>(
+				StaticLoadObject(
+					UTexture2D::StaticClass(),
+					nullptr,
+					*FString::Printf(TEXT("/Game/Resource/UI/Shared/Icons/Character/Thumbnails/TX_Character_Thumb_%s.TX_Character_Thumb_%s"), *AgentName, *AgentName)
+				)
+			);
+
+			FSlateBrush Brush;
+			Brush.SetResourceObject(Texture);
+			Brush.ImageSize = FVector2D(96.5f, 96.5f);
+			Brush.TintColor = FSlateColor(FLinearColor(1.f, 1.f, 1.f, 1.f));
+			Brush.DrawAs = ESlateBrushDrawType::Image;
+			ThumbImage->SetBrush(Brush);
+			UButtonSlot* ButtonSlot = Cast<UButtonSlot>(AgentButton->AddChild(ThumbImage));
+			ButtonSlot->SetHorizontalAlignment(HAlign_Fill);
+			ButtonSlot->SetVerticalAlignment(VAlign_Fill);
+			ButtonSlot->SetPadding(FMargin(0.f));
+		}
+		if (bBreak) break;
+	}
 }
