@@ -55,8 +55,7 @@ void UMiniMapWidget::UpdateMinimapIcons()
 	// 월드의 모든 에이전트 찾기
 	TArray<AActor*> AllAgents;
 	UGameplayStatics::GetAllActorsOfClass(GetWorld(),ABaseAgent::StaticClass(),AllAgents);
-
-	//
+	
 }
 
 
