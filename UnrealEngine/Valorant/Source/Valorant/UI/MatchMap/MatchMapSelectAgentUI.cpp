@@ -15,6 +15,13 @@ void UMatchMapSelectAgentUI::NativeConstruct()
 
 	auto* GameState = Cast<AMatchGameState>(GetWorld()->GetGameState());
 	GameState->OnRemainRoundStateTimeChanged.AddDynamic(this, &UMatchMapSelectAgentUI::UpdateTime);
+	GetOwningPlayer()->SetShowMouseCursor(true);
+}
+
+void UMatchMapSelectAgentUI::NativeDestruct()
+{
+	Super::NativeDestruct();
+	GetOwningPlayer()->SetShowMouseCursor(false);
 }
 
 void UMatchMapSelectAgentUI::OnClickedButtonLockIn()

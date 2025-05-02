@@ -15,8 +15,7 @@ void UMatchMapHUD::NativeConstruct()
 	auto* GameState = Cast<AMatchGameState>(GetWorld()->GetGameState());
 	GameState->OnRemainRoundStateTimeChanged.AddDynamic(this, &UMatchMapHUD::UpdateTime);
 	GameState->OnTeamScoreChanged.AddDynamic(this, &UMatchMapHUD::UpdateScore);
-	GameState->OnGameStateChanged.AddDynamic(this, &UMatchMapHUD::OnGameStateChanged);
-	GameState->OnGameStateChanged.AddDynamic(this, &UMatchMapHUD::DebugGameState);
+	GameState->OnRoundSubStateChanged.AddDynamic(this, &UMatchMapHUD::OnRoundSubStateChanged);
 
 	auto* PlayerState = Cast<AAgentPlayerState>(GetOwningPlayer());
 	// TODO: 라운드 결과 Delegate Binding
@@ -36,12 +35,26 @@ void UMatchMapHUD::UpdateScore(int TeamBlueScore, int TeamRedScore)
 	TextBlockRedScore->SetText(FText::FromString(FString::Printf(TEXT("%d"), TeamRedScore)));
 }
 
-void UMatchMapHUD::OnGameStateChanged(const FString& MatchStateStr, const FString& RoundSubStateStr)
+void UMatchMapHUD::OnRoundSubStateChanged(const ERoundSubState RoundSubState)
 {
-	if (RoundSubStateStr == TEXT("RSS_PreRound") || RoundSubStateStr == TEXT("RSS_BuyPhase"))
-	{
-		DisplayAnnouncement(EMatchAnnouncement::EMA_BuyPhase, 10.0f);
+	switch (RoundSubState) {
+	case ERoundSubState::RSS_None:
+		break;
+	case ERoundSubState::RSS_SelectAgent:
+		break;
+	case ERoundSubState::RSS_PreRound:
+		DisplayAnnouncement(EMatchAnnouncement::EMA_BuyPhase, 5.0f);
+		break;
+	case ERoundSubState::RSS_BuyPhase:
+		DisplayAnnouncement(EMatchAnnouncement::EMA_BuyPhase, 5.0f);
+		break;
+	case ERoundSubState::RSS_InRound:
+		break;
+	case ERoundSubState::RSS_EndPhase:
+		DisplayAnnouncement(EMatchAnnouncement::EMA_Won, 5.0f);
+		break;
 	}
+	DebugRoundSubState(StaticEnum<ERoundSubState>()->GetNameStringByValue(static_cast<int>(RoundSubState)));
 }
 
 void UMatchMapHUD::DisplayAnnouncement(EMatchAnnouncement MatchAnnouncement, float DisplayTime)
@@ -56,8 +69,7 @@ void UMatchMapHUD::HideAnnouncement()
 	WidgetSwitcherAnnouncement->SetVisibility(ESlateVisibility::Hidden);
 }
 
-void UMatchMapHUD::DebugGameState(const FString& MatchStateStr, const FString& RoundSubStateStr)
+void UMatchMapHUD::DebugRoundSubState(const FString& RoundSubStateStr)
 {
-	TextBlockMatchStateDbg->SetText(FText::FromString(TEXT("MatchState: ") + MatchStateStr));
 	TextBlockRoundSubStateDbg->SetText(FText::FromString(TEXT("RoundSubState: ") + RoundSubStateStr));
 }

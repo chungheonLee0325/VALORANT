@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
+#include "GameManager/MatchGameState.h"
 #include "MatchMapHUD.generated.h"
 
 class UWidgetSwitcher;
@@ -32,7 +33,7 @@ protected:
 	UFUNCTION()
 	void UpdateScore(int TeamBlueScore, int TeamRedScore);
 	UFUNCTION()
-	void OnGameStateChanged(const FString& MatchStateStr, const FString& RoundSubStateStr);
+	void OnRoundSubStateChanged(const ERoundSubState RoundSubState);
 
 	FTimerHandle AnnouncementTimerHandle;
 	UFUNCTION()
@@ -54,11 +55,9 @@ public:
  */
 public:
 	UPROPERTY(meta=(BindWidget))
-	TObjectPtr<UTextBlock> TextBlockMatchStateDbg = nullptr;
-	UPROPERTY(meta=(BindWidget))
 	TObjectPtr<UTextBlock> TextBlockRoundSubStateDbg = nullptr;
 
 protected:
 	UFUNCTION()
-	void DebugGameState(const FString& MatchStateStr, const FString& RoundSubStateStr);
+	void DebugRoundSubState(const FString& RoundSubStateStr);
 };

@@ -30,7 +30,6 @@ void AMatchGameState::HandleMatchIsWaitingToStart()
 	// Server측 맵 로딩 완료 (큰 의미 없는 이벤트)
 	Super::HandleMatchIsWaitingToStart();
 	NET_LOG(LogTemp, Warning, TEXT("%hs Called"), __FUNCTION__);
-	OnGameStateChanged.Broadcast(TEXT("WaitingToStart"), TEXT("None"));
 }
 
 void AMatchGameState::HandleMatchHasStarted()
@@ -40,7 +39,6 @@ void AMatchGameState::HandleMatchHasStarted()
 	// 모든 플레이어가 다 맵 로딩(PlayerController BeginPlay)을 마치고 매치가 본격적으로 시작된 단계
 	Super::HandleMatchHasStarted();
 	NET_LOG(LogTemp, Warning, TEXT("%hs Called"), __FUNCTION__);
-	OnGameStateChanged.Broadcast(TEXT("InProgress"), TEXT("None"));
 }
 
 void AMatchGameState::HandleMatchHasEnded()
@@ -79,7 +77,7 @@ void AMatchGameState::OnRep_RoundSubState()
 	{
 		HandleRoundSubState_EndRound();
 	}
-	OnGameStateChanged.Broadcast(TEXT("InProgress"), StaticEnum<ERoundSubState>()->GetNameStringByValue(static_cast<int>(RoundSubState)));
+	OnRoundSubStateChanged.Broadcast(RoundSubState);
 }
 
 void AMatchGameState::OnRep_RemainRoundStateTime()

@@ -11,7 +11,7 @@ enum class ERoundSubState : uint8;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FRemainRoundStateTimeChanged, float, Time);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FTeamScoreChanged, int, TeamBlueScore, int, TeamRedScore);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FGameStateChanged, const FString&, MatchStateStr, const FString&, RoundSubStateStr);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FRoundSubStateChanged, const ERoundSubState, RoundSubStateStr);
 
 /**
  * 
@@ -24,7 +24,7 @@ class VALORANT_API AMatchGameState : public AGameState
 protected:
 	UPROPERTY(ReplicatedUsing=OnRep_RoundSubState)
 	ERoundSubState RoundSubState;
-
+	
 	UPROPERTY(ReplicatedUsing=OnRep_RemainRoundStateTime)
 	float RemainRoundStateTime = 0.0f;
 
@@ -36,7 +36,7 @@ protected:
 public:
 	FRemainRoundStateTimeChanged OnRemainRoundStateTimeChanged;
 	FTeamScoreChanged OnTeamScoreChanged;
-	FGameStateChanged OnGameStateChanged;
+	FRoundSubStateChanged OnRoundSubStateChanged;
 	
 protected:
 	virtual void BeginPlay() override;
