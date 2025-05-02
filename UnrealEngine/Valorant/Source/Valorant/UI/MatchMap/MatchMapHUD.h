@@ -33,7 +33,9 @@ protected:
 	UFUNCTION()
 	void UpdateScore(int TeamBlueScore, int TeamRedScore);
 	UFUNCTION()
-	void OnRoundSubStateChanged(const ERoundSubState RoundSubState);
+	void OnRoundSubStateChanged(const ERoundSubState RoundSubState, const float TransitionTime);
+	UFUNCTION()
+	void OnRoundEnd(bool bBlueWin, const ERoundEndReason RoundEndReason, const float TransitionTime);
 
 	FTimerHandle AnnouncementTimerHandle;
 	UFUNCTION()

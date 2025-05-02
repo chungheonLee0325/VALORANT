@@ -3,9 +3,11 @@
 
 #include "MatchMapHUD.h"
 
+#include "Valorant.h"
 #include "Components/TextBlock.h"
 #include "Components/WidgetSwitcher.h"
 #include "GameManager/MatchGameState.h"
+#include "GameManager/SubsystemSteamManager.h"
 #include "Player/AgentPlayerState.h"
 
 void UMatchMapHUD::NativeConstruct()
@@ -16,9 +18,7 @@ void UMatchMapHUD::NativeConstruct()
 	GameState->OnRemainRoundStateTimeChanged.AddDynamic(this, &UMatchMapHUD::UpdateTime);
 	GameState->OnTeamScoreChanged.AddDynamic(this, &UMatchMapHUD::UpdateScore);
 	GameState->OnRoundSubStateChanged.AddDynamic(this, &UMatchMapHUD::OnRoundSubStateChanged);
-
-	auto* PlayerState = Cast<AAgentPlayerState>(GetOwningPlayer());
-	// TODO: 라운드 결과 Delegate Binding
+	GameState->OnRoundEnd.AddDynamic(this, &UMatchMapHUD::OnRoundEnd);
 }
 
 void UMatchMapHUD::UpdateTime(float Time)
@@ -35,7 +35,7 @@ void UMatchMapHUD::UpdateScore(int TeamBlueScore, int TeamRedScore)
 	TextBlockRedScore->SetText(FText::FromString(FString::Printf(TEXT("%d"), TeamRedScore)));
 }
 
-void UMatchMapHUD::OnRoundSubStateChanged(const ERoundSubState RoundSubState)
+void UMatchMapHUD::OnRoundSubStateChanged(const ERoundSubState RoundSubState, const float TransitionTime)
 {
 	switch (RoundSubState) {
 	case ERoundSubState::RSS_None:
@@ -43,22 +43,35 @@ void UMatchMapHUD::OnRoundSubStateChanged(const ERoundSubState RoundSubState)
 	case ERoundSubState::RSS_SelectAgent:
 		break;
 	case ERoundSubState::RSS_PreRound:
-		DisplayAnnouncement(EMatchAnnouncement::EMA_BuyPhase, 5.0f);
+		DisplayAnnouncement(EMatchAnnouncement::EMA_BuyPhase, TransitionTime);
 		break;
 	case ERoundSubState::RSS_BuyPhase:
-		DisplayAnnouncement(EMatchAnnouncement::EMA_BuyPhase, 5.0f);
+		DisplayAnnouncement(EMatchAnnouncement::EMA_BuyPhase, TransitionTime);
 		break;
 	case ERoundSubState::RSS_InRound:
 		break;
 	case ERoundSubState::RSS_EndPhase:
-		DisplayAnnouncement(EMatchAnnouncement::EMA_Won, 5.0f);
 		break;
 	}
 	DebugRoundSubState(StaticEnum<ERoundSubState>()->GetNameStringByValue(static_cast<int>(RoundSubState)));
 }
 
+void UMatchMapHUD::OnRoundEnd(bool bBlueWin, const ERoundEndReason RoundEndReason, const float TransitionTime)
+{
+	auto* PlayerState = GetOwningPlayer()->GetPlayerState<AMatchPlayerState>();
+	if (PlayerState->bIsBlueTeam)
+	{
+		DisplayAnnouncement(EMatchAnnouncement::EMA_Won, TransitionTime);
+	}
+	else
+	{
+		DisplayAnnouncement(EMatchAnnouncement::EMA_Lost, TransitionTime);
+	}
+}
+
 void UMatchMapHUD::DisplayAnnouncement(EMatchAnnouncement MatchAnnouncement, float DisplayTime)
 {
+	NET_LOG(LogTemp, Warning, TEXT("%hs Called, Idx: %d, TransitionTime: %f"), __FUNCTION__, static_cast<int32>(MatchAnnouncement), DisplayTime);
 	WidgetSwitcherAnnouncement->SetVisibility(ESlateVisibility::Visible);
 	WidgetSwitcherAnnouncement->SetActiveWidgetIndex(static_cast<int32>(MatchAnnouncement));
 	GetWorld()->GetTimerManager().SetTimer(AnnouncementTimerHandle, this, &UMatchMapHUD::HideAnnouncement, DisplayTime, false);

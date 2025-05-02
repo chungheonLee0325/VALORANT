@@ -3,9 +3,8 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "GameFramework/PlayerState.h"
 #include "AbilitySystemInterface.h"
-#include "GameplayEffectTypes.h"
+#include "MatchPlayerState.h"
 #include "AgentPlayerState.generated.h"
 
 class UValorantGameInstance;
@@ -15,7 +14,7 @@ class UBaseAttributeSet;
  * 
  */
 UCLASS()
-class VALORANT_API AAgentPlayerState : public APlayerState, public IAbilitySystemInterface
+class VALORANT_API AAgentPlayerState : public AMatchPlayerState, public IAbilitySystemInterface
 {
 	GENERATED_BODY()
 

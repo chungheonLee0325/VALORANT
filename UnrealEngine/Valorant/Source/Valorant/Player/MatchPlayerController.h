@@ -38,7 +38,7 @@ private:
 public:
 	void SetGameMode(AMatchGameMode* MatchGameMode);
 	UFUNCTION(Server, Reliable)
-	void ServerRPC_NotifyBeginPlay(const FString& Nickname);
+	void ServerRPC_NotifyBeginPlay(const FString& Name);
 	UFUNCTION(Client, Reliable)
 	void ClientRPC_DisplaySelectUI(bool bDisplay);
 	UFUNCTION(Client, Reliable)
