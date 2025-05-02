@@ -90,6 +90,7 @@ void AMatchGameMode::OnControllerBeginPlay(AMatchPlayerController* Controller, c
 	if (auto* PlayerState = Controller->GetPlayerState<AMatchPlayerState>())
 	{
 		PlayerState->bIsBlueTeam = PlayerInfo.bIsBlueTeam;
+		PlayerState->DisplayName = Nickname;
 	}
 	MatchPlayers.Add(PlayerInfo);
 	++LoggedInPlayerNum;

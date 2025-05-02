@@ -15,6 +15,7 @@
 #include "GameManager/SubsystemSteamManager.h"
 #include "GameManager/ValorantGameInstance.h"
 #include "Player/AgentPlayerController.h"
+#include "Player/MatchPlayerState.h"
 
 void UMatchMapSelectAgentUI::NativeConstruct()
 {
@@ -46,7 +47,15 @@ void UMatchMapSelectAgentUI::OnClickedButtonLockIn()
 
 void UMatchMapSelectAgentUI::OnClickedAgentSelectButton(int AgentId)
 {
+	auto* PlayerState = GetOwningPlayer()->GetPlayerState<AMatchPlayerState>();
+	if (nullptr == PlayerState)
+	{
+		NET_LOG(LogTemp, Warning, TEXT("%hs Called, PlayerState is nullptr"), __FUNCTION__);
+		return;
+	}
+
 	NET_LOG(LogTemp, Warning, TEXT("%hs Called, AgentId: %d"), __FUNCTION__, AgentId);
+	PlayerState->ServerRPC_NotifyAgentSelected(AgentId);
 }
 
 void UMatchMapSelectAgentUI::UpdateTime(float Time)
