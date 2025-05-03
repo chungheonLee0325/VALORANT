@@ -247,6 +247,12 @@ struct FAgentData : public FTableRowBase
 	// Agent Attribute Set
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Data")
 	TSubclassOf<UGameplayAbilitySet> AttributeSetClass;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Data")
+	FString LocalName;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Data")
+	FString Description;
 };
 
 USTRUCT(BlueprintType)

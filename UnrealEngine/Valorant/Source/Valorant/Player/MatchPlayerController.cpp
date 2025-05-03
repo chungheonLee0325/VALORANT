@@ -17,8 +17,8 @@ void AMatchPlayerController::BeginPlay()
 	Super::BeginPlay();
 	if (IsLocalPlayerController())
 	{
-		const FString Nickname = USubsystemSteamManager::GetDisplayName();
-		ServerRPC_NotifyBeginPlay(Nickname);
+		const FString DisplayName = USubsystemSteamManager::GetDisplayName();
+		ServerRPC_NotifyBeginPlay(DisplayName);
 	}
 }
 
@@ -27,7 +27,7 @@ void AMatchPlayerController::SetGameMode(AMatchGameMode* MatchGameMode)
 	this->GameMode = MatchGameMode;
 }
 
-void AMatchPlayerController::ServerRPC_NotifyBeginPlay_Implementation(const FString& Nickname)
+void AMatchPlayerController::ServerRPC_NotifyBeginPlay_Implementation(const FString& Name)
 {
 	if (nullptr == GameMode)
 	{
@@ -35,7 +35,7 @@ void AMatchPlayerController::ServerRPC_NotifyBeginPlay_Implementation(const FStr
 		return;
 	}
 
-	GameMode->OnControllerBeginPlay(this, Nickname);
+	GameMode->OnControllerBeginPlay(this, Name);
 }
 
 void AMatchPlayerController::ClientRPC_DisplaySelectUI_Implementation(bool bDisplay)

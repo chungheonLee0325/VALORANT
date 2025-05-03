@@ -4,9 +4,20 @@
 
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
+#include "GameManager/MatchGameState.h"
 #include "MatchMapHUD.generated.h"
 
+class UWidgetSwitcher;
 class UTextBlock;
+
+UENUM(BlueprintType)
+enum class EMatchAnnouncement : uint8
+{
+	EMA_Won,
+	EMA_Lost,
+	EMA_BuyPhase
+};
+
 /**
  * 
  */
@@ -19,8 +30,36 @@ protected:
 	virtual void NativeConstruct() override;
 	UFUNCTION()
 	void UpdateTime(float Time);
+	UFUNCTION()
+	void UpdateScore(int TeamBlueScore, int TeamRedScore);
+	UFUNCTION()
+	void OnRoundSubStateChanged(const ERoundSubState RoundSubState, const float TransitionTime);
+	UFUNCTION()
+	void OnRoundEnd(bool bBlueWin, const ERoundEndReason RoundEndReason, const float TransitionTime);
+
+	FTimerHandle AnnouncementTimerHandle;
+	UFUNCTION()
+	void DisplayAnnouncement(EMatchAnnouncement MatchAnnouncement, const float DisplayTime);
+	void HideAnnouncement();
 	
 public:
 	UPROPERTY(meta=(BindWidget))
 	TObjectPtr<UTextBlock> TextBlockTime = nullptr;
+	UPROPERTY(meta=(BindWidget))
+	TObjectPtr<UTextBlock> TextBlockBlueScore = nullptr;
+	UPROPERTY(meta=(BindWidget))
+	TObjectPtr<UTextBlock> TextBlockRedScore = nullptr;
+	UPROPERTY(meta=(BindWidget))
+	TObjectPtr<UWidgetSwitcher> WidgetSwitcherAnnouncement = nullptr;
+	
+/*
+ *	Debug
+ */
+public:
+	UPROPERTY(meta=(BindWidget))
+	TObjectPtr<UTextBlock> TextBlockRoundSubStateDbg = nullptr;
+
+protected:
+	UFUNCTION()
+	void DebugRoundSubState(const FString& RoundSubStateStr);
 };

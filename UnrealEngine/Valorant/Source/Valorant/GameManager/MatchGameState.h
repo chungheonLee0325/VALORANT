@@ -3,12 +3,16 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "MatchGameMode.h"
 #include "GameFramework/GameState.h"
 #include "MatchGameState.generated.h"
 
 enum class ERoundSubState : uint8;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FRemainRoundStateTimeChanged, float, Time);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FTeamScoreChanged, int, TeamBlueScore, int, TeamRedScore);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FRoundSubStateChanged, const ERoundSubState, RoundSubState, const float, TransitionTime);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnRoundEnd, bool, bBlueWin, const ERoundEndReason, RoundEndReason, const float, TransitionTime);
 
 /**
  * 
@@ -21,12 +25,20 @@ class VALORANT_API AMatchGameState : public AGameState
 protected:
 	UPROPERTY(ReplicatedUsing=OnRep_RoundSubState)
 	ERoundSubState RoundSubState;
-
+	
 	UPROPERTY(ReplicatedUsing=OnRep_RemainRoundStateTime)
 	float RemainRoundStateTime = 0.0f;
 
+	UPROPERTY(ReplicatedUsing=OnRep_TeamScore)
+	int TeamBlueScore = 0;
+	UPROPERTY(ReplicatedUsing=OnRep_TeamScore)
+	int TeamRedScore = 0;
+
 public:
 	FRemainRoundStateTimeChanged OnRemainRoundStateTimeChanged;
+	FTeamScoreChanged OnTeamScoreChanged;
+	FRoundSubStateChanged OnRoundSubStateChanged;
+	FOnRoundEnd OnRoundEnd;
 	
 protected:
 	virtual void BeginPlay() override;
@@ -43,6 +55,8 @@ protected:
 	/*
 	 *	RoundSubState 관련 Handle
 	 */
+	UPROPERTY(Replicated)
+	float TransitionTime = 0.0f;
 	UFUNCTION()
 	void OnRep_RoundSubState();
 	UFUNCTION()
@@ -53,7 +67,13 @@ protected:
 	void HandleRoundSubState_InRound();
 	void HandleRoundSubState_EndRound();
 
+	UFUNCTION()
+	void OnRep_TeamScore();
+
 public:
-	void SetRoundSubState(ERoundSubState NewRoundSubState);
+	void SetRoundSubState(ERoundSubState NewRoundSubState, float NewTransitionTime);
 	void SetRemainRoundStateTime(float NewRemainRoundStateTime);
+	UFUNCTION(NetMultiCast, Reliable)
+	void MulticastRPC_HandleRoundEnd(bool bBlueWin, ERoundEndReason RoundEndReason);
+	void SetTeamScore(int NewTeamBlueScore, int NewTeamRedScore);
 };
