@@ -3,14 +3,14 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Components/VerticalBox.h"
+#include "Blueprint/UserWidget.h"
 #include "TeamSelectAgentBox.generated.h"
 
 /**
  * 
  */
 UCLASS()
-class VALORANT_API UTeamSelectAgentBox : public UVerticalBox
+class VALORANT_API UTeamSelectAgentBox : public UUserWidget
 {
 	GENERATED_BODY()
 };

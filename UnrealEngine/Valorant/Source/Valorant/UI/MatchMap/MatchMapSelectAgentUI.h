@@ -7,7 +7,6 @@
 #include "MatchMapSelectAgentUI.generated.h"
 
 class UTeamSelectAgentBox;
-class UHorizontalBox;
 class UGridPanel;
 class UTextBlock;
 /**
@@ -27,20 +26,23 @@ protected:
 	UFUNCTION()
 	void OnClickedAgentSelectButton(int AgentId);
 	UFUNCTION()
-	void OnSelectedAgentChanged(const FString& PlayerNickname, int SelectedAgentID);
+	void OnSelectedAgentChanged(const FString& DisplayName, int SelectedAgentID);
 	
 	UFUNCTION()
 	void UpdateTime(float Time);
 	void FillAgentList();
-	void FillTeamList();
+	UFUNCTION(BlueprintImplementableEvent)
+	void AddTeamBox(const FString& DisplayName);
+	
 
-	UPROPERTY()
+	UPROPERTY(BlueprintReadWrite, meta=(AllowPrivateAccess))
 	TMap<FString, UTeamSelectAgentBox*> TeamSelectAgentBoxMap;
 	
 	UPROPERTY(meta=(BindWidget))
 	TObjectPtr<UGridPanel> GridPanelAgentList = nullptr;
 	UPROPERTY(meta=(BindWidget))
 	TObjectPtr<UTextBlock> TextBlockRemTime = nullptr;
-	UPROPERTY(meta=(BindWidget))
-	TObjectPtr<UHorizontalBox> HorizontalBoxTeamList = nullptr;
+
+public:
+	void FillTeamSelectAgentList(const TArray<FString>& TeamPlayerNameArray);
 };

@@ -6,6 +6,7 @@
 #include "GameFramework/PlayerController.h"
 #include "MatchPlayerController.generated.h"
 
+class UMatchMapSelectAgentUI;
 class USubsystemSteamManager;
 class AMatchGameMode;
 /**
@@ -27,20 +28,22 @@ private:
 	UPROPERTY()
 	TObjectPtr<AMatchGameMode> GameMode = nullptr;
 	UPROPERTY(EditDefaultsOnly)
-	TSubclassOf<UUserWidget> SelectUIWidgetClass;
+	TSubclassOf<UMatchMapSelectAgentUI> SelectUIWidgetClass;
 	UPROPERTY()
-	TObjectPtr<UUserWidget> SelectUIWidget = nullptr;
+	TObjectPtr<UMatchMapSelectAgentUI> SelectUIWidget = nullptr;
 	UPROPERTY(EditDefaultsOnly)
 	TSubclassOf<UUserWidget> HudClass;
 	UPROPERTY()
 	TObjectPtr<UUserWidget> Hud = nullptr;
-
+	
 public:
 	void SetGameMode(AMatchGameMode* MatchGameMode);
 	UFUNCTION(Server, Reliable)
 	void ServerRPC_NotifyBeginPlay(const FString& Name);
 	UFUNCTION(Client, Reliable)
-	void ClientRPC_DisplaySelectUI(bool bDisplay);
+	void ClientRPC_ShowSelectUI(const TArray<FString>& NewTeamPlayerNameArray);
+	UFUNCTION(Client, Reliable)
+	void ClientRPC_HideSelectUI();
 	UFUNCTION(Client, Reliable)
 	void ClientRPC_DisplayHud(bool bDisplay);
 	UFUNCTION(Server, Reliable)

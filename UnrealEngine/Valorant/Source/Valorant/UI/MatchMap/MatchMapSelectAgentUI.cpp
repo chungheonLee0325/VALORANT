@@ -25,7 +25,6 @@ void UMatchMapSelectAgentUI::NativeConstruct()
 	GameState->OnRemainRoundStateTimeChanged.AddDynamic(this, &UMatchMapSelectAgentUI::UpdateTime);
 	GetOwningPlayer()->SetShowMouseCursor(true);
 	FillAgentList();
-	FillTeamList();
 }
 
 void UMatchMapSelectAgentUI::NativeDestruct()
@@ -59,7 +58,7 @@ void UMatchMapSelectAgentUI::OnClickedAgentSelectButton(int AgentId)
 	PlayerState->ServerRPC_NotifyAgentSelected(AgentId);
 }
 
-void UMatchMapSelectAgentUI::OnSelectedAgentChanged(const FString& PlayerNickname, int SelectedAgentID)
+void UMatchMapSelectAgentUI::OnSelectedAgentChanged(const FString& DisplayName, int SelectedAgentID)
 {
 }
 
@@ -154,18 +153,10 @@ void UMatchMapSelectAgentUI::FillAgentList()
 	}
 }
 
-void UMatchMapSelectAgentUI::FillTeamList()
+void UMatchMapSelectAgentUI::FillTeamSelectAgentList(const TArray<FString>& TeamPlayerNameArray)
 {
-	auto* GameState = Cast<AMatchGameState>(GetWorld()->GetGameState());
-	const auto* MyMPS = GetOwningPlayer()->GetPlayerState<AMatchPlayerState>();
-	for (const auto PS : GameState->PlayerArray)
+	for (const auto& PlayerName : TeamPlayerNameArray)
 	{
-		auto* MPS = Cast<AMatchPlayerState>(PS);
-		if (MPS->bIsBlueTeam == MyMPS->bIsBlueTeam)
-		{
-			MPS->OnSelectedAgentChanged.AddDynamic(this, &UMatchMapSelectAgentUI::OnSelectedAgentChanged);
-			UTeamSelectAgentBox* TeamSelectAgentBox = NewObject<UTeamSelectAgentBox>(this);
-			TeamSelectAgentBoxMap.Add(MPS->DisplayName, TeamSelectAgentBox);
-		}
+		AddTeamBox(PlayerName);
 	}
 }

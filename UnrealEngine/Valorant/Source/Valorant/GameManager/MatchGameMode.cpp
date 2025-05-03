@@ -86,6 +86,14 @@ void AMatchGameMode::OnControllerBeginPlay(AMatchPlayerController* Controller, c
 	PlayerInfo.Controller = Cast<AAgentPlayerController>(Controller);
 	PlayerInfo.Nickname = Nickname;
 	PlayerInfo.bIsBlueTeam = MatchPlayers.Num() % 2 == 0;
+	if (PlayerInfo.bIsBlueTeam)
+	{
+		BlueTeamPlayerNameArray.Add(Nickname);
+	}
+	else
+	{
+		RedTeamPlayerNameArray.Add(Nickname);
+	}
 
 	if (auto* PlayerState = Controller->GetPlayerState<AMatchPlayerState>())
 	{
@@ -178,6 +186,17 @@ void AMatchGameMode::StartEndPhaseBySpikeDefuse()
 
 void AMatchGameMode::HandleRoundSubState_SelectAgent()
 {
+	for (const FMatchPlayer& MatchPlayer : MatchPlayers)
+	{
+		if (MatchPlayer.bIsBlueTeam)
+		{
+			MatchPlayer.Controller->ClientRPC_ShowSelectUI(BlueTeamPlayerNameArray);
+		}
+		else
+		{
+			MatchPlayer.Controller->ClientRPC_ShowSelectUI(RedTeamPlayerNameArray);
+		}
+	}
 	// 일정 시간 후에 요원 강제 선택 후 라운드 준비
 	MaxTime = SelectAgentTime;
 	GetWorld()->GetTimerManager().ClearTimer(RoundTimerHandle);

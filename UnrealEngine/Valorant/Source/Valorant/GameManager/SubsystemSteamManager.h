@@ -68,7 +68,7 @@ public:
 	 */
 	FTimerHandle CheckSessionHandle;
 	
-	int ReqMatchAutoStartPlayerCount = 2;
+	int ReqMatchAutoStartPlayerCount = 4;
 
 private:
 	void CheckHostingSession();

@@ -78,6 +78,8 @@ private:
 	UPROPERTY(BlueprintReadOnly, Category="Gameflow", meta=(AllowPrivateAccess))
 	TArray<FMatchPlayer> MatchPlayers;
 	int LockedInPlayerNum = 0;
+	TArray<FString> RedTeamPlayerNameArray;
+	TArray<FString> BlueTeamPlayerNameArray;
 	
 public:
 	void OnControllerBeginPlay(AMatchPlayerController* Controller, const FString& Nickname);
