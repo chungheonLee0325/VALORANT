@@ -5,6 +5,7 @@
 
 #include "OnlineSessionSettings.h"
 #include "OnlineSubsystem.h"
+#include "OnlineSubsystemUtils.h"
 #include "Interfaces/OnlineIdentityInterface.h"
 #include "Online/OnlineSessionNames.h"
 
@@ -30,15 +31,16 @@ USubsystemSteamManager::USubsystemSteamManager() :
 	return nullptr;
 }
 
-/* static */  FString USubsystemSteamManager::GetDisplayName(const int UniquePlayerID)
+/* static */  FString USubsystemSteamManager::GetDisplayName(const UWorld* Context, int LocalUserNum)
 {
-	const IOnlineSubsystem* OnlineSubsystem = IOnlineSubsystem::Get();
+	const IOnlineSubsystem* OnlineSubsystem = Online::GetSubsystem(Context);
 	if (OnlineSubsystem)
 	{
 		const IOnlineIdentityPtr IdentityInterface = OnlineSubsystem->GetIdentityInterface();
 		if (IdentityInterface.IsValid())
 		{
-			FString Nickname = IdentityInterface->GetPlayerNickname(UniquePlayerID);
+			FString Nickname = IdentityInterface->GetPlayerNickname(LocalUserNum);
+			if (OnlineSubsystem->GetSubsystemName() == TEXT("NULL") && Nickname.Len() >= 10) Nickname = Nickname.Right(4);
 			return Nickname;
 		}
 	}
