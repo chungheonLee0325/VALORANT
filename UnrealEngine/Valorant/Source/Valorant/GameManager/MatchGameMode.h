@@ -84,6 +84,7 @@ private:
 public:
 	void OnControllerBeginPlay(AMatchPlayerController* Controller, const FString& Nickname);
 	void OnLockIn(AMatchPlayerController* Player, int AgentId);
+	void OnAgentSelected(AMatchPlayerController* MatchPlayerController, int SelectedAgentID);
 
 protected:
 	FTimerHandle RoundTimerHandle;

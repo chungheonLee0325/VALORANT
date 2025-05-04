@@ -48,4 +48,8 @@ public:
 	void ClientRPC_DisplayHud(bool bDisplay);
 	UFUNCTION(Server, Reliable)
 	void ServerRPC_LockIn();
+	UFUNCTION(Server, Reliable)
+	void ServerRPC_OnAgentSelectButtonClicked(int SelectedAgentID);
+	UFUNCTION(Client, Reliable)
+	void ClientRPC_OnAgentSelected(const FString& DisplayName, int SelectedAgentID);
 };

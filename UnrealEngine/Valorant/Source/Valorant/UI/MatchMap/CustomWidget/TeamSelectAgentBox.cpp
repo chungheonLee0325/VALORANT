@@ -2,3 +2,27 @@
 
 
 #include "TeamSelectAgentBox.h"
+
+#include "Components/Image.h"
+#include "GameManager/ValorantGameInstance.h"
+
+void UTeamSelectAgentBox::ChangeAgentThumbImage(const int AgentId)
+{
+	auto* GameInstance = GetGameInstance<UValorantGameInstance>();
+	const auto* Data = GameInstance->GetAgentData(AgentId);
+	if (nullptr == Data)
+	{
+		return;
+	}
+	const FString& AgentName = Data->AgentName;
+	UTexture2D* Texture = Cast<UTexture2D>(
+		StaticLoadObject(
+			UTexture2D::StaticClass(),
+			nullptr,
+			*FString::Printf(TEXT("/Game/Resource/UI/Shared/Icons/Character/Thumbnails/TX_Character_Thumb_%s.TX_Character_Thumb_%s"), *AgentName, *AgentName)
+		)
+	);
+	FSlateBrush Brush = ImageAgentThumb->GetBrush();
+	Brush.SetResourceObject(Texture);
+	ImageAgentThumb->SetBrush(Brush);
+}

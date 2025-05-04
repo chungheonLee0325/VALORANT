@@ -9,6 +9,9 @@
 class UTeamSelectAgentBox;
 class UGridPanel;
 class UTextBlock;
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnClickAgentSelectButtonDelegate, int, SelectedAgentID);
+
 /**
  * 
  */
@@ -25,8 +28,6 @@ protected:
 	void OnClickedButtonLockIn();
 	UFUNCTION()
 	void OnClickedAgentSelectButton(int AgentId);
-	UFUNCTION()
-	void OnSelectedAgentChanged(const FString& DisplayName, int SelectedAgentID);
 	
 	UFUNCTION()
 	void UpdateTime(float Time);
@@ -34,7 +35,6 @@ protected:
 	UFUNCTION(BlueprintImplementableEvent)
 	void AddTeamBox(const FString& DisplayName);
 	
-
 	UPROPERTY(BlueprintReadWrite, meta=(AllowPrivateAccess))
 	TMap<FString, UTeamSelectAgentBox*> TeamSelectAgentBoxMap;
 	
@@ -44,5 +44,8 @@ protected:
 	TObjectPtr<UTextBlock> TextBlockRemTime = nullptr;
 
 public:
+	FOnClickAgentSelectButtonDelegate OnClickAgentSelectButtonDelegate;
+	
 	void FillTeamSelectAgentList(const TArray<FString>& TeamPlayerNameArray);
+	void OnSelectedAgentChanged(const FString& DisplayName, int SelectedAgentID);
 };

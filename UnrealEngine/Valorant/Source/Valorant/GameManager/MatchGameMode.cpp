@@ -113,6 +113,24 @@ void AMatchGameMode::OnLockIn(AMatchPlayerController* Player, int AgentId)
 	}
 }
 
+void AMatchGameMode::OnAgentSelected(AMatchPlayerController* MatchPlayerController, int SelectedAgentID)
+{
+	auto* PS = MatchPlayerController->GetPlayerState<AMatchPlayerState>();
+	if (nullptr == PS)
+	{
+		NET_LOG(LogTemp, Warning, TEXT("%hs Called, PS is nullptr"), __FUNCTION__);
+		return;
+	}
+	bool bIsBlueTeam = PS->bIsBlueTeam;
+	for (const auto& PlayerInfo : MatchPlayers)
+	{
+		if (bIsBlueTeam == PlayerInfo.bIsBlueTeam)
+		{
+			PlayerInfo.Controller->ClientRPC_OnAgentSelected(PS->DisplayName, SelectedAgentID);
+		}
+	}
+}
+
 bool AMatchGameMode::ReadyToStartMatch_Implementation()
 {
 	return LoggedInPlayerNum >= RequiredPlayerCount;

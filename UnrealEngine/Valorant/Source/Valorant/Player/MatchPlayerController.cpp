@@ -28,6 +28,16 @@ void AMatchPlayerController::SetGameMode(AMatchGameMode* MatchGameMode)
 	this->GameMode = MatchGameMode;
 }
 
+void AMatchPlayerController::ClientRPC_OnAgentSelected_Implementation(const FString& DisplayName, int SelectedAgentID)
+{
+	if (nullptr == SelectUIWidget)
+	{
+		NET_LOG(LogTemp, Warning, TEXT("%hs Called, SelectUIWidget is nullptr"), __FUNCTION__);
+		return;
+	}
+	SelectUIWidget->OnSelectedAgentChanged(DisplayName, SelectedAgentID);
+}
+
 void AMatchPlayerController::ServerRPC_NotifyBeginPlay_Implementation(const FString& Name)
 {
 	if (nullptr == GameMode)
@@ -47,6 +57,7 @@ void AMatchPlayerController::ClientRPC_ShowSelectUI_Implementation(const TArray<
 		NET_LOG(LogTemp, Warning, TEXT("%hs Called, SelectUIWidget is nullptr"), __FUNCTION__);
 		return;
 	}
+	SelectUIWidget->OnClickAgentSelectButtonDelegate.AddDynamic(this, &AMatchPlayerController::ServerRPC_OnAgentSelectButtonClicked);
 	SelectUIWidget->FillTeamSelectAgentList(NewTeamPlayerNameArray);
 	SelectUIWidget->AddToViewport();
 }
@@ -57,6 +68,7 @@ void AMatchPlayerController::ClientRPC_HideSelectUI_Implementation()
 	if (SelectUIWidget)
 	{
 		SelectUIWidget->RemoveFromParent();
+		SelectUIWidget->OnClickAgentSelectButtonDelegate.RemoveAll(this);
 		SelectUIWidget = nullptr;
 	}
 }
@@ -93,4 +105,9 @@ void AMatchPlayerController::ClientRPC_DisplayHud_Implementation(bool bDisplay)
 void AMatchPlayerController::ServerRPC_LockIn_Implementation()
 {
 	GameMode->OnLockIn(this, 0);
+}
+
+void AMatchPlayerController::ServerRPC_OnAgentSelectButtonClicked_Implementation(int SelectedAgentID)
+{
+	GameMode->OnAgentSelected(this, SelectedAgentID);
 }

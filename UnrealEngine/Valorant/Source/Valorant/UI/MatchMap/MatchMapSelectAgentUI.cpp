@@ -47,19 +47,18 @@ void UMatchMapSelectAgentUI::OnClickedButtonLockIn()
 
 void UMatchMapSelectAgentUI::OnClickedAgentSelectButton(int AgentId)
 {
-	auto* PlayerState = GetOwningPlayer()->GetPlayerState<AMatchPlayerState>();
-	if (nullptr == PlayerState)
-	{
-		NET_LOG(LogTemp, Warning, TEXT("%hs Called, PlayerState is nullptr"), __FUNCTION__);
-		return;
-	}
-
 	NET_LOG(LogTemp, Warning, TEXT("%hs Called, AgentId: %d"), __FUNCTION__, AgentId);
-	PlayerState->ServerRPC_NotifyAgentSelected(AgentId);
+	OnClickAgentSelectButtonDelegate.Broadcast(AgentId);
 }
 
 void UMatchMapSelectAgentUI::OnSelectedAgentChanged(const FString& DisplayName, int SelectedAgentID)
 {
+	if (false == TeamSelectAgentBoxMap.Contains(DisplayName))
+	{
+		NET_LOG(LogTemp, Warning, TEXT("%hs Called, WhoAreYou?? DisplayName: %s"), __FUNCTION__, *DisplayName, SelectedAgentID);
+		return;
+	}
+	TeamSelectAgentBoxMap[DisplayName]->ChangeAgentThumbImage(SelectedAgentID);
 }
 
 void UMatchMapSelectAgentUI::UpdateTime(float Time)
