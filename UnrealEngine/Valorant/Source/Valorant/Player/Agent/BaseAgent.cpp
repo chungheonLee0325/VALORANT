@@ -70,7 +70,7 @@ ABaseAgent::ABaseAgent()
 	AgentInputComponent = CreateDefaultSubobject<UAgentInputComponent>("InputComponent");
 
 	TL_Crouch = CreateDefaultSubobject<UTimelineComponent>("TL_Crouch");
-
+	TL_DieCamera = CreateDefaultSubobject<UTimelineComponent>("TL_DieCamera");
 	
 	//ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ
 	//             CYT             ♣
@@ -131,7 +131,27 @@ void ABaseAgent::BeginPlay()
 	}
 
 	TL_Crouch->SetTimelineLengthMode(ETimelineLengthMode::TL_LastKeyFrame);
+
+	if (DieCameraCurve && DieCameraPitchCurve)
+	{
+		FOnTimelineVector CamOffset;
+		FOnTimelineFloat CamPitch;
+		CamOffset.BindUFunction(this, FName("HandleDieCamera"));
+		CamPitch.BindUFunction(this, FName("HandleDieCameraPitch"));
+		TL_DieCamera->AddInterpVector(DieCameraCurve,CamOffset);
+		TL_DieCamera->AddInterpFloat(DieCameraPitchCurve,CamPitch);
+	}
 	
+	TL_DieCamera->SetTimelineLength(DieCameraTimeRange);
+	TL_DieCamera->SetTimelineLengthMode(ETimelineLengthMode::TL_TimelineLength);
+
+	// // 죽음 카메라 타임라인에 델리게이트 걸기
+	// if (IsLocallyControlled())
+	// {
+	// 	FOnTimelineEvent finishDieCamera;
+	// 	finishDieCamera.BindUFunction(this, FName("OnDieCameraFinished"));
+	// 	TL_DieCamera->SetTimelineFinishedFunc(finishDieCamera);
+	// }
 }
 
 void ABaseAgent::Tick(float DeltaTime)
@@ -279,19 +299,123 @@ void ABaseAgent::HandleCrouchProgress(float Value)
 	GetCapsuleComponent()->SetCapsuleHalfHeight(newHalfHeight,true);
 }
 
-void ABaseAgent::Die()
+void ABaseAgent::HandleDieCamera(FVector newPos)
 {
-	bIsDead = true;
-	UE_LOG(LogTemp, Warning, TEXT("죽음"));
-	ThirdPersonMesh->PlayAnimation(AM_Die,false);
+	Camera->SetRelativeLocation(newPos);
+	//UE_LOG(LogTemp,Warning,TEXT("pos: %f"),newPos.Z);
 }
 
-void ABaseAgent::EnterSpectMode()
+
+void ABaseAgent::HandleDieCameraPitch(float newPitch)
+{
+	Camera->SetRelativeRotation(FRotator(newPitch,0,0));
+	//UE_LOG(LogTemp,Warning,TEXT("pitch %f"),newPitch);
+}
+
+void ABaseAgent::Die()
+{
+	if (bIsDead)
+	{
+		return;
+	}
+	
+	NET_LOG(LogTemp,Warning,TEXT("죽음"));
+	
+	bIsDead = true;
+	ThirdPersonMesh->SetOwnerNoSee(false);
+	GetMesh()->SetVisibility(false);
+
+	ThirdPersonMesh->PlayAnimation(AM_Die, false);
+	
+	if (IsLocallyControlled())
+	{
+		NET_LOG(LogTemp,Warning,TEXT("로컬"));
+		TL_DieCamera->PlayFromStart();
+		
+		DisableInput(Cast<APlayerController>(GetController()));
+	}
+
+	if (HasAuthority())
+	{
+		NET_LOG(LogTemp,Warning,TEXT("다이 캠 피니쉬 타이머 설정"));
+		// 관전모드 진입
+		FTimerHandle deadTimerHandle;
+		GetWorldTimerManager().SetTimer(deadTimerHandle, FTimerDelegate::CreateLambda([this]()
+		{
+			OnDieCameraFinished();
+		}), DieCameraTimeRange, false);
+	}
+}
+
+/** 서버에서만 호출됨*/
+void ABaseAgent::OnDieCameraFinished()
+{
+	NET_LOG(LogTemp,Warning,TEXT("다이 캠 피니쉬 콜백"));
+	
+	AAgentPlayerController* pc = Cast<AAgentPlayerController>(GetController());
+	if (pc)
+	{
+		pc->StartSpectatingOnly();
+		Destroy();
+		
+		pc->ClientEnterSpectatorMode();
+	}
+	else
+	{
+		NET_LOG(LogTemp, Error, TEXT("OnDieCameraFinished: Controller가 없습니다!"));
+	}
+}
+
+void ABaseAgent::Net_Die_Implementation(AAgentPlayerController* _pc)
+{
+	
+}
+
+void ABaseAgent::Server_Die_Implementation()
 {
 }
 
 void ABaseAgent::Respawn()
 {
+	// APlayerState* ps;
+	// APawn* pawn;
+	//
+	// ps->SetIsSpectator(false);
+	// ps->SetIsOnlyASpectator(false);
+	//
+	// APlayerController* pc = ps->GetPlayerController();
+	//
+	// pc->Possess(pawn);
+	//
+	// ABaseAgent* player = Cast<ABaseAgent>(pc->GetPawn());
+	//
+	bIsDead = false;
+	ThirdPersonMesh->SetOwnerNoSee(true);
+	GetMesh()->SetVisibility(true);
+	Net_Respawn();
+}
+
+void ABaseAgent::Net_Respawn_Implementation()
+{
+	// player->SetActorHiddenInGame(false);
+	// player->SetActorEnableCollision(true);
+	// player->Rebirth();
+	//
+	// if (pc == nullptr)
+	// {
+	// 	return;
+	// }
+	//
+	//
+	// if (pc->IsLocalController())
+	// {
+	// 	FInputModeGameOnly InputMode;
+	// 	pc->SetInputMode(InputMode);
+	//
+	// 	pc->GetPawn()->EnableInput(pc);
+	//
+	// 	player->CameraComp->PostProcessSettings.ColorSaturation = FVector4(1, 1, 1, 1);
+	// }
 }
 
 void ABaseAgent::FindInteractable()

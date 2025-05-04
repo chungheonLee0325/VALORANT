@@ -44,6 +44,11 @@ void AAgentPlayerController::BeginPlay()
 	// *GetName(), (int32)GetLocalRole(), IsLocalController());
 }
 
+void AAgentPlayerController::ClientEnterSpectatorMode_Implementation()
+{
+	StartSpectatingOnly();
+}
+
 void AAgentPlayerController::InitCacheGAS()
 {
 	if (AAgentPlayerState* ps = GetPlayerState<AAgentPlayerState>())
