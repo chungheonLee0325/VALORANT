@@ -117,6 +117,7 @@ protected:
 	void HandleRoundSubState_EndPhase();
 	void SetRoundSubState(ERoundSubState NewRoundSubState);
 
+	virtual AActor* ChoosePlayerStart_Implementation(AController* Player) override;
 	void RespawnAll();
 	void OnKill(AMatchPlayerController* Killer, AMatchPlayerController* Victim);
 	void OnRevive(AMatchPlayerController* Reviver, AMatchPlayerController* Target);

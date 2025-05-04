@@ -3,10 +3,12 @@
 
 #include "MatchGameMode.h"
 
+#include "EngineUtils.h"
 #include "MatchGameState.h"
 #include "OnlineSessionSettings.h"
 #include "SubsystemSteamManager.h"
 #include "Valorant.h"
+#include "GameFramework/PlayerStart.h"
 #include "GameManager/ValorantGameInstance.h"
 #include "Player/AgentPlayerController.h"
 #include "Player/MatchPlayerController.h"
@@ -154,6 +156,33 @@ bool AMatchGameMode::ReadyToStartMatch_Implementation()
 void AMatchGameMode::HandleMatchHasStarted()
 {
 	Super::HandleMatchHasStarted();
+
+	for( FConstPlayerControllerIterator Iterator = GetWorld()->GetPlayerControllerIterator(); Iterator; ++Iterator )
+	{
+		APlayerController* PlayerController = Iterator->Get();
+		if (PlayerController && (PlayerController->GetPawn() == nullptr))
+		{
+			// AgentSelect 태그를 가진 PlayerStart 찾기
+			APlayerStart* AgentSelectStart = nullptr;
+			for (TActorIterator<APlayerStart> It(GetWorld()); It; ++It)
+			{
+				if (It->PlayerStartTag == FName("AgentSelect"))
+				{
+					NET_LOG(LogTemp, Error, TEXT("찾았다"));
+					AgentSelectStart = *It;
+					break;
+				}
+			}
+
+			if (AgentSelectStart)
+			{
+				// ViewTarget 지정
+				FViewTargetTransitionParams Params;
+				PlayerController->ClientSetViewTarget(AgentSelectStart, Params);
+			}
+		}
+	}
+	
 	StartSelectAgent();
 }
 
@@ -326,6 +355,12 @@ void AMatchGameMode::SetRoundSubState(ERoundSubState NewRoundSubState)
 		RemainRoundStateTime = MaxTime;
 		MatchGameState->SetRemainRoundStateTime(RemainRoundStateTime);
 	}
+}
+
+AActor* AMatchGameMode::ChoosePlayerStart_Implementation(AController* Player)
+{
+	// TODO: 블루팀이냐 레드팀이냐, 누가 공격인지 수비냐에 따라 스폰 위치 다르게
+	return Super::ChoosePlayerStart_Implementation(Player);
 }
 
 void AMatchGameMode::RespawnAll()
