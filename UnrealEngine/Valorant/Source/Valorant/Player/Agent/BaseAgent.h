@@ -63,6 +63,18 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category= "Crouch")
 	UCurveFloat* CrouchCurve;
 
+	UPROPERTY(EditAnywhere, Category= "Die")
+	float DieCameraTimeRange = 3.0f;;
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category= "Die")
+	UTimelineComponent* TL_DieCamera;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category= "Die")
+	UCurveFloat* DieCameraPitchCurve;
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category= "Die")
+	UCurveVector* DieCameraCurve;
+
 	//ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ
 	//             CYT             ♣
 	//ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ
@@ -218,14 +230,28 @@ protected:
 	
 	UFUNCTION()
 	void HandleCrouchProgress(float Value);
+	UFUNCTION()
+	void HandleDieCamera (FVector newPos);
+	UFUNCTION()
+	void HandleDieCameraPitch(float newPitch);
+	
 	virtual void OnStartCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust) override;
 	virtual void OnEndCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust) override;
 	
 	virtual void InitAgentData();
 	
 	virtual void Die();
-	virtual void EnterSpectMode();
+	UFUNCTION()
+	void OnDieCameraFinished();
+	
+	UFUNCTION(NetMulticast, Reliable)
+	void Net_Die(AAgentPlayerController* _pc);
+	UFUNCTION(Server, Reliable)
+	void Server_Die();
+	
 	virtual void Respawn();
+	UFUNCTION(NetMulticast, Reliable)
+	void Net_Respawn();
 
 	// UFUNCTION()
 	// void OnFindInteraction(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);

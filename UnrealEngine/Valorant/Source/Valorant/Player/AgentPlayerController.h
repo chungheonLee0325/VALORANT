@@ -46,7 +46,11 @@ public:
 
 	// ToDo : 상점 UI 열기 요청
 	UFUNCTION(BlueprintCallable, Category = "UI")
-	void RequestOpenShopUI(); 
+	void RequestOpenShopUI();
+
+	UFUNCTION(Client, Reliable)
+	void ClientEnterSpectatorMode();
+
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	class UValorantGameInstance* m_GameInstance;
@@ -59,13 +63,12 @@ protected:
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	UAgentBaseWidget* AgentWidget;
-
+	
 protected:
 	virtual void OnPossess(APawn* InPawn) override;
 	virtual void OnRep_PlayerState() override;
 	virtual void BeginPlay() override;
-
-private:
+	
 	UFUNCTION()
 	void InitCacheGAS();
 
