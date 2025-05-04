@@ -42,7 +42,18 @@ protected:
 	TObjectPtr<UGridPanel> GridPanelAgentList = nullptr;
 	UPROPERTY(meta=(BindWidget))
 	TObjectPtr<UTextBlock> TextBlockRemTime = nullptr;
-
+	
+	UPROPERTY(meta=(BindWidget))
+	TObjectPtr<UTextBlock> TextBlockPosition1 = nullptr;
+	UPROPERTY(meta=(BindWidget))
+	TObjectPtr<UTextBlock> TextBlockAgentName = nullptr;
+	UPROPERTY(meta=(BindWidget))
+	TObjectPtr<UTextBlock> TextBlockAgentDescription = nullptr;
+	UPROPERTY(meta=(BindWidget))
+	TObjectPtr<UTextBlock> TextBlockPosition2 = nullptr;
+	UPROPERTY(meta=(BindWidget))
+	TObjectPtr<UTextBlock> TextBlockPositionDescription = nullptr;
+	
 public:
 	FOnClickAgentSelectButtonDelegate OnClickAgentSelectButtonDelegate;
 	

@@ -157,6 +157,19 @@ void UMatchMapSelectAgentUI::OnSelectedAgentChanged(const FString& DisplayName, 
 		NET_LOG(LogTemp, Warning, TEXT("%hs Called, WhoAreYou?? DisplayName: %s"), __FUNCTION__, *DisplayName);
 		return;
 	}
+	
+	auto* GameInstance = GetGameInstance<UValorantGameInstance>();
+	const auto* Data = GameInstance->GetAgentData(SelectedAgentID);
+	if (Data)
+	{
+		const FString& RoleName = StaticEnum<EAgentRole>()->GetNameStringByValue(static_cast<int>(Data->AgentRole));
+		const FString& AgentName = Data->LocalName;
+		const FString& AgentDescription = Data->Description;
+		TextBlockPosition1->SetText(FText::FromString(RoleName));
+		TextBlockAgentName->SetText(FText::FromString(AgentName));
+		TextBlockAgentDescription->SetText(FText::FromString(AgentDescription));
+		TextBlockPosition2->SetText(FText::FromString(RoleName));
+	}
 	TeamSelectAgentBoxMap[DisplayName]->ChangeAgentThumbImage(SelectedAgentID);
 }
 
