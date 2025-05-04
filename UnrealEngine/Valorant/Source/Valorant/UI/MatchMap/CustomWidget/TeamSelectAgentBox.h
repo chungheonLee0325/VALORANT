@@ -20,4 +20,5 @@ public:
 	TObjectPtr<UImage> ImageAgentThumb = nullptr;
 	
 	void ChangeAgentThumbImage(const int AgentId);
+	void LockIn();
 };

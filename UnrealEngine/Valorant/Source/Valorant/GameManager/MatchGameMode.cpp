@@ -106,6 +106,21 @@ void AMatchGameMode::OnControllerBeginPlay(AMatchPlayerController* Controller, c
 
 void AMatchGameMode::OnLockIn(AMatchPlayerController* Player, int AgentId)
 {
+	auto* PS = Player->GetPlayerState<AMatchPlayerState>();
+	if (nullptr == PS)
+	{
+		NET_LOG(LogTemp, Warning, TEXT("%hs Called, PS is nullptr"), __FUNCTION__);
+		return;
+	}
+	bool bIsBlueTeam = PS->bIsBlueTeam;
+	for (const auto& PlayerInfo : MatchPlayers)
+	{
+		if (bIsBlueTeam == PlayerInfo.bIsBlueTeam)
+		{
+			PlayerInfo.Controller->ClientRPC_OnLockIn(PS->DisplayName);
+		}
+	}
+	
 	if (++LockedInPlayerNum >= RequiredPlayerCount)
 	{
 		NET_LOG(LogTemp, Warning, TEXT("%hs Called, All Players Completed Lock In"), __FUNCTION__);

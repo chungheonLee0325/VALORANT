@@ -52,4 +52,6 @@ public:
 	void ServerRPC_OnAgentSelectButtonClicked(int SelectedAgentID);
 	UFUNCTION(Client, Reliable)
 	void ClientRPC_OnAgentSelected(const FString& DisplayName, int SelectedAgentID);
+	UFUNCTION(Client, Reliable)
+	void ClientRPC_OnLockIn(const FString& DisplayName);
 };

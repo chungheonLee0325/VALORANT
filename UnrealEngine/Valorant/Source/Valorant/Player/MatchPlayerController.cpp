@@ -28,6 +28,16 @@ void AMatchPlayerController::SetGameMode(AMatchGameMode* MatchGameMode)
 	this->GameMode = MatchGameMode;
 }
 
+void AMatchPlayerController::ClientRPC_OnLockIn_Implementation(const FString& DisplayName)
+{
+	if (nullptr == SelectUIWidget)
+	{
+		NET_LOG(LogTemp, Warning, TEXT("%hs Called, SelectUIWidget is nullptr"), __FUNCTION__);
+		return;
+	}
+	SelectUIWidget->OnLockIn(DisplayName);
+}
+
 void AMatchPlayerController::ClientRPC_OnAgentSelected_Implementation(const FString& DisplayName, int SelectedAgentID)
 {
 	if (nullptr == SelectUIWidget)

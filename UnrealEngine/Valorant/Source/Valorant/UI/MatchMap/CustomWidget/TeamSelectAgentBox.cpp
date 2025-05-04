@@ -26,3 +26,10 @@ void UTeamSelectAgentBox::ChangeAgentThumbImage(const int AgentId)
 	Brush.SetResourceObject(Texture);
 	ImageAgentThumb->SetBrush(Brush);
 }
+
+void UTeamSelectAgentBox::LockIn()
+{
+	FSlateBrush Brush = ImageAgentThumb->GetBrush();
+	Brush.TintColor = FSlateColor(FLinearColor::White);
+	ImageAgentThumb->SetBrush(Brush);
+}

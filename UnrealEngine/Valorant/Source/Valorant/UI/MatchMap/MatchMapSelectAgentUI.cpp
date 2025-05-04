@@ -51,16 +51,6 @@ void UMatchMapSelectAgentUI::OnClickedAgentSelectButton(int AgentId)
 	OnClickAgentSelectButtonDelegate.Broadcast(AgentId);
 }
 
-void UMatchMapSelectAgentUI::OnSelectedAgentChanged(const FString& DisplayName, int SelectedAgentID)
-{
-	if (false == TeamSelectAgentBoxMap.Contains(DisplayName))
-	{
-		NET_LOG(LogTemp, Warning, TEXT("%hs Called, WhoAreYou?? DisplayName: %s"), __FUNCTION__, *DisplayName, SelectedAgentID);
-		return;
-	}
-	TeamSelectAgentBoxMap[DisplayName]->ChangeAgentThumbImage(SelectedAgentID);
-}
-
 void UMatchMapSelectAgentUI::UpdateTime(float Time)
 {
 	if (nullptr == TextBlockRemTime)
@@ -158,4 +148,25 @@ void UMatchMapSelectAgentUI::FillTeamSelectAgentList(const TArray<FString>& Team
 	{
 		AddTeamBox(PlayerName);
 	}
+}
+
+void UMatchMapSelectAgentUI::OnSelectedAgentChanged(const FString& DisplayName, int SelectedAgentID)
+{
+	if (false == TeamSelectAgentBoxMap.Contains(DisplayName))
+	{
+		NET_LOG(LogTemp, Warning, TEXT("%hs Called, WhoAreYou?? DisplayName: %s"), __FUNCTION__, *DisplayName);
+		return;
+	}
+	TeamSelectAgentBoxMap[DisplayName]->ChangeAgentThumbImage(SelectedAgentID);
+}
+
+
+void UMatchMapSelectAgentUI::OnLockIn(const FString& DisplayName)
+{
+	if (false == TeamSelectAgentBoxMap.Contains(DisplayName))
+	{
+		NET_LOG(LogTemp, Warning, TEXT("%hs Called, WhoAreYou?? DisplayName: %s"), __FUNCTION__, *DisplayName);
+		return;
+	}
+	TeamSelectAgentBoxMap[DisplayName]->LockIn();
 }
