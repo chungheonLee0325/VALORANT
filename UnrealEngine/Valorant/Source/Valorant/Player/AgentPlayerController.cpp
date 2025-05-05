@@ -33,7 +33,7 @@ void AAgentPlayerController::OnRep_PlayerState()
 	if (IsLocalController())
 	{
 		m_GameInstance = Cast<UValorantGameInstance>(GetGameInstance());
-		// CreateAgentWidget();
+		CreateAgentWidget();
 	}
 }
 
@@ -44,13 +44,19 @@ void AAgentPlayerController::BeginPlay()
 	// *GetName(), (int32)GetLocalRole(), IsLocalController());
 }
 
-void AAgentPlayerController::ClientEnterSpectatorMode_Implementation()
+void AAgentPlayerController::Client_EnterSpectatorMode_Implementation()
 {
 	StartSpectatingOnly();
 }
 
 void AAgentPlayerController::InitCacheGAS()
 {
+	if (CachedABS && CachedASC)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("AgentPC: already Cached"));
+		return;	
+	}
+	
 	if (AAgentPlayerState* ps = GetPlayerState<AAgentPlayerState>())
 	{
 		CachedASC = Cast<UAgentAbilitySystemComponent>(ps->GetAbilitySystemComponent());
@@ -76,12 +82,18 @@ void AAgentPlayerController::InitCacheGAS()
 
 void AAgentPlayerController::CreateAgentWidget()
 {
+	if (AgentWidget)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("AgentPC: Widget already Created"));
+		return;
+	}
+	
 	if (AgentWidgetClass == nullptr)
 	{
 		UE_LOG(LogTemp,Error,TEXT("PlayerController에 AgentWidget 좀 넣어주세요."));
 		return;
 	}
-	
+
 	AgentWidget = CreateWidget<UAgentBaseWidget>(this, AgentWidgetClass);
 	AgentWidget->AddToViewport();
 	AgentWidget->BindToDelegatePC(CachedASC,this);

@@ -8,6 +8,7 @@
 #include "GameplayTagContainer.h"
 #include "ValorantGameType.generated.h"
 
+class ABaseAgent;
 struct FGameplayTag;
 class UGameplayEffect;
 class UGameplayAbility;
@@ -197,6 +198,9 @@ struct FAgentData : public FTableRowBase
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Data")
 	FString AgentName = "";
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Data")
+	TSubclassOf<ABaseAgent> AgentAsset;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Data")
 	EAgentRole AgentRole = EAgentRole::None;
