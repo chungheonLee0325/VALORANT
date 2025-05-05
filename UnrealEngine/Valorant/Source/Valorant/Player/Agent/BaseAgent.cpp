@@ -358,7 +358,7 @@ void ABaseAgent::OnDieCameraFinished()
 		pc->StartSpectatingOnly();
 		Destroy();
 		
-		pc->ClientEnterSpectatorMode();
+		pc->Client_EnterSpectatorMode();
 	}
 	else
 	{

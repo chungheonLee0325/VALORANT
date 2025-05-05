@@ -49,7 +49,7 @@ public:
 	void RequestOpenShopUI();
 
 	UFUNCTION(Client, Reliable)
-	void ClientEnterSpectatorMode();
+	void Client_EnterSpectatorMode();
 
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)

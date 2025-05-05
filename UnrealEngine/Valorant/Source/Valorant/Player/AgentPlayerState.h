@@ -26,6 +26,10 @@ public:
 	
 	UBaseAttributeSet* GetBaseAttributeSet() const;
 
+	UFUNCTION(BlueprintCallable)
+	void SetAgentID(int32 NewAgentID) { m_AgentID = NewAgentID; }
+	int32 GetAgentID() const { return m_AgentID; }
+
 	UFUNCTION(BlueprintCallable, Category = "Agent|BaseAttributes")
 	float GetHealth() const;
 	
@@ -44,10 +48,12 @@ public:
 
 	int32 GetAbilityStack(int32 AbilityID) const;
 	int32 ReduceAbilityStack(int32 AbilityID);
+
+
 protected:
 	virtual void BeginPlay() override;
 	
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite) 
 	UAgentAbilitySystemComponent* ASC;
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
@@ -56,6 +62,9 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
 	UValorantGameInstance* m_GameInstance = nullptr;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	int32 m_AgentID = 0;
+	
 private:
 	UPROPERTY(EditDefaultsOnly)
 	int32 CurrentCredit = 0;
