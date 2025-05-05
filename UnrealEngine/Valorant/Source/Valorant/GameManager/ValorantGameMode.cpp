@@ -3,6 +3,8 @@
 #include "ValorantGameMode.h"
 
 #include "EngineUtils.h"
+#include "SubsystemSteamManager.h"
+#include "Valorant.h"
 #include "ValorantGameInstance.h"
 #include "GameFramework/GameStateBase.h"
 #include "Player/AgentPlayerState.h"
@@ -37,9 +39,16 @@ void AValorantGameMode::RespawnAllPlayer()
 			UE_LOG(LogTemp,Error,TEXT("AValorantGameMode::RespawnAllPlayer, PS NULL"));
 			continue;
 		}
+
+		APlayerController* pc = Cast<APlayerController>(ps->GetOwner());
+		if (!pc)
+		{
+			UE_LOG(LogTemp,Error,TEXT("AValorantGameMode::RespawnAllPlayer, PC NULL"));
+			continue;
+		}
 		
 		FAgentData* agentData = m_GameInstance->GetAgentData(ps->GetAgentID());
-
+		
 		// TODO: 팀별 스폰 위치 가져오기
 		FVector spawnLoc = FVector::ZeroVector;
 		FRotator spawnRot = FRotator::ZeroRotator;
@@ -49,40 +58,28 @@ void AValorantGameMode::RespawnAllPlayer()
 
 		ABaseAgent* newAgent = GetWorld()->SpawnActor<ABaseAgent>(agentData->AgentAsset, spawnLoc, spawnRot, params);
 		
-		if (newAgent)
-		{
-			APlayerController* pc = nullptr;
-
-			// 죽어서 관전자로 전환된 경우, Owner가 없으므로 찾아서 매칭
-			if (!ps->GetOwner())
-			{
-				for (AController* controller : TActorRange<AController>(GetWorld()))
-				{
-					AAgentPlayerController* tmpPC = Cast<AAgentPlayerController>(controller);
-					if (tmpPC && tmpPC->PlayerState == ps)
-					{
-						pc = tmpPC;
-						break;
-					}
-				}
-			}
-			else
-			{
-				// TODO: 기존 폰 없애는 로직 추가
-				pc = Cast<APlayerController>(ps->GetOwner());
-			}
-		
-			if (!pc)
-			{
-				UE_LOG(LogTemp,Error,TEXT("AValorantGameMode::RespawnAllPlayer, PC NULL"));
-				return;
-			}
-			
-			pc->Possess(newAgent);
-		}
-		else
+		if (!newAgent)
 		{
 			UE_LOG(LogTemp,Error,TEXT("AValorantGameMode::RespawnAllPlayer, AGENT NULL"));
+			continue;
+		}
+
+		if (ps->IsSpectator())
+		{
+			NET_LOG(LogTemp,Warning,TEXT("죽은 상태"));
+			
+			ps->SetIsSpectator(false);
+			ps->SetIsOnlyASpectator(false);
+		}
+
+		APawn* oldPawn = pc->GetPawn();
+		
+		pc->UnPossess();
+		pc->Possess(newAgent);
+		
+		if (oldPawn)
+		{
+			oldPawn->Destroy();
 		}
 	}
 }
