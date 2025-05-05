@@ -13,4 +13,14 @@ UCLASS()
 class VALORANT_API UMatchMapShopUI : public UUserWidget
 {
 	GENERATED_BODY()
+
+public:
+	UFUNCTION(BlueprintCallable)
+	void OnClickedBuyWeaponButton(const int WeaponId);
+
+	UFUNCTION(BlueprintCallable)
+	void OnClickedBuySkillButton(const int SkillId);
+
+	UFUNCTION(BlueprintCallable)
+	void OnClickedBuyShiledButton(const int ShieldId);
 };
