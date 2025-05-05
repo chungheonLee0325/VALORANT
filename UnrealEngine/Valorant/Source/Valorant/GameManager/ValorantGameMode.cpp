@@ -29,7 +29,6 @@ void AValorantGameMode::RespawnAllPlayer()
 		return;
 	}
 	
-	
 	for (APlayerState* basePS : gs->PlayerArray)
 	{
 		AAgentPlayerState* ps = Cast<AAgentPlayerState>(basePS);
@@ -45,8 +44,10 @@ void AValorantGameMode::RespawnAllPlayer()
 		FVector spawnLoc = FVector::ZeroVector;
 		FRotator spawnRot = FRotator::ZeroRotator;
 		
-		ABaseAgent* newAgent = GetWorld()->SpawnActor<ABaseAgent>(agentData->AgentAsset, spawnLoc, spawnRot);
+		FActorSpawnParameters params;
+		params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
 
+		ABaseAgent* newAgent = GetWorld()->SpawnActor<ABaseAgent>(agentData->AgentAsset, spawnLoc, spawnRot, params);
 		
 		if (newAgent)
 		{
@@ -67,6 +68,7 @@ void AValorantGameMode::RespawnAllPlayer()
 			}
 			else
 			{
+				// TODO: 기존 폰 없애는 로직 추가
 				pc = Cast<APlayerController>(ps->GetOwner());
 			}
 		
@@ -80,7 +82,7 @@ void AValorantGameMode::RespawnAllPlayer()
 		}
 		else
 		{
-			UE_LOG(LogTemp,Error,TEXT("AValorantGameMode::RespawnAllPlayer, AGENT or OWNER NULL"));
+			UE_LOG(LogTemp,Error,TEXT("AValorantGameMode::RespawnAllPlayer, AGENT NULL"));
 		}
 	}
 }
