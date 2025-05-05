@@ -30,7 +30,7 @@
 		{ \
 			Prefix = TEXT("[UNKNOWN] "); \
 		} \
-		FString Nickname = USubsystemSteamManager::GetDisplayName(); \
+		FString Nickname = USubsystemSteamManager::GetDisplayName(GetWorld()); \
 		UE_LOG(CategoryName, Verbosity, TEXT("%s%s: %s"), *Prefix, *Nickname, *FString::Printf(Format, ##__VA_ARGS__)); \
 	}
 

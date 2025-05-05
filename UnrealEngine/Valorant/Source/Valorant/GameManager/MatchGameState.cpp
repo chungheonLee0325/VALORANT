@@ -95,7 +95,8 @@ void AMatchGameState::HandleRoundSubState_SelectAgent()
 		return;
 	}
 	NET_LOG(LogTemp, Warning, TEXT("%hs Called"), __FUNCTION__);
-	PC->ClientRPC_DisplaySelectUI(true);
+	
+	// PC->ClientRPC_ShowSelectUI(true);
 }
 
 void AMatchGameState::HandleRoundSubState_PreRound()
@@ -107,7 +108,7 @@ void AMatchGameState::HandleRoundSubState_PreRound()
 		return;
 	}
 	NET_LOG(LogTemp, Warning, TEXT("%hs Called"), __FUNCTION__);
-	PC->ClientRPC_DisplaySelectUI(false);
+	PC->ClientRPC_HideSelectUI();
 	PC->ClientRPC_DisplayHud(true);
 }
 

@@ -3,10 +3,12 @@
 
 #include "MatchGameMode.h"
 
+#include "EngineUtils.h"
 #include "MatchGameState.h"
 #include "OnlineSessionSettings.h"
 #include "SubsystemSteamManager.h"
 #include "Valorant.h"
+#include "GameFramework/PlayerStart.h"
 #include "GameManager/ValorantGameInstance.h"
 #include "Player/AgentPlayerController.h"
 #include "Player/MatchPlayerController.h"
@@ -86,6 +88,14 @@ void AMatchGameMode::OnControllerBeginPlay(AMatchPlayerController* Controller, c
 	PlayerInfo.Controller = Cast<AAgentPlayerController>(Controller);
 	PlayerInfo.Nickname = Nickname;
 	PlayerInfo.bIsBlueTeam = MatchPlayers.Num() % 2 == 0;
+	if (PlayerInfo.bIsBlueTeam)
+	{
+		BlueTeamPlayerNameArray.Add(Nickname);
+	}
+	else
+	{
+		RedTeamPlayerNameArray.Add(Nickname);
+	}
 
 	if (auto* PlayerState = Controller->GetPlayerState<AMatchPlayerState>())
 	{
@@ -98,10 +108,43 @@ void AMatchGameMode::OnControllerBeginPlay(AMatchPlayerController* Controller, c
 
 void AMatchGameMode::OnLockIn(AMatchPlayerController* Player, int AgentId)
 {
+	auto* PS = Player->GetPlayerState<AMatchPlayerState>();
+	if (nullptr == PS)
+	{
+		NET_LOG(LogTemp, Warning, TEXT("%hs Called, PS is nullptr"), __FUNCTION__);
+		return;
+	}
+	bool bIsBlueTeam = PS->bIsBlueTeam;
+	for (const auto& PlayerInfo : MatchPlayers)
+	{
+		if (bIsBlueTeam == PlayerInfo.bIsBlueTeam)
+		{
+			PlayerInfo.Controller->ClientRPC_OnLockIn(PS->DisplayName);
+		}
+	}
+	
 	if (++LockedInPlayerNum >= RequiredPlayerCount)
 	{
 		NET_LOG(LogTemp, Warning, TEXT("%hs Called, All Players Completed Lock In"), __FUNCTION__);
 		StartPreRound();
+	}
+}
+
+void AMatchGameMode::OnAgentSelected(AMatchPlayerController* MatchPlayerController, int SelectedAgentID)
+{
+	auto* PS = MatchPlayerController->GetPlayerState<AMatchPlayerState>();
+	if (nullptr == PS)
+	{
+		NET_LOG(LogTemp, Warning, TEXT("%hs Called, PS is nullptr"), __FUNCTION__);
+		return;
+	}
+	bool bIsBlueTeam = PS->bIsBlueTeam;
+	for (const auto& PlayerInfo : MatchPlayers)
+	{
+		if (bIsBlueTeam == PlayerInfo.bIsBlueTeam)
+		{
+			PlayerInfo.Controller->ClientRPC_OnAgentSelected(PS->DisplayName, SelectedAgentID);
+		}
 	}
 }
 
@@ -113,6 +156,33 @@ bool AMatchGameMode::ReadyToStartMatch_Implementation()
 void AMatchGameMode::HandleMatchHasStarted()
 {
 	Super::HandleMatchHasStarted();
+
+	for( FConstPlayerControllerIterator Iterator = GetWorld()->GetPlayerControllerIterator(); Iterator; ++Iterator )
+	{
+		APlayerController* PlayerController = Iterator->Get();
+		if (PlayerController && (PlayerController->GetPawn() == nullptr))
+		{
+			// AgentSelect 태그를 가진 PlayerStart 찾기
+			APlayerStart* AgentSelectStart = nullptr;
+			for (TActorIterator<APlayerStart> It(GetWorld()); It; ++It)
+			{
+				if (It->PlayerStartTag == FName("AgentSelect"))
+				{
+					NET_LOG(LogTemp, Error, TEXT("찾았다"));
+					AgentSelectStart = *It;
+					break;
+				}
+			}
+
+			if (AgentSelectStart)
+			{
+				// ViewTarget 지정
+				FViewTargetTransitionParams Params;
+				PlayerController->ClientSetViewTarget(AgentSelectStart, Params);
+			}
+		}
+	}
+	
 	StartSelectAgent();
 }
 
@@ -178,6 +248,17 @@ void AMatchGameMode::StartEndPhaseBySpikeDefuse()
 
 void AMatchGameMode::HandleRoundSubState_SelectAgent()
 {
+	for (const FMatchPlayer& MatchPlayer : MatchPlayers)
+	{
+		if (MatchPlayer.bIsBlueTeam)
+		{
+			MatchPlayer.Controller->ClientRPC_ShowSelectUI(BlueTeamPlayerNameArray);
+		}
+		else
+		{
+			MatchPlayer.Controller->ClientRPC_ShowSelectUI(RedTeamPlayerNameArray);
+		}
+	}
 	// 일정 시간 후에 요원 강제 선택 후 라운드 준비
 	MaxTime = SelectAgentTime;
 	GetWorld()->GetTimerManager().ClearTimer(RoundTimerHandle);
@@ -274,6 +355,12 @@ void AMatchGameMode::SetRoundSubState(ERoundSubState NewRoundSubState)
 		RemainRoundStateTime = MaxTime;
 		MatchGameState->SetRemainRoundStateTime(RemainRoundStateTime);
 	}
+}
+
+AActor* AMatchGameMode::ChoosePlayerStart_Implementation(AController* Player)
+{
+	// TODO: 블루팀이냐 레드팀이냐, 누가 공격인지 수비냐에 따라 스폰 위치 다르게
+	return Super::ChoosePlayerStart_Implementation(Player);
 }
 
 void AMatchGameMode::RespawnAll()

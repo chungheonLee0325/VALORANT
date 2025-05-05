@@ -45,8 +45,8 @@ public:
 	void FindSessions();
 	void JoinSession(const FOnlineSessionSearchResult& SessionResult);
 	void DestroySession();
-
-	static FString GetDisplayName(int UniquePlayerID = 0);
+	
+	static FString GetDisplayName(const UWorld* Context, int LocalUserNum = 0);
 	
 	// SessionName에 해당하는 NamedOnlineSession 반환
 	static FNamedOnlineSession* GetNamedOnlineSession(FName SessionName = NAME_GameSession);
@@ -68,7 +68,7 @@ public:
 	 */
 	FTimerHandle CheckSessionHandle;
 	
-	int ReqMatchAutoStartPlayerCount = 2;
+	int ReqMatchAutoStartPlayerCount = 4;
 
 private:
 	void CheckHostingSession();

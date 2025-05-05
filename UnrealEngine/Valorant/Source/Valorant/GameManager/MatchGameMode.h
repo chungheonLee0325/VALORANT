@@ -78,10 +78,13 @@ private:
 	UPROPERTY(BlueprintReadOnly, Category="Gameflow", meta=(AllowPrivateAccess))
 	TArray<FMatchPlayer> MatchPlayers;
 	int LockedInPlayerNum = 0;
+	TArray<FString> RedTeamPlayerNameArray;
+	TArray<FString> BlueTeamPlayerNameArray;
 	
 public:
 	void OnControllerBeginPlay(AMatchPlayerController* Controller, const FString& Nickname);
 	void OnLockIn(AMatchPlayerController* Player, int AgentId);
+	void OnAgentSelected(AMatchPlayerController* MatchPlayerController, int SelectedAgentID);
 
 protected:
 	FTimerHandle RoundTimerHandle;
@@ -114,6 +117,7 @@ protected:
 	void HandleRoundSubState_EndPhase();
 	void SetRoundSubState(ERoundSubState NewRoundSubState);
 
+	virtual AActor* ChoosePlayerStart_Implementation(AController* Player) override;
 	void RespawnAll();
 	void OnKill(AMatchPlayerController* Killer, AMatchPlayerController* Victim);
 	void OnRevive(AMatchPlayerController* Reviver, AMatchPlayerController* Target);

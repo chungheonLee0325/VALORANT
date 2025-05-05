@@ -7,9 +7,11 @@
 #include "MatchMapSelectAgentUI.generated.h"
 
 class UTeamSelectAgentBox;
-class UHorizontalBox;
 class UGridPanel;
 class UTextBlock;
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnClickAgentSelectButtonDelegate, int, SelectedAgentID);
+
 /**
  * 
  */
@@ -26,21 +28,36 @@ protected:
 	void OnClickedButtonLockIn();
 	UFUNCTION()
 	void OnClickedAgentSelectButton(int AgentId);
-	UFUNCTION()
-	void OnSelectedAgentChanged(const FString& PlayerNickname, int SelectedAgentID);
 	
 	UFUNCTION()
 	void UpdateTime(float Time);
 	void FillAgentList();
-	void FillTeamList();
-
-	UPROPERTY()
+	UFUNCTION(BlueprintImplementableEvent)
+	void AddTeamBox(const FString& DisplayName);
+	
+	UPROPERTY(BlueprintReadWrite, meta=(AllowPrivateAccess))
 	TMap<FString, UTeamSelectAgentBox*> TeamSelectAgentBoxMap;
 	
 	UPROPERTY(meta=(BindWidget))
 	TObjectPtr<UGridPanel> GridPanelAgentList = nullptr;
 	UPROPERTY(meta=(BindWidget))
 	TObjectPtr<UTextBlock> TextBlockRemTime = nullptr;
+	
 	UPROPERTY(meta=(BindWidget))
-	TObjectPtr<UHorizontalBox> HorizontalBoxTeamList = nullptr;
+	TObjectPtr<UTextBlock> TextBlockPosition1 = nullptr;
+	UPROPERTY(meta=(BindWidget))
+	TObjectPtr<UTextBlock> TextBlockAgentName = nullptr;
+	UPROPERTY(meta=(BindWidget))
+	TObjectPtr<UTextBlock> TextBlockAgentDescription = nullptr;
+	UPROPERTY(meta=(BindWidget))
+	TObjectPtr<UTextBlock> TextBlockPosition2 = nullptr;
+	UPROPERTY(meta=(BindWidget))
+	TObjectPtr<UTextBlock> TextBlockPositionDescription = nullptr;
+	
+public:
+	FOnClickAgentSelectButtonDelegate OnClickAgentSelectButtonDelegate;
+	
+	void FillTeamSelectAgentList(const TArray<FString>& TeamPlayerNameArray);
+	void OnSelectedAgentChanged(const FString& DisplayName, int SelectedAgentID);
+	void OnLockIn(const FString& DisplayName);
 };

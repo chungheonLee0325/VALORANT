@@ -25,7 +25,6 @@ void UMatchMapSelectAgentUI::NativeConstruct()
 	GameState->OnRemainRoundStateTimeChanged.AddDynamic(this, &UMatchMapSelectAgentUI::UpdateTime);
 	GetOwningPlayer()->SetShowMouseCursor(true);
 	FillAgentList();
-	FillTeamList();
 }
 
 void UMatchMapSelectAgentUI::NativeDestruct()
@@ -48,19 +47,8 @@ void UMatchMapSelectAgentUI::OnClickedButtonLockIn()
 
 void UMatchMapSelectAgentUI::OnClickedAgentSelectButton(int AgentId)
 {
-	auto* PlayerState = GetOwningPlayer()->GetPlayerState<AMatchPlayerState>();
-	if (nullptr == PlayerState)
-	{
-		NET_LOG(LogTemp, Warning, TEXT("%hs Called, PlayerState is nullptr"), __FUNCTION__);
-		return;
-	}
-
 	NET_LOG(LogTemp, Warning, TEXT("%hs Called, AgentId: %d"), __FUNCTION__, AgentId);
-	PlayerState->ServerRPC_NotifyAgentSelected(AgentId);
-}
-
-void UMatchMapSelectAgentUI::OnSelectedAgentChanged(const FString& PlayerNickname, int SelectedAgentID)
-{
+	OnClickAgentSelectButtonDelegate.Broadcast(AgentId);
 }
 
 void UMatchMapSelectAgentUI::UpdateTime(float Time)
@@ -154,18 +142,44 @@ void UMatchMapSelectAgentUI::FillAgentList()
 	}
 }
 
-void UMatchMapSelectAgentUI::FillTeamList()
+void UMatchMapSelectAgentUI::FillTeamSelectAgentList(const TArray<FString>& TeamPlayerNameArray)
 {
-	auto* GameState = Cast<AMatchGameState>(GetWorld()->GetGameState());
-	const auto* MyMPS = GetOwningPlayer()->GetPlayerState<AMatchPlayerState>();
-	for (const auto PS : GameState->PlayerArray)
+	for (const auto& PlayerName : TeamPlayerNameArray)
 	{
-		auto* MPS = Cast<AMatchPlayerState>(PS);
-		if (MPS->bIsBlueTeam == MyMPS->bIsBlueTeam)
-		{
-			MPS->OnSelectedAgentChanged.AddDynamic(this, &UMatchMapSelectAgentUI::OnSelectedAgentChanged);
-			UTeamSelectAgentBox* TeamSelectAgentBox = NewObject<UTeamSelectAgentBox>(this);
-			TeamSelectAgentBoxMap.Add(MPS->DisplayName, TeamSelectAgentBox);
-		}
+		AddTeamBox(PlayerName);
 	}
+}
+
+void UMatchMapSelectAgentUI::OnSelectedAgentChanged(const FString& DisplayName, int SelectedAgentID)
+{
+	if (false == TeamSelectAgentBoxMap.Contains(DisplayName))
+	{
+		NET_LOG(LogTemp, Warning, TEXT("%hs Called, WhoAreYou?? DisplayName: %s"), __FUNCTION__, *DisplayName);
+		return;
+	}
+	
+	auto* GameInstance = GetGameInstance<UValorantGameInstance>();
+	const auto* Data = GameInstance->GetAgentData(SelectedAgentID);
+	if (Data)
+	{
+		const FString& RoleName = StaticEnum<EAgentRole>()->GetNameStringByValue(static_cast<int>(Data->AgentRole));
+		const FString& AgentName = Data->LocalName;
+		const FString& AgentDescription = Data->Description;
+		TextBlockPosition1->SetText(FText::FromString(RoleName));
+		TextBlockAgentName->SetText(FText::FromString(AgentName));
+		TextBlockAgentDescription->SetText(FText::FromString(AgentDescription));
+		TextBlockPosition2->SetText(FText::FromString(RoleName));
+	}
+	TeamSelectAgentBoxMap[DisplayName]->ChangeAgentThumbImage(SelectedAgentID);
+}
+
+
+void UMatchMapSelectAgentUI::OnLockIn(const FString& DisplayName)
+{
+	if (false == TeamSelectAgentBoxMap.Contains(DisplayName))
+	{
+		NET_LOG(LogTemp, Warning, TEXT("%hs Called, WhoAreYou?? DisplayName: %s"), __FUNCTION__, *DisplayName);
+		return;
+	}
+	TeamSelectAgentBoxMap[DisplayName]->LockIn();
 }
