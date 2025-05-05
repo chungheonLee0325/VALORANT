@@ -103,7 +103,7 @@ void UAgentAbilitySystemComponent::SetAgentAbility(int32 abilityID, int32 level)
 
 	for (const FGameplayTag& tag : tagCon)
 	{
-		NET_LOG(LogTemp,Warning,TEXT("tag: %s"), *tag.GetTagName().ToString());
+		// NET_LOG(LogTemp,Warning,TEXT("tag: %s"), *tag.GetTagName().ToString());
 		const FGameplayTag* foundTag = SkillTags.Find(tag);
 		if (foundTag)
 		{
