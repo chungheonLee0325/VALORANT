@@ -102,8 +102,8 @@ protected:
 	UFUNCTION(BlueprintCallable, Category="Weapon")
 	void StopReload();
 
+public:
 	UFUNCTION(BlueprintCallable, Category="Weapon")
 	void Drop();
 
-public:
 };

@@ -22,6 +22,7 @@ void UValorantPickUpComponent::BeginPlay()
 void UValorantPickUpComponent::OnSphereBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
 	// Checking if it is a First Person Character overlapping
+	UE_LOG(LogTemp,Warning,TEXT("UValorantPickUpComponent::OnSphereBeginOverlap"));
 	if(AValorantCharacter* Character = Cast<AValorantCharacter>(OtherActor))
 	{
 		if (Character->InteractionCapsule == Cast<UCapsuleComponent>(OtherComp))

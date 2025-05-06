@@ -6,6 +6,7 @@
 #include "EnhancedInputComponent.h"
 #include "MapTestAgent.h"
 #include "Valorant.h"
+#include "ValorantPickUpComponent.h"
 #include "Camera/CameraComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Valorant/AbilitySystem/AgentAbilitySystemComponent.h"
@@ -68,6 +69,13 @@ ABaseAgent::ABaseAgent()
 	GetMesh()->SetOnlyOwnerSee(true);
 
 	AgentInputComponent = CreateDefaultSubobject<UAgentInputComponent>("InputComponent");
+
+	InteractionCapsule = CreateDefaultSubobject<UCapsuleComponent>(TEXT("InteractionCapsule"));
+	InteractionCapsule->SetupAttachment(Camera);
+	InteractionCapsule->SetRelativeLocation(FVector(150, 0, 0));
+	InteractionCapsule->SetRelativeRotation(FRotator(-90, 0, 0));
+	InteractionCapsule->SetCapsuleHalfHeight(150);
+	InteractionCapsule->SetCapsuleRadius(35);
 
 	TL_Crouch = CreateDefaultSubobject<UTimelineComponent>("TL_Crouch");
 	TL_DieCamera = CreateDefaultSubobject<UTimelineComponent>("TL_DieCamera");
@@ -152,6 +160,9 @@ void ABaseAgent::BeginPlay()
 	// 	finishDieCamera.BindUFunction(this, FName("OnDieCameraFinished"));
 	// 	TL_DieCamera->SetTimelineFinishedFunc(finishDieCamera);
 	// }
+
+	InteractionCapsule->OnComponentBeginOverlap.AddDynamic(this, &ABaseAgent::OnFindInteraction);
+	InteractionCapsule->OnComponentEndOverlap.AddDynamic(this, &ABaseAgent::OnInteractionCapsuleEndOverlap);
 }
 
 void ABaseAgent::Tick(float DeltaTime)
@@ -326,6 +337,15 @@ void ABaseAgent::Die()
 	GetMesh()->SetVisibility(false);
 
 	ThirdPersonMesh->PlayAnimation(AM_Die, false);
+
+	if (PrimaryWeapon)
+	{
+		PrimaryWeapon->Drop();
+	}
+	if (SecondWeapon)
+	{
+		SecondWeapon->Drop();
+	}
 	
 	if (IsLocallyControlled())
 	{
@@ -389,10 +409,6 @@ void ABaseAgent::Respawn()
 	//
 	// ABaseAgent* player = Cast<ABaseAgent>(pc->GetPawn());
 	//
-	bIsDead = false;
-	ThirdPersonMesh->SetOwnerNoSee(true);
-	GetMesh()->SetVisibility(true);
-	Net_Respawn();
 }
 
 void ABaseAgent::Net_Respawn_Implementation()
@@ -450,28 +466,53 @@ void ABaseAgent::FindInteractable()
 			LookingActor = nullptr;
 		}
 	}
-
-	// if (GetWorld()->SweepSingleByChannel(
-	// 		hitResult,
-	// 		startPos,
-	// 		endPos,
-	// 		FQuat::Identity,
-	// 		ECC_Visibility,
-	// 		FCollisionShape::MakeSphere(20.0f)))
-	// {
-	// 	AActor* actor = hitResult.GetActor()->IsA(ABaseWeapon::StaticClass()) ? hitResult.GetActor() : nullptr;
-	// 	if (actor)
-	// 	{
-	// 		LookingActor = actor;
-	// 		UE_LOG(LogTemp,Warning,TEXT("%s를 보고 있음"),*LookingActor->GetActorNameOrLabel());
-	// 	}
-	// 	else
-	// 	{
-	// 		LookingActor = nullptr;
-	// 	}
-	// }
 	
 	// TODO: 스파이크 / 문 순서로 추가
+}
+
+void ABaseAgent::OnFindInteraction(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
+	UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
+{
+	NET_LOG(LogTemp,Warning,TEXT("OnFindInteraction"));
+	if (FindInteractActor)
+	{
+		if (auto* weapon = Cast<ABaseWeapon>(FindInteractActor))
+		{
+			return;
+		}
+	}
+    
+	if (auto* interactor = Cast<ABaseInteractor>(OtherActor))
+	{
+		FindInteractActor = interactor;
+		FindInteractActor->InteractActive(true);
+	}
+        
+	if (auto* PickUpComponent = Cast<UValorantPickUpComponent>(OtherComp))
+	{
+		FindPickUpComponent = PickUpComponent;
+	}
+}
+
+void ABaseAgent::OnInteractionCapsuleEndOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
+	UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
+{
+	if (const auto* interactor = Cast<ABaseInteractor>(OtherActor))
+	{
+		if (interactor == FindInteractActor)
+		{
+			FindInteractActor->InteractActive(false);
+			FindInteractActor = nullptr;
+		}
+	}
+    
+	if (const auto* PickUpComponent = Cast<UValorantPickUpComponent>(OtherComp))
+	{
+		if (PickUpComponent == FindPickUpComponent)
+		{
+			FindPickUpComponent = nullptr;
+		}
+	}
 }
 
 void ABaseAgent::ServerApplyGE_Implementation(TSubclassOf<UGameplayEffect> geClass)

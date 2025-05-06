@@ -2,14 +2,13 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
-#include "AbilitySystemInterface.h"
-#include "GameplayEffectTypes.h"
 #include "Player/AgentPlayerController.h"
 #include "Player/Animaiton/AgentAnimInstance.h"
 #include "Valorant/ResourceManager/ValorantGameType.h"
 #include "Weapon/BaseWeapon.h"
 #include "BaseAgent.generated.h"
 
+class UValorantPickUpComponent;
 class UAgentAnimInstance;
 class ABaseWeapon;
 class UTimelineComponent;
@@ -53,6 +52,9 @@ public:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
 	UAgentInputComponent* AgentInputComponent;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
+	UCapsuleComponent* InteractionCapsule;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category= "Anim")
 	UAnimMontage* AM_Die;
@@ -173,8 +175,8 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	UValorantGameInstance* m_GameInstance;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	AAgentPlayerState* PS = nullptr;
+	// UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	// AAgentPlayerState* PS = nullptr;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	AAgentPlayerController* PC = nullptr;
@@ -190,6 +192,11 @@ protected:
 	UAgentAnimInstance* ABP_1P = nullptr;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	UAgentAnimInstance* ABP_3P = nullptr;
+
+	UPROPERTY()
+	ABaseInteractor* FindInteractActor = nullptr;
+	UPROPERTY()
+	UValorantPickUpComponent* FindPickUpComponent = nullptr;
 	
 	UPROPERTY(Replicated, ReplicatedUsing=OnRep_WeaponState)
 	uint8 WeaponState = 3;
@@ -217,8 +224,6 @@ protected:
 	ABaseWeapon* PrimaryWeapon = nullptr;
 	UPROPERTY(VisibleAnywhere)
 	ABaseWeapon* SecondWeapon = nullptr;
-	UPROPERTY(VisibleAnywhere)
-	ABaseWeapon* MeleeWeapon = nullptr;
 
 protected:
 	virtual void PossessedBy(AController* NewController) override;
@@ -253,10 +258,10 @@ protected:
 	UFUNCTION(NetMulticast, Reliable)
 	void Net_Respawn();
 
-	// UFUNCTION()
-	// void OnFindInteraction(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
-	// UFUNCTION()
-	// void OnInteractionCapsuleEndOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
+	UFUNCTION()
+	void OnFindInteraction(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
+	UFUNCTION()
+	void OnInteractionCapsuleEndOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
 	void FindInteractable();
 	
 	UFUNCTION()
