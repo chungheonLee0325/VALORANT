@@ -7,6 +7,7 @@
 #include "MapTestAgent.h"
 #include "Valorant.h"
 #include "ValorantPickUpComponent.h"
+#include "AbilitySystem/Attributes/BaseAttributeSet.h"
 #include "Camera/CameraComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Valorant/AbilitySystem/AgentAbilitySystemComponent.h"
@@ -96,7 +97,7 @@ void ABaseAgent::PossessedBy(AController* NewController)
 	Super::PossessedBy(NewController);
 
 	//국룰 위치
-	InitAgentData();
+	InitAgentAbility();
 	
 	AAgentPlayerController* pc = Cast<AAgentPlayerController>(NewController);
 	if (pc)
@@ -109,18 +110,15 @@ void ABaseAgent::PossessedBy(AController* NewController)
 void ABaseAgent::OnRep_PlayerState()
 {
 	Super::OnRep_PlayerState();
+
+	//국룰 위치
+	InitAgentAbility();
 	
-	if (IsLocallyControlled())
+	AAgentPlayerController* pc = Cast<AAgentPlayerController>(GetController());
+	if (pc)
 	{
-		//국룰 위치
-		InitAgentData();
-		
-		AAgentPlayerController* pc = Cast<AAgentPlayerController>(GetController());
-		if (pc)
-		{
-			// UE_LOG(LogTemp, Warning, TEXT("클라, 델리게이트 바인딩"));
-			BindToDelegatePC(pc);
-		}
+		// UE_LOG(LogTemp, Warning, TEXT("클라, 델리게이트 바인딩"));
+		BindToDelegatePC(pc);
 	}
 }
 
@@ -185,7 +183,7 @@ void ABaseAgent::Tick(float DeltaTime)
 	
 }
 
-void ABaseAgent::InitAgentData()
+void ABaseAgent::InitAgentAbility()
 {
 	AAgentPlayerState* ps = GetPlayerState<AAgentPlayerState>();
 	if (ps == nullptr)
@@ -200,7 +198,7 @@ void ABaseAgent::InitAgentData()
 	if (HasAuthority())
 	{
 		// 스킬 등록 및 값 초기화는 서버에서만 진행
-		ASC->InitializeByAgentData(m_AgentID);
+		ASC->InitializeByAgentData(ps->GetAgentID());
 		
 		// UE_LOG(LogTemp, Warning, TEXT("=== ASC 등록된 GA 목록 ==="));
 		// for (const FGameplayAbilitySpec& spec : ASC->GetActivatableAbilities())
@@ -349,7 +347,7 @@ void ABaseAgent::Die()
 	
 	if (IsLocallyControlled())
 	{
-		NET_LOG(LogTemp,Warning,TEXT("로컬"));
+		// NET_LOG(LogTemp,Warning,TEXT("로컬"));
 		TL_DieCamera->PlayFromStart();
 		
 		DisableInput(Cast<APlayerController>(GetController()));
@@ -357,7 +355,7 @@ void ABaseAgent::Die()
 
 	if (HasAuthority())
 	{
-		NET_LOG(LogTemp,Warning,TEXT("다이 캠 피니쉬 타이머 설정"));
+		// NET_LOG(LogTemp,Warning,TEXT("다이 캠 피니쉬 타이머 설정"));
 		// 관전모드 진입
 		FTimerHandle deadTimerHandle;
 		GetWorldTimerManager().SetTimer(deadTimerHandle, FTimerDelegate::CreateLambda([this]()
@@ -370,7 +368,7 @@ void ABaseAgent::Die()
 /** 서버에서만 호출됨*/
 void ABaseAgent::OnDieCameraFinished()
 {
-	NET_LOG(LogTemp,Warning,TEXT("다이 캠 피니쉬 콜백"));
+	// NET_LOG(LogTemp,Warning,TEXT("다이 캠 피니쉬 콜백"));
 	
 	AAgentPlayerController* pc = Cast<AAgentPlayerController>(GetController());
 	if (pc)
@@ -382,7 +380,7 @@ void ABaseAgent::OnDieCameraFinished()
 	}
 	else
 	{
-		NET_LOG(LogTemp, Error, TEXT("OnDieCameraFinished: Controller가 없습니다!"));
+		// NET_LOG(LogTemp, Error, TEXT("OnDieCameraFinished: Controller가 없습니다!"));
 	}
 }
 
@@ -473,7 +471,7 @@ void ABaseAgent::FindInteractable()
 void ABaseAgent::OnFindInteraction(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
 	UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
-	NET_LOG(LogTemp,Warning,TEXT("OnFindInteraction"));
+	// NET_LOG(LogTemp,Warning,TEXT("OnFindInteraction"));
 	if (FindInteractActor)
 	{
 		if (auto* weapon = Cast<ABaseWeapon>(FindInteractActor))

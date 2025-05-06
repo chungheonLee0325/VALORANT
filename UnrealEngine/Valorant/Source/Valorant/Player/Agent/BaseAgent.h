@@ -243,7 +243,7 @@ protected:
 	virtual void OnStartCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust) override;
 	virtual void OnEndCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust) override;
 	
-	virtual void InitAgentData();
+	virtual void InitAgentAbility();
 	
 	virtual void Die();
 	UFUNCTION()

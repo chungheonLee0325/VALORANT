@@ -70,10 +70,9 @@ protected:
 	virtual void BeginPlay() override;
 	
 	UFUNCTION()
-	void InitCacheGAS();
-
+	void InitGAS();
 	UFUNCTION()
-	void CreateAgentWidget();
+	void InitAgentWidget();
 	
 	UFUNCTION()
 	void HandleHealthChanged(float NewHealth);
