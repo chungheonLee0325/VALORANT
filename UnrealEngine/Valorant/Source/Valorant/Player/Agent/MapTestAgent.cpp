@@ -11,6 +11,7 @@ AMapTestAgent::AMapTestAgent()
 {
 	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
+	
 }
 
 // Called when the game starts or when spawned
@@ -39,12 +40,12 @@ void AMapTestAgent::SetupPlayerInputComponent(UInputComponent* PlayerInputCompon
 bool AMapTestAgent::IsPositionIsVision(const FVector& TargetPosition) const
 {
 	// 플레이아의 전방백터와 타켓 방향 백터 계산
-	FVector ForwardVector = GetActorForwardVector();
-	FVector DirectionToTarget =(TargetPosition - GetActorLocation().GetSafeNormal());
+	//FVector ForwardVector = GetActorForwardVector();
+	//FVector DirectionToTarget =(TargetPosition - GetActorLocation().GetSafeNormal());
 
 	// 두 백터 사이의 각도 계산 (내적)
-	float DotProduct = FVector::DotProduct(ForwardVector, DirectionToTarget);
-	float AngleCos = FMath::Cos(FMath::DegreesToRadians(VisionAngle * 0.5f));
+	//float DotProduct = FVector::DotProduct(ForwardVector, DirectionToTarget);
+	//float AngleCos = FMath::Cos(FMath::DegreesToRadians(VisionAngle * 0.5f));
 	//시야 각도 제한
 	// if (DotProduct > VisionAngle)
 	// {
@@ -85,7 +86,7 @@ void AMapTestAgent::DetectAgents()
 		if (!IsLineOfSightBlocked(Agent))
 		{
 			IsVisible = true;
-
+	
 			// 적이 보이면 상태 업데이트
 			if (Agent->MinimapVisibility != EAgentVisibility::Visible)
 			{
