@@ -72,3 +72,8 @@ Plugins/**/Intermediate/*
 
 # Cache files for the editor to use
 DerivedDataCache/*
+
+# AI_Class
+/AI_Class/hyeongseob/FastAPI/__pycache__
+/AI_Class/hyeongseob/MCP/__pycache__
+/AI_Class/hyeongseob/Tests/__pycache__

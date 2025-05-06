@@ -3,7 +3,7 @@
         "mcp-test" : {
             "command": "C:\\Users\\user\\miniconda3\\envs\\valorant\\python",
             "args": [
-                "C:\\Wanted\\projectfiles\\valorant\\VALORANT\\AI_Class\\MCP\\KHS\\mcp_server.py"
+                "C:\\Wanted\\원티드_포텐업_프로젝트\\5_project\\VALORANT\\AI_Class\\MCP\\KHS\\mcp_server.py"
             ]
         }
     }

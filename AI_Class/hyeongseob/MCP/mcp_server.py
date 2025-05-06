@@ -6,16 +6,16 @@ import matplotlib.pyplot as plt
 
 # 1. MCP Server
 mcp = FastMCP(
-    "vlaorithm",
+    "VALORITHM",
     instructions="You are an AI assistant who utilizes tools that can help with game development",
-    host="0.0.0.0",
-    port=8005,
+    host="localhost",
+    port=8000
     )
 
 # 2. Tool Setting
-# 함수 1.
+## function. 1
 @mcp.tool()
-def machinegun_recoil_points(self, shots: int):
+def machinegun_recoil_points(shots: int):
     """
     machinegun_recoil_points(shots: int):
     기관총 반동 궤적을 생성합니다. 
@@ -48,9 +48,9 @@ def machinegun_recoil_points(self, shots: int):
     
     return x_cum, y_cum
 
-# 함수 2.
+## function. 2
 @mcp.tool()
-def pistol_recoil_points(self, shots: int):
+def pistol_recoil_points(shots: int):
     """
     pistol_recoil_points(shots: int):
     권총 반동 궤적을 생성합니다. 
@@ -83,9 +83,9 @@ def pistol_recoil_points(self, shots: int):
 
     return x_cum, y_cum
 
-# 함수. 3
+## function. 3
 @mcp.tool()
-def shotgun_recoil_points(self, shots: int):
+def shotgun_recoil_points(shots: int):
     """
     shotgun_recoil_points(shots: int):
     산탄총 반동 궤적을 생성합니다.
@@ -115,9 +115,9 @@ def shotgun_recoil_points(self, shots: int):
 
     return x_cum, y_cum
     
-# 함수. 4
+## function. 4
 @mcp.tool()    
-def plot_recoil_pattern(self, data):
+def plot_recoil_pattern(data):
     """생성된 좌표값을 시각화하는 메서드"""
     plt.figure(figsize=(5, 5))
     plt.scatter(data[0], data[1], c='red', s=10, marker='s')  # y축 반전해서 위로 튀는 느낌
@@ -136,15 +136,14 @@ def plot_recoil_pattern(self, data):
     
     return plt.show()
 
-# 함수. 5
+## function. 5
 @mcp.tool()
-def dataset(self, data):
+def dataset(data):
     """생성된 좌표값을 데이터프레임화하는 메서드"""
     df = pd.DataFrame({"x": data[0], "y": data[1]})
     
     return df
 
-# 3. MCP Server Start(SSE)
+# 3. Server Start
 if __name__ == "__main__":
-    print("Starting MCP Server...")
-    mcp.run()
+    mcp.run(transport='stdio')
