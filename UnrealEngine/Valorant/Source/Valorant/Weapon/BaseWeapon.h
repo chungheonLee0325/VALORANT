@@ -92,10 +92,7 @@ protected:
 
 	UFUNCTION(BlueprintCallable, Category="Weapon")
 	void EndFire();
-
-	UFUNCTION(BlueprintCallable, Category="Weapon")
-	void StartReload();
-
+	
 	UFUNCTION(BlueprintCallable, Category="Weapon")
 	void Reload();
 
@@ -103,6 +100,9 @@ protected:
 	void StopReload();
 
 public:
+	UFUNCTION(BlueprintCallable, Category="Weapon")
+	void StartReload();
+	
 	UFUNCTION(BlueprintCallable, Category="Weapon")
 	void Drop();
 
