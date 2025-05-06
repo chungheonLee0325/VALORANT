@@ -18,14 +18,15 @@ UAgentInputComponent::UAgentInputComponent()
 void UAgentInputComponent::BeginPlay()
 {
 	Super::BeginPlay();
-
+	
 	Agent = Cast<ABaseAgent>(GetOwner());
-	if (Agent)
+
+	if (!Agent->IsLocallyControlled())
 	{
-		UE_LOG(LogTemp, Warning, TEXT("InputComp, Get Agent: %s"), *Agent->GetName());
+		return;
 	}
 	
-	if (APlayerController* pc = Cast<APlayerController>(GetOwner()->GetInstigatorController()))
+	if (APlayerController* pc = Cast<APlayerController>(Agent->GetInstigatorController()))
 	{
 		if (ULocalPlayer* player = pc->GetLocalPlayer())
 		{
