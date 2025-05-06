@@ -22,6 +22,8 @@ public:
 	
 protected:
 	virtual void BeginPlay() override;
+	virtual void OnPossess(APawn* InPawn) override;
+	virtual void OnRep_Pawn() override;
 
 private:
 	// GameMode의 PostLogin 단계에서 주입된다

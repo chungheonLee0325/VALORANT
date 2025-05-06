@@ -5,7 +5,9 @@
 
 #include "EnhancedInputSubsystems.h"
 #include "EnhancedInputComponent.h"
+#include "Valorant.h"
 #include "GameFramework/PlayerController.h"
+#include "GameManager/SubsystemSteamManager.h"
 #include "Player/Agent/BaseAgent.h"
 
 
@@ -46,6 +48,7 @@ void UAgentInputComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 
 void UAgentInputComponent::BindInput(UInputComponent* InputComponent)
 {
+	NET_LOG(LogTemp, Warning, TEXT("%hs Called"), __FUNCTION__);
 	if (auto* eic = Cast<UEnhancedInputComponent>(InputComponent))
 	{
 		if (MoveAction)
