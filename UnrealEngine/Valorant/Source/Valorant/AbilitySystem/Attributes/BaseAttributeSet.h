@@ -74,9 +74,14 @@ public:
 	UPROPERTY(BlueprintAssignable)
 	FOnArmorChanged OnArmorChanged_FromGE;
 	UPROPERTY(BlueprintAssignable)
-	FOnEffectSpeedChanged OnEffectSpeedChanged_FromGE;	
+	FOnEffectSpeedChanged OnEffectSpeedChanged_FromGE;
+
 	
 public:
+	UFUNCTION(BlueprintCallable)
+	virtual void ResetAttributeData();
+	
+protected:
 	virtual void PreAttributeChange(const FGameplayAttribute& Attribute, float& NewValue) override;
 	virtual void PostAttributeChange(const FGameplayAttribute& Attribute, float OldValue, float NewValue) override;
 
@@ -85,8 +90,7 @@ public:
 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
-	
-protected:
+private:
 	void AdjustAttributeForMaxChange(FGameplayAttributeData& AffectedAttribute, const FGameplayAttributeData& MaxAttribute, float NewMaxValue, const FGameplayAttribute& AffectedAttributeProperty);
 	
 	UFUNCTION()

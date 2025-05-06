@@ -12,6 +12,12 @@ UBaseAttributeSet::UBaseAttributeSet()
 {
 }
 
+void UBaseAttributeSet::ResetAttributeData()
+{
+	UE_LOG(LogTemp, Warning, TEXT("UBaseAttributeSet::ResetAttributeData"));
+	SetHealth(GetMaxHealth());
+}
+
 // 호출시점: SetAttributeBaseValue()처럼 수동으로 값이 바뀔 시, 속성에 변경된 값을 적용하기 직전.
 // 용도: 최종적으로 값을 점검 (e.g. 최대값을 넘지 않도록 제한 / 비율 유지)
 void UBaseAttributeSet::PreAttributeChange(const FGameplayAttribute& Attribute, float& NewValue)

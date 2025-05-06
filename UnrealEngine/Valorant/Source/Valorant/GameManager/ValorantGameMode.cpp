@@ -6,6 +6,7 @@
 #include "SubsystemSteamManager.h"
 #include "Valorant.h"
 #include "ValorantGameInstance.h"
+#include "AbilitySystem/Attributes/BaseAttributeSet.h"
 #include "GameFramework/GameStateBase.h"
 #include "Player/AgentPlayerState.h"
 #include "Player/Agent/BaseAgent.h"
@@ -40,6 +41,7 @@ void AValorantGameMode::RespawnAllPlayers()
 			continue;
 		}
 
+		ResetAgentAtrributeData(PS);
 		RespawnPlayer(PS);
 	}
 }
@@ -72,8 +74,6 @@ void AValorantGameMode::RespawnPlayer(AAgentPlayerState* ps)
 
 	if (ps->IsSpectator())
 	{
-		NET_LOG(LogTemp,Warning,TEXT("죽은 상태"));
-			
 		ps->SetIsSpectator(false);
 		ps->SetIsOnlyASpectator(false);
 	}
@@ -93,4 +93,9 @@ void AValorantGameMode::BeginPlay()
 {
 	Super::BeginPlay();
 	m_GameInstance = Cast<UValorantGameInstance>(GetGameInstance());
+}
+
+void AValorantGameMode::ResetAgentAtrributeData(AAgentPlayerState* ps)
+{
+	ps->GetBaseAttributeSet()->ResetAttributeData();
 }

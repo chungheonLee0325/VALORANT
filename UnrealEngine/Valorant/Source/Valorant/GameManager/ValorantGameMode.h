@@ -16,11 +16,14 @@ class AValorantGameMode : public AGameModeBase
 
 public:
 	AValorantGameMode();
-
+	
 	UFUNCTION(BlueprintCallable)
 	void RespawnAllPlayers();
 	UFUNCTION(BlueprintCallable)
 	void RespawnPlayer(AAgentPlayerState* ps);
+
+	UFUNCTION(BlueprintCallable)
+	void ResetAgentAtrributeData(AAgentPlayerState* ps);
 
 	UFUNCTION(BlueprintCallable)
 	void SetRespawnLoc(FVector const newLoc) { RespawnLocation = newLoc; }

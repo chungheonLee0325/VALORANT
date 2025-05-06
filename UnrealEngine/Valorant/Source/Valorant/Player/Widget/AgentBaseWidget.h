@@ -7,6 +7,7 @@
 #include "Valorant/AbilitySystem/ValorantGameplayTags.h"
 #include "AgentBaseWidget.generated.h"
 
+class AAgentPlayerState;
 class AAgentPlayerController;
 class UAgentAbilitySystemComponent;
 struct FGameplayTag;
@@ -68,6 +69,9 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	void BindToDelegatePC(UAgentAbilitySystemComponent* _asc, AAgentPlayerController* pc);
+
+	UFUNCTION(BlueprintCallable)
+	void InitUI(AAgentPlayerState* ps);
 
 	UFUNCTION(BlueprintCallable)
 	void UpdateDisplayHealth(const float health);
