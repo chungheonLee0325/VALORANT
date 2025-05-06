@@ -29,6 +29,8 @@ public:
 	bool bIsInAir = false;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category=State)
 	bool bIsCrouch = false;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category=State)
+	bool bIsDead = false;
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category=Weapon)
 	uint8 WeaponState = 3;
