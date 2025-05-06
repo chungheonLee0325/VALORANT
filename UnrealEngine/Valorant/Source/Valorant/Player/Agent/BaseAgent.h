@@ -59,6 +59,9 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category= "Anim")
 	UAnimMontage* AM_Die;
 	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category= "Anim")
+	UAnimMontage* AM_Reload;
+	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category= "Crouch")
 	UTimelineComponent* TL_Crouch;
 	
@@ -121,7 +124,7 @@ public:
 
 	// 네트워크 복제 속성 설정 - (언리얼 네트워크 이용)
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
-
+	
 	UFUNCTION(BlueprintCallable)
 	void BindToDelegatePC(AAgentPlayerController* pc);
 	
@@ -142,7 +145,7 @@ public:
 	void SetIsRun(const bool _bIsRun);
 	UFUNCTION(Server, Reliable)
 	void Server_SetIsRun(const bool _bIsRun);
-
+	
 	UFUNCTION(BlueprintCallable)
 	uint8 GetWeaponState() const { return ABP_1P->WeaponState; }
 	UFUNCTION(BlueprintCallable)
@@ -151,7 +154,7 @@ public:
 	void Server_SetWeaponState(uint8 newState);
 	UFUNCTION()
 	void OnRep_WeaponState();
-
+	
 	UFUNCTION(BlueprintCallable)
 	ABaseWeapon* GetPrimaryWeapon() const { return PrimaryWeapon; }
 	UFUNCTION(BlueprintCallable)
@@ -161,6 +164,9 @@ public:
 	ABaseWeapon* GetSecondWeapon() const { return SecondWeapon; }
 	UFUNCTION()
 	void SetSecondWeapon(ABaseWeapon* newWeapon) { SecondWeapon = newWeapon; }
+	
+	void Reload();
+	void Interact();
 	
 	UFUNCTION(BlueprintCallable) 
 	float GetEffectSpeedMulitiplier() const { return EffectSpeedMultiplier; }

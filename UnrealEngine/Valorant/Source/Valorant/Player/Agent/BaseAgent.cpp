@@ -287,6 +287,31 @@ void ABaseAgent::OnRep_WeaponState()
 	}
 }
 
+void ABaseAgent::Reload()
+{
+	ABaseWeapon* weapon = nullptr;
+	if (WeaponState == 1)
+	{
+		weapon = PrimaryWeapon;
+	}
+	else if (WeaponState == 2)
+	{
+		weapon = SecondWeapon;
+	}
+
+	if (!weapon)
+	{
+		return;
+	}
+
+	weapon->StartReload();
+	ABP_3P->Montage_Stop(0.1f);
+	if (AM_Reload)
+	{
+		ABP_3P->Montage_Play(AM_Reload, 1.0f);
+	}
+}
+
 void ABaseAgent::OnStartCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust)
 {
 	Super::OnStartCrouch(HalfHeightAdjust, ScaledHalfHeightAdjust);
@@ -334,7 +359,9 @@ void ABaseAgent::Die()
 	ThirdPersonMesh->SetOwnerNoSee(false);
 	GetMesh()->SetVisibility(false);
 
-	ThirdPersonMesh->PlayAnimation(AM_Die, false);
+	ABP_3P->Montage_Stop(0.1f);
+	ABP_3P->Montage_Play(AM_Die, 1.0f);
+	ABP_3P->bIsDead = true;
 
 	if (PrimaryWeapon)
 	{
@@ -356,7 +383,7 @@ void ABaseAgent::Die()
 	if (HasAuthority())
 	{
 		// NET_LOG(LogTemp,Warning,TEXT("다이 캠 피니쉬 타이머 설정"));
-		// 관전모드 진입
+
 		FTimerHandle deadTimerHandle;
 		GetWorldTimerManager().SetTimer(deadTimerHandle, FTimerDelegate::CreateLambda([this]()
 		{
@@ -386,7 +413,6 @@ void ABaseAgent::OnDieCameraFinished()
 
 void ABaseAgent::Net_Die_Implementation(AAgentPlayerController* _pc)
 {
-	
 }
 
 void ABaseAgent::Server_Die_Implementation()
@@ -395,75 +421,52 @@ void ABaseAgent::Server_Die_Implementation()
 
 void ABaseAgent::Respawn()
 {
-	// APlayerState* ps;
-	// APawn* pawn;
-	//
-	// ps->SetIsSpectator(false);
-	// ps->SetIsOnlyASpectator(false);
-	//
-	// APlayerController* pc = ps->GetPlayerController();
-	//
-	// pc->Possess(pawn);
-	//
-	// ABaseAgent* player = Cast<ABaseAgent>(pc->GetPawn());
-	//
 }
 
 void ABaseAgent::Net_Respawn_Implementation()
 {
-	// player->SetActorHiddenInGame(false);
-	// player->SetActorEnableCollision(true);
-	// player->Rebirth();
-	//
-	// if (pc == nullptr)
-	// {
-	// 	return;
-	// }
-	//
-	//
-	// if (pc->IsLocalController())
-	// {
-	// 	FInputModeGameOnly InputMode;
-	// 	pc->SetInputMode(InputMode);
-	//
-	// 	pc->GetPawn()->EnableInput(pc);
-	//
-	// 	player->CameraComp->PostProcessSettings.ColorSaturation = FVector4(1, 1, 1, 1);
-	// }
+}
+
+void ABaseAgent::Interact()
+{
+	if (FindPickUpComponent)
+	{
+		// FindPickUpComponent->PickUp(this);
+	}
 }
 
 void ABaseAgent::FindInteractable()
 {
-	const FVector startPos = SpringArm->GetComponentLocation();
-	const FVector endPos = startPos + Camera->GetForwardVector() * FindItemRange;
-	FHitResult hitResult;
-	
-	TArray<TEnumAsByte<EObjectTypeQuery>> objectTypesArray;
-	objectTypesArray.Add(UEngineTypes::ConvertToObjectType(ECC_EngineTraceChannel1));
-	
-	TArray<AActor*> actorsToIgnore;
-	actorsToIgnore.Add(this);
-	
-	if (UKismetSystemLibrary::SphereTraceSingleForObjects(
-	GetWorld(), startPos, endPos, 20.f, objectTypesArray, false
-	, actorsToIgnore, EDrawDebugTrace::None, hitResult, true))
-	{
-		AActor* actor = hitResult.GetActor()->IsA(ABaseInteractor::StaticClass()) ? hitResult.GetActor() : nullptr;
-		if (actor)
-		{
-			LookingActor = Cast<ABaseInteractor>(actor);
-			LookingActor->InteractActive(true);
-		}
-	}
-	else
-	{
-		if (LookingActor)
-		{
-			// UE_LOG(LogTemp,Warning,TEXT("%s를 그만볼래"),*LookingActor->GetActorNameOrLabel());
-			LookingActor->InteractActive(false);
-			LookingActor = nullptr;
-		}
-	}
+	// const FVector startPos = SpringArm->GetComponentLocation();
+	// const FVector endPos = startPos + Camera->GetForwardVector() * FindItemRange;
+	// FHitResult hitResult;
+	//
+	// TArray<TEnumAsByte<EObjectTypeQuery>> objectTypesArray;
+	// objectTypesArray.Add(UEngineTypes::ConvertToObjectType(ECC_EngineTraceChannel1));
+	//
+	// TArray<AActor*> actorsToIgnore;
+	// actorsToIgnore.Add(this);
+	//
+	// if (UKismetSystemLibrary::SphereTraceSingleForObjects(
+	// GetWorld(), startPos, endPos, 20.f, objectTypesArray, false
+	// , actorsToIgnore, EDrawDebugTrace::None, hitResult, true))
+	// {
+	// 	AActor* actor = hitResult.GetActor()->IsA(ABaseInteractor::StaticClass()) ? hitResult.GetActor() : nullptr;
+	// 	if (actor)
+	// 	{
+	// 		LookingActor = Cast<ABaseInteractor>(actor);
+	// 		LookingActor->InteractActive(true);
+	// 	}
+	// }
+	// else
+	// {
+	// 	if (LookingActor)
+	// 	{
+	// 		// UE_LOG(LogTemp,Warning,TEXT("%s를 그만볼래"),*LookingActor->GetActorNameOrLabel());
+	// 		LookingActor->InteractActive(false);
+	// 		LookingActor = nullptr;
+	// 	}
+	// }
 	
 	// TODO: 스파이크 / 문 순서로 추가
 }
@@ -471,7 +474,13 @@ void ABaseAgent::FindInteractable()
 void ABaseAgent::OnFindInteraction(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
 	UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
-	// NET_LOG(LogTemp,Warning,TEXT("OnFindInteraction"));
+	const ECollisionChannel ObjType = OtherComp->GetCollisionObjectType();
+	if (ObjType != ECC_GameTraceChannel1)
+	{
+		return;
+	}
+	
+	// 이미 바라보고 있는 총이 있으면 리턴
 	if (FindInteractActor)
 	{
 		if (auto* weapon = Cast<ABaseWeapon>(FindInteractActor))
@@ -479,16 +488,16 @@ void ABaseAgent::OnFindInteraction(UPrimitiveComponent* OverlappedComponent, AAc
 			return;
 		}
 	}
-    
+	
 	if (auto* interactor = Cast<ABaseInteractor>(OtherActor))
 	{
 		FindInteractActor = interactor;
 		FindInteractActor->InteractActive(true);
-	}
-        
-	if (auto* PickUpComponent = Cast<UValorantPickUpComponent>(OtherComp))
-	{
-		FindPickUpComponent = PickUpComponent;
+
+		if (auto* pickUpComp = interactor->FindComponentByClass<UValorantPickUpComponent>())
+		{
+			FindPickUpComponent = pickUpComp;
+		}
 	}
 }
 
@@ -500,15 +509,14 @@ void ABaseAgent::OnInteractionCapsuleEndOverlap(UPrimitiveComponent* OverlappedC
 		if (interactor == FindInteractActor)
 		{
 			FindInteractActor->InteractActive(false);
+			auto* pickUpComp = interactor->FindComponentByClass<UValorantPickUpComponent>();
+			
+			if (pickUpComp && pickUpComp == FindPickUpComponent)
+			{
+				FindPickUpComponent = nullptr;
+			}
+			
 			FindInteractActor = nullptr;
-		}
-	}
-    
-	if (const auto* PickUpComponent = Cast<UValorantPickUpComponent>(OtherComp))
-	{
-		if (PickUpComponent == FindPickUpComponent)
-		{
-			FindPickUpComponent = nullptr;
 		}
 	}
 }
