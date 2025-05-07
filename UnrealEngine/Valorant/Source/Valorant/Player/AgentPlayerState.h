@@ -46,10 +46,14 @@ public:
 	UFUNCTION(Server, Reliable, WithValidation)
 	void Server_PurchaseAbility(int32 AbilityID);
 
+	// 크레딧 시스템 관련 함수
+	UFUNCTION(BlueprintCallable, Category = "Agent|Credits")
+	UCreditComponent* GetCreditComponent() const { return CreditComponent; }
+
+	// 능력 스택 관련 함수
 	int32 GetAbilityStack(int32 AbilityID) const;
 	int32 ReduceAbilityStack(int32 AbilityID);
-
-
+	
 protected:
 	virtual void BeginPlay() override;
 	
@@ -59,6 +63,9 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
 	UBaseAttributeSet* BaseAttributeSet;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+	UCreditComponent* CreditComponent;
+
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
 	UValorantGameInstance* m_GameInstance = nullptr;
 
@@ -66,12 +73,6 @@ protected:
 	int32 m_AgentID = 0;
 	
 private:
-	UPROPERTY(EditDefaultsOnly)
-	int32 CurrentCredit = 0;
-
-	UPROPERTY(EditDefaultsOnly)
-	int32 MaxCredit = 100;
-
 	// AbilityID, Stack
 	UPROPERTY(EditDefaultsOnly)
 	TMap<int32, int32> AbilityStacks; 
