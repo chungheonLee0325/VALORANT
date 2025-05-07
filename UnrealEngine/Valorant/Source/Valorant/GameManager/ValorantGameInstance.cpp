@@ -158,6 +158,14 @@ FWeaponData* UValorantGameInstance::GetWeaponData(int WeaponID)
 	return nullptr;
 }
 
+void UValorantGameInstance::GetAllWeaponData(TArray<FWeaponData*>& WeaponList)
+{
+	for (auto& pair :dt_Weapon)
+	{
+		WeaponList.Add(&pair.Value);
+	}
+}
+
 FGameplayEffectData* UValorantGameInstance::GetGEffectData(int GEffectID)
 {
 	if (FGameplayEffectData* data = dt_GEffect.Find(GEffectID))

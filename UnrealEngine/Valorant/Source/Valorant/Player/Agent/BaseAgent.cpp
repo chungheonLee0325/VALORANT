@@ -312,6 +312,18 @@ void ABaseAgent::Reload()
 	}
 }
 
+void ABaseAgent::SetShopUI()
+{
+	if (IsLocallyControlled())
+	{
+		PC->RequestShopUI();
+	}
+	else
+	{
+		
+	}
+}
+
 void ABaseAgent::OnStartCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust)
 {
 	Super::OnStartCrouch(HalfHeightAdjust, ScaledHalfHeightAdjust);

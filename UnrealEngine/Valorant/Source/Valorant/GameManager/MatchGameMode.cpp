@@ -13,9 +13,11 @@
 #include "GameManager/ValorantGameInstance.h"
 #include "Kismet/GameplayStatics.h"
 #include "Player/AgentPlayerController.h"
+#include "Player/AgentPlayerState.h"
 #include "Player/MatchPlayerController.h"
 #include "Player/MatchPlayerState.h"
 #include "Player/Agent/BaseAgent.h"
+#include "Player/Component/CreditComponent.h"
 
 AMatchGameMode::AMatchGameMode()
 {
@@ -349,6 +351,8 @@ void AMatchGameMode::HandleRoundSubState_EndPhase()
 		GetWorld()->GetTimerManager().SetTimer(RoundTimerHandle, this, &AMatchGameMode::StartBuyPhase, EndPhaseTime);
 	}
 	
+	// 라운드 종료 시 크레딧 보상 지급
+	AwardRoundEndCredits();
 }
 
 void AMatchGameMode::SetRoundSubState(ERoundSubState NewRoundSubState)
@@ -410,6 +414,57 @@ void AMatchGameMode::RespawnAll()
 
 void AMatchGameMode::OnKill(AMatchPlayerController* Killer, AMatchPlayerController* Victim)
 {
+	// 킬러에게 크레딧 보상
+	if (Killer)
+	{
+		AAgentPlayerState* KillerPS = Killer->GetPlayerState<AAgentPlayerState>();
+		if (KillerPS)
+		{
+			UCreditComponent* CreditComp = KillerPS->FindComponentByClass<UCreditComponent>();
+			if (CreditComp)
+			{
+				// TODO: 헤드샷 여부 확인 로직 추가
+				bool bIsHeadshot = false; // 임시로 false로 설정
+				CreditComp->AwardKillCredits(bIsHeadshot);
+			}
+		}
+	}
+	
+	// 팀원들에게 어시스트 크레딧 보상 - 나중에 실제 어시스트 로직으로 교체
+	if (Killer && Victim)
+	{
+		AAgentPlayerState* KillerPS = Killer->GetPlayerState<AAgentPlayerState>();
+		AAgentPlayerState* VictimPS = Victim->GetPlayerState<AAgentPlayerState>();
+		
+		if (KillerPS && VictimPS)
+		{
+			bool bKillerIsBlue = KillerPS->bIsBlueTeam;
+			
+			// 같은 팀 플레이어에게 어시스트 크레딧 지급 (실제로는 어시스트 여부 체크 필요)
+			for (const FMatchPlayer& Player : MatchPlayers)
+			{
+				if (Player.Controller && Player.Controller != Killer && Player.bIsBlueTeam == bKillerIsBlue)
+				{
+					AAgentPlayerState* PS = Player.Controller->GetPlayerState<AAgentPlayerState>();
+					if (PS)
+					{
+						UCreditComponent* CreditComp = PS->FindComponentByClass<UCreditComponent>();
+						if (CreditComp)
+						{
+							// TODO: 실제 어시스트 여부 확인 필요
+							// 임시로 50% 확률로 어시스트 크레딧 지급
+							if (FMath::RandBool())
+							{
+								CreditComp->AwardAssistCredits();
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
+	// 생존 플레이어 카운트 및 라운드 종료 처리
 	int TeamBlueSurvivorNum = 0;
 	int TeamRedSurvivorNum = 0;
 	for (auto& PlayerInfo : MatchPlayers)
@@ -423,7 +478,7 @@ void AMatchGameMode::OnKill(AMatchPlayerController* Killer, AMatchPlayerControll
 		{
 			++TeamBlueSurvivorNum;
 		}
-		else
+		else if (!PlayerInfo.bIsBlueTeam && false == PlayerInfo.bIsDead)
 		{
 			++TeamRedSurvivorNum;
 		}
@@ -459,6 +514,21 @@ void AMatchGameMode::OnRevive(AMatchPlayerController* Reviver, AMatchPlayerContr
 
 void AMatchGameMode::OnSpikePlanted(AMatchPlayerController* Planter)
 {
+	// 스파이크 설치자에게 크레딧 보상
+	if (Planter)
+	{
+		AAgentPlayerState* PlanterPS = Planter->GetPlayerState<AAgentPlayerState>();
+		if (PlanterPS)
+		{
+			UCreditComponent* CreditComp = PlanterPS->FindComponentByClass<UCreditComponent>();
+			if (CreditComp)
+			{
+				CreditComp->AwardSpikeActionCredits(true);
+			}
+		}
+	}
+	
+	// 라운드 타이머 수정
 	MaxTime = SpikeActiveTime;
 	RemainRoundStateTime = MaxTime;
 	GetWorld()->GetTimerManager().ClearTimer(RoundTimerHandle);
@@ -467,12 +537,66 @@ void AMatchGameMode::OnSpikePlanted(AMatchPlayerController* Planter)
 
 void AMatchGameMode::OnSpikeDefused(AMatchPlayerController* Defuser)
 {
+	// 스파이크 해제자에게 크레딧 보상
+	if (Defuser)
+	{
+		AAgentPlayerState* DefuserPS = Defuser->GetPlayerState<AAgentPlayerState>();
+		if (DefuserPS)
+		{
+			UCreditComponent* CreditComp = DefuserPS->FindComponentByClass<UCreditComponent>();
+			if (CreditComp)
+			{
+				CreditComp->AwardSpikeActionCredits(false);
+			}
+		}
+	}
+	
 	StartEndPhaseBySpikeDefuse();
 }
 
 void AMatchGameMode::HandleRoundEnd(bool bBlueWin, const ERoundEndReason RoundEndReason)
 {
-	// TODO: 규칙에 따라 크레딧 지급
+	// 승패에 따라 팀 크레딧 지급
+	for (const FMatchPlayer& Player : MatchPlayers)
+	{
+		if (Player.Controller)
+		{
+			// 플레이어 스테이트에서 크레딧 컴포넌트 찾기
+			AAgentPlayerState* PS = Player.Controller->GetPlayerState<AAgentPlayerState>();
+			if (PS)
+			{
+				UCreditComponent* CreditComp = PS->FindComponentByClass<UCreditComponent>();
+				if (CreditComp)
+				{
+					// 팀 승패에 따라 크레딧 지급
+					bool bIsWinner = (Player.bIsBlueTeam == bBlueWin);
+					
+					// 연속 패배 보너스 계산
+					int32 ConsecutiveLosses = bIsWinner ? 0 : (Player.bIsBlueTeam ? BlueTeamConsecutiveLosses : RedTeamConsecutiveLosses);
+					
+					CreditComp->AwardRoundEndCredits(bIsWinner, ConsecutiveLosses);
+				}
+			}
+		}
+	}
+
+	// 연속 패배 카운터 업데이트
+	if (bBlueWin)
+	{
+		BlueTeamConsecutiveLosses = 0;
+		RedTeamConsecutiveLosses++;
+		
+		// 최대 3까지만 보너스 적용
+		RedTeamConsecutiveLosses = FMath::Min(RedTeamConsecutiveLosses, 3);
+	}
+	else
+	{
+		RedTeamConsecutiveLosses = 0;
+		BlueTeamConsecutiveLosses++;
+		
+		// 최대 3까지만 보너스 적용
+		BlueTeamConsecutiveLosses = FMath::Min(BlueTeamConsecutiveLosses, 3);
+	}
 
 	if (bBlueWin)
 	{
@@ -489,4 +613,40 @@ void AMatchGameMode::HandleRoundEnd(bool bBlueWin, const ERoundEndReason RoundEn
 	}
 	MatchGameState->SetTeamScore(TeamBlueScore, TeamRedScore);
 	MatchGameState->MulticastRPC_HandleRoundEnd(bBlueWin, RoundEndReason);
+}
+
+// 크레딧 시스템 관련 함수 추가
+void AMatchGameMode::AwardRoundEndCredits()
+{
+	// 현재 라운드 승패 정보 얻기 (임시로 팀 A가 이겼다고 가정)
+	bool bTeamAWon = true; // 실제로는 라운드 결과에 따라 설정
+	
+	// 라운드 종료 후 모든 플레이어에게 크레딧 보상 지급
+	for (const FMatchPlayer& Player : MatchPlayers)
+	{
+		if (Player.Controller)
+		{
+			// 플레이어 스테이트에서 크레딧 컴포넌트 찾기
+			AAgentPlayerState* PS = Player.Controller->GetPlayerState<AAgentPlayerState>();
+			if (PS)
+			{
+				UCreditComponent* CreditComp = PS->GetCreditComponent();
+				if (CreditComp)
+				{
+					// 팀 승패에 따라 크레딧 지급
+					bool bIsWinner = (Player.bIsBlueTeam == bTeamAWon);
+					
+					// 연속 패배 보너스 계산 (실제로는 팀별 연속 패배 횟수를 추적해야 함)
+					int32 ConsecutiveLosses = 0;
+					if (!bIsWinner)
+					{
+						// TODO: 팀별 연속 패배 횟수 추적 구현
+						ConsecutiveLosses = 1; // 임시로 1로 설정
+					}
+					
+					CreditComp->AwardRoundEndCredits(bIsWinner, ConsecutiveLosses);
+				}
+			}
+		}
+	}
 }

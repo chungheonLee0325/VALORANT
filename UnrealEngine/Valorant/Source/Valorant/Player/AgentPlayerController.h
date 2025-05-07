@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "MatchPlayerController.h"
+#include "Component/ShopComponent.h"
 
 #include "AgentPlayerController.generated.h"
 
@@ -22,6 +23,8 @@ class VALORANT_API AAgentPlayerController : public AMatchPlayerController
 	GENERATED_BODY()
 
 public:
+	AAgentPlayerController();
+	
 	UMatchMapHUD* GetAgentWidget() const { return AgentWidget; }
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Widget")
@@ -35,6 +38,8 @@ public:
 	FOnArmorChanged_PC OnArmorChanged_PC;
 	UPROPERTY(BlueprintAssignable)
 	FOnEffectSpeedChanged_PC OnEffectSpeedChanged_PC;
+	UPROPERTY()
+	UShopComponent* ShopComponent;
 
 	// 클라이언트에서 호출 -> 서버로 스킬 구매 요청
 	UFUNCTION(BlueprintCallable, Category = "Shop")
@@ -44,9 +49,32 @@ public:
 	UFUNCTION(Server, Reliable, WithValidation)
 	void Server_RequestPurchaseAbility(int AbilityID);
 
-	// ToDo : 상점 UI 열기 요청
+	UFUNCTION(BlueprintCallable, Category = "UI")
+	void RequestShopUI();
+
+	// 상점 UI 열기 요청 
 	UFUNCTION(BlueprintCallable, Category = "UI")
 	void RequestOpenShopUI();
+
+	// 상점 UI 닫기 요청
+	UFUNCTION(BlueprintCallable, Category = "UI")
+	void RequestCloseShopUI();
+
+	// 무기 구매 요청
+	UFUNCTION(BlueprintCallable, Category = "Shop")
+	void RequestPurchaseWeapon(int32 WeaponID);
+
+	// 서버에서 실행될 무기 구매 함수
+	UFUNCTION(Server, Reliable, WithValidation)
+	void Server_RequestPurchaseWeapon(int32 WeaponID);
+
+	// 방어구 구매 요청
+	UFUNCTION(BlueprintCallable, Category = "Shop")
+	void RequestPurchaseArmor(int32 ArmorLevel);
+
+	// 서버에서 실행될 방어구 구매 함수 
+	UFUNCTION(Server, Reliable, WithValidation)
+	void Server_RequestPurchaseArmor(int32 ArmorID);
 
 	UFUNCTION(Client, Reliable)
 	void Client_EnterSpectatorMode();
@@ -55,6 +83,21 @@ public:
 	UAgentAbilitySystemComponent* GetCacehdASC() { return CachedASC; }
 	UFUNCTION()
 	UBaseAttributeSet* GetCachedABS() { return CachedABS; }
+
+	// 상점 UI 관련 기능
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "UI")
+	TSubclassOf<class UMatchMapShopUI> ShopUIClass;
+
+	UPROPERTY(BlueprintReadOnly, Category = "UI")
+	class UMatchMapShopUI* ShopUI;
+
+	// 상점 UI 열기
+	UFUNCTION(BlueprintCallable, Category = "UI")
+	void OpenShopUI();
+
+	// 상점 UI 닫기
+	UFUNCTION(BlueprintCallable, Category = "UI")
+	void CloseShopUI();
 
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
@@ -88,4 +131,7 @@ protected:
 	UFUNCTION()
 	void HandleEffectSpeedChanged(float NewSpeed);
 	
+	// 크레딧 관련 위젯 바인딩
+	UFUNCTION()
+	void BindCreditWidgetDelegate();
 };

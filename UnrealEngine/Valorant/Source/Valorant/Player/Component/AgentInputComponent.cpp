@@ -91,6 +91,11 @@ void UAgentInputComponent::BindInput(UInputComponent* InputComponent)
 		{
 			eic->BindAction(InteractAction, ETriggerEvent::Started, this, &UAgentInputComponent::Interact);
 		}
+		
+		if (ShopUIAction)
+		{
+			eic->BindAction(ShopUIAction, ETriggerEvent::Started, this, &UAgentInputComponent::ShopUI);
+		}
 	}
 }
 
@@ -209,4 +214,11 @@ void UAgentInputComponent::Weapon3(const FInputActionValue& InputActionValue)
 void UAgentInputComponent::StartReload(const FInputActionValue& InputActionValue)
 {
 	Agent->Reload();
+}
+void UAgentInputComponent::ShopUI(const FInputActionValue& InputActionValue)
+{
+	if (Agent)
+	{
+		Agent->SetShopUI();
+	}
 }

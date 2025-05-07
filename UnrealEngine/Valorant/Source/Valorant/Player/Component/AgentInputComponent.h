@@ -77,7 +77,9 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	UInputAction* MapAction;
-
+	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	UInputAction* ShopUIAction;
 private:
 	UPROPERTY()
 	UEnhancedInputLocalPlayerSubsystem* InputSubsystem = nullptr;
@@ -111,4 +113,6 @@ public:
 	void Weapon3(const FInputActionValue& InputActionValue);
 	
 	void StartReload(const FInputActionValue& InputActionValue);
+
+	void ShopUI(const FInputActionValue& InputActionValue); 
 };

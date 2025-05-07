@@ -7,6 +7,7 @@
 #include "Valorant/Player/Agent/BaseAgent.h"
 #include "Valorant/AbilitySystem/Attributes/BaseAttributeSet.h"
 #include "Valorant/GameManager/ValorantGameInstance.h"
+#include "Component/CreditComponent.h"
 
 AAgentPlayerState::AAgentPlayerState()
 {
@@ -19,6 +20,9 @@ AAgentPlayerState::AAgentPlayerState()
 	ASC->SetReplicationMode(EGameplayEffectReplicationMode::Mixed);
 
 	BaseAttributeSet = CreateDefaultSubobject<UBaseAttributeSet>(TEXT("BaseAttributeSet"));
+	
+	// 크레딧 컴포넌트 생성 및 초기화
+	CreditComponent = CreateDefaultSubobject<UCreditComponent>(TEXT("CreditComponent"));
 
 	SetNetUpdateFrequency(100.f);
 	SetMinNetUpdateFrequency(33.f);
@@ -78,23 +82,18 @@ float AAgentPlayerState::GetEffectSpeed() const
 
 void AAgentPlayerState::Server_PurchaseAbility_Implementation(int32 AbilityID)
 {
-	if (!GetAbilitySystemComponent() || !GetBaseAttributeSet()) return;
+	if (!GetAbilitySystemComponent() || !GetBaseAttributeSet() || !CreditComponent) return;
 
 	FAbilityData* AbilityData = m_GameInstance->GetAbilityData(AbilityID);
+	if (!AbilityData) return;
+	
 	// 1. 비용 확인
 	int32 Cost = AbilityData->ChargeCost;
 
-	if (CurrentCredit >= Cost)
+	// 크레딧 컴포넌트를 통한 구매 시도
+	if (CreditComponent->CanUseCredits(Cost) && CreditComponent->UseCredits(Cost))
 	{
-		// 2. 비용 차감 
-		CurrentCredit -= Cost;
-
-		// 3. 어빌리티 부여
-		// FGameplayAbilitySpec AbilitySpec(AbilityData->AbilityClass, 1, INDEX_NONE, this); // Level 1, InputID 없음
-		// //AbilitySpec.Ability;
-		// GetAbilitySystemComponent()->GiveAbility(AbilitySpec);
-		
-		
+		// 2. 어빌리티 스택 증가
 		int32* Stack = AbilityStacks.Find(AbilityID);
 		if (Stack == nullptr)
 		{

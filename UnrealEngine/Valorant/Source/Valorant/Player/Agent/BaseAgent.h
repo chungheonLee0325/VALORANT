@@ -177,6 +177,8 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void SetEquipSpeedMultiplier(const float newEquipSpeed) { EquipSpeedMultiplier = newEquipSpeed; }
 
+	UFUNCTION(BlueprintCallable)
+	void SetShopUI();
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	UValorantGameInstance* m_GameInstance;
