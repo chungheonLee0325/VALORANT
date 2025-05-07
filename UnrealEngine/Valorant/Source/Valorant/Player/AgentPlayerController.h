@@ -9,7 +9,7 @@
 
 class UBaseAttributeSet;
 class UAgentAbilitySystemComponent;
-class UAgentBaseWidget;
+class UMatchMapHUD;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnHealthChanged_PC, float, newHealth);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnMaxHealthChanged_PC, float, newMaxHealth);
@@ -22,7 +22,7 @@ class VALORANT_API AAgentPlayerController : public AMatchPlayerController
 	GENERATED_BODY()
 
 public:
-	UAgentBaseWidget* GetAgentWidget() const { return AgentWidget; }
+	UMatchMapHUD* GetAgentWidget() const { return AgentWidget; }
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Widget")
 	TSubclassOf<UUserWidget> AgentWidgetClass;
@@ -51,6 +51,11 @@ public:
 	UFUNCTION(Client, Reliable)
 	void Client_EnterSpectatorMode();
 
+	UFUNCTION()
+	UAgentAbilitySystemComponent* GetCacehdASC() { return CachedASC; }
+	UFUNCTION()
+	UBaseAttributeSet* GetCachedABS() { return CachedABS; }
+
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	class UValorantGameInstance* m_GameInstance;
@@ -62,7 +67,7 @@ protected:
 	UBaseAttributeSet* CachedABS = nullptr ;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	UAgentBaseWidget* AgentWidget;
+	UMatchMapHUD* AgentWidget;
 	
 protected:
 	virtual void OnPossess(APawn* InPawn) override;

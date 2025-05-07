@@ -10,6 +10,7 @@
 #include "AbilitySystem/AgentAbilitySystemComponent.h"
 #include "AbilitySystem/Attributes/BaseAttributeSet.h"
 #include "Agent/BaseAgent.h"
+#include "UI/MatchMap/MatchMapHUD.h"
 #include "Valorant/GameManager/ValorantGameInstance.h"
 #include "Widget/AgentBaseWidget.h"
 
@@ -23,7 +24,7 @@ void AAgentPlayerController::OnPossess(APawn* InPawn)
 	if (IsLocalController())
 	{
 		m_GameInstance = Cast<UValorantGameInstance>(GetGameInstance());
-		InitAgentWidget();
+		// InitAgentWidget();
 	}
 }
 
@@ -34,7 +35,7 @@ void AAgentPlayerController::OnRep_PlayerState()
 	InitGAS();
 	
 	m_GameInstance = Cast<UValorantGameInstance>(GetGameInstance());
-	InitAgentWidget();
+	// InitAgentWidget();
 }
 
 void AAgentPlayerController::BeginPlay()
@@ -94,7 +95,7 @@ void AAgentPlayerController::InitAgentWidget()
 	
 	if (!AgentWidget)
 	{
-		AgentWidget = CreateWidget<UAgentBaseWidget>(this, AgentWidgetClass);
+		AgentWidget = CreateWidget<UMatchMapHUD>(this, AgentWidgetClass);
 		AgentWidget->AddToViewport();
 		AgentWidget->BindToDelegatePC(CachedASC,this);
 	}
