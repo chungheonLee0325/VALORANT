@@ -174,6 +174,18 @@ enum class EAbilitySlotType : uint8
 };
 
 USTRUCT(BlueprintType)
+struct FGunDamageFalloffData : public FTableRowBase
+{
+	GENERATED_BODY()
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Data")
+	int RangeStart = 0;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Data")
+	float DamageMultiplier = 1.0f;
+};
+
+USTRUCT(BlueprintType)
 struct FGunRecoilData : public FTableRowBase
 {
 	GENERATED_BODY()
@@ -299,6 +311,9 @@ struct FWeaponData : public FTableRowBase
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Data")
 	TArray<FGameplayTag> WeaponTags;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Data")
+	TArray<FGunDamageFalloffData> GunDamageFalloffArray;
+	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Data")
 	TArray<FGunRecoilData> GunRecoilMap;
 };
