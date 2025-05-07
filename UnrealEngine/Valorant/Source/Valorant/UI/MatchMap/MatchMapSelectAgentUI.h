@@ -56,6 +56,9 @@ protected:
 	
 public:
 	FOnClickAgentSelectButtonDelegate OnClickAgentSelectButtonDelegate;
+
+	UPROPERTY()
+	int32 CurrentSelectedAgentID = 0;
 	
 	void FillTeamSelectAgentList(const TArray<FString>& TeamPlayerNameArray);
 	void OnSelectedAgentChanged(const FString& DisplayName, int SelectedAgentID);

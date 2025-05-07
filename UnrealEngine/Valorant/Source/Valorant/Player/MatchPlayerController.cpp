@@ -131,9 +131,9 @@ void AMatchPlayerController::ClientRPC_DisplayHud_Implementation(bool bDisplay)
 	}
 }
 
-void AMatchPlayerController::ServerRPC_LockIn_Implementation()
+void AMatchPlayerController::ServerRPC_LockIn_Implementation(int SelectedAgentID)
 {
-	GameMode->OnLockIn(this, 0);
+	GameMode->OnLockIn(this, SelectedAgentID);
 }
 
 void AMatchPlayerController::ServerRPC_OnAgentSelectButtonClicked_Implementation(int SelectedAgentID)

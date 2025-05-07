@@ -119,6 +119,7 @@ void AMatchGameMode::OnLockIn(AMatchPlayerController* Player, int AgentId)
 		NET_LOG(LogTemp, Warning, TEXT("%hs Called, PS is nullptr"), __FUNCTION__);
 		return;
 	}
+	
 	bool bIsBlueTeam = PS->bIsBlueTeam;
 	for (const auto& PlayerInfo : MatchPlayers)
 	{
@@ -126,6 +127,11 @@ void AMatchGameMode::OnLockIn(AMatchPlayerController* Player, int AgentId)
 		{
 			PlayerInfo.Controller->ClientRPC_OnLockIn(PS->DisplayName);
 		}
+	}
+
+	if (auto* agentPS = Player->GetPlayerState<AAgentPlayerState>())
+	{
+		agentPS->SetAgentID(AgentId);
 	}
 	
 	if (++LockedInPlayerNum >= RequiredPlayerCount)
@@ -300,7 +306,22 @@ void AMatchGameMode::HandleRoundSubState_PreRound()
 			{
 				SpawnTransform = DefendersStartPoint->GetTransform();
 			}
-			auto* Agent = GetWorld()->SpawnActor<ABaseAgent>(AgentClass, SpawnTransform, SpawnParams);
+			
+			auto* agentPS = MatchPlayer.Controller->GetPlayerState<AAgentPlayerState>();
+			if (nullptr == agentPS)
+			{
+				NET_LOG(LogTemp, Error, TEXT("%hs Called, agentPS is nullptr"), __FUNCTION__);
+				return;
+			}
+			
+			FAgentData* agentData = Cast<UValorantGameInstance>(GetGameInstance())->GetAgentData(agentPS->GetAgentID()); 
+			if (agentData == nullptr)
+			{
+				NET_LOG(LogTemp, Error, TEXT("%hs Called, agentData is nullptr"), __FUNCTION__);
+				return;
+			}
+			
+			auto* Agent = GetWorld()->SpawnActor<ABaseAgent>(agentData->AgentAsset, SpawnTransform, SpawnParams);
 			MatchPlayer.Controller->ClientSetViewTarget(Agent);
 			MatchPlayer.Controller->Possess(Agent);
 		}
