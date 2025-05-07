@@ -257,7 +257,19 @@ void ABaseWeapon::ServerRPC_Fire_Implementation(const FVector& Location, const F
 	);
 	if (bHit)
 	{
-		NET_LOG(LogTemp, Warning, TEXT("LineTraceSingle Hit : %s"), *OutHit.GetActor()->GetName());
+		const auto& DamageFalloffArray = WeaponData->GunDamageFalloffArray;
+		int FinalDamage = WeaponData->BaseDamage;
+		for (int i = DamageFalloffArray.Num() - 1; i >= 0; i--)
+		{
+			const auto& DamageFalloff = DamageFalloffArray[i];
+			if (OutHit.Distance >= DamageFalloff.RangeStart)
+			{
+				FinalDamage *= DamageFalloff.DamageMultiplier;
+				break;
+			}
+		}
+		
+		NET_LOG(LogTemp, Warning, TEXT("LineTraceSingle Hit: %s, Distance: %f, FinalDamage: %d"), *OutHit.GetActor()->GetName(), OutHit.Distance, FinalDamage);
 		if (ABaseAgent* HitAgent = Cast<ABaseAgent>(OutHit.GetActor()))
 		{
 			HitAgent->ServerApplyGE(DamageEffectClass);
