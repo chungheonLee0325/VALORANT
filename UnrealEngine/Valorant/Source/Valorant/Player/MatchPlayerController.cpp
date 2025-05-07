@@ -23,6 +23,25 @@ void AMatchPlayerController::BeginPlay()
 	}
 }
 
+void AMatchPlayerController::OnPossess(APawn* InPawn)
+{
+	Super::OnPossess(InPawn);
+	NET_LOG(LogTemp, Warning, TEXT("%hs Called, PawnName Is %s"), __FUNCTION__, *InPawn->GetName());
+}
+
+void AMatchPlayerController::OnRep_Pawn()
+{
+	Super::OnRep_Pawn();
+	if (GetPawn() == nullptr)
+	{
+		NET_LOG(LogTemp, Warning, TEXT("%hs Called, PawnName Is nullptr"), __FUNCTION__);
+	}
+	else
+	{
+		NET_LOG(LogTemp, Warning, TEXT("%hs Called, PawnName Is %s"), __FUNCTION__, *GetPawn()->GetName());
+	}
+}
+
 void AMatchPlayerController::SetGameMode(AMatchGameMode* MatchGameMode)
 {
 	this->GameMode = MatchGameMode;

@@ -6,8 +6,10 @@
 #include "GameFramework/GameMode.h"
 #include "MatchGameMode.generated.h"
 
+class ABaseAgent;
 class AMatchPlayerController;
 class AAgentPlayerController;
+class APlayerStart;
 class USubsystemSteamManager;
 class UValorantGameInstance;
 
@@ -80,6 +82,14 @@ private:
 	int LockedInPlayerNum = 0;
 	TArray<FString> RedTeamPlayerNameArray;
 	TArray<FString> BlueTeamPlayerNameArray;
+	UPROPERTY()
+	TObjectPtr<APlayerStart> AgentSelectStartPoint = nullptr;
+	UPROPERTY()
+	TObjectPtr<APlayerStart> AttackersStartPoint = nullptr;
+	UPROPERTY()
+	TObjectPtr<APlayerStart> DefendersStartPoint = nullptr;
+	UPROPERTY(EditDefaultsOnly, Category="Gameflow", meta=(AllowPrivateAccess))
+	TSubclassOf<ABaseAgent> AgentClass;
 	
 public:
 	void OnControllerBeginPlay(AMatchPlayerController* Controller, const FString& Nickname);

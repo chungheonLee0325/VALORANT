@@ -8,11 +8,14 @@
 #include "OnlineSessionSettings.h"
 #include "SubsystemSteamManager.h"
 #include "Valorant.h"
+#include "ValorantCharacter.h"
 #include "GameFramework/PlayerStart.h"
 #include "GameManager/ValorantGameInstance.h"
+#include "Kismet/GameplayStatics.h"
 #include "Player/AgentPlayerController.h"
 #include "Player/MatchPlayerController.h"
 #include "Player/MatchPlayerState.h"
+#include "Player/Agent/BaseAgent.h"
 
 AMatchGameMode::AMatchGameMode()
 {
@@ -157,28 +160,38 @@ void AMatchGameMode::HandleMatchHasStarted()
 {
 	Super::HandleMatchHasStarted();
 
-	for( FConstPlayerControllerIterator Iterator = GetWorld()->GetPlayerControllerIterator(); Iterator; ++Iterator )
+	TSubclassOf<AActor> ActorClass = APlayerStart::StaticClass();
+	TArray<AActor*> OutActors;
+	UGameplayStatics::GetAllActorsOfClass(GetWorld(), ActorClass, OutActors);
+	for (auto* Actor : OutActors)
+	{
+		auto* PlayerStart = Cast<APlayerStart>(Actor);
+		if (PlayerStart->PlayerStartTag == FName("AgentSelect"))
+		{
+			AgentSelectStartPoint = PlayerStart;
+			UE_LOG(LogTemp, Warning, TEXT("AgentSelectStartPoint Found"));
+		}
+		else if (PlayerStart->PlayerStartTag == FName("Attackers"))
+		{
+			AttackersStartPoint = PlayerStart;
+			UE_LOG(LogTemp, Warning, TEXT("AttackersStartPoint Found"));
+		}
+		else if (PlayerStart->PlayerStartTag == FName("Defenders"))
+		{
+			DefendersStartPoint = PlayerStart;
+			UE_LOG(LogTemp, Warning, TEXT("DefendersStartPoint Found"));
+		}
+	}
+	
+	for(FConstPlayerControllerIterator Iterator = GetWorld()->GetPlayerControllerIterator(); Iterator; ++Iterator )
 	{
 		APlayerController* PlayerController = Iterator->Get();
 		if (PlayerController && (PlayerController->GetPawn() == nullptr))
 		{
-			// AgentSelect 태그를 가진 PlayerStart 찾기
-			APlayerStart* AgentSelectStart = nullptr;
-			for (TActorIterator<APlayerStart> It(GetWorld()); It; ++It)
+			if (AgentSelectStartPoint)
 			{
-				if (It->PlayerStartTag == FName("AgentSelect"))
-				{
-					NET_LOG(LogTemp, Error, TEXT("찾았다"));
-					AgentSelectStart = *It;
-					break;
-				}
-			}
-
-			if (AgentSelectStart)
-			{
-				// ViewTarget 지정
 				FViewTargetTransitionParams Params;
-				PlayerController->ClientSetViewTarget(AgentSelectStart, Params);
+				PlayerController->ClientSetViewTarget(AgentSelectStartPoint, Params);
 			}
 		}
 	}
@@ -270,6 +283,25 @@ void AMatchGameMode::HandleRoundSubState_PreRound()
 	if (CurrentRound == ShiftRound)
 	{
 		// TODO: 공수교대
+	}
+	{
+		FActorSpawnParameters SpawnParams;
+		SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+		for (const auto& MatchPlayer : MatchPlayers)
+		{
+			FTransform SpawnTransform  = FTransform::Identity;
+			if (MatchPlayer.bIsBlueTeam)
+			{
+				SpawnTransform = AttackersStartPoint->GetTransform();
+			}
+			else
+			{
+				SpawnTransform = DefendersStartPoint->GetTransform();
+			}
+			auto* Agent = GetWorld()->SpawnActor<ABaseAgent>(AgentClass, SpawnTransform, SpawnParams);
+			MatchPlayer.Controller->ClientSetViewTarget(Agent);
+			MatchPlayer.Controller->Possess(Agent);
+		}
 	}
 	RespawnAll();
 	// 일정 시간 후에 라운드 시작
