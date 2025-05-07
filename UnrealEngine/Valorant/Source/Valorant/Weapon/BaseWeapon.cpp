@@ -31,7 +31,7 @@ void ABaseWeapon::BeginPlay()
 	Super::BeginPlay();
 
 	PickUpModule->OnPickUp.AddDynamic(this, &ABaseWeapon::AttachWeapon);
-	
+	 
 	auto* GameInstance = Cast<UValorantGameInstance>(UGameplayStatics::GetGameInstance(GetWorld()));
 	if (nullptr == GameInstance)
 	{
@@ -258,6 +258,10 @@ void ABaseWeapon::ServerRPC_Fire_Implementation(const FVector& Location, const F
 	if (bHit)
 	{
 		NET_LOG(LogTemp, Warning, TEXT("LineTraceSingle Hit : %s"), *OutHit.GetActor()->GetName());
+		if (ABaseAgent* HitAgent = Cast<ABaseAgent>(OutHit.GetActor()))
+		{
+			HitAgent->ServerApplyGE(DamageEffectClass);
+		}
 		DrawDebugPoint(WorldContext, OutHit.ImpactPoint, 5, FColor::Green, false, 30);
 	}
 }

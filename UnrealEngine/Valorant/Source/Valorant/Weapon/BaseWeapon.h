@@ -7,6 +7,7 @@
 #include "ValorantObject/BaseInteractor.h"
 #include "BaseWeapon.generated.h"
 
+class UGameplayEffect;
 class UPickUpComponent;
 class UInputMappingContext;
 class UInputAction;
@@ -109,4 +110,6 @@ public:
 	UFUNCTION(BlueprintCallable, Category="Weapon")
 	void Drop();
 
+	UPROPERTY(EditDefaultsOnly)
+	TSubclassOf<UGameplayEffect> DamageEffectClass;
 };
