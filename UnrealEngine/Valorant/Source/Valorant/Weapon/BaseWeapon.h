@@ -90,6 +90,9 @@ protected:
 	UFUNCTION(BlueprintCallable, Category="Weapon")
 	void Fire();
 
+	UFUNCTION(Server, Reliable)
+	void ServerRPC_Fire(const FVector& Location, const FVector& Direction);
+
 	UFUNCTION(BlueprintCallable, Category="Weapon")
 	void EndFire();
 	

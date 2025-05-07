@@ -6,6 +6,8 @@
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "PickUpComponent.h"
+#include "Valorant.h"
+#include "GameManager/SubsystemSteamManager.h"
 #include "GameManager/ValorantGameInstance.h"
 #include "Kismet/GameplayStatics.h"
 #include "Player/AgentPlayerController.h"
@@ -14,6 +16,7 @@
 ABaseWeapon::ABaseWeapon()
 {
 	PrimaryActorTick.bCanEverTick = true;
+	bReplicates = true;
 	
 	WeaponMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("WeaponMesh"));
 	SetRootComponent(WeaponMesh);
@@ -107,6 +110,7 @@ void ABaseWeapon::AttachWeapon(ABaseAgent* PickUpAgent)
 		true
 	);
 	AttachToComponent(Agent->GetMesh(), AttachmentRules, FName(TEXT("R_WeaponPointSocket")));
+	SetOwner(Agent);
 
 	// Set up action bindings
 	if (const AAgentPlayerController* PlayerController = Cast<AAgentPlayerController>(Agent->GetController()))
@@ -187,38 +191,19 @@ void ABaseWeapon::Fire()
 		UE_LOG(LogTemp, Warning, TEXT("Ammo : %d, Total : (%f, %f), Add : (%f, %f)"), MagazineAmmo, TotalRecoilOffsetPitch, TotalRecoilOffsetYaw, PitchValue, YawValue);
 	}
 
-	if (const UWorld* World = GetWorld())
+	// 서버 쪽에서 처리해야 하는 발사 로직 호출
+	// 서버 입장에서는 클라이언트의 ViewportSize를 모르고, 반응성 등의 문제 때문에 발사 지점, 방향은 클라에서 계산 후 넘겨줌
+	const auto* PlayerController = Cast<AAgentPlayerController>(Agent->GetController());
+	if (nullptr == PlayerController)
 	{
-		const AAgentPlayerController* PlayerController = Cast<AAgentPlayerController>(Agent->GetController());
-		FVector Start, Dir;
-		int32 ScreenWidth, ScreenHeight;
-		PlayerController->GetViewportSize(ScreenWidth, ScreenHeight);
-		PlayerController->DeprojectScreenPositionToWorld(ScreenWidth * 0.5f, ScreenHeight * 0.5f, Start, Dir);
-		const FVector End = Start + Dir * 9999;
-
-		// 궤적, 탄착군 디버깅
-		TArray<AActor*> ActorsToIgnore;
-		ActorsToIgnore.Add(GetOwner());
-		FHitResult OutHit;
-		const bool bHit = UKismetSystemLibrary::LineTraceSingle(
-			World,
-			Start,
-			End,
-			UEngineTypes::ConvertToTraceType(ECC_Visibility),
-			false,
-			ActorsToIgnore,
-			EDrawDebugTrace::ForDuration,
-			OutHit,
-			true,
-			FLinearColor::Red,
-			FLinearColor::Green,
-			2.5f
-		);
-		if (bHit)
-		{
-			DrawDebugPoint(World, OutHit.ImpactPoint, 5, FColor::Green, false, 30);
-		}
+		NET_LOG(LogTemp, Error, TEXT("%hs Called, Agent Controller is incorrect"), __FUNCTION__);
+		return;
 	}
+	int32 ScreenWidth, ScreenHeight;
+	PlayerController->GetViewportSize(ScreenWidth, ScreenHeight);
+	FVector Start, Dir;
+	PlayerController->DeprojectScreenPositionToWorld(ScreenWidth * 0.5f, ScreenHeight * 0.5f, Start, Dir);
+	ServerRPC_Fire(Start, Dir);
 	
 	// // Try and play the sound if specified
 	// if (FireSound != nullptr)
@@ -236,6 +221,45 @@ void ABaseWeapon::Fire()
 	// 		AnimInstance->Montage_Play(FireAnimation, 1.f);
 	// 	}
 	// }
+}
+
+void ABaseWeapon::ServerRPC_Fire_Implementation(const FVector& Location, const FVector& Direction)
+{
+	const auto* WorldContext = GetWorld();
+	if (nullptr == WorldContext)
+	{
+		NET_LOG(LogTemp, Error, TEXT("%hs Called, World is nullptr"), __FUNCTION__);
+		return;
+	}
+	
+	const FVector& Start = Location;
+	const FVector End = Start + Direction * 99999;
+	NET_LOG(LogTemp, Warning, TEXT("ServerRPC_Fire_Implementation, Start : %s, End : %s"), *Start.ToString(), *End.ToString());
+	
+	// 궤적, 탄착군 디버깅
+	TArray<AActor*> ActorsToIgnore;
+	ActorsToIgnore.Add(GetOwner());
+	ActorsToIgnore.Add(Agent);
+	FHitResult OutHit;
+	const bool bHit = UKismetSystemLibrary::LineTraceSingle(
+		WorldContext,
+		Start,
+		End,
+		UEngineTypes::ConvertToTraceType(ECC_GameTraceChannel2), // TraceChannel: HitDetect
+		false,
+		ActorsToIgnore,
+		EDrawDebugTrace::ForDuration,
+		OutHit,
+		true,
+		FLinearColor::Red,
+		FLinearColor::Green,
+		2.5f
+	);
+	if (bHit)
+	{
+		NET_LOG(LogTemp, Warning, TEXT("LineTraceSingle Hit : %s"), *OutHit.GetActor()->GetName());
+		DrawDebugPoint(WorldContext, OutHit.ImpactPoint, 5, FColor::Green, false, 30);
+	}
 }
 
 void ABaseWeapon::EndFire()
