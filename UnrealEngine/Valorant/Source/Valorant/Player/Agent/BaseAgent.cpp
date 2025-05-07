@@ -57,6 +57,7 @@ ABaseAgent::ABaseAgent()
 	ThirdPersonMesh->bAffectDynamicIndirectLighting = true;
 	ThirdPersonMesh->PrimaryComponentTick.TickGroup = TG_PrePhysics;
 	ThirdPersonMesh->SetGenerateOverlapEvents(false);
+	ThirdPersonMesh->SetCollisionProfileName(TEXT("Agent"));
 	ThirdPersonMesh->SetCanEverAffectNavigation(false);
 
 	GetCapsuleComponent()->SetCapsuleHalfHeight(72.0f);
