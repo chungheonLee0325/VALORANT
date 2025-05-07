@@ -30,10 +30,10 @@ void UPickUpComponent::OnSphereBeginOverlap(UPrimitiveComponent* OverlappedCompo
 	// Checking if it is a First Person Character overlapping
 	if(ABaseAgent* Agent = Cast<ABaseAgent>(OtherActor))
 	{
-		// if (Agent->InteractionCapsule == Cast<UCapsuleComponent>(OtherComp))
-		// {
-		// 	return;
-		// }
+		if (Agent->InteractionCapsule == Cast<UCapsuleComponent>(OtherComp))
+		{
+			return;
+		}
 
 		// 이미 무기를 들고있다면 무시한다.
 		// TODO: 주무기, 보조무기, 근접무기 구분 필요
