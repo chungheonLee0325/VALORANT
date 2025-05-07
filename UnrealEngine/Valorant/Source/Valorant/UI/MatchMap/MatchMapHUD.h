@@ -7,6 +7,8 @@
 #include "GameManager/MatchGameState.h"
 #include "MatchMapHUD.generated.h"
 
+class UAgentAbilitySystemComponent;
+class AAgentPlayerState;
 class UWidgetSwitcher;
 class UTextBlock;
 
@@ -28,6 +30,7 @@ class VALORANT_API UMatchMapHUD : public UUserWidget
 
 protected:
 	virtual void NativeConstruct() override;
+	
 	UFUNCTION()
 	void UpdateTime(float Time);
 	UFUNCTION()
@@ -41,6 +44,18 @@ protected:
 	UFUNCTION()
 	void DisplayAnnouncement(EMatchAnnouncement MatchAnnouncement, const float DisplayTime);
 	void HideAnnouncement();
+
+	UFUNCTION()
+	void UpdateDisplayHealth(const float health);
+	UFUNCTION()
+	void UpdateDisplayArmor(const float armor);
+
+public:
+	UFUNCTION(BlueprintCallable)
+	void BindToDelegatePC(UAgentAbilitySystemComponent* asc, AAgentPlayerController* pc);
+
+	UFUNCTION(BlueprintCallable)
+	void InitUI(AAgentPlayerState* ps);
 	
 public:
 	UPROPERTY(meta=(BindWidget))
@@ -51,6 +66,16 @@ public:
 	TObjectPtr<UTextBlock> TextBlockRedScore = nullptr;
 	UPROPERTY(meta=(BindWidget))
 	TObjectPtr<UWidgetSwitcher> WidgetSwitcherAnnouncement = nullptr;
+
+	UPROPERTY(meta=(BindWidget))
+	UTextBlock* txt_Armor;
+
+	UPROPERTY(meta=(BindWidget))
+	UTextBlock* txt_HP;
+
+private:
+	UPROPERTY()
+	UAgentAbilitySystemComponent* ASC;
 	
 /*
  *	Debug
