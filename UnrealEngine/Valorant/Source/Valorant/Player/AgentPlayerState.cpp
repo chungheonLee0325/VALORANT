@@ -8,6 +8,7 @@
 #include "Valorant/AbilitySystem/Attributes/BaseAttributeSet.h"
 #include "Valorant/GameManager/ValorantGameInstance.h"
 #include "Component/CreditComponent.h"
+#include "Net/UnrealNetwork.h"
 
 AAgentPlayerState::AAgentPlayerState()
 {
@@ -26,6 +27,12 @@ AAgentPlayerState::AAgentPlayerState()
 
 	SetNetUpdateFrequency(100.f);
 	SetMinNetUpdateFrequency(33.f);
+}
+
+void AAgentPlayerState::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+	DOREPLIFETIME(AAgentPlayerState, m_AgentID);
 }
 
 int32 AAgentPlayerState::GetAbilityStack(int32 AbilityID) const

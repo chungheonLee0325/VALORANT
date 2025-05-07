@@ -49,7 +49,7 @@ public:
 	UFUNCTION(Client, Reliable)
 	void ClientRPC_DisplayHud(bool bDisplay);
 	UFUNCTION(Server, Reliable)
-	void ServerRPC_LockIn();
+	void ServerRPC_LockIn(int SelectedAgentID);
 	UFUNCTION(Server, Reliable)
 	void ServerRPC_OnAgentSelectButtonClicked(int SelectedAgentID);
 	UFUNCTION(Client, Reliable)
