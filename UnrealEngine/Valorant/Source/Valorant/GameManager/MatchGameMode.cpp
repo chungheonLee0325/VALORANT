@@ -61,6 +61,31 @@ void AMatchGameMode::BeginPlay()
 void AMatchGameMode::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
+
+	// InRound상태일 때 종료 조건인지 확인
+	// 굳이 Tick에서 확인하는 이유는 동시 전멸 체크를 위함임.
+	if (RoundSubState == ERoundSubState::RSS_InRound)
+	{
+		if (TeamBlueRemainingAgentNum <= 0 && TeamRedRemainingAgentNum <= 0)
+		{
+			// 동시에 전멸하면 블루팀이 이기는가? (선공: 블루)
+			// 스파이크설치X && 교대X -> 패배
+			// 스파이크설치O && 교대X -> 승리
+			// 스파이크설치X && 교대O -> 승리
+			// 스파이크설치O && 교대O -> 패배
+			// 스파이크설치와 교대 bool값이 서로 다르면 승리 -> XOR연산
+			StartEndPhaseByEliminated(bSpikePlanted ^ !IsShifted());
+		}
+		else if (TeamBlueRemainingAgentNum <= 0)
+		{
+			StartEndPhaseByEliminated(false);
+		}
+		else if (TeamRedRemainingAgentNum <= 0)
+		{
+			StartEndPhaseByEliminated(true);
+		}
+	}
+	
 	RemainRoundStateTime = FMath::Clamp(RemainRoundStateTime - DeltaSeconds, 0.0f, MaxTime);
 	
 	AMatchGameState* MatchGameState = GetGameState<AMatchGameState>();
@@ -306,6 +331,7 @@ void AMatchGameMode::HandleRoundSubState_PreRound()
 		}
 	}
 	RespawnAll();
+	TeamBlueRemainingAgentNum = TeamRedRemainingAgentNum = MatchPlayers.Num();
 	// 일정 시간 후에 라운드 시작
 	MaxTime = PreRoundTime;
 	GetWorld()->GetTimerManager().ClearTimer(RoundTimerHandle);
@@ -315,6 +341,7 @@ void AMatchGameMode::HandleRoundSubState_PreRound()
 void AMatchGameMode::HandleRoundSubState_BuyPhase()
 {
 	RespawnAll();
+	TeamBlueRemainingAgentNum = TeamRedRemainingAgentNum = MatchPlayers.Num();
 	// 일정 시간 후에 라운드 시작
 	MaxTime = BuyPhaseTime;
 	GetWorld()->GetTimerManager().ClearTimer(RoundTimerHandle);
@@ -464,40 +491,27 @@ void AMatchGameMode::OnKill(AMatchPlayerController* Killer, AMatchPlayerControll
 		}
 	}
 
+	int Blue = 0;
+	int Red = 0;
 	// 생존 플레이어 카운트 및 라운드 종료 처리
-	int TeamBlueSurvivorNum = 0;
-	int TeamRedSurvivorNum = 0;
 	for (auto& PlayerInfo : MatchPlayers)
 	{
-		if (PlayerInfo.Controller == Cast<AAgentPlayerController>(Victim))
+		if (PlayerInfo.Controller == Victim)
 		{
 			PlayerInfo.bIsDead = true;
 		}
 		
 		if (PlayerInfo.bIsBlueTeam && false == PlayerInfo.bIsDead)
 		{
-			++TeamBlueSurvivorNum;
+			Blue++;
 		}
 		else if (!PlayerInfo.bIsBlueTeam && false == PlayerInfo.bIsDead)
 		{
-			++TeamRedSurvivorNum;
+			Red++;
 		}
 	}
-	
-	if (TeamBlueSurvivorNum == 0 && TeamRedSurvivorNum == 0)
-	{
-		// TODO: 동시에 죽는것을 감지하려면 시간차를 두거나 HandleKill을 배열로 받는 변경 필요
-		// TODO: 스파이크 설치 여부에 따라 결정
-		StartEndPhaseByEliminated(true);
-	}
-	else if (TeamBlueSurvivorNum == 0)
-	{
-		StartEndPhaseByEliminated(false);
-	}
-	else if (TeamRedSurvivorNum == 0)
-	{
-		StartEndPhaseByEliminated(true);
-	}
+	TeamBlueRemainingAgentNum = Blue;
+	TeamRedRemainingAgentNum = Red;
 }
 
 void AMatchGameMode::OnRevive(AMatchPlayerController* Reviver, AMatchPlayerController* Target)

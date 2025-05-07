@@ -44,7 +44,6 @@ struct FMatchPlayer
 	TObjectPtr<AAgentPlayerController> Controller = nullptr;
 	FString Nickname = "UNKNOWN";
 	bool bIsBlueTeam = true;
-	int SelectedAgentID = 0;
 	bool bIsDead = false;
 };
 
@@ -126,13 +125,6 @@ protected:
 	void HandleRoundSubState_InRound();
 	void HandleRoundSubState_EndPhase();
 	void SetRoundSubState(ERoundSubState NewRoundSubState);
-
-	virtual AActor* ChoosePlayerStart_Implementation(AController* Player) override;
-	void RespawnAll();
-	void OnKill(AMatchPlayerController* Killer, AMatchPlayerController* Victim);
-	void OnRevive(AMatchPlayerController* Reviver, AMatchPlayerController* Target);
-	void OnSpikePlanted(AMatchPlayerController* Planter);
-	void OnSpikeDefused(AMatchPlayerController* Defuser);
 	
 	int TotalRound = 6;
 	int CurrentRound = 0;
@@ -147,4 +139,15 @@ protected:
 
 	// 크레딧 시스템 관련 함수
 	void AwardRoundEndCredits();
+
+public:
+	bool bSpikePlanted = false;
+	int TeamBlueRemainingAgentNum = 0;
+	int TeamRedRemainingAgentNum = 0;
+	virtual AActor* ChoosePlayerStart_Implementation(AController* Player) override;
+	void RespawnAll();
+	void OnKill(AMatchPlayerController* Killer, AMatchPlayerController* Victim);
+	void OnRevive(AMatchPlayerController* Reviver, AMatchPlayerController* Target);
+	void OnSpikePlanted(AMatchPlayerController* Planter);
+	void OnSpikeDefused(AMatchPlayerController* Defuser);
 };

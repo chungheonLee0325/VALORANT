@@ -14,6 +14,7 @@
 #include "Components/CapsuleComponent.h"
 #include "Components/TimelineComponent.h"
 #include "GameFramework/SpringArmComponent.h"
+#include "GameManager/MatchGameMode.h"
 #include "GameManager/SubsystemSteamManager.h"
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetSystemLibrary.h"
@@ -396,7 +397,7 @@ void ABaseAgent::Die()
 	if (HasAuthority())
 	{
 		// NET_LOG(LogTemp,Warning,TEXT("다이 캠 피니쉬 타이머 설정"));
-
+		GetWorld()->GetAuthGameMode<AMatchGameMode>()->OnKill(Cast<AMatchPlayerController>(GetOwner()), Cast<AMatchPlayerController>(GetOwner()));
 		FTimerHandle deadTimerHandle;
 		GetWorldTimerManager().SetTimer(deadTimerHandle, FTimerDelegate::CreateLambda([this]()
 		{
