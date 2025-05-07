@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/GameMode.h"
+#include "Player/AgentPlayerState.h"
 #include "MatchGameMode.generated.h"
 
 class ABaseAgent;
@@ -146,6 +147,8 @@ public:
 	int TeamRedRemainingAgentNum = 0;
 	virtual AActor* ChoosePlayerStart_Implementation(AController* Player) override;
 	void RespawnAll();
+	void RespawnPlayer(AAgentPlayerState* ps, AAgentPlayerController* pc, FTransform spawnTransform);
+	void ResetAgentAtrributeData(AAgentPlayerState* AgentPS);
 	void OnKill(AMatchPlayerController* Killer, AMatchPlayerController* Victim);
 	void OnRevive(AMatchPlayerController* Reviver, AMatchPlayerController* Target);
 	void OnSpikePlanted(AMatchPlayerController* Planter);
