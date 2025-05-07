@@ -9,6 +9,7 @@
 #include "SubsystemSteamManager.h"
 #include "Valorant.h"
 #include "ValorantCharacter.h"
+#include "AbilitySystem/Attributes/BaseAttributeSet.h"
 #include "GameFramework/PlayerStart.h"
 #include "GameManager/ValorantGameInstance.h"
 #include "Kismet/GameplayStatics.h"
@@ -288,45 +289,8 @@ void AMatchGameMode::HandleRoundSubState_SelectAgent()
 
 void AMatchGameMode::HandleRoundSubState_PreRound()
 {
-	if (CurrentRound == ShiftRound)
-	{
-		// TODO: 공수교대
-	}
-	{
-		FActorSpawnParameters SpawnParams;
-		SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-		for (const auto& MatchPlayer : MatchPlayers)
-		{
-			FTransform SpawnTransform  = FTransform::Identity;
-			if (MatchPlayer.bIsBlueTeam)
-			{
-				SpawnTransform = AttackersStartPoint->GetTransform();
-			}
-			else
-			{
-				SpawnTransform = DefendersStartPoint->GetTransform();
-			}
-			
-			auto* agentPS = MatchPlayer.Controller->GetPlayerState<AAgentPlayerState>();
-			if (nullptr == agentPS)
-			{
-				NET_LOG(LogTemp, Error, TEXT("%hs Called, agentPS is nullptr"), __FUNCTION__);
-				return;
-			}
-			
-			FAgentData* agentData = Cast<UValorantGameInstance>(GetGameInstance())->GetAgentData(agentPS->GetAgentID()); 
-			if (agentData == nullptr)
-			{
-				NET_LOG(LogTemp, Error, TEXT("%hs Called, agentData is nullptr"), __FUNCTION__);
-				return;
-			}
-			
-			auto* Agent = GetWorld()->SpawnActor<ABaseAgent>(agentData->AgentAsset, SpawnTransform, SpawnParams);
-			MatchPlayer.Controller->ClientSetViewTarget(Agent);
-			MatchPlayer.Controller->Possess(Agent);
-		}
-	}
 	RespawnAll();
+	
 	// 일정 시간 후에 라운드 시작
 	MaxTime = PreRoundTime;
 	GetWorld()->GetTimerManager().ClearTimer(RoundTimerHandle);
@@ -361,7 +325,6 @@ void AMatchGameMode::HandleRoundSubState_EndPhase()
 	GetWorld()->GetTimerManager().ClearTimer(RoundTimerHandle);
 	if (CurrentRound == TotalRound)
 	{
-		// TODO: 
 	}
 	else if (CurrentRound == TotalRound - 1)
 	{
@@ -422,15 +385,64 @@ AActor* AMatchGameMode::ChoosePlayerStart_Implementation(AController* Player)
 
 void AMatchGameMode::RespawnAll()
 {
-	for (auto& PlayerInfo : MatchPlayers)
+	NET_LOG(LogTemp, Warning, TEXT("리스폰 올"));
+	for (const auto& MatchPlayer : MatchPlayers)
 	{
-		if (PlayerInfo.bIsDead)
+		FTransform SpawnTransform  = FTransform::Identity;
+		if (MatchPlayer.bIsBlueTeam)
 		{
-			PlayerInfo.bIsDead = false;
-			// TODO: 체력 등 정상화
-			// TODO: 팀 & 공수교대 여부에 따라 처리
+			if (IsShifted()) { SpawnTransform = AttackersStartPoint->GetTransform(); }
+			else { SpawnTransform = DefendersStartPoint->GetTransform(); }
 		}
+		else
+		{
+			if (IsShifted()) { SpawnTransform = DefendersStartPoint->GetTransform(); }
+			else { SpawnTransform = AttackersStartPoint->GetTransform(); }
+		}
+			
+		auto* agentPS = MatchPlayer.Controller->GetPlayerState<AAgentPlayerState>();
+		if (nullptr == agentPS)
+		{
+			NET_LOG(LogTemp, Error, TEXT("%hs Called, agentPS is nullptr"), __FUNCTION__);
+			return;
+		}
+
+		ResetAgentAtrributeData(agentPS);
+		RespawnPlayer(agentPS, MatchPlayer.Controller, SpawnTransform);
 	}
+	// TODO: 팀 & 공수교대 여부에 따라 처리
+}
+
+void AMatchGameMode::RespawnPlayer(AAgentPlayerState* ps, AAgentPlayerController* pc, FTransform spawnTransform)
+{
+	FActorSpawnParameters SpawnParams;
+	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+	
+	FAgentData* agentData = Cast<UValorantGameInstance>(GetGameInstance())->GetAgentData(ps->GetAgentID());
+	
+	auto* Agent = GetWorld()->SpawnActor<ABaseAgent>(agentData->AgentAsset, spawnTransform);
+	
+	if (ps->IsSpectator())
+	{
+		ps->SetIsSpectator(false);
+		ps->SetIsOnlyASpectator(false);
+	}
+
+	APawn* oldPawn = pc->GetPawn();
+	
+	pc->UnPossess();
+	pc->Possess(Agent);
+		
+	if (oldPawn)
+	{
+		oldPawn->Destroy();
+	}
+}
+
+// 체력 등 정상화
+void AMatchGameMode::ResetAgentAtrributeData(AAgentPlayerState* AgentPS)
+{
+	AgentPS->GetBaseAttributeSet()->ResetAttributeData();
 }
 
 void AMatchGameMode::OnKill(AMatchPlayerController* Killer, AMatchPlayerController* Victim)
