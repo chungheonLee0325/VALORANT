@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "MatchPlayerController.h"
+#include "Component/ShopComponent.h"
 
 #include "AgentPlayerController.generated.h"
 
@@ -22,6 +23,8 @@ class VALORANT_API AAgentPlayerController : public AMatchPlayerController
 	GENERATED_BODY()
 
 public:
+	AAgentPlayerController();
+
 	UAgentBaseWidget* GetAgentWidget() const { return AgentWidget; }
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Widget")
@@ -44,9 +47,30 @@ public:
 	UFUNCTION(Server, Reliable, WithValidation)
 	void Server_RequestPurchaseAbility(int AbilityID);
 
-	// ToDo : 상점 UI 열기 요청
+	// 상점 UI 열기 요청 
 	UFUNCTION(BlueprintCallable, Category = "UI")
-	void RequestOpenShopUI(); 
+	void RequestOpenShopUI();
+
+	// 상점 UI 닫기 요청
+	UFUNCTION(BlueprintCallable, Category = "UI")
+	void RequestCloseShopUI();
+
+	// 무기 구매 요청
+	UFUNCTION(BlueprintCallable, Category = "Shop")
+	void RequestPurchaseWeapon(int32 WeaponID);
+
+	// 서버에서 실행될 무기 구매 함수
+	UFUNCTION(Server, Reliable, WithValidation)
+	void Server_RequestPurchaseWeapon(int32 WeaponID);
+
+	// 방어구 구매 요청
+	UFUNCTION(BlueprintCallable, Category = "Shop")
+	void RequestPurchaseArmor(int32 ArmorLevel);
+
+	// 서버에서 실행될 방어구 구매 함수 
+	UFUNCTION(Server, Reliable, WithValidation)
+	void Server_RequestPurchaseArmor(int32 ArmorID);
+
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	class UValorantGameInstance* m_GameInstance;
@@ -59,6 +83,9 @@ protected:
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	UAgentBaseWidget* AgentWidget;
+
+	UPROPERTY()
+	UShopComponent* ShopComponent;
 
 protected:
 	virtual void OnPossess(APawn* InPawn) override;

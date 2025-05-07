@@ -57,6 +57,7 @@ public:
 public:
 	FAgentData* GetAgentData(int AgentID);
 	FWeaponData* GetWeaponData(int WeaponID);
+	void GetAllWeaponData(TArray<FWeaponData*> WeaponList);
 	FGameplayEffectData* GetGEffectData(int GEffectID);
 	FAbilityData* GetAbilityData(int AbilityID);
 	

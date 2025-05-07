@@ -7,6 +7,7 @@
 #include "AbilitySystem/AgentAbilitySystemComponent.h"
 #include "AbilitySystem/Attributes/BaseAttributeSet.h"
 #include "Agent/BaseAgent.h"
+#include "Component/ShopComponent.h"
 #include "Valorant/GameManager/ValorantGameInstance.h"
 #include "Widget/AgentBaseWidget.h"
 
@@ -107,6 +108,11 @@ void AAgentPlayerController::HandleEffectSpeedChanged(float NewSpeed)
 	OnEffectSpeedChanged_PC.Broadcast(NewSpeed);
 }
 
+AAgentPlayerController::AAgentPlayerController()
+{
+	ShopComponent = CreateDefaultSubobject<UShopComponent>(TEXT("ShopComponent"));
+}
+
 void AAgentPlayerController::RequestPurchaseAbility(int AbilityID)
 {
 	if (AbilityID != 0)
@@ -132,4 +138,68 @@ bool AAgentPlayerController::Server_RequestPurchaseAbility_Validate(int AbilityI
 
 void AAgentPlayerController::RequestOpenShopUI()
 {
+	if (ShopComponent)
+	{
+		ShopComponent->OpenShop();
+	}
+}
+
+void AAgentPlayerController::RequestCloseShopUI()
+{
+	if (ShopComponent)
+	{
+		ShopComponent->CloseShop();
+	}
+}
+
+void AAgentPlayerController::RequestPurchaseWeapon(int32 WeaponID)
+{
+	if (WeaponID != 0)
+	{
+		Server_RequestPurchaseWeapon(WeaponID);
+	}
+}
+
+void AAgentPlayerController::Server_RequestPurchaseWeapon_Implementation(int32 WeaponID)
+{
+	AAgentPlayerState* PS = GetPlayerState<AAgentPlayerState>();
+	if (PS)
+	{
+		if (ShopComponent)
+		{
+			// 무기 구매 시도
+			ShopComponent->PurchaseWeapon(WeaponID);
+		}
+	}
+}
+
+bool AAgentPlayerController::Server_RequestPurchaseWeapon_Validate(int32 WeaponID)
+{
+	return WeaponID != 0;
+}
+
+void AAgentPlayerController::RequestPurchaseArmor(int32 ArmorLevel)
+{
+	if (ArmorLevel > 0)
+	{
+		Server_RequestPurchaseArmor(ArmorLevel);
+	}
+}
+
+void AAgentPlayerController::Server_RequestPurchaseArmor_Implementation(int32 ArmorID)
+{
+	AAgentPlayerState* PS = GetPlayerState<AAgentPlayerState>();
+	if (PS)
+	{
+		if (ShopComponent)
+		{
+			// 방어구 구매 시도
+			ShopComponent->PurchaseArmor(ArmorID);
+		}
+	}
+}
+
+bool AAgentPlayerController::Server_RequestPurchaseArmor_Validate(int32 ArmorID)
+{
+	return ArmorID > 0;
 }

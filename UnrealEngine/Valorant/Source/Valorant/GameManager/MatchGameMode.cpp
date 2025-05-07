@@ -9,7 +9,9 @@
 #include "Valorant.h"
 #include "GameManager/ValorantGameInstance.h"
 #include "Player/AgentPlayerController.h"
+#include "Player/AgentPlayerState.h"
 #include "Player/MatchPlayerController.h"
+#include "Player/Component/CreditComponent.h"
 
 AMatchGameMode::AMatchGameMode()
 {
@@ -168,10 +170,13 @@ void AMatchGameMode::HandleRoundSubState_InRound()
 
 void AMatchGameMode::HandleRoundSubState_EndPhase()
 {
-	// 일정 시간 후에 라운드 재시작
+	// 일정 시간 후에 라운드 종료
 	MaxTime = EndPhaseTime;
 	GetWorld()->GetTimerManager().ClearTimer(RoundTimerHandle);
 	GetWorld()->GetTimerManager().SetTimer(RoundTimerHandle, this, &AMatchGameMode::StartBuyPhase, EndPhaseTime);
+	
+	// 라운드 종료 시 크레딧 보상 지급
+	AwardRoundEndCredits();
 }
 
 void AMatchGameMode::SetRoundSubState(ERoundSubState NewRoundSubState)
@@ -209,5 +214,41 @@ void AMatchGameMode::SetRoundSubState(ERoundSubState NewRoundSubState)
 
 		RemainRoundStateTime = MaxTime;
 		MatchGameState->SetRemainRoundStateTime(RemainRoundStateTime);
+	}
+}
+
+// 크레딧 시스템 관련 함수 추가
+void AMatchGameMode::AwardRoundEndCredits()
+{
+	// 현재 라운드 승패 정보 얻기 (임시로 팀 A가 이겼다고 가정)
+	bool bTeamAWon = true; // 실제로는 라운드 결과에 따라 설정
+	
+	// 라운드 종료 후 모든 플레이어에게 크레딧 보상 지급
+	for (const FMatchPlayer& Player : MatchPlayers)
+	{
+		if (Player.Controller)
+		{
+			// 플레이어 스테이트에서 크레딧 컴포넌트 찾기
+			AAgentPlayerState* PS = Player.Controller->GetPlayerState<AAgentPlayerState>();
+			if (PS)
+			{
+				UCreditComponent* CreditComp = PS->GetCreditComponent();
+				if (CreditComp)
+				{
+					// 팀 승패에 따라 크레딧 지급
+					bool bIsWinner = (Player.bIsTeamA == bTeamAWon);
+					
+					// 연속 패배 보너스 계산 (실제로는 팀별 연속 패배 횟수를 추적해야 함)
+					int32 ConsecutiveLosses = 0;
+					if (!bIsWinner)
+					{
+						// TODO: 팀별 연속 패배 횟수 추적 구현
+						ConsecutiveLosses = 1; // 임시로 1로 설정
+					}
+					
+					CreditComp->AwardRoundEndCredits(bIsWinner, ConsecutiveLosses);
+				}
+			}
+		}
 	}
 }

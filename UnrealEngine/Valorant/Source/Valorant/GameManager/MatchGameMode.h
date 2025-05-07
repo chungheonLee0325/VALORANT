@@ -95,4 +95,7 @@ protected:
 	void HandleRoundSubState_InRound();
 	void HandleRoundSubState_EndPhase();
 	void SetRoundSubState(ERoundSubState NewRoundSubState);
+
+	// 크레딧 시스템 관련 함수
+	void AwardRoundEndCredits();
 };
