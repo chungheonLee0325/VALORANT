@@ -3,20 +3,18 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "GameFramework/PlayerState.h"
 #include "AbilitySystemInterface.h"
-#include "GameplayEffectTypes.h"
+#include "MatchPlayerState.h"
 #include "AgentPlayerState.generated.h"
 
 class UValorantGameInstance;
 class UAgentAbilitySystemComponent;
 class UBaseAttributeSet;
-class UCreditComponent;
 /**
  * 
  */
 UCLASS()
-class VALORANT_API AAgentPlayerState : public APlayerState, public IAbilitySystemInterface
+class VALORANT_API AAgentPlayerState : public AMatchPlayerState, public IAbilitySystemInterface
 {
 	GENERATED_BODY()
 
@@ -27,6 +25,10 @@ public:
 	UAbilitySystemComponent* GetAbilitySystemComponent() const override;
 	
 	UBaseAttributeSet* GetBaseAttributeSet() const;
+
+	UFUNCTION(BlueprintCallable)
+	void SetAgentID(int32 NewAgentID) { m_AgentID = NewAgentID; }
+	int32 GetAgentID() const { return m_AgentID; }
 
 	UFUNCTION(BlueprintCallable, Category = "Agent|BaseAttributes")
 	float GetHealth() const;
@@ -55,7 +57,7 @@ public:
 protected:
 	virtual void BeginPlay() override;
 	
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite) 
 	UAgentAbilitySystemComponent* ASC;
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
@@ -67,6 +69,9 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
 	UValorantGameInstance* m_GameInstance = nullptr;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	int32 m_AgentID = 0;
+	
 private:
 	// AbilityID, Stack
 	UPROPERTY(EditDefaultsOnly)

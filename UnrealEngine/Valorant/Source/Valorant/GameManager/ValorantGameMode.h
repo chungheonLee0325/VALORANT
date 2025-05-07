@@ -6,6 +6,8 @@
 #include "GameFramework/GameModeBase.h"
 #include "ValorantGameMode.generated.h"
 
+class UValorantGameInstance;
+
 UCLASS(minimalapi)
 class AValorantGameMode : public AGameModeBase
 {
@@ -13,6 +15,17 @@ class AValorantGameMode : public AGameModeBase
 
 public:
 	AValorantGameMode();
+
+	UFUNCTION(BlueprintCallable)
+	void RespawnAllPlayer();
+
+private:
+	UPROPERTY()
+	UValorantGameInstance* m_GameInstance;
+	
+protected:
+	virtual void BeginPlay() override;
+
 };
 
 

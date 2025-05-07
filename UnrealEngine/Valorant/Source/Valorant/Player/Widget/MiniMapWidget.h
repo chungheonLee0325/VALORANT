@@ -20,7 +20,7 @@ public:
 
 	// 미니맵 배경 이미지  (BP 바인딩)
 	UPROPERTY(BlueprintReadWrite, meta = (BindWidget))
-	class UImage* MiniMapBackground;
+	class UImage* MinimapBackground;
 
 	// 미니맵 원점 좌표 (월드 좌표계의 어느 위치가 미니맵의 중심인지)
 	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="MiniMap")

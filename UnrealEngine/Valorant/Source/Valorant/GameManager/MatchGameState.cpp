@@ -21,6 +21,9 @@ void AMatchGameState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutL
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 	DOREPLIFETIME(AMatchGameState, RoundSubState);
 	DOREPLIFETIME(AMatchGameState, RemainRoundStateTime);
+	DOREPLIFETIME(AMatchGameState, TeamBlueScore);
+	DOREPLIFETIME(AMatchGameState, TeamRedScore);
+	DOREPLIFETIME(AMatchGameState, TransitionTime);
 }
 
 void AMatchGameState::HandleMatchIsWaitingToStart()
@@ -75,6 +78,7 @@ void AMatchGameState::OnRep_RoundSubState()
 	{
 		HandleRoundSubState_EndRound();
 	}
+	OnRoundSubStateChanged.Broadcast(RoundSubState, TransitionTime);
 }
 
 void AMatchGameState::OnRep_RemainRoundStateTime()
@@ -91,7 +95,8 @@ void AMatchGameState::HandleRoundSubState_SelectAgent()
 		return;
 	}
 	NET_LOG(LogTemp, Warning, TEXT("%hs Called"), __FUNCTION__);
-	PC->ClientRPC_DisplaySelectUI(true);
+	
+	// PC->ClientRPC_ShowSelectUI(true);
 }
 
 void AMatchGameState::HandleRoundSubState_PreRound()
@@ -103,7 +108,7 @@ void AMatchGameState::HandleRoundSubState_PreRound()
 		return;
 	}
 	NET_LOG(LogTemp, Warning, TEXT("%hs Called"), __FUNCTION__);
-	PC->ClientRPC_DisplaySelectUI(false);
+	PC->ClientRPC_HideSelectUI();
 	PC->ClientRPC_DisplayHud(true);
 }
 
@@ -129,20 +134,41 @@ void AMatchGameState::HandleRoundSubState_EndRound()
 	NET_LOG(LogTemp, Warning, TEXT("%hs Called"), __FUNCTION__);
 }
 
-void AMatchGameState::SetRoundSubState(ERoundSubState NewRoundSubState)
+void AMatchGameState::OnRep_TeamScore()
 {
-	if (GetLocalRole() == ROLE_Authority)
+	OnTeamScoreChanged.Broadcast(TeamBlueScore, TeamRedScore);
+}
+
+void AMatchGameState::SetRoundSubState(ERoundSubState NewRoundSubState, const float NewTransitionTime)
+{
+	if (HasAuthority())
 	{
 		RoundSubState = NewRoundSubState;
+		TransitionTime = NewTransitionTime;
 		OnRep_RoundSubState();
 	}
 }
 
 void AMatchGameState::SetRemainRoundStateTime(float NewRemainRoundStateTime)
 {
-	if (GetLocalRole() == ROLE_Authority)
+	if (HasAuthority())
 	{
 		RemainRoundStateTime = NewRemainRoundStateTime;
 		OnRep_RemainRoundStateTime();
+	}
+}
+
+void AMatchGameState::MulticastRPC_HandleRoundEnd_Implementation(bool bBlueWin, ERoundEndReason RoundEndReason)
+{
+	OnRoundEnd.Broadcast(bBlueWin, RoundEndReason, TransitionTime);
+}
+
+void AMatchGameState::SetTeamScore(int NewTeamBlueScore, int NewTeamRedScore)
+{
+	if (HasAuthority())
+	{
+		this->TeamBlueScore = NewTeamBlueScore;
+		this->TeamRedScore = NewTeamRedScore;
+		OnRep_TeamScore();
 	}
 }

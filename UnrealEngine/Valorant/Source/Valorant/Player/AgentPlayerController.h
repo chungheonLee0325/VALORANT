@@ -71,6 +71,9 @@ public:
 	UFUNCTION(Server, Reliable, WithValidation)
 	void Server_RequestPurchaseArmor(int32 ArmorID);
 
+	UFUNCTION(Client, Reliable)
+	void Client_EnterSpectatorMode();
+
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	class UValorantGameInstance* m_GameInstance;
@@ -91,8 +94,7 @@ protected:
 	virtual void OnPossess(APawn* InPawn) override;
 	virtual void OnRep_PlayerState() override;
 	virtual void BeginPlay() override;
-
-private:
+	
 	UFUNCTION()
 	void InitCacheGAS();
 
