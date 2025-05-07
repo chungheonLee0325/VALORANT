@@ -140,6 +140,8 @@ protected:
 	int TeamBlueScore = 0;
 	int TeamRedScore = 0;
 	int ShiftRound = 4;
+	int BlueTeamConsecutiveLosses = 0;
+	int RedTeamConsecutiveLosses = 0;
 	bool IsShifted() const { return CurrentRound >= ShiftRound; }
 	void HandleRoundEnd(bool bBlueWin, const ERoundEndReason RoundEndReason);
 

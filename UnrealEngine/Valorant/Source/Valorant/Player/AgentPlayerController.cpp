@@ -7,10 +7,36 @@
 #include "AbilitySystem/AgentAbilitySystemComponent.h"
 #include "AbilitySystem/Attributes/BaseAttributeSet.h"
 #include "Agent/BaseAgent.h"
+#include "Component/CreditComponent.h"
 #include "Component/ShopComponent.h"
 #include "Valorant/GameManager/ValorantGameInstance.h"
 #include "Widget/AgentBaseWidget.h"
+#include "Valorant/UI/MatchMap/MatchMapShopUI.h"
 
+
+AAgentPlayerController::AAgentPlayerController()
+{
+	ShopComponent = CreateDefaultSubobject<UShopComponent>(TEXT("ShopComponent"));
+}
+
+void AAgentPlayerController::BeginPlay()
+{
+	Super::BeginPlay();
+	// UE_LOG(LogTemp, Warning, TEXT("PC, BeginPlay → %s, LocalRole=%d, IsLocal=%d"),
+	// *GetName(), (int32)GetLocalRole(), IsLocalController());
+	
+	// ShopComponent 초기화
+	if (ShopComponent)
+	{
+		// 에이전트가 가진 스킬 ID를 가져와서 상점 초기화
+		// 아직 에이전트가 연결되지 않았으므로 나중에 처리
+		UE_LOG(LogTemp, Display, TEXT("PC, ShopComponent found"));
+	}
+	else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("PC, ShopComponent not found"));
+	}
+}
 
 void AAgentPlayerController::OnPossess(APawn* InPawn)
 {
@@ -22,6 +48,37 @@ void AAgentPlayerController::OnPossess(APawn* InPawn)
 	{
 		m_GameInstance = Cast<UValorantGameInstance>(GetGameInstance());
 		CreateAgentWidget();
+	}
+	
+	// 에이전트 소유 시 ShopComponent 초기화
+	ABaseAgent* Agent = Cast<ABaseAgent>(InPawn);
+	if (Agent && ShopComponent)
+	{
+		AAgentPlayerState* PS = GetPlayerState<AAgentPlayerState>();
+		if (PS)
+		{
+			int32 AgentID = PS->GetAgentID();
+			UE_LOG(LogTemp, Display, TEXT("PC, Possess Agent ID: %d"), AgentID);
+			
+			// 에이전트 데이터 가져오기
+			if (m_GameInstance)
+			{
+				FAgentData* AgentData = m_GameInstance->GetAgentData(AgentID);
+				if (AgentData)
+				{
+					// 에이전트의 구매 가능한 능력 ID 목록 생성
+					TArray<int32> SkillIDs;
+					if (AgentData->AbilityID_C != 0) SkillIDs.Add(AgentData->AbilityID_C);
+					if (AgentData->AbilityID_Q != 0) SkillIDs.Add(AgentData->AbilityID_Q);
+					if (AgentData->AbilityID_E != 0) SkillIDs.Add(AgentData->AbilityID_E);
+					if (AgentData->AbilityID_X != 0) SkillIDs.Add(AgentData->AbilityID_X);
+					
+					// 상점 초기화
+					ShopComponent->InitBySkillData(SkillIDs);
+					UE_LOG(LogTemp, Display, TEXT("PC, ShopComponent initialized with %d skills"), SkillIDs.Num());
+				}
+			}
+		}
 	}
 }
 
@@ -36,13 +93,6 @@ void AAgentPlayerController::OnRep_PlayerState()
 		m_GameInstance = Cast<UValorantGameInstance>(GetGameInstance());
 		CreateAgentWidget();
 	}
-}
-
-void AAgentPlayerController::BeginPlay()
-{
-	Super::BeginPlay();
-	// UE_LOG(LogTemp, Warning, TEXT("PC, BeginPlay → %s, LocalRole=%d, IsLocal=%d"),
-	// *GetName(), (int32)GetLocalRole(), IsLocalController());
 }
 
 void AAgentPlayerController::Client_EnterSpectatorMode_Implementation()
@@ -94,10 +144,14 @@ void AAgentPlayerController::CreateAgentWidget()
 		UE_LOG(LogTemp,Error,TEXT("PlayerController에 AgentWidget 좀 넣어주세요."));
 		return;
 	}
-
+	
 	AgentWidget = CreateWidget<UAgentBaseWidget>(this, AgentWidgetClass);
+	
 	AgentWidget->AddToViewport();
 	AgentWidget->BindToDelegatePC(CachedASC,this);
+	
+	// 크레딧 UI 바인딩
+	BindCreditWidgetDelegate();
 }
 
 void AAgentPlayerController::HandleHealthChanged(float NewHealth)
@@ -124,11 +178,6 @@ void AAgentPlayerController::HandleEffectSpeedChanged(float NewSpeed)
 	OnEffectSpeedChanged_PC.Broadcast(NewSpeed);
 }
 
-AAgentPlayerController::AAgentPlayerController()
-{
-	ShopComponent = CreateDefaultSubobject<UShopComponent>(TEXT("ShopComponent"));
-}
-
 void AAgentPlayerController::RequestPurchaseAbility(int AbilityID)
 {
 	if (AbilityID != 0)
@@ -152,11 +201,30 @@ bool AAgentPlayerController::Server_RequestPurchaseAbility_Validate(int AbilityI
 	return AbilityID != 0;
 }
 
+void AAgentPlayerController::RequestShopUI()
+{
+	if (ShopComponent)
+	{
+		// 이미 열려있으면 닫기
+		// ToDo : Shopcomponent로 캡슐화 -> 열어야하는지 확인 로직 추가
+		if (ShopUI)
+		{
+			RequestCloseShopUI();
+		}
+		// 닫혀있으면 열기
+		else
+		{
+			RequestOpenShopUI();
+		}
+	}
+}
+
 void AAgentPlayerController::RequestOpenShopUI()
 {
 	if (ShopComponent)
 	{
 		ShopComponent->OpenShop();
+		OpenShopUI();
 	}
 }
 
@@ -165,6 +233,59 @@ void AAgentPlayerController::RequestCloseShopUI()
 	if (ShopComponent)
 	{
 		ShopComponent->CloseShop();
+		CloseShopUI();
+	}
+}
+
+void AAgentPlayerController::OpenShopUI()
+{
+	// 이미 UI가 열려 있으면 다시 열지 않음
+	if (ShopUI)
+	{
+		ShopUI->SetVisibility(ESlateVisibility::Visible);
+		return;
+	}
+	
+	// UI 클래스가 설정되어 있는지 확인
+	if (ShopUIClass == nullptr)
+	{
+		UE_LOG(LogTemp, Error, TEXT("상점 UI 클래스가 설정되지 않았습니다."));
+		return;
+	}
+	
+	// 상점 UI 생성
+	ShopUI = CreateWidget<UMatchMapShopUI>(this, ShopUIClass);
+	if (ShopUI)
+	{
+		// UI 초기화 및 표시
+		ShopUI->InitializeShopUI(this);
+		ShopUI->AddToViewport(10); // z-order 10 (다른 UI보다 위에 표시)
+		
+		// 입력 모드 설정 (UI에 포커스)
+		FInputModeGameAndUI InputMode;
+		InputMode.SetWidgetToFocus(ShopUI->TakeWidget());
+		InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+		SetInputMode(InputMode);
+		
+		// 마우스 커서 표시
+		bShowMouseCursor = true;
+	}
+}
+
+void AAgentPlayerController::CloseShopUI()
+{
+	if (ShopUI)
+	{
+		// UI 숨기기 또는 제거
+		//ShopUI->SetVisibility(ESlateVisibility::Collapsed);
+		ShopUI->RemoveFromParent(); // 완전히 제거하려면 이 라인 사용
+		
+		// 입력 모드를 게임으로 되돌리기
+		FInputModeGameOnly InputMode;
+		SetInputMode(InputMode);
+		
+		// 마우스 커서 숨기기
+		bShowMouseCursor = false;
 	}
 }
 
@@ -218,4 +339,29 @@ void AAgentPlayerController::Server_RequestPurchaseArmor_Implementation(int32 Ar
 bool AAgentPlayerController::Server_RequestPurchaseArmor_Validate(int32 ArmorID)
 {
 	return ArmorID > 0;
+}
+
+void AAgentPlayerController::BindCreditWidgetDelegate()
+{
+	if (!AgentWidget)
+	{
+		UE_LOG(LogTemp, Error, TEXT("AgentWidget이 없습니다."));
+		return;
+	}
+
+	AAgentPlayerState* PS = GetPlayerState<AAgentPlayerState>();
+	if (!PS)
+	{
+		UE_LOG(LogTemp, Error, TEXT("PlayerState가 없습니다."));
+		return;
+	}
+
+	UCreditComponent* CreditComp = PS->FindComponentByClass<UCreditComponent>();
+	if (!CreditComp)
+	{
+		UE_LOG(LogTemp, Error, TEXT("CreditComponent가 없습니다."));
+		return;
+	}
+
+	// ToDo : 위젯에 크레딧 변경 이벤트 바인딩
 }

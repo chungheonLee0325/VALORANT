@@ -99,6 +99,14 @@ public:
 	UPROPERTY(BlueprintReadOnly, Category = "Shop")
 	TArray<FShopItem> ShopItems;
 
+	// 특정 타입의 아이템만 가져오기
+	UFUNCTION(BlueprintCallable, Category = "Shop")
+	TArray<FShopItem> GetShopItemsByType(EShopItemType ItemType) const;
+
+	// 모든 상점 아이템 가져오기
+	UFUNCTION(BlueprintCallable, Category = "Shop")
+	const TArray<FShopItem>& GetAllShopItems() const { return ShopItems; }
+
 	// 상점 열기/닫기 상태
 	UPROPERTY(BlueprintReadOnly, Category = "Shop")
 	bool bIsShopOpen;
@@ -117,10 +125,8 @@ private:
 	// 상점 소유자
 	UPROPERTY()
 	AAgentPlayerController* m_Owner;
-	
-	UPROPERTY()
-	UCreditComponent* CreditComponent;
-	
+
+	// 게임 인스턴스 참조
 	UPROPERTY()
 	UValorantGameInstance* GameInstance;
 

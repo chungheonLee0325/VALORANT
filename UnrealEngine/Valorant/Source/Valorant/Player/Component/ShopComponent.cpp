@@ -22,20 +22,13 @@ void UShopComponent::BeginPlay()
 	Super::BeginPlay();
 
 	m_Owner = Cast<AAgentPlayerController>(GetOwner());
-	
+
 	if (m_Owner)
 	{
-		// 플레이어 스테이트에서 크레딧 컴포넌트 가져오기
-		AAgentPlayerState* PS = m_Owner->GetPlayerState<AAgentPlayerState>();
-		if (PS)
-		{
-			CreditComponent = PS->FindComponentByClass<UCreditComponent>();
-		}
-		
 		// 게임 인스턴스 가져오기
 		GameInstance = Cast<UValorantGameInstance>(m_Owner->GetGameInstance());
 	}
-	
+
 	// 상점 아이템 초기화
 	InitializeShopItems();
 }
@@ -61,17 +54,17 @@ void UShopComponent::InitializeShopItems()
 	{
 		return;
 	}
-	
+
 	// 무기 목록 초기화
 	TArray<FWeaponData*> WeaponList;
 	GameInstance->GetAllWeaponData(WeaponList);
-	
+
 	for (FWeaponData* Weapon : WeaponList)
 	{
 		if (Weapon)
 		{
 			AvailableWeapons.Add(Weapon->WeaponID, Weapon);
-			
+
 			FShopItem NewItem;
 			NewItem.ItemID = Weapon->WeaponID;
 			//NewItem.ItemName = Weapon->WeaponName;
@@ -79,11 +72,11 @@ void UShopComponent::InitializeShopItems()
 			NewItem.Price = Weapon->Cost;
 			// ToDo: 아이콘 설정
 			NewItem.bIsAvailable = true;
-			
+
 			ShopItems.Add(NewItem);
 		}
 	}
-	
+
 	// 능력 목록 초기화는 InitBySkillData에서 처리
 }
 
@@ -93,10 +86,10 @@ void UShopComponent::InitBySkillData(TArray<int32> SkillIDs)
 	{
 		return;
 	}
-	
+
 	// 기존 능력 초기화
 	AvailableAbilities.Empty();
-	
+
 	// 지정된 스킬 ID로 능력 데이터 로드
 	for (int32 SkillID : SkillIDs)
 	{
@@ -104,7 +97,7 @@ void UShopComponent::InitBySkillData(TArray<int32> SkillIDs)
 		if (AbilityData)
 		{
 			AvailableAbilities.Add(SkillID, AbilityData);
-			
+
 			FShopItem NewItem;
 			NewItem.ItemID = AbilityData->AbilityID;
 			NewItem.ItemName = AbilityData->AbilityName;
@@ -113,7 +106,7 @@ void UShopComponent::InitBySkillData(TArray<int32> SkillIDs)
 			NewItem.ItemIcon = AbilityData->AbilityIcon;
 			NewItem.ItemClass = AbilityData->AbilityClass;
 			NewItem.bIsAvailable = true;
-			
+
 			ShopItems.Add(NewItem);
 		}
 	}
@@ -121,69 +114,76 @@ void UShopComponent::InitBySkillData(TArray<int32> SkillIDs)
 
 bool UShopComponent::PurchaseWeapon(int32 WeaponID)
 {
-	if (!IsShopAvailable() || !CreditComponent)
-	{
-		return false;
-	}
-	
+	// if (!IsShopAvailable() || !m_Owner)
+	// {
+	// 	return false;
+	// }
+
+	// 플레이어 스테이트와 크레딧 컴포넌트 찾기
+	AAgentPlayerState* PS = m_Owner->GetPlayerState<AAgentPlayerState>();
+	if (!PS) return false;
+
+	UCreditComponent* CreditComp = PS->FindComponentByClass<UCreditComponent>();
+	if (!CreditComp) return false;
+
 	FWeaponData** WeaponInfo = AvailableWeapons.Find(WeaponID);
 	if (!WeaponInfo || !*WeaponInfo)
 	{
 		return false;
 	}
-	
+
 	int32 Cost = (*WeaponInfo)->Cost;
-	
+
 	// 크레딧 충분한지 확인
-	if (CreditComponent->CanUseCredits(Cost))
+	if (CreditComp->CanUseCredits(Cost))
 	{
-		// 서버에 구매 요청
-		if (m_Owner)
+		// 크레딧 차감 (서버에서 처리되어야 함)
+		bool bSuccess = CreditComp->UseCredits(Cost);
+
+		if (bSuccess)
 		{
-			// ToDo: AAgentPlayerController에 무기 구매 RPC 추가
-			// m_Owner->RequestPurchaseWeapon(WeaponID);
-			
-			// 크레딧 차감 (서버에서 처리되어야 함)
-			bool bSuccess = CreditComponent->UseCredits(Cost);
-			
-			if (bSuccess)
+			// 구매 이벤트 발생
+			FShopItem* Item = FindShopItem(WeaponID, EShopItemType::Weapon);
+			if (Item)
 			{
-				// 구매 이벤트 발생
-				FShopItem* Item = FindShopItem(WeaponID, EShopItemType::Weapon);
-				if (Item)
-				{
-					OnShopItemPurchased.Broadcast(*Item);
-				}
+				OnShopItemPurchased.Broadcast(*Item);
 			}
-			
-			return bSuccess;
 		}
+
+		return bSuccess;
 	}
-	
+
 	return false;
 }
 
 bool UShopComponent::PurchaseAbility(int32 AbilityID)
 {
-	if (!IsShopAvailable() || !CreditComponent || !m_Owner)
+	if (!IsShopAvailable() || !m_Owner)
 	{
 		return false;
 	}
-	
+
+	// 플레이어 스테이트와 크레딧 컴포넌트 찾기
+	AAgentPlayerState* PS = m_Owner->GetPlayerState<AAgentPlayerState>();
+	if (!PS) return false;
+
+	UCreditComponent* CreditComp = PS->FindComponentByClass<UCreditComponent>();
+	if (!CreditComp) return false;
+
 	FAbilityData** AbilityInfo = AvailableAbilities.Find(AbilityID);
 	if (!AbilityInfo || !*AbilityInfo)
 	{
 		return false;
 	}
-	
+
 	int32 Cost = (*AbilityInfo)->ChargeCost;
-	
+
 	// 크레딧 충분한지 확인
-	if (CreditComponent->CanUseCredits(Cost))
+	if (CreditComp->CanUseCredits(Cost))
 	{
-		// 서버에 구매 요청 (이미 구현되어 있음)
+		// 서버에 구매 요청
 		m_Owner->RequestPurchaseAbility(AbilityID);
-		
+
 		// 크레딧 차감은 실제 구매 성공 후 서버에서 처리됨
 		// 여기서는 UI 업데이트를 위한 이벤트만 발생시킴
 		FShopItem* Item = FindShopItem(AbilityID, EShopItemType::Ability);
@@ -191,20 +191,27 @@ bool UShopComponent::PurchaseAbility(int32 AbilityID)
 		{
 			OnShopItemPurchased.Broadcast(*Item);
 		}
-		
+
 		return true;
 	}
-	
+
 	return false;
 }
 
 bool UShopComponent::PurchaseArmor(int32 ArmorLevel)
 {
-	if (!IsShopAvailable() || !CreditComponent)
+	if (!IsShopAvailable() || !m_Owner)
 	{
 		return false;
 	}
-	
+
+	// 플레이어 스테이트와 크레딧 컴포넌트 찾기
+	AAgentPlayerState* PS = m_Owner->GetPlayerState<AAgentPlayerState>();
+	if (!PS) return false;
+
+	UCreditComponent* CreditComp = PS->FindComponentByClass<UCreditComponent>();
+	if (!CreditComp) return false;
+
 	// 방어구 가격 설정 (레벨에 따라 다름)
 	int32 Cost = 0;
 	switch (ArmorLevel)
@@ -219,19 +226,19 @@ bool UShopComponent::PurchaseArmor(int32 ArmorLevel)
 	default:
 		return false;
 	}
-	
+
 	// 크레딧 충분한지 확인
-	if (CreditComponent->CanUseCredits(Cost))
+	if (CreditComp->CanUseCredits(Cost))
 	{
 		// 서버에 구매 요청
 		if (m_Owner)
 		{
 			// ToDo: AAgentPlayerController에 방어구 구매 RPC 추가
 			// m_Owner->RequestPurchaseArmor(ArmorLevel);
-			
+
 			// 크레딧 차감 (서버에서 처리되어야 함)
-			bool bSuccess = CreditComponent->UseCredits(Cost);
-			
+			bool bSuccess = CreditComp->UseCredits(Cost);
+
 			if (bSuccess)
 			{
 				// 구매 이벤트 발생
@@ -241,26 +248,33 @@ bool UShopComponent::PurchaseArmor(int32 ArmorLevel)
 				ArmorItem.ItemName = ArmorLevel == 1 ? "Light Armor" : "Heavy Armor";
 				ArmorItem.ItemType = EShopItemType::Armor;
 				ArmorItem.Price = Cost;
-				
+
 				OnShopItemPurchased.Broadcast(ArmorItem);
 			}
-			
+
 			return bSuccess;
 		}
 	}
-	
+
 	return false;
 }
 
 bool UShopComponent::CanPurchaseItem(int32 ItemID, EShopItemType ItemType) const
 {
-	if (!CreditComponent)
+	if (!m_Owner)
 	{
 		return false;
 	}
-	
+
+	// 플레이어 스테이트와 크레딧 컴포넌트 찾기
+	AAgentPlayerState* PS = m_Owner->GetPlayerState<AAgentPlayerState>();
+	if (!PS) return false;
+
+	UCreditComponent* CreditComp = PS->FindComponentByClass<UCreditComponent>();
+	if (!CreditComp) return false;
+
 	int32 Cost = 0;
-	
+
 	switch (ItemType)
 	{
 	case EShopItemType::Weapon:
@@ -272,7 +286,7 @@ bool UShopComponent::CanPurchaseItem(int32 ItemID, EShopItemType ItemType) const
 			}
 		}
 		break;
-		
+
 	case EShopItemType::Ability:
 		{
 			const FAbilityData* const* AbilityInfo = AvailableAbilities.Find(ItemID);
@@ -282,16 +296,16 @@ bool UShopComponent::CanPurchaseItem(int32 ItemID, EShopItemType ItemType) const
 			}
 		}
 		break;
-		
+
 	case EShopItemType::Armor:
 		Cost = (ItemID == 1) ? 400 : 1000;
 		break;
-		
+
 	default:
 		return false;
 	}
-	
-	return CreditComponent->CanUseCredits(Cost);
+
+	return CreditComp->CanUseCredits(Cost);
 }
 
 FShopItem* UShopComponent::FindShopItem(int32 ItemID, EShopItemType ItemType)
@@ -312,18 +326,33 @@ bool UShopComponent::IsShopAvailable() const
 	{
 		return false;
 	}
-	
+
 	// 게임 상태 확인
 	AMatchGameState* GameState = m_Owner->GetWorld()->GetGameState<AMatchGameState>();
 	if (!GameState)
 	{
 		return false;
 	}
-	
+
 	// 현재 라운드 서브스테이트 확인 (구매 가능 단계인지)
 	// ToDo: GameState에서 라운드 서브스테이트 확인 로직 추가
 	// return GameState->GetRoundSubState() == ERoundSubState::RSS_BuyPhase;
-	
+
 	// 현재는 임시로 항상 true 반환
 	return true;
+}
+
+TArray<FShopItem> UShopComponent::GetShopItemsByType(EShopItemType ItemType) const
+{
+	TArray<FShopItem> FilteredItems;
+
+	for (const FShopItem& Item : ShopItems)
+	{
+		if (Item.ItemType == ItemType)
+		{
+			FilteredItems.Add(Item);
+		}
+	}
+
+	return FilteredItems;
 }

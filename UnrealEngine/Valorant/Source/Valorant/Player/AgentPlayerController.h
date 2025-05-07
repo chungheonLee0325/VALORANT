@@ -38,6 +38,8 @@ public:
 	FOnArmorChanged_PC OnArmorChanged_PC;
 	UPROPERTY(BlueprintAssignable)
 	FOnEffectSpeedChanged_PC OnEffectSpeedChanged_PC;
+	UPROPERTY()
+	UShopComponent* ShopComponent;
 
 	// 클라이언트에서 호출 -> 서버로 스킬 구매 요청
 	UFUNCTION(BlueprintCallable, Category = "Shop")
@@ -46,6 +48,9 @@ public:
 	// 서버에서 실행될 실제 구매 요청 함수 (위 함수 내부에서 호출)
 	UFUNCTION(Server, Reliable, WithValidation)
 	void Server_RequestPurchaseAbility(int AbilityID);
+
+	UFUNCTION(BlueprintCallable, Category = "UI")
+	void RequestShopUI();
 
 	// 상점 UI 열기 요청 
 	UFUNCTION(BlueprintCallable, Category = "UI")
@@ -74,6 +79,21 @@ public:
 	UFUNCTION(Client, Reliable)
 	void Client_EnterSpectatorMode();
 
+	// 상점 UI 관련 기능
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "UI")
+	TSubclassOf<class UMatchMapShopUI> ShopUIClass;
+
+	UPROPERTY(BlueprintReadOnly, Category = "UI")
+	class UMatchMapShopUI* ShopUI;
+
+	// 상점 UI 열기
+	UFUNCTION(BlueprintCallable, Category = "UI")
+	void OpenShopUI();
+
+	// 상점 UI 닫기
+	UFUNCTION(BlueprintCallable, Category = "UI")
+	void CloseShopUI();
+
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	class UValorantGameInstance* m_GameInstance;
@@ -86,10 +106,6 @@ protected:
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	UAgentBaseWidget* AgentWidget;
-
-	UPROPERTY()
-	UShopComponent* ShopComponent;
-
 protected:
 	virtual void OnPossess(APawn* InPawn) override;
 	virtual void OnRep_PlayerState() override;
@@ -110,4 +126,7 @@ protected:
 	UFUNCTION()
 	void HandleEffectSpeedChanged(float NewSpeed);
 	
+	// 크레딧 관련 위젯 바인딩
+	UFUNCTION()
+	void BindCreditWidgetDelegate();
 };

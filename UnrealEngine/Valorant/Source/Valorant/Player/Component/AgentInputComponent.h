@@ -75,7 +75,9 @@ public:
 	/** Switch Weapon Input Action */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	UInputAction* SwitchWeaponAction;
-
+	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	UInputAction* ShopUIAction;
 private:
 	UPROPERTY()
 	UEnhancedInputLocalPlayerSubsystem* InputSubsystem = nullptr;
@@ -105,4 +107,6 @@ public:
 	void Weapon1(const FInputActionValue& InputActionValue);
 	void Weapon2(const FInputActionValue& InputActionValue);
 	void Weapon3(const FInputActionValue& InputActionValue);
+
+	void ShopUI(const FInputActionValue& InputActionValue); 
 };

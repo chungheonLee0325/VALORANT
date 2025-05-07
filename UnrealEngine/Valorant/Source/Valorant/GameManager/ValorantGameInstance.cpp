@@ -158,7 +158,7 @@ FWeaponData* UValorantGameInstance::GetWeaponData(int WeaponID)
 	return nullptr;
 }
 
-void UValorantGameInstance::GetAllWeaponData(TArray<FWeaponData*> WeaponList)
+void UValorantGameInstance::GetAllWeaponData(TArray<FWeaponData*>& WeaponList)
 {
 	for (auto& pair :dt_Weapon)
 	{

@@ -80,6 +80,11 @@ void UAgentInputComponent::BindInput(UInputComponent* InputComponent)
 			eic->BindAction(Num_2Action, ETriggerEvent::Started, this, &UAgentInputComponent::Weapon2);
 			eic->BindAction(Num_3Action, ETriggerEvent::Started, this, &UAgentInputComponent::Weapon3);
 		}
+		
+		if (ShopUIAction)
+		{
+			eic->BindAction(ShopUIAction, ETriggerEvent::Started, this, &UAgentInputComponent::ShopUI);
+		}
 	}
 }
 
@@ -184,5 +189,13 @@ void UAgentInputComponent::Weapon3(const FInputActionValue& InputActionValue)
 	if (Agent)
 	{
 		Agent->SetWeaponState(3);
+	}
+}
+
+void UAgentInputComponent::ShopUI(const FInputActionValue& InputActionValue)
+{
+	if (Agent)
+	{
+		Agent->SetShopUI();
 	}
 }
