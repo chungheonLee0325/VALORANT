@@ -43,6 +43,9 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	UInputAction* CtrlAction;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	UInputAction* InteractAction;
+
 	/** Attack Input Action */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	UInputAction* LeftMouseAction;
@@ -53,6 +56,9 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	UInputAction* ReloadAction;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	UInputAction* SwitchWeaponAction;
+	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	UInputAction* Num_1Action;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
@@ -71,10 +77,6 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	UInputAction* MapAction;
-	
-	/** Switch Weapon Input Action */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
-	UInputAction* SwitchWeaponAction;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	UInputAction* ShopUIAction;
@@ -103,10 +105,14 @@ public:
 	void WalkStart(const FInputActionValue& InputActionValue);
 	void WalkComplete(const FInputActionValue& InputActionValue);
 
+	void Interact(const FInputActionValue& InputActionValue);
+	
 	void WeaponChange(const FInputActionValue& value);
 	void Weapon1(const FInputActionValue& InputActionValue);
 	void Weapon2(const FInputActionValue& InputActionValue);
 	void Weapon3(const FInputActionValue& InputActionValue);
+	
+	void StartReload(const FInputActionValue& InputActionValue);
 
 	void ShopUI(const FInputActionValue& InputActionValue); 
 };

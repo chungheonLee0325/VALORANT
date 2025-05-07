@@ -8,6 +8,7 @@
 #include "Components/WidgetSwitcher.h"
 #include "GameManager/MatchGameState.h"
 #include "GameManager/SubsystemSteamManager.h"
+#include "Player/AgentPlayerController.h"
 #include "Player/AgentPlayerState.h"
 
 void UMatchMapHUD::NativeConstruct()
@@ -19,6 +20,26 @@ void UMatchMapHUD::NativeConstruct()
 	GameState->OnTeamScoreChanged.AddDynamic(this, &UMatchMapHUD::UpdateScore);
 	GameState->OnRoundSubStateChanged.AddDynamic(this, &UMatchMapHUD::OnRoundSubStateChanged);
 	GameState->OnRoundEnd.AddDynamic(this, &UMatchMapHUD::OnRoundEnd);
+
+	AAgentPlayerController* pc = Cast<AAgentPlayerController>(GetOwningPlayer());
+	if (pc)
+	{
+		BindToDelegatePC(pc->GetCacehdASC(),pc);
+	}
+	else
+	{
+		UE_LOG(LogTemp, Error, TEXT("%s"), TEXT("MatchMap HUD, PC NULL"));
+		return;
+	}
+
+	if (AAgentPlayerState* ps = pc->GetPlayerState<AAgentPlayerState>())
+	{
+		InitUI(ps);
+	}
+	else
+	{
+		UE_LOG(LogTemp, Error, TEXT("%s"), TEXT("MatchMap HUD, PS NULL"));
+	}
 }
 
 void UMatchMapHUD::UpdateTime(float Time)
@@ -80,6 +101,35 @@ void UMatchMapHUD::DisplayAnnouncement(EMatchAnnouncement MatchAnnouncement, flo
 void UMatchMapHUD::HideAnnouncement()
 {
 	WidgetSwitcherAnnouncement->SetVisibility(ESlateVisibility::Hidden);
+}
+
+void UMatchMapHUD::UpdateDisplayHealth(const float health)
+{
+	txt_HP->SetText(FText::AsNumber(health));
+}
+
+void UMatchMapHUD::UpdateDisplayArmor(const float armor)
+{
+	txt_Armor->SetText(FText::AsNumber(armor));
+}
+
+void UMatchMapHUD::BindToDelegatePC(UAgentAbilitySystemComponent* asc, AAgentPlayerController* pc)
+{
+	pc->OnHealthChanged_PC.AddDynamic(this, &UMatchMapHUD::UpdateDisplayHealth);
+	pc->OnArmorChanged_PC.AddDynamic(this, &UMatchMapHUD::UpdateDisplayArmor);
+
+	if (asc == nullptr)
+	{
+		UE_LOG(LogTemp, Error, TEXT("AgentWidget, ASC NULL"));
+		return;
+	}
+	ASC = asc;
+}
+
+void UMatchMapHUD::InitUI(AAgentPlayerState* ps)
+{
+	txt_HP->SetText(FText::AsNumber(ps->GetHealth()));
+	txt_Armor->SetText(FText::AsNumber(ps->GetArmor()));
 }
 
 void UMatchMapHUD::DebugRoundSubState(const FString& RoundSubStateStr)

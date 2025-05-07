@@ -20,14 +20,15 @@ UAgentInputComponent::UAgentInputComponent()
 void UAgentInputComponent::BeginPlay()
 {
 	Super::BeginPlay();
-
+	
 	Agent = Cast<ABaseAgent>(GetOwner());
-	if (Agent)
+
+	if (!Agent->IsLocallyControlled())
 	{
-		UE_LOG(LogTemp, Warning, TEXT("InputComp, Get Agent: %s"), *Agent->GetName());
+		return;
 	}
 	
-	if (APlayerController* pc = Cast<APlayerController>(GetOwner()->GetInstigatorController()))
+	if (APlayerController* pc = Cast<APlayerController>(Agent->GetInstigatorController()))
 	{
 		if (ULocalPlayer* player = pc->GetLocalPlayer())
 		{
@@ -74,11 +75,21 @@ void UAgentInputComponent::BindInput(UInputComponent* InputComponent)
 			eic->BindAction(CtrlAction, ETriggerEvent::Started, this, &UAgentInputComponent::CrouchStart);
 			eic->BindAction(CtrlAction, ETriggerEvent::Completed, this, &UAgentInputComponent::CrouchComplete);
 		}
+		
 		if (Num_1Action && Num_2Action && Num_3Action)
 		{
 			eic->BindAction(Num_1Action, ETriggerEvent::Started, this, &UAgentInputComponent::Weapon1);
 			eic->BindAction(Num_2Action, ETriggerEvent::Started, this, &UAgentInputComponent::Weapon2);
 			eic->BindAction(Num_3Action, ETriggerEvent::Started, this, &UAgentInputComponent::Weapon3);
+		}
+		if (ReloadAction)
+		{
+			eic->BindAction(ReloadAction, ETriggerEvent::Started, this, &UAgentInputComponent::StartReload);
+		}
+
+		if (InteractAction)
+		{
+			eic->BindAction(InteractAction, ETriggerEvent::Started, this, &UAgentInputComponent::Interact);
 		}
 		
 		if (ShopUIAction)
@@ -162,6 +173,14 @@ void UAgentInputComponent::WalkComplete(const FInputActionValue& InputActionValu
 	}
 }
 
+void UAgentInputComponent::Interact(const FInputActionValue& InputActionValue)
+{
+	if (Agent)
+	{
+		Agent->Interact();
+	}
+}
+
 void UAgentInputComponent::WeaponChange(const FInputActionValue& value)
 {
 	uint8 state = Agent->GetWeaponState();
@@ -192,6 +211,10 @@ void UAgentInputComponent::Weapon3(const FInputActionValue& InputActionValue)
 	}
 }
 
+void UAgentInputComponent::StartReload(const FInputActionValue& InputActionValue)
+{
+	Agent->Reload();
+}
 void UAgentInputComponent::ShopUI(const FInputActionValue& InputActionValue)
 {
 	if (Agent)

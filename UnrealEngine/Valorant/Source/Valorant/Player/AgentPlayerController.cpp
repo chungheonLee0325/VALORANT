@@ -3,10 +3,14 @@
 
 #include "AgentPlayerController.h"
 
+#include <GameManager/SubsystemSteamManager.h>
+
 #include "AgentPlayerState.h"
+#include "Valorant.h"
 #include "AbilitySystem/AgentAbilitySystemComponent.h"
 #include "AbilitySystem/Attributes/BaseAttributeSet.h"
 #include "Agent/BaseAgent.h"
+#include "UI/MatchMap/MatchMapHUD.h"
 #include "Component/CreditComponent.h"
 #include "Component/ShopComponent.h"
 #include "Valorant/GameManager/ValorantGameInstance.h"
@@ -42,12 +46,12 @@ void AAgentPlayerController::OnPossess(APawn* InPawn)
 {
 	Super::OnPossess(InPawn);
 	
-	InitCacheGAS();
+	InitGAS();
 
 	if (IsLocalController())
 	{
 		m_GameInstance = Cast<UValorantGameInstance>(GetGameInstance());
-		CreateAgentWidget();
+		// InitAgentWidget();
 	}
 	
 	// 에이전트 소유 시 ShopComponent 초기화
@@ -86,13 +90,10 @@ void AAgentPlayerController::OnRep_PlayerState()
 {
 	Super::OnRep_PlayerState();
 
-	InitCacheGAS();
-
-	if (IsLocalController())
-	{
-		m_GameInstance = Cast<UValorantGameInstance>(GetGameInstance());
-		CreateAgentWidget();
-	}
+	InitGAS();
+	
+	m_GameInstance = Cast<UValorantGameInstance>(GetGameInstance());
+	// InitAgentWidget();
 }
 
 void AAgentPlayerController::Client_EnterSpectatorMode_Implementation()
@@ -100,13 +101,16 @@ void AAgentPlayerController::Client_EnterSpectatorMode_Implementation()
 	StartSpectatingOnly();
 }
 
-void AAgentPlayerController::InitCacheGAS()
+void AAgentPlayerController::InitGAS()
 {
+	//한 게임당 1번 실행되도록
 	if (CachedABS && CachedASC)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("AgentPC: already Cached"));
+		// UE_LOG(LogTemp, Warning, TEXT("AgentPC: already Cached"));
 		return;	
 	}
+	
+	NET_LOG(LogTemp,Warning,TEXT("이닛 가스"));
 	
 	if (AAgentPlayerState* ps = GetPlayerState<AAgentPlayerState>())
 	{
@@ -124,34 +128,36 @@ void AAgentPlayerController::InitCacheGAS()
 		UE_LOG(LogTemp,Error,TEXT("PC, ABS 없음"));
 		return;
 	}
-	
+
+	CachedABS->ResetAttributeData();
 	CachedABS->OnHealthChanged.AddDynamic(this,&AAgentPlayerController::HandleHealthChanged);
 	CachedABS->OnMaxHealthChanged.AddDynamic(this,&AAgentPlayerController::HandleMaxHealthChanged);
 	CachedABS->OnArmorChanged.AddDynamic(this,&AAgentPlayerController::HandleArmorChanged);
 	CachedABS->OnEffectSpeedChanged.AddDynamic(this,&AAgentPlayerController::HandleEffectSpeedChanged);
 }
 
-void AAgentPlayerController::CreateAgentWidget()
+void AAgentPlayerController::InitAgentWidget()
 {
-	if (AgentWidget)
-	{
-		UE_LOG(LogTemp, Warning, TEXT("AgentPC: Widget already Created"));
-		return;
-	}
-	
 	if (AgentWidgetClass == nullptr)
 	{
 		UE_LOG(LogTemp,Error,TEXT("PlayerController에 AgentWidget 좀 넣어주세요."));
 		return;
 	}
 	
-	AgentWidget = CreateWidget<UAgentBaseWidget>(this, AgentWidgetClass);
-	
-	AgentWidget->AddToViewport();
-	AgentWidget->BindToDelegatePC(CachedASC,this);
+	if (!AgentWidget)
+	{
+		AgentWidget = CreateWidget<UMatchMapHUD>(this, AgentWidgetClass);
+		AgentWidget->AddToViewport();
+		AgentWidget->BindToDelegatePC(CachedASC,this);
+	}
 	
 	// 크레딧 UI 바인딩
 	BindCreditWidgetDelegate();
+
+	if (AAgentPlayerState* ps = GetPlayerState<AAgentPlayerState>())
+	{
+		AgentWidget->InitUI(ps);
+	}
 }
 
 void AAgentPlayerController::HandleHealthChanged(float NewHealth)

@@ -2,14 +2,13 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
-#include "AbilitySystemInterface.h"
-#include "GameplayEffectTypes.h"
 #include "Player/AgentPlayerController.h"
 #include "Player/Animaiton/AgentAnimInstance.h"
 #include "Valorant/ResourceManager/ValorantGameType.h"
 #include "Weapon/BaseWeapon.h"
 #include "BaseAgent.generated.h"
 
+class UValorantPickUpComponent;
 class UAgentAnimInstance;
 class ABaseWeapon;
 class UTimelineComponent;
@@ -54,8 +53,14 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
 	UAgentInputComponent* AgentInputComponent;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
+	UCapsuleComponent* InteractionCapsule;
+
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category= "Anim")
 	UAnimMontage* AM_Die;
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category= "Anim")
+	UAnimMontage* AM_Reload;
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category= "Crouch")
 	UTimelineComponent* TL_Crouch;
@@ -119,7 +124,7 @@ public:
 
 	// 네트워크 복제 속성 설정 - (언리얼 네트워크 이용)
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
-
+	
 	UFUNCTION(BlueprintCallable)
 	void BindToDelegatePC(AAgentPlayerController* pc);
 	
@@ -140,7 +145,7 @@ public:
 	void SetIsRun(const bool _bIsRun);
 	UFUNCTION(Server, Reliable)
 	void Server_SetIsRun(const bool _bIsRun);
-
+	
 	UFUNCTION(BlueprintCallable)
 	uint8 GetWeaponState() const { return ABP_1P->WeaponState; }
 	UFUNCTION(BlueprintCallable)
@@ -149,7 +154,7 @@ public:
 	void Server_SetWeaponState(uint8 newState);
 	UFUNCTION()
 	void OnRep_WeaponState();
-
+	
 	UFUNCTION(BlueprintCallable)
 	ABaseWeapon* GetPrimaryWeapon() const { return PrimaryWeapon; }
 	UFUNCTION(BlueprintCallable)
@@ -159,6 +164,9 @@ public:
 	ABaseWeapon* GetSecondWeapon() const { return SecondWeapon; }
 	UFUNCTION()
 	void SetSecondWeapon(ABaseWeapon* newWeapon) { SecondWeapon = newWeapon; }
+	
+	void Reload();
+	void Interact();
 	
 	UFUNCTION(BlueprintCallable) 
 	float GetEffectSpeedMulitiplier() const { return EffectSpeedMultiplier; }
@@ -175,8 +183,8 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	UValorantGameInstance* m_GameInstance;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	AAgentPlayerState* PS = nullptr;
+	// UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	// AAgentPlayerState* PS = nullptr;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	AAgentPlayerController* PC = nullptr;
@@ -192,6 +200,11 @@ protected:
 	UAgentAnimInstance* ABP_1P = nullptr;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	UAgentAnimInstance* ABP_3P = nullptr;
+
+	UPROPERTY()
+	ABaseInteractor* FindInteractActor = nullptr;
+	UPROPERTY()
+	UValorantPickUpComponent* FindPickUpComponent = nullptr;
 	
 	UPROPERTY(Replicated, ReplicatedUsing=OnRep_WeaponState)
 	uint8 WeaponState = 3;
@@ -219,8 +232,6 @@ protected:
 	ABaseWeapon* PrimaryWeapon = nullptr;
 	UPROPERTY(VisibleAnywhere)
 	ABaseWeapon* SecondWeapon = nullptr;
-	UPROPERTY(VisibleAnywhere)
-	ABaseWeapon* MeleeWeapon = nullptr;
 
 protected:
 	virtual void PossessedBy(AController* NewController) override;
@@ -240,7 +251,7 @@ protected:
 	virtual void OnStartCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust) override;
 	virtual void OnEndCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust) override;
 	
-	virtual void InitAgentData();
+	virtual void InitAgentAbility();
 	
 	virtual void Die();
 	UFUNCTION()
@@ -255,10 +266,10 @@ protected:
 	UFUNCTION(NetMulticast, Reliable)
 	void Net_Respawn();
 
-	// UFUNCTION()
-	// void OnFindInteraction(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
-	// UFUNCTION()
-	// void OnInteractionCapsuleEndOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
+	UFUNCTION()
+	void OnFindInteraction(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
+	UFUNCTION()
+	void OnInteractionCapsuleEndOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
 	void FindInteractable();
 	
 	UFUNCTION()

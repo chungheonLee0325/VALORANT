@@ -3,7 +3,10 @@
 #include "ValorantGameMode.h"
 
 #include "EngineUtils.h"
+#include "SubsystemSteamManager.h"
+#include "Valorant.h"
 #include "ValorantGameInstance.h"
+#include "AbilitySystem/Attributes/BaseAttributeSet.h"
 #include "GameFramework/GameStateBase.h"
 #include "Player/AgentPlayerState.h"
 #include "Player/Agent/BaseAgent.h"
@@ -20,7 +23,7 @@ AValorantGameMode::AValorantGameMode()
 	// DefaultPawnClass = PlayerPawnClassFinder.Class;
 }
 
-void AValorantGameMode::RespawnAllPlayer()
+void AValorantGameMode::RespawnAllPlayers()
 {
 	AGameStateBase* gs = GetGameState<AGameStateBase>();
 	if (!gs)
@@ -31,65 +34,68 @@ void AValorantGameMode::RespawnAllPlayer()
 	
 	for (APlayerState* basePS : gs->PlayerArray)
 	{
-		AAgentPlayerState* ps = Cast<AAgentPlayerState>(basePS);
-		if (!ps)
+		AAgentPlayerState* PS = Cast<AAgentPlayerState>(basePS);
+		if (!PS)
 		{
 			UE_LOG(LogTemp,Error,TEXT("AValorantGameMode::RespawnAllPlayer, PS NULL"));
 			continue;
 		}
-		
-		FAgentData* agentData = m_GameInstance->GetAgentData(ps->GetAgentID());
 
-		// TODO: 팀별 스폰 위치 가져오기
-		FVector spawnLoc = FVector::ZeroVector;
-		FRotator spawnRot = FRotator::ZeroRotator;
-		
-		FActorSpawnParameters params;
-		params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
-
-		ABaseAgent* newAgent = GetWorld()->SpawnActor<ABaseAgent>(agentData->AgentAsset, spawnLoc, spawnRot, params);
-		
-		if (newAgent)
-		{
-			APlayerController* pc = nullptr;
-
-			// 죽어서 관전자로 전환된 경우, Owner가 없으므로 찾아서 매칭
-			if (!ps->GetOwner())
-			{
-				for (AController* controller : TActorRange<AController>(GetWorld()))
-				{
-					AAgentPlayerController* tmpPC = Cast<AAgentPlayerController>(controller);
-					if (tmpPC && tmpPC->PlayerState == ps)
-					{
-						pc = tmpPC;
-						break;
-					}
-				}
-			}
-			else
-			{
-				// TODO: 기존 폰 없애는 로직 추가
-				pc = Cast<APlayerController>(ps->GetOwner());
-			}
-		
-			if (!pc)
-			{
-				UE_LOG(LogTemp,Error,TEXT("AValorantGameMode::RespawnAllPlayer, PC NULL"));
-				return;
-			}
-			
-			pc->Possess(newAgent);
-		}
-		else
-		{
-			UE_LOG(LogTemp,Error,TEXT("AValorantGameMode::RespawnAllPlayer, AGENT NULL"));
-		}
+		ResetAgentAtrributeData(PS);
+		RespawnPlayer(PS);
 	}
 }
 
+void AValorantGameMode::RespawnPlayer(AAgentPlayerState* ps)
+{
+	APlayerController* pc = Cast<APlayerController>(ps->GetOwner());
+	if (!pc)
+	{
+		UE_LOG(LogTemp,Error,TEXT("AValorantGameMode::RespawnAllPlayer, PC NULL"));
+		return;
+	}
+		
+	FAgentData* agentData = m_GameInstance->GetAgentData(ps->GetAgentID());
+		
+	// TODO: 팀별 스폰 위치 가져오기
+	FVector spawnLoc = RespawnLocation;
+	FRotator spawnRot = RespawnRotation;
+		
+	FActorSpawnParameters params;
+	params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
+
+	ABaseAgent* newAgent = GetWorld()->SpawnActor<ABaseAgent>(agentData->AgentAsset, spawnLoc, spawnRot, params);
+		
+	if (!newAgent)
+	{
+		UE_LOG(LogTemp,Error,TEXT("AValorantGameMode::RespawnAllPlayer, AGENT NULL"));
+		return;
+	}
+
+	if (ps->IsSpectator())
+	{
+		ps->SetIsSpectator(false);
+		ps->SetIsOnlyASpectator(false);
+	}
+
+	APawn* oldPawn = pc->GetPawn();
+		
+	pc->UnPossess();
+	pc->Possess(newAgent);
+		
+	if (oldPawn)
+	{
+		oldPawn->Destroy();
+	}
+}
 
 void AValorantGameMode::BeginPlay()
 {
 	Super::BeginPlay();
 	m_GameInstance = Cast<UValorantGameInstance>(GetGameInstance());
+}
+
+void AValorantGameMode::ResetAgentAtrributeData(AAgentPlayerState* ps)
+{
+	ps->GetBaseAttributeSet()->ResetAttributeData();
 }

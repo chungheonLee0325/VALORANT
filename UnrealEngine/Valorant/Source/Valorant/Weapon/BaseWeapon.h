@@ -90,20 +90,23 @@ protected:
 	UFUNCTION(BlueprintCallable, Category="Weapon")
 	void Fire();
 
+	UFUNCTION(Server, Reliable)
+	void ServerRPC_Fire(const FVector& Location, const FVector& Direction);
+
 	UFUNCTION(BlueprintCallable, Category="Weapon")
 	void EndFire();
-
-	UFUNCTION(BlueprintCallable, Category="Weapon")
-	void StartReload();
-
+	
 	UFUNCTION(BlueprintCallable, Category="Weapon")
 	void Reload();
 
 	UFUNCTION(BlueprintCallable, Category="Weapon")
 	void StopReload();
 
+public:
+	UFUNCTION(BlueprintCallable, Category="Weapon")
+	void StartReload();
+	
 	UFUNCTION(BlueprintCallable, Category="Weapon")
 	void Drop();
 
-public:
 };

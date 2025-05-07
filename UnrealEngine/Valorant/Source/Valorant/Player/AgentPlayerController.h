@@ -10,7 +10,7 @@
 
 class UBaseAttributeSet;
 class UAgentAbilitySystemComponent;
-class UAgentBaseWidget;
+class UMatchMapHUD;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnHealthChanged_PC, float, newHealth);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnMaxHealthChanged_PC, float, newMaxHealth);
@@ -24,8 +24,8 @@ class VALORANT_API AAgentPlayerController : public AMatchPlayerController
 
 public:
 	AAgentPlayerController();
-
-	UAgentBaseWidget* GetAgentWidget() const { return AgentWidget; }
+	
+	UMatchMapHUD* GetAgentWidget() const { return AgentWidget; }
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Widget")
 	TSubclassOf<UUserWidget> AgentWidgetClass;
@@ -79,6 +79,11 @@ public:
 	UFUNCTION(Client, Reliable)
 	void Client_EnterSpectatorMode();
 
+	UFUNCTION()
+	UAgentAbilitySystemComponent* GetCacehdASC() { return CachedASC; }
+	UFUNCTION()
+	UBaseAttributeSet* GetCachedABS() { return CachedABS; }
+
 	// 상점 UI 관련 기능
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "UI")
 	TSubclassOf<class UMatchMapShopUI> ShopUIClass;
@@ -105,17 +110,17 @@ protected:
 	UBaseAttributeSet* CachedABS = nullptr ;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	UAgentBaseWidget* AgentWidget;
+	UMatchMapHUD* AgentWidget;
+	
 protected:
 	virtual void OnPossess(APawn* InPawn) override;
 	virtual void OnRep_PlayerState() override;
 	virtual void BeginPlay() override;
 	
 	UFUNCTION()
-	void InitCacheGAS();
-
+	void InitGAS();
 	UFUNCTION()
-	void CreateAgentWidget();
+	void InitAgentWidget();
 	
 	UFUNCTION()
 	void HandleHealthChanged(float NewHealth);
