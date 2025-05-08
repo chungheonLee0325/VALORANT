@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+#include "ResourceManager/ValorantGameType.h"
 #include "ValorantObject/BaseInteractor.h"
 #include "BaseWeapon.generated.h"
 
@@ -110,6 +111,9 @@ public:
 	
 	UFUNCTION(BlueprintCallable, Category="Weapon")
 	void Drop();
+
+	UFUNCTION()
+	EWeaponCategory GetWeaponCategory() { return WeaponData->WeaponCategory; }
 
 	UPROPERTY(EditDefaultsOnly)
 	TSubclassOf<UGameplayEffect> DamageEffectClass;
