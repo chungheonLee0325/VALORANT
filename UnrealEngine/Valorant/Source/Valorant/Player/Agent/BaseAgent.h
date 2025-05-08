@@ -49,6 +49,8 @@ class VALORANT_API ABaseAgent : public ACharacter
 public:
 	ABaseAgent();
 
+	static EAgentDamagedPart GetHitDamagedPart(const FName& BoneName);
+	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
 	class UCameraComponent* Camera;
 
@@ -146,6 +148,8 @@ public:
 
 	UFUNCTION(Server, Reliable)
 	void ServerApplyGE(TSubclassOf<UGameplayEffect> geClass);
+	UFUNCTION(Server, Reliable)
+	void ServerApplyHitScanGE(TSubclassOf<UGameplayEffect> geClass, const int Damage);
 
 	UFUNCTION(BlueprintCallable)
 	bool GetIsRun() const { return  bIsRun; }

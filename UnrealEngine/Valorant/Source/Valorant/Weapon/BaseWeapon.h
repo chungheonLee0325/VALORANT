@@ -106,6 +106,9 @@ public:
 	UPROPERTY(EditDefaultsOnly)
 	TSubclassOf<UGameplayEffect> DamageEffectClass;
 
+	UPROPERTY(EditDefaultsOnly)
+	TSubclassOf<UGameplayEffect> NewDamageEffectClass;
+
 	/*
 	 *	PickUp & Drop 관련
 	 */

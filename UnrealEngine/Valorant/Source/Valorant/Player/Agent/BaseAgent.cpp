@@ -5,6 +5,7 @@
 #include "AbilitySystemComponent.h"
 #include "MapTestAgent.h"
 #include "Valorant.h"
+#include "AbilitySystem/Context/HitScanGameplayEffectContext.h"
 #include "Camera/CameraComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Valorant/AbilitySystem/AgentAbilitySystemComponent.h"
@@ -22,7 +23,7 @@
 #include "ValorantObject/BaseInteractor.h"
 #include "ValorantObject/Spike/Spike.h"
 
-EAgentDamagedPart GetHitDamagedPart(const FName& BoneName)
+/* static */ EAgentDamagedPart ABaseAgent::GetHitDamagedPart(const FName& BoneName)
 {
 	const FString& NameStr = BoneName.ToString();
 	if (NameStr.Contains(TEXT("Neck"), ESearchCase::IgnoreCase))
@@ -103,7 +104,6 @@ ABaseAgent::ABaseAgent()
 	// 마지막 시야 시간 0으로 초기화
 	LastVisibleTime = 0.0f;
 }
-
 
 // 서버 전용. 캐릭터를 Possess할 때 호출됨. 게임 첫 시작시, BeginPlay 보다 먼저 호출됩니다.
 void ABaseAgent::PossessedBy(AController* NewController)
@@ -571,6 +571,25 @@ void ABaseAgent::ServerApplyGE_Implementation(TSubclassOf<UGameplayEffect> geCla
 	FGameplayEffectContextHandle Context = ASC->MakeEffectContext();
 	FGameplayEffectSpecHandle SpecHandle = ASC->MakeOutgoingSpec(geClass, 1.f, Context);
 
+	if (SpecHandle.IsValid())
+	{
+		ASC->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
+	}
+}
+
+void ABaseAgent::ServerApplyHitScanGE_Implementation(TSubclassOf<UGameplayEffect> geClass, const int Damage)
+{
+	if (!geClass)
+	{
+		NET_LOG(LogTemp, Error, TEXT("올바른 게임이펙트를 넣어주세요."));
+		return;
+	}
+
+	FGameplayEffectContextHandle Context = FGameplayEffectContextHandle(new FHitScanGameplayEffectContext());
+	FHitScanGameplayEffectContext* HitScanContext = static_cast<FHitScanGameplayEffectContext*>(Context.Get());
+	HitScanContext->Damage = Damage;
+	
+	FGameplayEffectSpecHandle SpecHandle = ASC->MakeOutgoingSpec(geClass, 1.f, Context);
 	if (SpecHandle.IsValid())
 	{
 		ASC->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());

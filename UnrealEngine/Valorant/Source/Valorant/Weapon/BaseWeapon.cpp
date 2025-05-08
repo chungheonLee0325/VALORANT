@@ -217,22 +217,37 @@ void ABaseWeapon::ServerRPC_Fire_Implementation(const FVector& Location, const F
 	);
 	if (bHit)
 	{
-		const auto& DamageFalloffArray = WeaponData->GunDamageFalloffArray;
 		int FinalDamage = WeaponData->BaseDamage;
-		for (int i = DamageFalloffArray.Num() - 1; i >= 0; i--)
+		switch (const EAgentDamagedPart DamagedPart = ABaseAgent::GetHitDamagedPart(OutHit.BoneName))
 		{
-			const auto& DamageFalloff = DamageFalloffArray[i];
-			if (OutHit.Distance >= DamageFalloff.RangeStart)
+		case EAgentDamagedPart::None:
+			break;
+		case EAgentDamagedPart::Head:
+			FinalDamage *= WeaponData->HeadshotMultiplier;
+			break;
+		case EAgentDamagedPart::Body:
+			break;
+		case EAgentDamagedPart::Legs:
+			FinalDamage *= WeaponData->LegshotMultiplier;
+			break;
+		}
+
+		const auto& FalloffArray = WeaponData->GunDamageFalloffArray;
+		for (int i = FalloffArray.Num() - 1; i >= 0; i--)
+		{
+			const auto& FalloffData = FalloffArray[i];
+			if (OutHit.Distance >= FalloffData.RangeStart)
 			{
-				FinalDamage *= DamageFalloff.DamageMultiplier;
+				FinalDamage *= FalloffData.DamageMultiplier;
 				break;
 			}
 		}
+		FinalDamage = FMath::Clamp(FinalDamage, 1, 9999);
 		
 		NET_LOG(LogTemp, Warning, TEXT("LineTraceSingle Hit: %s, BoneName: %s, Distance: %f, FinalDamage: %d"), *OutHit.GetActor()->GetName(), *OutHit.BoneName.ToString(), OutHit.Distance, FinalDamage);
 		if (ABaseAgent* HitAgent = Cast<ABaseAgent>(OutHit.GetActor()))
 		{
-			HitAgent->ServerApplyGE(DamageEffectClass);
+			HitAgent->ServerApplyHitScanGE(NewDamageEffectClass, FinalDamage);
 		}
 		DrawDebugPoint(WorldContext, OutHit.ImpactPoint, 5, FColor::Green, false, 30);
 	}
