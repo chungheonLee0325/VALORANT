@@ -91,6 +91,10 @@ void UAgentInputComponent::BindInput(UInputComponent* InputComponent)
 		{
 			eic->BindAction(InteractAction, ETriggerEvent::Started, this, &UAgentInputComponent::Interact);
 		}
+		if (DropAction)
+		{
+			eic->BindAction(DropAction, ETriggerEvent::Started, this, &UAgentInputComponent::Drop);
+		}
 		
 		if (ShopUIAction)
 		{
@@ -173,6 +177,14 @@ void UAgentInputComponent::WalkComplete(const FInputActionValue& InputActionValu
 	}
 }
 
+void UAgentInputComponent::Drop(const FInputActionValue& InputActionValue)
+{
+	if (Agent)
+	{
+		Agent->DropCurrentInteractor();
+	}
+}
+
 void UAgentInputComponent::Interact(const FInputActionValue& InputActionValue)
 {
 	if (Agent)
@@ -215,6 +227,7 @@ void UAgentInputComponent::StartReload(const FInputActionValue& InputActionValue
 {
 	Agent->Reload();
 }
+
 void UAgentInputComponent::ShopUI(const FInputActionValue& InputActionValue)
 {
 	if (Agent)
