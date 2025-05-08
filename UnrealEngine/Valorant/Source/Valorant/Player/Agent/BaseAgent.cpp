@@ -3,10 +3,9 @@
 
 #include "BaseAgent.h"
 #include "AbilitySystemComponent.h"
-#include "EnhancedInputComponent.h"
 #include "MapTestAgent.h"
 #include "Valorant.h"
-#include "ValorantPickUpComponent.h"
+#include "Weapon/ValorantPickUpComponent.h"
 #include "AbilitySystem/Attributes/BaseAttributeSet.h"
 #include "Camera/CameraComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
@@ -17,15 +16,12 @@
 #include "GameManager/MatchGameMode.h"
 #include "GameManager/SubsystemSteamManager.h"
 #include "Kismet/GameplayStatics.h"
-#include "Kismet/KismetSystemLibrary.h"
 #include "Net/UnrealNetwork.h"
 #include "Player/Animaiton/AgentAnimInstance.h"
 #include "Player/Component/AgentInputComponent.h"
 #include "Valorant/Player/AgentPlayerController.h"
 #include "Valorant/Player/AgentPlayerState.h"
-#include "Valorant/Player/Widget/AgentBaseWidget.h"
 #include "ValorantObject/BaseInteractor.h"
-#include "Weapon/PickUpComponent.h"
 
 
 class AAgentPlayerState;

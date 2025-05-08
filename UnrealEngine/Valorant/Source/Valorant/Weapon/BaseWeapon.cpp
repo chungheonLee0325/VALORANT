@@ -5,7 +5,7 @@
 
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
-#include "PickUpComponent.h"
+#include "Weapon/ValorantPickUpComponent.h"
 #include "Valorant.h"
 #include "ValorantPickUpComponent.h"
 #include "GameManager/SubsystemSteamManager.h"

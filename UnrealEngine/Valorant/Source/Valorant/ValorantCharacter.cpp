@@ -8,7 +8,7 @@
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "InputActionValue.h"
-#include "ValorantPickUpComponent.h"
+#include "Weapon/ValorantPickUpComponent.h"
 #include "ValorantWeaponComponent.h"
 #include "Components/WidgetComponent.h"
 #include "Engine/LocalPlayer.h"
