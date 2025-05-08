@@ -22,8 +22,24 @@
 #include "ValorantObject/BaseInteractor.h"
 #include "ValorantObject/Spike/Spike.h"
 
-
-class AAgentPlayerState;
+EAgentDamagedPart GetHitDamagedPart(const FName& BoneName)
+{
+	const FString& NameStr = BoneName.ToString();
+	if (NameStr.Contains(TEXT("Neck"), ESearchCase::IgnoreCase))
+		return EAgentDamagedPart::Head;
+	if (NameStr.Contains(TEXT("Clavicle"), ESearchCase::IgnoreCase) || 
+		NameStr.Contains(TEXT("Shoulder"), ESearchCase::IgnoreCase) || 
+		NameStr.Contains(TEXT("Elbow"), ESearchCase::IgnoreCase) ||
+		NameStr.Contains(TEXT("Hand"), ESearchCase::IgnoreCase) ||
+		NameStr.Contains(TEXT("Spine"), ESearchCase::IgnoreCase))
+		return EAgentDamagedPart::Body;
+	if (NameStr.Contains(TEXT("Hip"), ESearchCase::IgnoreCase) || 
+		NameStr.Contains(TEXT("Knee"), ESearchCase::IgnoreCase) || 
+		NameStr.Contains(TEXT("Foot"), ESearchCase::IgnoreCase) || 
+		NameStr.Contains(TEXT("Toe"), ESearchCase::IgnoreCase))
+		return EAgentDamagedPart::Legs;
+	return EAgentDamagedPart::None;
+}
 
 ABaseAgent::ABaseAgent()
 {

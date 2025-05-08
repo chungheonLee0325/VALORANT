@@ -32,6 +32,14 @@ enum class EAgentVisibility : uint8
 	LastKnown,
 };
 
+UENUM(BlueprintType)
+enum class EAgentDamagedPart : uint8
+{
+	None,
+	Head,
+	Body,
+	Legs
+};
 
 UCLASS()
 class VALORANT_API ABaseAgent : public ACharacter
