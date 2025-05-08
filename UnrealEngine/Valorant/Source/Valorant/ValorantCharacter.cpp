@@ -136,7 +136,7 @@ void AValorantCharacter::Interaction()
 			}
 		}
 		
-		FindPickUpComponent->PickUp(this);
+		// FindPickUpComponent->PickUp(this);
 		FindPickUpComponent = nullptr;
 	}
 }

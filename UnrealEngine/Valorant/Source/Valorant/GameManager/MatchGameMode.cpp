@@ -466,24 +466,27 @@ void AMatchGameMode::RespawnPlayer(AAgentPlayerState* ps, AAgentPlayerController
 	FActorSpawnParameters SpawnParams;
 	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 	
-	FAgentData* agentData = Cast<UValorantGameInstance>(GetGameInstance())->GetAgentData(ps->GetAgentID());
-	
-	auto* Agent = GetWorld()->SpawnActor<ABaseAgent>(agentData->AgentAsset, spawnTransform);
-	
 	if (ps->IsSpectator())
 	{
+		FAgentData* agentData = Cast<UValorantGameInstance>(GetGameInstance())->GetAgentData(ps->GetAgentID());
+		auto* Agent = GetWorld()->SpawnActor<ABaseAgent>(agentData->AgentAsset, spawnTransform);
+		
 		ps->SetIsSpectator(false);
 		ps->SetIsOnlyASpectator(false);
-	}
-
-	APawn* oldPawn = pc->GetPawn();
-	
-	pc->UnPossess();
-	pc->Possess(Agent);
 		
-	if (oldPawn)
+		APawn* oldPawn = pc->GetPawn();
+	
+		pc->UnPossess();
+		pc->Possess(Agent);
+		
+		if (oldPawn)
+		{
+			oldPawn->Destroy();
+		}
+	}
+	else
 	{
-		oldPawn->Destroy();
+		ps->GetPawn()->SetActorTransform(spawnTransform);
 	}
 }
 

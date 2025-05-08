@@ -4,6 +4,7 @@
 
 #include "ValorantWeaponComponent.h"
 #include "Components/CapsuleComponent.h"
+#include "Player/Agent/BaseAgent.h"
 
 UValorantPickUpComponent::UValorantPickUpComponent()
 {
@@ -22,7 +23,7 @@ void UValorantPickUpComponent::BeginPlay()
 void UValorantPickUpComponent::OnSphereBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
 	// Checking if it is a First Person Character overlapping
-	if(AValorantCharacter* Character = Cast<AValorantCharacter>(OtherActor))
+	if(ABaseAgent* Character = Cast<ABaseAgent>(OtherActor))
 	{
 		if (Character->InteractionCapsule == Cast<UCapsuleComponent>(OtherComp))
 		{
@@ -30,7 +31,7 @@ void UValorantPickUpComponent::OnSphereBeginOverlap(UPrimitiveComponent* Overlap
 		}
 
 		TArray<USceneComponent*> ChildrenArray;
-		Character->GetMesh1P()->GetChildrenComponents(true, ChildrenArray);
+		Character->GetMesh()->GetChildrenComponents(true, ChildrenArray);
 		
 		// TODO: 주무기, 보조무기, 근접무기 구분 필요
 		if (ChildrenArray.FindItemByClass<UValorantWeaponComponent>())
@@ -52,7 +53,7 @@ void UValorantPickUpComponent::OnSphereBeginOverlap(UPrimitiveComponent* Overlap
 	}
 }
 
-void UValorantPickUpComponent::PickUp(AValorantCharacter* Character)
+void UValorantPickUpComponent::PickUp(ABaseAgent* Character)
 {
 	if (Character != nullptr)
 	{
