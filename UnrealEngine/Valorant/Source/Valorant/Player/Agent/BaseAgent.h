@@ -153,6 +153,9 @@ public:
 	void Server_SetWeaponState(uint8 newState);
 	UFUNCTION()
 	void OnRep_WeaponState();
+
+	UFUNCTION(BlueprintCallable)
+	void EquipWeapon(ABaseWeapon* weapon);
 	
 	UFUNCTION(BlueprintCallable)
 	ABaseWeapon* GetPrimaryWeapon() const { return PrimaryWeapon; }
@@ -208,7 +211,7 @@ protected:
 	
 	UPROPERTY(Replicated)
 	bool bIsRun = true;
-	UPROPERTY(Replicated)
+	UPROPERTY()
 	bool bIsDead = false;
 
 	float BaseCapsuleHalfHeight = 0.0f;
@@ -255,13 +258,7 @@ protected:
 	void OnDieCameraFinished();
 	
 	UFUNCTION(NetMulticast, Reliable)
-	void Net_Die(AAgentPlayerController* _pc);
-	UFUNCTION(Server, Reliable)
-	void Server_Die();
-	
-	virtual void Respawn();
-	UFUNCTION(NetMulticast, Reliable)
-	void Net_Respawn();
+	void Net_Die();
 
 	UFUNCTION()
 	void OnFindInteraction(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);

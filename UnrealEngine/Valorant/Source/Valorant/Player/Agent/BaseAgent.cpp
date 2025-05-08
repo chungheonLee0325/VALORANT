@@ -278,6 +278,13 @@ void ABaseAgent::OnRep_WeaponState()
 	}
 }
 
+void ABaseAgent::EquipWeapon(ABaseWeapon* weapon)
+{
+	// 무기의 타입 받고, 해당 무기 슬롯에 이미 무기 있으면 버리기
+	// 무기 설정하기
+	// 무기 타입 바로 장착
+}
+
 void ABaseAgent::Reload()
 {
 	ABaseWeapon* weapon = nullptr;
@@ -351,21 +358,9 @@ void ABaseAgent::HandleDieCameraPitch(float newPitch)
 
 void ABaseAgent::Die()
 {
-	if (bIsDead)
-	{
-		return;
-	}
+	// NET_LOG(LogTemp,Warning,TEXT("죽음"));
 	
-	NET_LOG(LogTemp,Warning,TEXT("죽음"));
-	
-	bIsDead = true;
-	ThirdPersonMesh->SetOwnerNoSee(false);
-	GetMesh()->SetVisibility(false);
-
-	ABP_3P->Montage_Stop(0.1f);
-	ABP_3P->Montage_Play(AM_Die, 1.0f);
-	ABP_3P->bIsDead = true;
-
+	//TODO: 복제 어떻게 진행할지
 	if (PrimaryWeapon)
 	{
 		PrimaryWeapon->Drop();
@@ -377,12 +372,14 @@ void ABaseAgent::Die()
 	
 	if (IsLocallyControlled())
 	{
-		// NET_LOG(LogTemp,Warning,TEXT("로컬"));
-		TL_DieCamera->PlayFromStart();
-		
 		DisableInput(Cast<APlayerController>(GetController()));
-	}
 
+		ThirdPersonMesh->SetOwnerNoSee(false);
+		GetMesh()->SetVisibility(false);
+		
+		TL_DieCamera->PlayFromStart();
+	}
+	
 	if (HasAuthority())
 	{
 		// NET_LOG(LogTemp,Warning,TEXT("다이 캠 피니쉬 타이머 설정"));
@@ -392,6 +389,9 @@ void ABaseAgent::Die()
 		{
 			OnDieCameraFinished();
 		}), DieCameraTimeRange, false);
+
+		ThirdPersonMesh->SetOwnerNoSee(false);
+		Net_Die();
 	}
 }
 
@@ -414,20 +414,13 @@ void ABaseAgent::OnDieCameraFinished()
 	}
 }
 
-void ABaseAgent::Net_Die_Implementation(AAgentPlayerController* _pc)
+void ABaseAgent::Net_Die_Implementation()
 {
-}
-
-void ABaseAgent::Server_Die_Implementation()
-{
-}
-
-void ABaseAgent::Respawn()
-{
-}
-
-void ABaseAgent::Net_Respawn_Implementation()
-{
+	bIsDead = true;
+	
+	ABP_3P->Montage_Stop(0.1f);
+	ABP_3P->Montage_Play(AM_Die, 1.0f);
+	ABP_3P->bIsDead = true;
 }
 
 void ABaseAgent::Interact()
