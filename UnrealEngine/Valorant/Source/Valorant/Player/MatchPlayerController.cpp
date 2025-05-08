@@ -47,6 +47,14 @@ void AMatchPlayerController::SetGameMode(AMatchGameMode* MatchGameMode)
 	this->GameMode = MatchGameMode;
 }
 
+void AMatchPlayerController::ClientRPC_CleanUpSession_Implementation()
+{
+	if (auto* SubsystemManager = GetGameInstance()->GetSubsystem<USubsystemSteamManager>())
+	{
+		SubsystemManager->DestroySession();
+	}
+}
+
 void AMatchPlayerController::ClientRPC_OnLockIn_Implementation(const FString& DisplayName)
 {
 	if (nullptr == SelectUIWidget)
