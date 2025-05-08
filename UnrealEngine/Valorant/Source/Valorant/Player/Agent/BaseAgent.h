@@ -150,6 +150,9 @@ public:
 	EInteractorType GetInteractorState() const { return CurrentInteractorState; }
 	UFUNCTION(BlueprintCallable)
 	void SetInteractorState(const EInteractorType newState);
+
+	UFUNCTION(BlueprintCallable)
+	void EquipWeapon(ABaseWeapon* weapon);
 	
 	void Reload();
 	void Interact();
@@ -240,9 +243,7 @@ protected:
 	virtual void InitAgentAbility();
 
 	UFUNCTION(BlueprintCallable)
-	void EquipSpike(ASpike* spike);
-	UFUNCTION(BlueprintCallable)
-	void EquipWeapon(ABaseWeapon* weapon);
+	void EquipSpike(ASpike* spike)
 	
 	UFUNCTION(BlueprintCallable)
 	void SetCurrentInteractor(ABaseInteractor* interactor);
