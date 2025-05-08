@@ -3,12 +3,10 @@
 
 #include "MatchGameMode.h"
 
-#include "EngineUtils.h"
 #include "MatchGameState.h"
 #include "OnlineSessionSettings.h"
 #include "SubsystemSteamManager.h"
 #include "Valorant.h"
-#include "ValorantCharacter.h"
 #include "AbilitySystem/Attributes/BaseAttributeSet.h"
 #include "GameFramework/PlayerStart.h"
 #include "GameManager/ValorantGameInstance.h"
@@ -216,17 +214,13 @@ void AMatchGameMode::HandleMatchHasStarted()
 			UE_LOG(LogTemp, Warning, TEXT("DefendersStartPoint Found"));
 		}
 	}
-	
-	for(FConstPlayerControllerIterator Iterator = GetWorld()->GetPlayerControllerIterator(); Iterator; ++Iterator )
+
+	for (const auto& PlayerInfo : MatchPlayers)
 	{
-		APlayerController* PlayerController = Iterator->Get();
-		if (PlayerController && (PlayerController->GetPawn() == nullptr))
+		if (AgentSelectStartPoint)
 		{
-			if (AgentSelectStartPoint)
-			{
-				FViewTargetTransitionParams Params;
-				PlayerController->ClientSetViewTarget(AgentSelectStartPoint, Params);
-			}
+			const FViewTargetTransitionParams Params;
+			PlayerInfo.Controller->ClientSetViewTarget(AgentSelectStartPoint, Params);
 		}
 	}
 	
@@ -238,10 +232,20 @@ bool AMatchGameMode::ReadyToEndMatch_Implementation()
 	return bReadyToEndMatch;
 }
 
+void AMatchGameMode::LeavingMatch()
+{
+	for (const auto& PlayerInfo : MatchPlayers)
+	{
+		PlayerInfo.Controller->ClientRPC_CleanUpSession();
+		PlayerInfo.Controller->ClientTravel("/Game/Maps/MainMap.MainMap", TRAVEL_Absolute);
+	}
+}
+
 void AMatchGameMode::HandleMatchHasEnded()
 {
 	Super::HandleMatchHasEnded();
-	// TODO: 결과 레벨로 전환?
+	// 일정 시간 이후 매치 완전 종료
+	GetWorld()->GetTimerManager().SetTimer(RoundTimerHandle, this, &AMatchGameMode::LeavingMatch, LeavingMatchTime);
 }
 
 void AMatchGameMode::StartSelectAgent()
@@ -269,28 +273,28 @@ void AMatchGameMode::StartInRound()
 void AMatchGameMode::StartEndPhaseByTimeout()
 {
 	bool bBlueWin = IsShifted(); // Blue가 선공이니까 false라면 공격->진다, true라면 수비->이긴다
-	SetRoundSubState(ERoundSubState::RSS_EndPhase);
 	HandleRoundEnd(bBlueWin, ERoundEndReason::ERER_Timeout);
+	SetRoundSubState(ERoundSubState::RSS_EndPhase);
 }
 
 void AMatchGameMode::StartEndPhaseByEliminated(const bool bBlueWin)
 {
-	SetRoundSubState(ERoundSubState::RSS_EndPhase);
 	HandleRoundEnd(bBlueWin, ERoundEndReason::ERER_Eliminated);
+	SetRoundSubState(ERoundSubState::RSS_EndPhase);
 }
 
 void AMatchGameMode::StartEndPhaseBySpikeActive()
 {
 	bool bBlueWin = !IsShifted(); // Blue가 선공이니까 false라면 공격->이긴다, true라면 수비->진다
-	SetRoundSubState(ERoundSubState::RSS_EndPhase);
 	HandleRoundEnd(bBlueWin, ERoundEndReason::ERER_SpikeActive);
+	SetRoundSubState(ERoundSubState::RSS_EndPhase);
 }
 
 void AMatchGameMode::StartEndPhaseBySpikeDefuse()
 {
 	bool bBlueWin = IsShifted(); // Blue가 선공이니까 false라면 공격->해체당했으니 진다, true라면 수비->해체했으니 이긴다
-	SetRoundSubState(ERoundSubState::RSS_EndPhase);
 	HandleRoundEnd(bBlueWin, ERoundEndReason::ERER_SpikeDefuse);
+	SetRoundSubState(ERoundSubState::RSS_EndPhase);
 }
 
 void AMatchGameMode::HandleRoundSubState_SelectAgent()
@@ -345,6 +349,22 @@ void AMatchGameMode::HandleRoundSubState_EndPhase()
 	// TODO: 라운드 상황에 따라 BuyPhase로 전환할 것인지 InRound로 전환할 것인지 아예 매치가 끝난 상태로 전환할 것인지 판단
 	// 공수교대(->InRound) 조건: 3라운드가 끝나고 4라운드 시작되는 시점
 	// 매치 종료 조건: 4승을 먼저 달성한 팀이 있는 경우 (6전 4선승제, 만약 3:3일 경우 단판 승부전)
+	NET_LOG(LogTemp, Warning, TEXT("TeamBlueScore: %d, TeamRedScore: %d"), TeamBlueScore, TeamRedScore);
+	if (RequiredScore <= TeamBlueScore || RequiredScore <= TeamRedScore)
+	{
+		NET_LOG(LogTemp, Warning, TEXT("ReadyToEndMatch"));
+		bReadyToEndMatch = true; // true가 되면 MatchState가 WaitingPostMatch로 전환되고 HandleMatchHasEnded 이벤트 발생
+		// TODO: 매치 승리/패배를 알림
+		if (RequiredScore <= TeamBlueScore)
+		{
+			//
+		}
+		else
+		{
+			//
+		}
+		return;
+	}
 	
 	// 일정 시간 후에 라운드 재시작
 	MaxTime = EndPhaseTime;
@@ -416,7 +436,7 @@ void AMatchGameMode::RespawnAll()
 	{
 		MatchPlayer.bIsDead = false;
 		
-		FTransform SpawnTransform  = FTransform::Identity;
+		FTransform SpawnTransform = FTransform::Identity;
 		if (MatchPlayer.bIsBlueTeam)
 		{
 			if (IsShifted()) { SpawnTransform = AttackersStartPoint->GetTransform(); }
