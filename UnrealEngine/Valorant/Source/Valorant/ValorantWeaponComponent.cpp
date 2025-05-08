@@ -9,7 +9,7 @@
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "InputMappingContext.h"
-#include "ValorantPickUpComponent.h"
+#include "Weapon/ValorantPickUpComponent.h"
 #include "Animation/AnimInstance.h"
 #include "Components/WidgetComponent.h"
 #include "ResourceManager/ValorantGameType.h"
