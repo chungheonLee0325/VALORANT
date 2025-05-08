@@ -306,13 +306,13 @@ void ABaseAgent::EquipSpike(ASpike* spike)
 
 void ABaseAgent::EquipWeapon(ABaseWeapon* weapon)
 {
-	UE_LOG(LogTemp,Warning,TEXT("이큅 웨폰"));
+	// UE_LOG(LogTemp,Warning,TEXT("이큅 웨폰"));
 	if(weapon->GetWeaponCategory() == EWeaponCategory::Sidearm)
 	{
 		UE_LOG(LogTemp,Warning,TEXT("보조무기"));
 		if (SecondWeapon)
 		{
-			UE_LOG(LogTemp,Warning,TEXT("이미 들고 있음"));
+			// UE_LOG(LogTemp,Warning,TEXT("이미 들고 있음"));
 			SecondWeapon->Drop();
 		}
 		
@@ -323,7 +323,7 @@ void ABaseAgent::EquipWeapon(ABaseWeapon* weapon)
 		UE_LOG(LogTemp,Warning,TEXT("주무기"));
 		if (PrimaryWeapon)
 		{
-			UE_LOG(LogTemp,Warning,TEXT("이미 들고 있음"));
+			// UE_LOG(LogTemp,Warning,TEXT("이미 들고 있음"));
 			PrimaryWeapon->Drop();
 		}
             
@@ -331,7 +331,6 @@ void ABaseAgent::EquipWeapon(ABaseWeapon* weapon)
 	}
 
 	weapon->PickUp(this);
-	
 	SetInteractorState(weapon->GetInteractorType());
 }
 
@@ -361,7 +360,7 @@ void ABaseAgent::SetInteractorState(const EInteractorType newState)
 
 void ABaseAgent::SetCurrentInteractor(ABaseInteractor* interactor)
 {
-	//TODO: 기존 들고 있던 물건 숨기기
+	//TODO: 기존 들고 있던 물건 숨기고 새로운 인터랙터 활성화
 	//TODO: EInteractorType 따른 애니메이션 재생
 
 	CurrentInteractor = interactor;

@@ -243,7 +243,7 @@ protected:
 	virtual void InitAgentAbility();
 
 	UFUNCTION(BlueprintCallable)
-	void EquipSpike(ASpike* spike)
+	void EquipSpike(ASpike* spike);
 	
 	UFUNCTION(BlueprintCallable)
 	void SetCurrentInteractor(ABaseInteractor* interactor);
