@@ -90,7 +90,13 @@ void ABaseInteractor::Drop()
 	}
 
 	// TODO: 툭 놓는게 아니라 던지도록 변경
-	DetachFromActor(FDetachmentTransformRules::KeepWorldTransform);
+	FDetachmentTransformRules DetachmentRule(
+		EDetachmentRule::KeepWorld,
+		EDetachmentRule::KeepWorld,
+		EDetachmentRule::KeepRelative,
+		true
+	);
+	DetachFromActor(DetachmentRule);
 	const FVector& ForwardVector = OwnerAgent->GetActorForwardVector();
 	const FVector& FeetLocation = OwnerAgent->GetMovementComponent()->GetActorFeetLocation();
 	const FVector Offset = FVector(0, 0, 32);
