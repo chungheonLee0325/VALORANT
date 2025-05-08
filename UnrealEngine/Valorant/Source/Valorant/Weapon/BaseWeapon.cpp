@@ -301,6 +301,7 @@ void ABaseWeapon::Drop()
 {
 	Super::Drop();
 
+	//TODO: 이미 Super에서 Onwer가 Null로 처리됨. 필요시 수정
 	if (nullptr == OwnerAgent)
 	{
 		return;
@@ -346,7 +347,6 @@ void ABaseWeapon::AttachWeapon(ABaseAgent* PickUpAgent)
 			EnhancedInputComponent->BindAction(StartFireAction, ETriggerEvent::Triggered, this, &ABaseWeapon::StartFire);
 			EnhancedInputComponent->BindAction(EndFireAction, ETriggerEvent::Triggered, this, &ABaseWeapon::EndFire);
 			EnhancedInputComponent->BindAction(StartReloadAction, ETriggerEvent::Triggered, this, &ABaseWeapon::StartReload);
-			EnhancedInputComponent->BindAction(DropAction, ETriggerEvent::Triggered, this, &ABaseWeapon::Drop);
 		}
 	}
 }
