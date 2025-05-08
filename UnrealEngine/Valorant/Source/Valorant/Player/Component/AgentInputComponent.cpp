@@ -195,15 +195,14 @@ void UAgentInputComponent::Interact(const FInputActionValue& InputActionValue)
 
 void UAgentInputComponent::WeaponChange(const FInputActionValue& value)
 {
-	uint8 state = Agent->GetWeaponState();
-	Agent->SetWeaponState((state +1) % 3);
+	//TODO: Enum int 로 변환하여 휠으로 슬롯 체인지
 }
 
 void UAgentInputComponent::Weapon1(const FInputActionValue& InputActionValue)
 {
 	if (Agent)
 	{
-		Agent->SetWeaponState(1);
+		Agent->SetInteractorState(EInteractorType::MainWeapon);
 	}
 }
 
@@ -211,7 +210,7 @@ void UAgentInputComponent::Weapon2(const FInputActionValue& InputActionValue)
 {
 	if (Agent)
 	{
-		Agent->SetWeaponState(2);
+		Agent->SetInteractorState(EInteractorType::SubWeapon);
 	}
 }
 
@@ -219,7 +218,7 @@ void UAgentInputComponent::Weapon3(const FInputActionValue& InputActionValue)
 {
 	if (Agent)
 	{
-		Agent->SetWeaponState(3);
+		Agent->SetInteractorState(EInteractorType::Melee);
 	}
 }
 
