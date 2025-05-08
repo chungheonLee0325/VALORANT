@@ -25,6 +25,7 @@
 #include "Valorant/Player/AgentPlayerState.h"
 #include "Valorant/Player/Widget/AgentBaseWidget.h"
 #include "ValorantObject/BaseInteractor.h"
+#include "Weapon/PickUpComponent.h"
 
 
 class AAgentPlayerState;
@@ -177,12 +178,6 @@ void ABaseAgent::Tick(float DeltaTime)
 	}
 	
 	GetCharacterMovement()->MaxWalkSpeed = baseSpeed * EffectSpeedMultiplier * EquipSpeedMultiplier;
-	
-	if (IsLocallyControlled())
-	{
-		FindInteractable();
-	}
-	
 }
 
 void ABaseAgent::InitAgentAbility()
@@ -445,44 +440,8 @@ void ABaseAgent::Interact()
 {
 	if (FindPickUpComponent)
 	{
-		// FindPickUpComponent->PickUp(this);
+		FindPickUpComponent->PickUp(this);
 	}
-}
-
-void ABaseAgent::FindInteractable()
-{
-	// const FVector startPos = SpringArm->GetComponentLocation();
-	// const FVector endPos = startPos + Camera->GetForwardVector() * FindItemRange;
-	// FHitResult hitResult;
-	//
-	// TArray<TEnumAsByte<EObjectTypeQuery>> objectTypesArray;
-	// objectTypesArray.Add(UEngineTypes::ConvertToObjectType(ECC_EngineTraceChannel1));
-	//
-	// TArray<AActor*> actorsToIgnore;
-	// actorsToIgnore.Add(this);
-	//
-	// if (UKismetSystemLibrary::SphereTraceSingleForObjects(
-	// GetWorld(), startPos, endPos, 20.f, objectTypesArray, false
-	// , actorsToIgnore, EDrawDebugTrace::None, hitResult, true))
-	// {
-	// 	AActor* actor = hitResult.GetActor()->IsA(ABaseInteractor::StaticClass()) ? hitResult.GetActor() : nullptr;
-	// 	if (actor)
-	// 	{
-	// 		LookingActor = Cast<ABaseInteractor>(actor);
-	// 		LookingActor->InteractActive(true);
-	// 	}
-	// }
-	// else
-	// {
-	// 	if (LookingActor)
-	// 	{
-	// 		// UE_LOG(LogTemp,Warning,TEXT("%s를 그만볼래"),*LookingActor->GetActorNameOrLabel());
-	// 		LookingActor->InteractActive(false);
-	// 		LookingActor = nullptr;
-	// 	}
-	// }
-	
-	// TODO: 스파이크 / 문 순서로 추가
 }
 
 void ABaseAgent::OnFindInteraction(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
@@ -507,7 +466,7 @@ void ABaseAgent::OnFindInteraction(UPrimitiveComponent* OverlappedComponent, AAc
 	{
 		FindInteractActor = interactor;
 		FindInteractActor->InteractActive(true);
-
+		
 		if (auto* pickUpComp = interactor->FindComponentByClass<UValorantPickUpComponent>())
 		{
 			FindPickUpComponent = pickUpComp;
