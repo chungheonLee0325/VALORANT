@@ -7,6 +7,7 @@
 #include "EnhancedInputSubsystems.h"
 #include "PickUpComponent.h"
 #include "Valorant.h"
+#include "ValorantPickUpComponent.h"
 #include "GameManager/SubsystemSteamManager.h"
 #include "GameManager/ValorantGameInstance.h"
 #include "Kismet/GameplayStatics.h"
@@ -20,7 +21,7 @@ ABaseWeapon::ABaseWeapon()
 	
 	WeaponMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("WeaponMesh"));
 	SetRootComponent(WeaponMesh);
-	PickUpModule = CreateDefaultSubobject<UPickUpComponent>(TEXT("PickUpModule"));
+	PickUpModule = CreateDefaultSubobject<UValorantPickUpComponent>(TEXT("PickUpComp"));
 	PickUpModule->SetupAttachment(GetRootComponent());
 
 	InteractWidget->SetupAttachment(RootComponent);

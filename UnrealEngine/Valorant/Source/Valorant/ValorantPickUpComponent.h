@@ -4,12 +4,13 @@
 
 #include "CoreMinimal.h"
 #include "Components/SphereComponent.h"
-#include "ValorantCharacter.h"
 #include "ValorantPickUpComponent.generated.h"
+
+class ABaseAgent;
 
 // Declaration of the delegate that will be called when someone picks this up
 // The character picking this up is the parameter sent with the notification
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPickUp, AValorantCharacter*, PickUpCharacter);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPickUp, ABaseAgent*, PickUpCharacter);
 
 UCLASS(Blueprintable, BlueprintType, ClassGroup = (Custom), meta = (BlueprintSpawnableComponent))
 class VALORANT_API UValorantPickUpComponent : public USphereComponent
@@ -33,6 +34,6 @@ protected:
 	void OnSphereBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
 
 public:
-	void PickUp(AValorantCharacter* Character);
+	void PickUp(ABaseAgent* Character);
 	void SetEnableBeginOverlap();
 };

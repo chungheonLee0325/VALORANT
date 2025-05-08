@@ -7,6 +7,7 @@
 #include "ValorantObject/BaseInteractor.h"
 #include "BaseWeapon.generated.h"
 
+class UValorantPickUpComponent;
 class UGameplayEffect;
 class UPickUpComponent;
 class UInputMappingContext;
@@ -35,7 +36,7 @@ class VALORANT_API ABaseWeapon : public ABaseInteractor
 	TObjectPtr<USkeletalMeshComponent> WeaponMesh;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess = "true"))
-	TObjectPtr<UPickUpComponent> PickUpModule;
+	TObjectPtr<UValorantPickUpComponent> PickUpModule;
 
 	UPROPERTY()
 	TObjectPtr<ABaseAgent> Agent;
