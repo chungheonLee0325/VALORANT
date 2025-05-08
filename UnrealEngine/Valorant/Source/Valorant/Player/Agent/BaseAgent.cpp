@@ -20,6 +20,7 @@
 #include "Valorant/Player/AgentPlayerController.h"
 #include "Valorant/Player/AgentPlayerState.h"
 #include "ValorantObject/BaseInteractor.h"
+#include "ValorantObject/Spike/Spike.h"
 
 
 class AAgentPlayerState;
@@ -158,6 +159,8 @@ void ABaseAgent::BeginPlay()
 
 	InteractionCapsule->OnComponentBeginOverlap.AddDynamic(this, &ABaseAgent::OnFindInteraction);
 	InteractionCapsule->OnComponentEndOverlap.AddDynamic(this, &ABaseAgent::OnInteractionCapsuleEndOverlap);
+
+	//TODO: 기본 총, 칼 스폰해서 붙여주기
 }
 
 void ABaseAgent::Tick(float DeltaTime)
@@ -245,83 +248,6 @@ void ABaseAgent::Server_SetIsRun_Implementation(const bool _bIsRun)
 	bIsRun = _bIsRun;
 }
 
-void ABaseAgent::SetWeaponState(const uint8 newState)
-{
-	if (HasAuthority())
-	{
-		WeaponState = newState;
-		ABP_1P->WeaponState = WeaponState;
-		ABP_3P->WeaponState = WeaponState;
-	}
-	else
-	{
-		Server_SetWeaponState(newState);
-	}
-}
-
-void ABaseAgent::Server_SetWeaponState_Implementation(uint8 newState)
-{
-	WeaponState = newState;
-	ABP_1P->WeaponState = WeaponState;
-	ABP_3P->WeaponState = WeaponState;
-}
-
-void ABaseAgent::OnRep_WeaponState()
-{
-	if (ABP_1P)
-	{
-		ABP_1P->WeaponState = WeaponState;
-	}
-	if (ABP_3P)
-	{
-		ABP_3P->WeaponState = WeaponState;
-	}
-}
-
-void ABaseAgent::EquipWeapon(ABaseWeapon* weapon)
-{
-	// 무기의 타입 받고, 해당 무기 슬롯에 이미 무기 있으면 버리기
-	// 무기 설정하기
-	// 무기 타입 바로 장착
-}
-
-void ABaseAgent::Reload()
-{
-	ABaseWeapon* weapon = nullptr;
-	if (WeaponState == 1)
-	{
-		weapon = PrimaryWeapon;
-	}
-	else if (WeaponState == 2)
-	{
-		weapon = SecondWeapon;
-	}
-
-	if (!weapon)
-	{
-		return;
-	}
-
-	weapon->StartReload();
-	ABP_3P->Montage_Stop(0.1f);
-	if (AM_Reload)
-	{
-		ABP_3P->Montage_Play(AM_Reload, 1.0f);
-	}
-}
-
-void ABaseAgent::SetShopUI()
-{
-	if (IsLocallyControlled())
-	{
-		PC->RequestShopUI();
-	}
-	else
-	{
-		
-	}
-}
-
 void ABaseAgent::OnStartCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust)
 {
 	Super::OnStartCrouch(HalfHeightAdjust, ScaledHalfHeightAdjust);
@@ -341,6 +267,201 @@ void ABaseAgent::HandleCrouchProgress(float Value)
 	float newHalfHeight = BaseCapsuleHalfHeight - Value;
 	//NET_LOG(LogTemp,Warning,TEXT("HandleCrouchProgress %f"), newHalfHeight);
 	GetCapsuleComponent()->SetCapsuleHalfHeight(newHalfHeight,true);
+}
+
+void ABaseAgent::Reload()
+{
+	if (CurrentInteractor == nullptr)
+	{
+		return;
+	}
+	
+	if (ABaseWeapon* weapon = Cast<ABaseWeapon>(CurrentInteractor))
+	{
+		weapon->StartReload();
+		ABP_3P->Montage_Stop(0.1f);
+		if (AM_Reload)
+		{
+			ABP_3P->Montage_Play(AM_Reload, 1.0f);
+		}
+	}
+}
+
+void ABaseAgent::SetShopUI()
+{
+	if (IsLocallyControlled())
+	{
+		PC->RequestShopUI();
+	}
+	else
+	{
+		
+	}
+}
+
+void ABaseAgent::EquipSpike(ASpike* spike)
+{
+	//TODO: 픽업 성공했는지 여부에 따라 다르게 처리
+}
+
+void ABaseAgent::EquipWeapon(ABaseWeapon* weapon)
+{
+	// UE_LOG(LogTemp,Warning,TEXT("이큅 웨폰"));
+	if(weapon->GetWeaponCategory() == EWeaponCategory::Sidearm)
+	{
+		UE_LOG(LogTemp,Warning,TEXT("보조무기"));
+		if (SecondWeapon)
+		{
+			// UE_LOG(LogTemp,Warning,TEXT("이미 들고 있음"));
+			SecondWeapon->Drop();
+		}
+		
+		SecondWeapon = weapon;
+	}
+	else
+	{
+		UE_LOG(LogTemp,Warning,TEXT("주무기"));
+		if (PrimaryWeapon)
+		{
+			// UE_LOG(LogTemp,Warning,TEXT("이미 들고 있음"));
+			PrimaryWeapon->Drop();
+		}
+            
+		PrimaryWeapon = weapon;
+	}
+
+	weapon->PickUp(this);
+	SetInteractorState(weapon->GetInteractorType());
+}
+
+void ABaseAgent::SetInteractorState(const EInteractorType newState)
+{
+	CurrentInteractorState = newState;
+	
+	if (newState == EInteractorType::MainWeapon)
+	{
+		SetCurrentInteractor(PrimaryWeapon);
+	}
+	else if (newState == EInteractorType::SubWeapon)
+	{
+		SetCurrentInteractor(SecondWeapon);
+	}
+	else if (newState == EInteractorType::Melee)
+	{
+		//TODO: 칼 넣어주기
+		SetCurrentInteractor(nullptr);
+	}
+	else if (newState == EInteractorType::Spike)
+	{
+		//TODO: 스파이크 넣어주기
+		SetCurrentInteractor(nullptr);
+	}
+}
+
+void ABaseAgent::SetCurrentInteractor(ABaseInteractor* interactor)
+{
+	//TODO: 기존 들고 있던 물건 숨기고 새로운 인터랙터 활성화
+	//TODO: EInteractorType 따른 애니메이션 재생
+
+	CurrentInteractor = interactor;
+	
+	if (CurrentInteractor == nullptr)
+	{
+		CurrentInteractorState = EInteractorType::None;
+		CurrentInteractorState = EInteractorType::None;
+		return;
+	}
+
+	UE_LOG(LogTemp,Warning,TEXT("현재 들고 있는 인터랙터: %s"), *CurrentInteractor->GetActorNameOrLabel());
+}
+
+void ABaseAgent::Server_SetInteractorState_Implementation(EInteractorType newState)
+{
+	CurrentInteractorState = newState;
+}
+
+/** CurrentInteractorState 변경시 호출 */
+void ABaseAgent::OnRep_InteractorState()
+{
+	if (ABP_1P)
+	{
+		ABP_1P->InteractorState = CurrentInteractorState;
+	}
+	if (ABP_3P)
+	{
+		ABP_3P->InteractorState = CurrentInteractorState;
+	}
+}
+
+void ABaseAgent::Interact()
+{
+	if (FindInteractActor)
+	{
+		if (ABaseWeapon* weapon = Cast<ABaseWeapon> (FindInteractActor))
+		{
+			EquipWeapon(weapon);
+		}
+		else if (ASpike* spike = Cast<ASpike> (FindInteractActor))
+		{
+			EquipSpike(spike);			
+		}
+	}
+}
+
+void ABaseAgent::DropCurrentInteractor()
+{
+	if (CurrentInteractor && CurrentInteractor->CanDrop())
+	{
+		if (CurrentInteractor == PrimaryWeapon)
+		{
+			PrimaryWeapon = nullptr;
+		}
+		else if (CurrentInteractor == SecondWeapon)
+		{
+			SecondWeapon = nullptr;
+		}
+		
+		CurrentInteractor->Drop();
+		SetCurrentInteractor(nullptr);
+	}
+}
+
+void ABaseAgent::OnFindInteraction(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
+                                   UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
+{
+	const ECollisionChannel ObjType = OtherComp->GetCollisionObjectType();
+	if (ObjType != ECC_GameTraceChannel1)
+	{
+		return;
+	}
+	
+	// 이미 바라보고 있는 총이 있으면 리턴
+	if (FindInteractActor)
+	{
+		if (auto* weapon = Cast<ABaseWeapon>(FindInteractActor))
+		{
+			return;
+		}
+	}
+	
+	if (auto* interactor = Cast<ABaseInteractor>(OtherActor))
+	{
+		FindInteractActor = interactor;
+		FindInteractActor->InteractActive(true);
+	}
+}
+
+void ABaseAgent::OnInteractionCapsuleEndOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
+	UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
+{
+	if (const auto* interactor = Cast<ABaseInteractor>(OtherActor))
+	{
+		if (interactor == FindInteractActor)
+		{
+			FindInteractActor->InteractActive(false);
+			FindInteractActor = nullptr;
+		}
+	}
 }
 
 void ABaseAgent::HandleDieCamera(FVector newPos)
@@ -423,52 +544,6 @@ void ABaseAgent::Net_Die_Implementation()
 	ABP_3P->bIsDead = true;
 }
 
-void ABaseAgent::Interact()
-{
-	if (FindInteractActor)
-	{
-		FindInteractActor->PickUp(this);
-	}
-}
-
-void ABaseAgent::OnFindInteraction(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
-	UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
-{
-	const ECollisionChannel ObjType = OtherComp->GetCollisionObjectType();
-	if (ObjType != ECC_GameTraceChannel1)
-	{
-		return;
-	}
-	
-	// 이미 바라보고 있는 총이 있으면 리턴
-	if (FindInteractActor)
-	{
-		if (auto* weapon = Cast<ABaseWeapon>(FindInteractActor))
-		{
-			return;
-		}
-	}
-	
-	if (auto* interactor = Cast<ABaseInteractor>(OtherActor))
-	{
-		FindInteractActor = interactor;
-		FindInteractActor->InteractActive(true);
-	}
-}
-
-void ABaseAgent::OnInteractionCapsuleEndOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
-	UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
-{
-	if (const auto* interactor = Cast<ABaseInteractor>(OtherActor))
-	{
-		if (interactor == FindInteractActor)
-		{
-			FindInteractActor->InteractActive(false);
-			FindInteractActor = nullptr;
-		}
-	}
-}
-
 void ABaseAgent::ServerApplyGE_Implementation(TSubclassOf<UGameplayEffect> geClass)
 {
 	if (!geClass)
@@ -522,7 +597,10 @@ void ABaseAgent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifeti
 	DOREPLIFETIME(ABaseAgent, LastVisibleTime);
 	DOREPLIFETIME(ABaseAgent, TeamID);
 	DOREPLIFETIME(ABaseAgent, bIsRun);
-	DOREPLIFETIME(ABaseAgent, WeaponState);
+	DOREPLIFETIME(ABaseAgent, CurrentInteractorState);
+	DOREPLIFETIME(ABaseAgent, PrimaryWeapon);
+	DOREPLIFETIME(ABaseAgent, SecondWeapon);
+	DOREPLIFETIME(ABaseAgent, CurrentInteractor);
 }
 
 // 특정 플레이어에게 보이는지 체크

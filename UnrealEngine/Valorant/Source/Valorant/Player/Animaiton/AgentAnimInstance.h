@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Animation/AnimInstance.h"
+#include "ResourceManager/ValorantGameType.h"
 #include "AgentAnimInstance.generated.h"
 
 /**
@@ -32,10 +33,9 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category=State)
 	bool bIsDead = false;
 	
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category=Weapon)
-	uint8 WeaponState = 3;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category=Interactor)
+	EInteractorType InteractorState = EInteractorType::None;
 	
 	virtual  void NativeUpdateAnimation(float DeltaSeconds) override;
-
-	void SetWeaponState(const uint8 newState) { WeaponState = newState; }
+	void SetWeaponState(const EInteractorType newState) { InteractorState = newState; }
 };

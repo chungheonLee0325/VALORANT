@@ -10,6 +10,7 @@
 
 class UAgentAnimInstance;
 class ABaseWeapon;
+class ASpike;
 class UTimelineComponent;
 class ABaseInteractor;
 class AAgentPlayerState;
@@ -146,29 +147,16 @@ public:
 	void Server_SetIsRun(const bool _bIsRun);
 	
 	UFUNCTION(BlueprintCallable)
-	uint8 GetWeaponState() const { return ABP_1P->WeaponState; }
+	EInteractorType GetInteractorState() const { return CurrentInteractorState; }
 	UFUNCTION(BlueprintCallable)
-	void SetWeaponState(const uint8 newState);
-	UFUNCTION(Server, Reliable)
-	void Server_SetWeaponState(uint8 newState);
-	UFUNCTION()
-	void OnRep_WeaponState();
+	void SetInteractorState(const EInteractorType newState);
 
 	UFUNCTION(BlueprintCallable)
 	void EquipWeapon(ABaseWeapon* weapon);
 	
-	UFUNCTION(BlueprintCallable)
-	ABaseWeapon* GetPrimaryWeapon() const { return PrimaryWeapon; }
-	UFUNCTION(BlueprintCallable)
-	void SetPrimaryWeapon(ABaseWeapon* newWeapon) { PrimaryWeapon = newWeapon; }
-	
-	UFUNCTION(BlueprintCallable)
-	ABaseWeapon* GetSecondWeapon() const { return SecondWeapon; }
-	UFUNCTION()
-	void SetSecondWeapon(ABaseWeapon* newWeapon) { SecondWeapon = newWeapon; }
-	
 	void Reload();
 	void Interact();
+	void DropCurrentInteractor();
 	
 	UFUNCTION(BlueprintCallable) 
 	float GetEffectSpeedMulitiplier() const { return EffectSpeedMultiplier; }
@@ -181,6 +169,7 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	void SetShopUI();
+
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	UValorantGameInstance* m_GameInstance;
@@ -206,9 +195,6 @@ protected:
 	UPROPERTY()
 	ABaseInteractor* FindInteractActor = nullptr;
 	
-	UPROPERTY(Replicated, ReplicatedUsing=OnRep_WeaponState)
-	uint8 WeaponState = 3;
-	
 	UPROPERTY(Replicated)
 	bool bIsRun = true;
 	UPROPERTY()
@@ -225,13 +211,16 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	float FindItemRange = 250.0f;
 
-	UPROPERTY()
-	ABaseInteractor* LookingActor = nullptr;
-
-	UPROPERTY(VisibleAnywhere)
+	UPROPERTY(Replicated)
 	ABaseWeapon* PrimaryWeapon = nullptr;
-	UPROPERTY(VisibleAnywhere)
+	UPROPERTY(Replicated)
 	ABaseWeapon* SecondWeapon = nullptr;
+	
+	UPROPERTY(Replicated)
+	ABaseInteractor* CurrentInteractor = nullptr;
+	
+	UPROPERTY(Replicated, ReplicatedUsing=OnRep_InteractorState)
+	EInteractorType CurrentInteractorState = EInteractorType::None;
 
 protected:
 	virtual void PossessedBy(AController* NewController) override;
@@ -252,18 +241,30 @@ protected:
 	virtual void OnEndCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust) override;
 	
 	virtual void InitAgentAbility();
+
+	UFUNCTION(BlueprintCallable)
+	void EquipSpike(ASpike* spike);
 	
-	virtual void Die();
+	UFUNCTION(BlueprintCallable)
+	void SetCurrentInteractor(ABaseInteractor* interactor);
+	
+	UFUNCTION(Server, Reliable)
+	void Server_SetInteractorState(EInteractorType newState);
 	UFUNCTION()
-	void OnDieCameraFinished();
-	
-	UFUNCTION(NetMulticast, Reliable)
-	void Net_Die();
+	void OnRep_InteractorState();
 
 	UFUNCTION()
 	void OnFindInteraction(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
 	UFUNCTION()
 	void OnInteractionCapsuleEndOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
+
+	virtual void Die();
+	
+	UFUNCTION()
+	void OnDieCameraFinished();
+	
+	UFUNCTION(NetMulticast, Reliable)
+	void Net_Die();
 	
 	UFUNCTION()
 	void UpdateHealth(float newHealth);

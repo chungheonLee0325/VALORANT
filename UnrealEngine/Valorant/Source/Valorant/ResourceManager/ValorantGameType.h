@@ -54,6 +54,15 @@ enum class EPlayerRole : uint8
 	IGL UMETA(DisplayName = "In-Game Leader")
 };
 
+UENUM(BlueprintType)
+enum class EInteractorType : uint8
+{
+	None UMETA(DisplayName = "None"),
+	MainWeapon UMETA(DisplayName = "MainWeapon"),
+	SubWeapon UMETA(DisplayName = "SubWeapon"),
+	Melee UMETA(DisplayName = "Melee"),
+	Spike UMETA(DisplayName = "Spike")
+};
 
 UENUM(BlueprintType)
 enum class EWeaponCategory : uint8

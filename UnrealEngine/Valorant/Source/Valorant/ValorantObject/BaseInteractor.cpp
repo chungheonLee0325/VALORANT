@@ -89,6 +89,8 @@ void ABaseInteractor::Drop()
 		return;
 	}
 
+	UE_LOG(LogTemp, Warning, TEXT("드롭"));
+	
 	// TODO: 툭 놓는게 아니라 던지도록 변경
 	FDetachmentTransformRules DetachmentRule(
 		EDetachmentRule::KeepWorld,
