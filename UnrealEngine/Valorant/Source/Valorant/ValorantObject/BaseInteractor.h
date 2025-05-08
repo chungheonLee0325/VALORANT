@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "Components/WidgetComponent.h"
 #include "GameFramework/Actor.h"
+#include "ResourceManager/ValorantGameType.h"
 #include "BaseInteractor.generated.h"
 
 class USphereComponent;
@@ -26,6 +27,9 @@ protected:
 	UPROPERTY()
 	TObjectPtr<ABaseAgent> OwnerAgent = nullptr;
 
+	UPROPERTY()
+	EInteractorType InteractorType = EInteractorType::None;
+
 public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	UWidgetComponent* InteractWidget;
@@ -44,4 +48,6 @@ public:
 	virtual bool CanDrop() const;
 	virtual void PickUp(ABaseAgent* Agent);
 	virtual void Drop();
+
+	EInteractorType GetInteractorType() const { return InteractorType; }
 };
