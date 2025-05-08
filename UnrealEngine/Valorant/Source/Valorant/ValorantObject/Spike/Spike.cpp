@@ -3,24 +3,31 @@
 
 #include "Spike.h"
 
+#include "Components/SphereComponent.h"
 
-// Sets default values
+
 ASpike::ASpike()
 {
-	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
+
+	SpikeMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("SpikeMesh"));
+	ConstructorHelpers::FObjectFinder<USkeletalMesh> SpikeMeshObj(TEXT("/Script/Engine.SkeletalMesh'/Game/Resource/Props/Spike/Spike.Spike'"));
+	if (SpikeMeshObj.Succeeded())
+	{
+		SpikeMesh->SetSkeletalMesh(SpikeMeshObj.Object);
+	}
+	SetRootComponent(SpikeMesh);
+	
+	InteractWidget->SetupAttachment(GetRootComponent());
+	Sphere->SetupAttachment(RootComponent);
 }
 
-// Called when the game starts or when spawned
 void ASpike::BeginPlay()
 {
 	Super::BeginPlay();
-	
 }
 
-// Called every frame
 void ASpike::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 }
-

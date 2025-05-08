@@ -8,7 +8,6 @@
 #include "Weapon/BaseWeapon.h"
 #include "BaseAgent.generated.h"
 
-class UValorantPickUpComponent;
 class UAgentAnimInstance;
 class ABaseWeapon;
 class UTimelineComponent;
@@ -203,8 +202,6 @@ protected:
 
 	UPROPERTY()
 	ABaseInteractor* FindInteractActor = nullptr;
-	UPROPERTY()
-	UValorantPickUpComponent* FindPickUpComponent = nullptr;
 	
 	UPROPERTY(Replicated, ReplicatedUsing=OnRep_WeaponState)
 	uint8 WeaponState = 3;

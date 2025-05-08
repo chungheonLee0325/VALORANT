@@ -34,12 +34,6 @@ class VALORANT_API ABaseWeapon : public ABaseInteractor
 	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess = "true"))
 	TObjectPtr<USkeletalMeshComponent> WeaponMesh;
-	
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess = "true"))
-	TObjectPtr<UValorantPickUpComponent> PickUpModule;
-
-	UPROPERTY()
-	TObjectPtr<ABaseAgent> Agent;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category=Input, meta=(AllowPrivateAccess = "true"))
 	UInputMappingContext* FireMappingContext;
@@ -83,9 +77,6 @@ protected:
 
 	virtual void Tick(float DeltaSeconds) override;
 
-	UFUNCTION()
-	void AttachWeapon(ABaseAgent* PickUpAgent);
-
 	UFUNCTION(BlueprintCallable, Category="Weapon")
 	void StartFire();
 	
@@ -107,10 +98,18 @@ protected:
 public:
 	UFUNCTION(BlueprintCallable, Category="Weapon")
 	void StartReload();
-	
-	UFUNCTION(BlueprintCallable, Category="Weapon")
-	void Drop();
 
 	UPROPERTY(EditDefaultsOnly)
 	TSubclassOf<UGameplayEffect> DamageEffectClass;
+
+	/*
+	 *	PickUp & Drop 관련
+	 */
+public:
+	virtual bool CanAutoPickUp(ABaseAgent* Agent) const override;
+	virtual bool CanDrop() const override;
+	virtual void PickUp(ABaseAgent* Agent) override;
+	virtual void Drop() override;
+	UFUNCTION()
+	void AttachWeapon(ABaseAgent* PickUpAgent);
 };

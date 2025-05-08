@@ -5,8 +5,6 @@
 #include "AbilitySystemComponent.h"
 #include "MapTestAgent.h"
 #include "Valorant.h"
-#include "Weapon/ValorantPickUpComponent.h"
-#include "AbilitySystem/Attributes/BaseAttributeSet.h"
 #include "Camera/CameraComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Valorant/AbilitySystem/AgentAbilitySystemComponent.h"
@@ -434,9 +432,9 @@ void ABaseAgent::Net_Respawn_Implementation()
 
 void ABaseAgent::Interact()
 {
-	if (FindPickUpComponent)
+	if (FindInteractActor)
 	{
-		FindPickUpComponent->PickUp(this);
+		FindInteractActor->PickUp(this);
 	}
 }
 
@@ -462,11 +460,6 @@ void ABaseAgent::OnFindInteraction(UPrimitiveComponent* OverlappedComponent, AAc
 	{
 		FindInteractActor = interactor;
 		FindInteractActor->InteractActive(true);
-		
-		if (auto* pickUpComp = interactor->FindComponentByClass<UValorantPickUpComponent>())
-		{
-			FindPickUpComponent = pickUpComp;
-		}
 	}
 }
 
@@ -478,13 +471,6 @@ void ABaseAgent::OnInteractionCapsuleEndOverlap(UPrimitiveComponent* OverlappedC
 		if (interactor == FindInteractActor)
 		{
 			FindInteractActor->InteractActive(false);
-			auto* pickUpComp = interactor->FindComponentByClass<UValorantPickUpComponent>();
-			
-			if (pickUpComp && pickUpComp == FindPickUpComponent)
-			{
-				FindPickUpComponent = nullptr;
-			}
-			
 			FindInteractActor = nullptr;
 		}
 	}

@@ -6,20 +6,21 @@
 #include "ValorantObject/BaseInteractor.h"
 #include "Spike.generated.h"
 
+class UValorantPickUpComponent;
+
 UCLASS()
 class VALORANT_API ASpike : public ABaseInteractor
 {
 	GENERATED_BODY()
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess = "true"))
+	TObjectPtr<USkeletalMeshComponent> SpikeMesh = nullptr;
+	
 public:
 	// Sets default values for this actor's properties
 	ASpike();
 
 protected:
-	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
-
-public:
-	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 };
