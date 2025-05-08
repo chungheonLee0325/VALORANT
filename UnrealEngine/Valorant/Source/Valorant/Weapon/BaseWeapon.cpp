@@ -53,6 +53,15 @@ void ABaseWeapon::BeginPlay()
 	}
 	WeaponMesh->SetSkeletalMeshAsset(WeaponMeshAsset);
 	WeaponMesh->SetRelativeScale3D(FVector(0.34f));
+
+	if (WeaponData->WeaponCategory == EWeaponCategory::Sidearm)
+	{
+		InteractorType = EInteractorType::SubWeapon;
+	}
+	else
+	{
+		InteractorType = EInteractorType::MainWeapon;
+	}
 	
 	MagazineSize = WeaponData->MagazineSize;
 	MagazineAmmo = MagazineSize;

@@ -99,8 +99,8 @@ protected:
 public:
 	UFUNCTION(BlueprintCallable, Category="Weapon")
 	void StartReload();
-
-	UFUNCTION()
+	
+	UFUNCTION(BlueprintCallable)
 	EWeaponCategory GetWeaponCategory() { return WeaponData->WeaponCategory; }
 
 	UPROPERTY(EditDefaultsOnly)
