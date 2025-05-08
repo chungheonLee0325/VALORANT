@@ -229,7 +229,7 @@ void ABaseWeapon::ServerRPC_Fire_Implementation(const FVector& Location, const F
 			}
 		}
 		
-		NET_LOG(LogTemp, Warning, TEXT("LineTraceSingle Hit: %s, Distance: %f, FinalDamage: %d"), *OutHit.GetActor()->GetName(), OutHit.Distance, FinalDamage);
+		NET_LOG(LogTemp, Warning, TEXT("LineTraceSingle Hit: %s, BoneName: %s, Distance: %f, FinalDamage: %d"), *OutHit.GetActor()->GetName(), *OutHit.BoneName.ToString(), OutHit.Distance, FinalDamage);
 		if (ABaseAgent* HitAgent = Cast<ABaseAgent>(OutHit.GetActor()))
 		{
 			HitAgent->ServerApplyGE(DamageEffectClass);
