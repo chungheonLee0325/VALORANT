@@ -43,18 +43,18 @@ void UShopComponent::SetShopActive(bool bActive)
 		// 이용 불가능한 상태에서 활성화 시도 시 무시
 		return;
 	}
-	
+
 	// 상태 변경이 있을 때만 처리
 	if (bIsShopActive != bActive)
 	{
 		bIsShopActive = bActive;
-		
+
 		// 상점 활성화 시 크레딧 동기화 요청
 		if (bIsShopActive)
 		{
 			RequestCreditSync();
 		}
-		
+
 		// 상태 변경 이벤트 발생
 		OnShopAvailabilityChanged.Broadcast();
 	}
@@ -170,7 +170,7 @@ bool UShopComponent::PurchaseWeapon(int32 WeaponID)
 	bool bHasSameIDWeapon = false;
 	bool bHasSameCategoryWeapon = false;
 	int32 RefundAmount = 0;
-	
+
 	// 새 무기가 Sidearm(보조무기)인 경우
 	if (NewWeaponCategory == EWeaponCategory::Sidearm)
 	{
@@ -188,11 +188,12 @@ bool UShopComponent::PurchaseWeapon(int32 WeaponID)
 			{
 				// 다른 무기지만 같은 카테고리(보조무기)인 경우
 				bHasSameCategoryWeapon = true;
-				
+
 				// 무기 환불 금액 계산
-				FWeaponData* CurrentWeaponData = GameInstance ? 
-					GameInstance->GetWeaponData(CurrentWeapon->GetWeaponID()) : nullptr;
-				
+				FWeaponData* CurrentWeaponData = GameInstance
+					                                 ? GameInstance->GetWeaponData(CurrentWeapon->GetWeaponID())
+					                                 : nullptr;
+
 				if (CurrentWeaponData && !CurrentWeapon->GetWasUsed())
 				{
 					// 사용하지 않은 무기는 100% 환불
@@ -218,11 +219,12 @@ bool UShopComponent::PurchaseWeapon(int32 WeaponID)
 			{
 				// 다른 무기지만 같은 카테고리(주무기)인 경우
 				bHasSameCategoryWeapon = true;
-				
+
 				// 무기 환불 금액 계산
-				FWeaponData* CurrentWeaponData = GameInstance ? 
-					GameInstance->GetWeaponData(CurrentWeapon->GetWeaponID()) : nullptr;
-				
+				FWeaponData* CurrentWeaponData = GameInstance
+					                                 ? GameInstance->GetWeaponData(CurrentWeapon->GetWeaponID())
+					                                 : nullptr;
+
 				if (CurrentWeaponData && !CurrentWeapon->GetWasUsed())
 				{
 					// 사용하지 않은 무기는 100% 환불
@@ -235,21 +237,21 @@ bool UShopComponent::PurchaseWeapon(int32 WeaponID)
 	// 현재 보유 크레딧 + 환불 금액으로 구매 가능 여부 확인
 	int32 CurrentCredits = CreditComp->GetCurrentCredit();
 	bool bCanAffordAfterRefund = (CurrentCredits + RefundAmount) >= Cost;
-	
+
 	if (!bCanAffordAfterRefund)
 	{
 		// 환불액을 고려해도 구매 불가능한 경우
 		return false;
 	}
-	
+
 	// 여기서부터는 구매 가능한 케이스
-	
+
 	// 환불 금액을 크레딧에 추가
 	if (bHasSameCategoryWeapon && RefundAmount > 0)
 	{
 		CreditComp->AddCredits(RefundAmount);
 	}
-	
+
 	// 실제 지불해야 할 비용
 	if (CreditComp->CanUseCredits(Cost))
 	{
@@ -264,7 +266,7 @@ bool UShopComponent::PurchaseWeapon(int32 WeaponID)
 			{
 				// OnShopItemPurchased.Broadcast(*Item); // 성공 여부를 서버에서 판단 후 Client_ReceivePurchaseResult를 통해 전달하므로 여기서는 제거하거나, 서버 전용 로깅/이벤트로 남길 수 있음
 			}
-			
+
 			// 무기 생성 및 플레이어에게 할당
 			SpawnWeaponForPlayer(WeaponID);
 
@@ -279,7 +281,8 @@ bool UShopComponent::PurchaseWeapon(int32 WeaponID)
 			// 클라이언트에 실패 결과 전송 (크레딧 사용 실패)
 			if (m_Owner)
 			{
-				m_Owner->Client_ReceivePurchaseResult(false, WeaponID, EShopItemType::Weapon, TEXT("Failed to use credits."));
+				m_Owner->Client_ReceivePurchaseResult(false, WeaponID, EShopItemType::Weapon,
+				                                      TEXT("Failed to use credits."));
 			}
 		}
 
@@ -291,7 +294,8 @@ bool UShopComponent::PurchaseWeapon(int32 WeaponID)
 		// 클라이언트에 실패 결과 전송
 		if (m_Owner)
 		{
-			m_Owner->Client_ReceivePurchaseResult(false, WeaponID, EShopItemType::Weapon, TEXT("Not enough credits even after refund."));
+			m_Owner->Client_ReceivePurchaseResult(false, WeaponID, EShopItemType::Weapon,
+			                                      TEXT("Not enough credits even after refund."));
 		}
 	}
 
@@ -405,9 +409,10 @@ bool UShopComponent::PurchaseArmor(int32 ArmorLevel)
 	}
 	else // 크레딧 사용 실패
 	{
-		if(m_Owner)
+		if (m_Owner)
 		{
-			m_Owner->Client_ReceivePurchaseResult(false, ArmorLevel, EShopItemType::Armor, TEXT("Failed to use credits for armor."));
+			m_Owner->Client_ReceivePurchaseResult(false, ArmorLevel, EShopItemType::Armor,
+			                                      TEXT("Failed to use credits for armor."));
 		}
 	}
 
@@ -518,13 +523,13 @@ void UShopComponent::SpawnWeaponForPlayer(int32 WeaponID)
 	{
 		return;
 	}
-	
+
 	ABaseAgent* Agent = m_Owner->GetPawn<ABaseAgent>();
 	if (!Agent)
 	{
 		return;
 	}
-	
+
 	// 서버에서만 무기 생성 요청
 	if (m_Owner->HasAuthority())
 	{
@@ -534,9 +539,9 @@ void UShopComponent::SpawnWeaponForPlayer(int32 WeaponID)
 		{
 			return;
 		}
-		
+
 		EWeaponCategory WeaponCategory = (*WeaponInfo)->WeaponCategory;
-		
+
 		// 무기 카테고리에 따라 처리 방식 결정
 		ABaseWeapon* CurrentWeapon = nullptr;
 		if (WeaponCategory == EWeaponCategory::Sidearm)
@@ -547,62 +552,42 @@ void UShopComponent::SpawnWeaponForPlayer(int32 WeaponID)
 		{
 			CurrentWeapon = Agent->GetMainWeapon();
 		}
-		
+
 		// 이제 새 무기 생성 및 할당
 		FVector SpawnLocation = Agent->GetActorLocation();
 		FRotator SpawnRotation = Agent->GetActorRotation();
-		
+
 		// 무기 생성
 		FActorSpawnParameters SpawnParams;
 		SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 		SpawnParams.Owner = Agent;
-		
-		ABaseWeapon* NewWeapon = GetWorld()->SpawnActor<ABaseWeapon>(ABaseWeapon::StaticClass(), SpawnLocation, SpawnRotation, SpawnParams);
-		
+
+		ABaseWeapon* NewWeapon = GetWorld()->SpawnActor<ABaseWeapon>(ABaseWeapon::StaticClass(), SpawnLocation,
+		                                                             SpawnRotation, SpawnParams);
+
 		if (NewWeapon)
 		{
 			// 무기 ID 설정
 			NewWeapon->SetWeaponID(WeaponID);
-			// // 무기 카테고리에 따라 장착 방식 결정
-			// if (WeaponCategory == EWeaponCategory::Sidearm)
-			// {
-			// 	// Sidearm은 SubWeapon 슬롯에 장착
-			// 	if (CurrentWeapon)
-			// 	{
-			// 		// 기존 무기가 사용된 경우 드롭, 아닌 경우 제거
-			// 		if (CurrentWeapon->GetWasUsed())
-			// 		{
-			// 			CurrentWeapon->Drop();
-			// 		}
-			// 		else
-			// 		{
-			// 			// 사용되지 않은 무기 제거
-			// 			// 환불은 이미 PurchaseWeapon에서 처리되었음
-			// 			CurrentWeapon->Destroy();
-			// 		}
-			// 	}
-			// 	
-			// }
-			// else
-			// {
-			// 	// 다른 모든 무기는 MainWeapon 슬롯에 장착
-			// 	if (CurrentWeapon)
-			// 	{
-			// 		// 기존 무기가 사용된 경우 드롭, 아닌 경우 제거
-			// 		if (CurrentWeapon->GetWasUsed())
-			// 		{
-			// 			CurrentWeapon->Drop();
-			// 		}
-			// 		else
-			// 		{
-			// 			// 사용되지 않은 무기 제거
-			// 			// 환불은 이미 PurchaseWeapon에서 처리되었음
-			// 			CurrentWeapon->Destroy();
-			// 		}
-			// 	}
-			// }
-			Agent->EquipWeapon(NewWeapon);
+			// 무기 카테고리에 따라 장착 방식 결정
 			
+			if (CurrentWeapon)
+			{
+				// 기존 무기가 사용된 경우 드롭, 아닌 경우 제거
+				if (CurrentWeapon->GetWasUsed())
+				{
+					CurrentWeapon->ServerRPC_Drop();
+				}
+				else
+				{
+					// 사용되지 않은 무기 제거
+					// 환불은 이미 PurchaseWeapon에서 처리되었음
+					CurrentWeapon->Destroy();
+				}
+			}
+			
+			Agent->EquipWeapon(NewWeapon);
+
 			// // 무기가 장착된 후 이벤트 발생
 			// OnEquippedWeaponsChanged.Broadcast();
 		}
@@ -619,32 +604,32 @@ void UShopComponent::SpawnWeaponForPlayer(int32 WeaponID)
 TArray<int32> UShopComponent::GetEquippedWeaponIDs() const
 {
 	TArray<int32> EquippedWeaponIDs;
-    
+
 	if (!m_Owner)
 	{
 		return EquippedWeaponIDs;
 	}
-    
+
 	ABaseAgent* Agent = m_Owner->GetPawn<ABaseAgent>();
 	if (!Agent)
 	{
 		return EquippedWeaponIDs;
 	}
-    
+
 	// 주무기 확인
 	ABaseWeapon* MainWeapon = Agent->GetMainWeapon();
 	if (MainWeapon)
 	{
 		EquippedWeaponIDs.Add(MainWeapon->GetWeaponID());
 	}
-    
+
 	// 보조무기 확인
 	ABaseWeapon* SubWeapon = Agent->GetSubWeapon();
 	if (SubWeapon)
 	{
 		EquippedWeaponIDs.Add(SubWeapon->GetWeaponID());
 	}
-    
+
 	return EquippedWeaponIDs;
 }
 
@@ -654,26 +639,26 @@ bool UShopComponent::IsWeaponEquipped(int32 WeaponID) const
 	{
 		return false;
 	}
-    
+
 	ABaseAgent* Agent = m_Owner->GetPawn<ABaseAgent>();
 	if (!Agent)
 	{
 		return false;
 	}
-    
+
 	// 주무기 확인
 	ABaseWeapon* PrimaryWeapon = Agent->GetMainWeapon();
 	if (PrimaryWeapon && PrimaryWeapon->GetWeaponID() == WeaponID)
 	{
 		return true;
 	}
-    
+
 	// 보조무기 확인
 	ABaseWeapon* SecondWeapon = Agent->GetSubWeapon();
 	if (SecondWeapon && SecondWeapon->GetWeaponID() == WeaponID)
 	{
 		return true;
 	}
-    
+
 	return false;
 }
