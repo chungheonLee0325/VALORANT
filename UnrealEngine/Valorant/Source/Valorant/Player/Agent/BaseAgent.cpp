@@ -71,7 +71,7 @@ ABaseAgent::ABaseAgent()
 	ThirdPersonMesh->bCastDynamicShadow = true;
 	ThirdPersonMesh->bAffectDynamicIndirectLighting = true;
 	ThirdPersonMesh->PrimaryComponentTick.TickGroup = TG_PrePhysics;
-	ThirdPersonMesh->SetGenerateOverlapEvents(false);
+	ThirdPersonMesh->SetGenerateOverlapEvents(true);
 	ThirdPersonMesh->SetCollisionProfileName(TEXT("Agent"));
 	ThirdPersonMesh->SetCanEverAffectNavigation(false);
 
