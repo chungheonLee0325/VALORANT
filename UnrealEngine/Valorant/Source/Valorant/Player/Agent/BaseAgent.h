@@ -163,15 +163,20 @@ public:
 	UFUNCTION(BlueprintCallable)
 	EInteractorType GetInteractorState() const { return CurrentInteractorState; }
 
-	UFUNCTION(BlueprintCallable)
-	void SetInteractorState(const EInteractorType newState);
-
-	UFUNCTION(BlueprintCallable)
-	void EquipWeapon(ABaseWeapon* weapon);
-
 	ABaseWeapon* GetMainWeapon() const;
 	ABaseWeapon* GetSubWeapon() const;
 
+	/** 장착 X, 획득하는 개념 (땅에 떨어진 무기 줍기, 상점에서 무기 구매) */
+	UFUNCTION(BlueprintCallable, Category = "Weapon")
+	void AcquireWeapon(ABaseWeapon* weapon);
+	
+	/**해당 슬롯의 인터랙터를 손에 들고자 할 때*/
+	UFUNCTION(BlueprintCallable, Category = "Weapon")
+	void SwitchWeapon(EInteractorType InteractorType);
+
+	UFUNCTION(Server, Reliable, Category = "Weapon")
+	void Server_SwitchWeapon(EInteractorType InteractorType);
+	
 	void Reload();
 	void Interact();
 	void DropCurrentInteractor();
@@ -191,11 +196,6 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void SetShopUI();
 
-	UFUNCTION(BlueprintCallable, Category = "Weapon")
-	void SwitchWeapon(EInteractorType InteractorType);
-
-	UFUNCTION(Server, Reliable)
-	void Server_SwitchWeapon(EInteractorType InteractorType);
 
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
@@ -246,7 +246,7 @@ protected:
 	UPROPERTY(Replicated)
 	ABaseInteractor* CurrentInteractor = nullptr;
 
-	UPROPERTY(Replicated, ReplicatedUsing=OnRep_InteractorState)
+	UPROPERTY(Replicated)
 	EInteractorType CurrentInteractorState = EInteractorType::None;
 
 protected:
@@ -270,15 +270,7 @@ protected:
 	virtual void InitAgentAbility();
 
 	UFUNCTION(BlueprintCallable)
-	void EquipSpike(ASpike* spike);
-
-	UFUNCTION(BlueprintCallable)
-	void SetCurrentInteractor(ABaseInteractor* interactor);
-
-	UFUNCTION(Server, Reliable)
-	void Server_SetInteractorState(EInteractorType newState);
-	UFUNCTION()
-	void OnRep_InteractorState();
+	void EquipInteractor(ABaseInteractor* interactor);
 
 	UFUNCTION()
 	void OnFindInteraction(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp,
