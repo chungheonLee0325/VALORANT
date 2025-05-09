@@ -95,6 +95,10 @@ public:
 	void OnControllerBeginPlay(AMatchPlayerController* Controller, const FString& Nickname);
 	void OnLockIn(AMatchPlayerController* Player, int AgentId);
 	void OnAgentSelected(AMatchPlayerController* MatchPlayerController, int SelectedAgentID);
+	
+	// 구매 페이즈 종료 시 모든 무기를 사용됨으로 표시
+	UFUNCTION(BlueprintCallable, Category="Round")
+	void MarkAllWeaponsAsUsed();
 
 protected:
 	FTimerHandle RoundTimerHandle;

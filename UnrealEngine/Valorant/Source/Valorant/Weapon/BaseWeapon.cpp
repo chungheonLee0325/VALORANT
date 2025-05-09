@@ -11,6 +11,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "Player/AgentPlayerController.h"
 #include "Player/Agent/BaseAgent.h"
+#include "Net/UnrealNetwork.h"
 
 ABaseWeapon::ABaseWeapon()
 {
@@ -34,6 +35,9 @@ void ABaseWeapon::BeginPlay()
 		UE_LOG(LogTemp, Error, TEXT("ABaseWeapon::BeginPlay: WeaponData Load Fail (WeaponID : %d)"), WeaponID);
 		return;
 	}
+	
+	// 무기 사용 여부에 따른 시각적 효과 적용
+	UpdateVisualState();
 
 	// TODO: WeaponID에 맞는 SkeletalMesh 불러오기
 	FSoftObjectPath MeshRef(TEXT("/Script/Engine.SkeletalMesh'/Game/Resource/Weapons/BasicPhantom/Mesh/GN_Carbine_Clean_S0_Skelmesh.GN_Carbine_Clean_S0_Skelmesh'"));
@@ -126,6 +130,12 @@ void ABaseWeapon::Fire()
 	}
 	LastFireTime = CurrentTime;
 	MagazineAmmo--;
+	
+	// 무기를 사용한 것으로 표시
+	if (!bWasUsed && HasAuthority())
+	{
+		bWasUsed = true;
+	}
 	
 	// KBD: 발사 시 캐릭터에 반동값 적용
 	if (RecoilData.Num() > 0)
@@ -277,6 +287,13 @@ void ABaseWeapon::Reload()
 	UE_LOG(LogTemp, Warning, TEXT("Reload Completed, MagazineAmmo : %d -> %d, SpareAmmo : %d -> %d"), MagazineAmmo, MagazineAmmo + D, SpareAmmo, SpareAmmo - D);
 	MagazineAmmo += D;
 	SpareAmmo -= D;
+	
+	// 무기를 사용한 것으로 표시
+	if (!bWasUsed && HasAuthority())
+	{
+		bWasUsed = true;
+	}
+	
 	if (const auto* World = GetWorld())
 	{
 		if (World->GetTimerManager().IsTimerActive(AutoFireHandle))
@@ -364,5 +381,86 @@ void ABaseWeapon::ServerOnly_AttachWeapon(ABaseAgent* PickUpAgent)
 			EnhancedInputComponent->BindAction(EndFireAction, ETriggerEvent::Triggered, this, &ABaseWeapon::EndFire);
 			EnhancedInputComponent->BindAction(StartReloadAction, ETriggerEvent::Triggered, this, &ABaseWeapon::StartReload);
 		}
+	}
+}
+
+void ABaseWeapon::SetWeaponID(int32 NewWeaponID)
+{
+	WeaponID = NewWeaponID;
+	
+	// 무기 ID가 변경되었으므로 무기 데이터 다시 로드
+	auto* GameInstance = Cast<UValorantGameInstance>(UGameplayStatics::GetGameInstance(GetWorld()));
+	if (GameInstance)
+	{
+		WeaponData = GameInstance->GetWeaponData(WeaponID);
+		if (WeaponData)
+		{
+			// 무기 데이터 기반으로 속성 업데이트
+			MagazineSize = WeaponData->MagazineSize;
+			MagazineAmmo = MagazineSize;
+			// 여분 탄약 설정 (추후 데이터 추가 필요)
+			SpareAmmo = MagazineSize * 5;
+			FireInterval = 1.0f / WeaponData->FireRate;
+			
+			// 반동 데이터 갱신
+			RecoilData.Empty();
+			for (auto Element : WeaponData->GunRecoilMap)
+			{
+				RecoilData.Add(Element);
+			}
+			
+			// 메시 업데이트 (실제 구현에서는 무기 ID에 따라 다른 메시 적용)
+			// TODO: 여기서 무기 ID에 맞는 메시 로드 로직 추가
+		}
+	}
+}
+
+// 무기 사용 여부를 네트워크 복제되도록 처리
+void ABaseWeapon::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	// 무기 사용 여부 복제
+	DOREPLIFETIME(ABaseWeapon, bWasUsed);
+}
+
+// 라운드 시작/종료 시 무기 사용 여부 리셋을 위한 함수 추가
+void ABaseWeapon::ResetUsedStatus()
+{
+	if (HasAuthority())
+	{
+		bWasUsed = false;
+	}
+}
+
+// 무기 사용 여부에 따른 시각적 효과 업데이트
+void ABaseWeapon::UpdateVisualState()
+{
+	// // 사용하지 않은 무기는 약간 밝게 표시하여 구분하기 쉽게 함
+	// if (WeaponMesh)
+	// {
+	// 	// 기본 색상 파라미터 (Material Instance를 통해 접근)
+	// 	if (!bWasUsed)
+	// 	{
+	// 		// 미사용 무기는 약간 아웃라인 효과 또는 하이라이트
+	// 		// Material Instance로 처리하는 것이 이상적이나, 여기서는 간단히 색상 변경으로 대체
+	// 		// 실제 구현에서는 적절한 Material Parameter를 설정
+	// 		WeaponMesh->SetRenderCustomDepth(true);  // 아웃라인을 위한 커스텀 뎁스 활성화
+	// 	}
+	// 	else
+	// 	{
+	// 		// 사용된 무기는 일반 효과
+	// 		WeaponMesh->SetRenderCustomDepth(false);
+	// 	}
+	// }
+}
+
+// 무기 사용 여부 설정시 시각적 상태도 업데이트하도록 수정
+void ABaseWeapon::SetWasUsed(bool bNewWasUsed)
+{
+	if (bWasUsed != bNewWasUsed)
+	{
+		bWasUsed = bNewWasUsed;
+		UpdateVisualState();
 	}
 }

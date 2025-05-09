@@ -14,6 +14,7 @@
 #include "GameFramework/SpringArmComponent.h"
 #include "GameManager/MatchGameMode.h"
 #include "GameManager/SubsystemSteamManager.h"
+#include "GameManager/ValorantGameInstance.h"
 #include "Kismet/GameplayStatics.h"
 #include "Net/UnrealNetwork.h"
 #include "Player/Animaiton/AgentAnimInstance.h"
@@ -50,19 +51,19 @@ ABaseAgent::ABaseAgent()
 	SpringArm->SetRelativeLocation(FVector(-10, 0, 60));
 	SpringArm->TargetArmLength = 0;
 	SpringArm->bUsePawnControlRotation = true;
-	
+
 	Camera = CreateDefaultSubobject<UCameraComponent>("Camera");
 	Camera->SetupAttachment(SpringArm);
-	
+
 	GetMesh()->SetupAttachment(SpringArm);
 	GetMesh()->SetRelativeScale3D(FVector(.34f));
-	GetMesh()->SetRelativeLocation(FVector(10,0,-155));
-	
+	GetMesh()->SetRelativeLocation(FVector(10, 0, -155));
+
 	ThirdPersonMesh = CreateDefaultSubobject<USkeletalMeshComponent>("ThirdPersonMesh");
 	ThirdPersonMesh->SetupAttachment(GetRootComponent());
 	ThirdPersonMesh->SetRelativeScale3D(FVector(.34f));
-	ThirdPersonMesh->SetRelativeLocation(FVector(.0f,.0f,-90.f));
-	
+	ThirdPersonMesh->SetRelativeLocation(FVector(.0f, .0f, -90.f));
+
 	ThirdPersonMesh->AlwaysLoadOnClient = true;
 	ThirdPersonMesh->AlwaysLoadOnServer = true;
 	ThirdPersonMesh->bOwnerNoSee = false;
@@ -95,7 +96,7 @@ ABaseAgent::ABaseAgent()
 
 	TL_Crouch = CreateDefaultSubobject<UTimelineComponent>("TL_Crouch");
 	TL_DieCamera = CreateDefaultSubobject<UTimelineComponent>("TL_DieCamera");
-	
+
 	//ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ
 	//             CYT             ♣
 	//ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ
@@ -112,7 +113,7 @@ void ABaseAgent::PossessedBy(AController* NewController)
 
 	//국룰 위치
 	InitAgentAbility();
-	
+
 	AAgentPlayerController* pc = Cast<AAgentPlayerController>(NewController);
 	if (pc)
 	{
@@ -127,7 +128,7 @@ void ABaseAgent::OnRep_PlayerState()
 
 	//국룰 위치
 	InitAgentAbility();
-	
+
 	AAgentPlayerController* pc = Cast<AAgentPlayerController>(GetController());
 	if (pc)
 	{
@@ -158,10 +159,10 @@ void ABaseAgent::BeginPlay()
 		FOnTimelineFloat CamPitch;
 		CamOffset.BindUFunction(this, FName("HandleDieCamera"));
 		CamPitch.BindUFunction(this, FName("HandleDieCameraPitch"));
-		TL_DieCamera->AddInterpVector(DieCameraCurve,CamOffset);
-		TL_DieCamera->AddInterpFloat(DieCameraPitchCurve,CamPitch);
+		TL_DieCamera->AddInterpVector(DieCameraCurve, CamOffset);
+		TL_DieCamera->AddInterpFloat(DieCameraPitchCurve, CamPitch);
 	}
-	
+
 	TL_DieCamera->SetTimelineLength(DieCameraTimeRange);
 	TL_DieCamera->SetTimelineLengthMode(ETimelineLengthMode::TL_TimelineLength);
 
@@ -182,14 +183,14 @@ void ABaseAgent::BeginPlay()
 void ABaseAgent::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
-	
+
 	float baseSpeed = BaseRunSpeed;
 
 	if (!bIsRun)
 	{
 		baseSpeed = BaseWalkSpeed;
 	}
-	
+
 	GetCharacterMovement()->MaxWalkSpeed = baseSpeed * EffectSpeedMultiplier * EquipSpeedMultiplier;
 }
 
@@ -201,15 +202,15 @@ void ABaseAgent::InitAgentAbility()
 		UE_LOG(LogTemp, Error, TEXT("PlayerState를 AAgentPlayerState를 상속받는 녀석으로 교체 부탁"));
 		return;
 	}
-	
+
 	ASC = Cast<UAgentAbilitySystemComponent>(ps->GetAbilitySystemComponent());
 	ASC->InitAbilityActorInfo(ps, this);
-	
+
 	if (HasAuthority())
 	{
 		// 스킬 등록 및 값 초기화는 서버에서만 진행
 		ASC->InitializeByAgentData(ps->GetAgentID());
-		
+
 		// UE_LOG(LogTemp, Warning, TEXT("=== ASC 등록된 GA 목록 ==="));
 		// for (const FGameplayAbilitySpec& spec : ASC->GetActivatableAbilities())
 		// {
@@ -243,7 +244,7 @@ void ABaseAgent::BindToDelegatePC(AAgentPlayerController* pc)
 void ABaseAgent::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
-	
+
 	AgentInputComponent->BindInput(PlayerInputComponent);
 }
 
@@ -282,7 +283,12 @@ void ABaseAgent::HandleCrouchProgress(float Value)
 {
 	float newHalfHeight = BaseCapsuleHalfHeight - Value;
 	//NET_LOG(LogTemp,Warning,TEXT("HandleCrouchProgress %f"), newHalfHeight);
-	GetCapsuleComponent()->SetCapsuleHalfHeight(newHalfHeight,true);
+	GetCapsuleComponent()->SetCapsuleHalfHeight(newHalfHeight, true);
+}
+
+ABaseWeapon* ABaseAgent::GetSubWeapon() const
+{
+	return SubWeapon;
 }
 
 void ABaseAgent::Reload()
@@ -291,7 +297,7 @@ void ABaseAgent::Reload()
 	{
 		return;
 	}
-	
+
 	if (ABaseWeapon* weapon = Cast<ABaseWeapon>(CurrentInteractor))
 	{
 		weapon->StartReload();
@@ -311,7 +317,6 @@ void ABaseAgent::SetShopUI()
 	}
 	else
 	{
-		
 	}
 }
 
@@ -323,44 +328,50 @@ void ABaseAgent::EquipSpike(ASpike* spike)
 void ABaseAgent::EquipWeapon(ABaseWeapon* weapon)
 {
 	// UE_LOG(LogTemp,Warning,TEXT("이큅 웨폰"));
-	if(weapon->GetWeaponCategory() == EWeaponCategory::Sidearm)
+	if (weapon->GetWeaponCategory() == EWeaponCategory::Sidearm)
 	{
-		UE_LOG(LogTemp,Warning,TEXT("보조무기"));
-		if (SecondWeapon)
+		UE_LOG(LogTemp, Warning, TEXT("보조무기"));
+		if (SubWeapon)
 		{
+			// ToDO : 기본 권총을 버려야할지
 			// UE_LOG(LogTemp,Warning,TEXT("이미 들고 있음"));
-			SecondWeapon->ServerRPC_Drop();
+			SubWeapon->ServerRPC_Drop();
 		}
 		
-		SecondWeapon = weapon;
+		SubWeapon = weapon;
 	}
 	else
 	{
-		UE_LOG(LogTemp,Warning,TEXT("주무기"));
-		if (PrimaryWeapon)
+		UE_LOG(LogTemp, Warning, TEXT("주무기"));
+		if (MainWeapon)
 		{
 			// UE_LOG(LogTemp,Warning,TEXT("이미 들고 있음"));
-			PrimaryWeapon->ServerRPC_Drop();
+			MainWeapon->ServerRPC_Drop();
 		}
-            
-		PrimaryWeapon = weapon;
+
+		MainWeapon = weapon;
 	}
 
 	weapon->ServerRPC_PickUp(this);
 	SetInteractorState(weapon->GetInteractorType());
 }
 
+ABaseWeapon* ABaseAgent::GetMainWeapon() const
+{
+	return MainWeapon;
+}
+
 void ABaseAgent::SetInteractorState(const EInteractorType newState)
 {
 	CurrentInteractorState = newState;
-	
+
 	if (newState == EInteractorType::MainWeapon)
 	{
-		SetCurrentInteractor(PrimaryWeapon);
+		SetCurrentInteractor(MainWeapon);
 	}
 	else if (newState == EInteractorType::SubWeapon)
 	{
-		SetCurrentInteractor(SecondWeapon);
+		SetCurrentInteractor(SubWeapon);
 	}
 	else if (newState == EInteractorType::Melee)
 	{
@@ -380,7 +391,7 @@ void ABaseAgent::SetCurrentInteractor(ABaseInteractor* interactor)
 	//TODO: EInteractorType 따른 애니메이션 재생
 
 	CurrentInteractor = interactor;
-	
+
 	if (CurrentInteractor == nullptr)
 	{
 		CurrentInteractorState = EInteractorType::None;
@@ -388,7 +399,7 @@ void ABaseAgent::SetCurrentInteractor(ABaseInteractor* interactor)
 		return;
 	}
 
-	UE_LOG(LogTemp,Warning,TEXT("현재 들고 있는 인터랙터: %s"), *CurrentInteractor->GetActorNameOrLabel());
+	UE_LOG(LogTemp, Warning, TEXT("현재 들고 있는 인터랙터: %s"), *CurrentInteractor->GetActorNameOrLabel());
 }
 
 void ABaseAgent::Server_SetInteractorState_Implementation(EInteractorType newState)
@@ -413,13 +424,13 @@ void ABaseAgent::Interact()
 {
 	if (FindInteractActor)
 	{
-		if (ABaseWeapon* weapon = Cast<ABaseWeapon> (FindInteractActor))
+		if (ABaseWeapon* weapon = Cast<ABaseWeapon>(FindInteractActor))
 		{
 			EquipWeapon(weapon);
 		}
-		else if (ASpike* spike = Cast<ASpike> (FindInteractActor))
+		else if (ASpike* spike = Cast<ASpike>(FindInteractActor))
 		{
-			EquipSpike(spike);			
+			EquipSpike(spike);
 		}
 	}
 }
@@ -428,29 +439,29 @@ void ABaseAgent::DropCurrentInteractor()
 {
 	if (CurrentInteractor && CurrentInteractor->ServerOnly_CanDrop())
 	{
-		if (CurrentInteractor == PrimaryWeapon)
+		if (CurrentInteractor == MainWeapon)
 		{
-			PrimaryWeapon = nullptr;
+			MainWeapon = nullptr;
 		}
-		else if (CurrentInteractor == SecondWeapon)
+		else if (CurrentInteractor == SubWeapon)
 		{
-			SecondWeapon = nullptr;
+			SubWeapon = nullptr;
 		}
-		
 		CurrentInteractor->ServerRPC_Drop();
 		SetCurrentInteractor(nullptr);
 	}
 }
 
 void ABaseAgent::OnFindInteraction(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
-                                   UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
+                                   UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep,
+                                   const FHitResult& SweepResult)
 {
 	const ECollisionChannel ObjType = OtherComp->GetCollisionObjectType();
 	if (ObjType != ECC_GameTraceChannel1)
 	{
 		return;
 	}
-	
+
 	// 이미 바라보고 있는 총이 있으면 리턴
 	if (FindInteractActor)
 	{
@@ -459,7 +470,7 @@ void ABaseAgent::OnFindInteraction(UPrimitiveComponent* OverlappedComponent, AAc
 			return;
 		}
 	}
-	
+
 	if (auto* interactor = Cast<ABaseInteractor>(OtherActor))
 	{
 		FindInteractActor = interactor;
@@ -468,7 +479,7 @@ void ABaseAgent::OnFindInteraction(UPrimitiveComponent* OverlappedComponent, AAc
 }
 
 void ABaseAgent::OnInteractionCapsuleEndOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
-	UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
+                                                UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
 {
 	if (const auto* interactor = Cast<ABaseInteractor>(OtherActor))
 	{
@@ -489,38 +500,39 @@ void ABaseAgent::HandleDieCamera(FVector newPos)
 
 void ABaseAgent::HandleDieCameraPitch(float newPitch)
 {
-	Camera->SetRelativeRotation(FRotator(newPitch,0,0));
+	Camera->SetRelativeRotation(FRotator(newPitch, 0, 0));
 	//UE_LOG(LogTemp,Warning,TEXT("pitch %f"),newPitch);
 }
 
 void ABaseAgent::Die()
 {
 	// NET_LOG(LogTemp,Warning,TEXT("죽음"));
-	
+
 	//TODO: 복제 어떻게 진행할지
-	if (PrimaryWeapon)
+	if (MainWeapon)
 	{
-		PrimaryWeapon->ServerRPC_Drop();
+		MainWeapon->ServerRPC_Drop();
 	}
-	if (SecondWeapon)
+	if (SubWeapon)
 	{
-		SecondWeapon->ServerRPC_Drop();
+		SubWeapon->ServerRPC_Drop();
 	}
-	
+
 	if (IsLocallyControlled())
 	{
 		DisableInput(Cast<APlayerController>(GetController()));
 
 		ThirdPersonMesh->SetOwnerNoSee(false);
 		GetMesh()->SetVisibility(false);
-		
+
 		TL_DieCamera->PlayFromStart();
 	}
-	
+
 	if (HasAuthority())
 	{
 		// NET_LOG(LogTemp,Warning,TEXT("다이 캠 피니쉬 타이머 설정"));
-		GetWorld()->GetAuthGameMode<AMatchGameMode>()->OnKill(Cast<AMatchPlayerController>(GetOwner()), Cast<AMatchPlayerController>(GetOwner()));
+		GetWorld()->GetAuthGameMode<AMatchGameMode>()->OnKill(Cast<AMatchPlayerController>(GetOwner()),
+		                                                      Cast<AMatchPlayerController>(GetOwner()));
 		FTimerHandle deadTimerHandle;
 		GetWorldTimerManager().SetTimer(deadTimerHandle, FTimerDelegate::CreateLambda([this]()
 		{
@@ -536,13 +548,13 @@ void ABaseAgent::Die()
 void ABaseAgent::OnDieCameraFinished()
 {
 	// NET_LOG(LogTemp,Warning,TEXT("다이 캠 피니쉬 콜백"));
-	
+
 	AAgentPlayerController* pc = Cast<AAgentPlayerController>(GetController());
 	if (pc)
 	{
 		pc->StartSpectatingOnly();
 		Destroy();
-		
+
 		pc->Client_EnterSpectatorMode();
 	}
 	else
@@ -554,7 +566,7 @@ void ABaseAgent::OnDieCameraFinished()
 void ABaseAgent::Net_Die_Implementation()
 {
 	bIsDead = true;
-	
+
 	ABP_3P->Montage_Stop(0.1f);
 	ABP_3P->Montage_Play(AM_Die, 1.0f);
 	ABP_3P->bIsDead = true;
@@ -564,7 +576,7 @@ void ABaseAgent::ServerApplyGE_Implementation(TSubclassOf<UGameplayEffect> geCla
 {
 	if (!geClass)
 	{
-		NET_LOG(LogTemp,Error,TEXT("올바른 게임이펙트를 넣어주세요."));
+		NET_LOG(LogTemp, Error, TEXT("올바른 게임이펙트를 넣어주세요."));
 		return;
 	}
 
@@ -614,10 +626,60 @@ void ABaseAgent::UpdateArmor(float newArmor)
 
 void ABaseAgent::UpdateEffectSpeed(float newSpeed)
 {
-	NET_LOG(LogTemp,Warning,TEXT("%f dp"), newSpeed);
+	NET_LOG(LogTemp, Warning, TEXT("%f dp"), newSpeed);
 	EffectSpeedMultiplier = newSpeed;
 }
 
+// 무기 카테고리에 따른 이동 속도 멀티플라이어 업데이트
+void ABaseAgent::UpdateEquipSpeedMultiplier()
+{
+	if (HasAuthority())
+	{
+		// 기본값으로 리셋
+		EquipSpeedMultiplier = 1.0f;
+
+		// 무기가 있으면 카테고리에 따라 속도 설정
+		if (CurrentInteractor)
+		{
+			ABaseWeapon* CurrentWeapon = Cast<ABaseWeapon>(CurrentInteractor);
+			if (CurrentWeapon)
+			{
+				// GameInstance에서 무기 데이터 가져오기
+				UValorantGameInstance* GameInstance = Cast<UValorantGameInstance>(GetGameInstance());
+				if (GameInstance)
+				{
+					FWeaponData* WeaponData = GameInstance->GetWeaponData(CurrentWeapon->GetWeaponID());
+					if (WeaponData)
+					{
+						// 무기 종류에 따른 이동 속도 조정
+						switch (WeaponData->WeaponCategory)
+						{
+						case EWeaponCategory::Sidearm:
+							EquipSpeedMultiplier = 1.0f; // 기본 속도
+							break;
+						case EWeaponCategory::SMG:
+							EquipSpeedMultiplier = 0.95f; // 약간 감소
+							break;
+						case EWeaponCategory::Rifle:
+						case EWeaponCategory::Shotgun:
+							EquipSpeedMultiplier = 0.9f; // 더 감소
+							break;
+						case EWeaponCategory::Sniper:
+							EquipSpeedMultiplier = 0.85f; // 많이 감소
+							break;
+						case EWeaponCategory::Heavy:
+							EquipSpeedMultiplier = 0.8f; // 가장 많이 감소
+							break;
+						default:
+							EquipSpeedMultiplier = 1.0f; // 기본값
+							break;
+						}
+					}
+				}
+			}
+		}
+	}
+}
 
 //ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ
 //             CYT             ♣
@@ -633,8 +695,8 @@ void ABaseAgent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifeti
 	DOREPLIFETIME(ABaseAgent, TeamID);
 	DOREPLIFETIME(ABaseAgent, bIsRun);
 	DOREPLIFETIME(ABaseAgent, CurrentInteractorState);
-	DOREPLIFETIME(ABaseAgent, PrimaryWeapon);
-	DOREPLIFETIME(ABaseAgent, SecondWeapon);
+	DOREPLIFETIME(ABaseAgent, MainWeapon);
+	DOREPLIFETIME(ABaseAgent, SubWeapon);
 	DOREPLIFETIME(ABaseAgent, CurrentInteractor);
 }
 
@@ -656,19 +718,19 @@ bool ABaseAgent::IsVisibleToTeam(int32 ViewerTeamID) const
 	// for (AActor* Agent : AllAgents)
 	// {
 	// 	ABaseAgent* PlayerAgent = Cast<ABaseAgent>(Agent);
-		// 유효한 플레이어 지정된 팀ID 일치하는지 확인
-		// if (PlayerAgent && PlayerAgent->TeamID == ViewerTeamID)
-		// {
-			// 이플레이어의 시야에 현재 에이전트가 있는지 //@@TODO YT
-			// if (PlayerAgent->IsLineOfSightBlocked(this))
-			// {
-			// 	// 한명이라도 볼 수 있으면 보이는 것으로 판단
-			// 	UE_LOG(LogTemp, Warning, TEXT("다른팀 보일랑말랑"));
-			// 	return true;
-			// }
+	// 유효한 플레이어 지정된 팀ID 일치하는지 확인
+	// if (PlayerAgent && PlayerAgent->TeamID == ViewerTeamID)
+	// {
+	// 이플레이어의 시야에 현재 에이전트가 있는지 //@@TODO YT
+	// if (PlayerAgent->IsLineOfSightBlocked(this))
+	// {
+	// 	// 한명이라도 볼 수 있으면 보이는 것으로 판단
+	// 	UE_LOG(LogTemp, Warning, TEXT("다른팀 보일랑말랑"));
+	// 	return true;
+	// }
 	// 	}
 	// }
-	 UE_LOG(LogTemp, Warning, TEXT("다른팀 안보임"));
+	UE_LOG(LogTemp, Warning, TEXT("다른팀 안보임"));
 	return false;
 }
 
@@ -680,13 +742,13 @@ void ABaseAgent::UpdateMinimapVisibility()
 	{
 		return;
 	}
-	
+
 	// 게임의 현재 시간 가져오기 
 	float CurrentTime = UGameplayStatics::GetTimeSeconds(GetWorld());
-	
+
 	// 시야에서 사라진 후 경과 시간 계산
 	float TimeSinceLastSeen = CurrentTime - LastVisibleTime;
-	
+
 	//현재 상태에 따른 업데이트 로직
 	if (MinimapVisibility == EAgentVisibility::Visible)
 	{
@@ -734,12 +796,12 @@ UTexture2D* ABaseAgent::GetAgentIcon(int32 ViewerTeamID) const
 	// 다른팀에 대한 표시 규칙
 	switch (MinimapVisibility)
 	{
-		// 기본시야에 보이는경우 에이전트 아이콘으로 표시
-		case EAgentVisibility::Visible: return AgentIcon;
-		// 마지막으로 본위치 물음표 아이콘으로 표시
-		case EAgentVisibility::LastKnown: return QuestionMarkIcon;
-		// 숨김 상태 아이콘 표시 없음
-		case EAgentVisibility::Hidden: default: return nullptr;
+	// 기본시야에 보이는경우 에이전트 아이콘으로 표시
+	case EAgentVisibility::Visible: return AgentIcon;
+	// 마지막으로 본위치 물음표 아이콘으로 표시
+	case EAgentVisibility::LastKnown: return QuestionMarkIcon;
+	// 숨김 상태 아이콘 표시 없음
+	case EAgentVisibility::Hidden: default: return nullptr;
 	}
 }
 
@@ -748,7 +810,7 @@ bool ABaseAgent::IsVisibleToOpponents() const
 	// 모든 플레이어 컨트롤러 Actor 배열로 가져오기
 	TArray<AActor*> FoundActors;
 	UGameplayStatics::GetAllActorsOfClass
-	(GetWorld(),APlayerController::StaticClass(),FoundActors);
+		(GetWorld(), APlayerController::StaticClass(), FoundActors);
 
 	// 각 Actor를 APlayController로 캐스팅하여 검사 
 	for (AActor* Actor : FoundActors)
@@ -765,7 +827,7 @@ bool ABaseAgent::IsVisibleToOpponents() const
 			continue;
 		}
 		// 플레이어가 이 에이전트 볼 수 있는지 체크
-		if(!PlayerAgent->IsLineOfSightBlocked(this))
+		if (!PlayerAgent->IsLineOfSightBlocked(this))
 		{
 			// 한명이라도 볼수 있다면 true 반환
 			return true;
@@ -773,4 +835,51 @@ bool ABaseAgent::IsVisibleToOpponents() const
 	}
 	// 아무도 볼수 없다면 false 반환 
 	return false;
+}
+
+void ABaseAgent::SwitchWeapon(EInteractorType InteractorType)
+{
+	if (HasAuthority())
+	{
+		if (InteractorType == EInteractorType::MainWeapon && MainWeapon)
+		{
+			EquipWeapon(MainWeapon);
+
+			// 무기 교체에 따른 이동 속도 업데이트
+			UpdateEquipSpeedMultiplier();
+		}
+		else if (InteractorType == EInteractorType::SubWeapon && SubWeapon)
+		{
+			EquipWeapon(SubWeapon);
+
+			// 무기 교체에 따른 이동 속도 업데이트
+			UpdateEquipSpeedMultiplier();
+		}
+		// else if (InteractorType == EInteractorType::Melee && SubWeapon)
+		// {
+		// 	// ToDo : Melee, Spike 처리 @@HY
+		// 	//EquipWeapon(Melee);
+		// 	
+		// 	// 무기 교체에 따른 이동 속도 업데이트
+		// 	UpdateEquipSpeedMultiplier();
+		// }
+		// else if (InteractorType == EInteractorType::Spike && SubWeapon)
+		// {
+		// 	// ToDo : Melee, Spike 처리 @@HY
+		// 	//EquipWeapon(Melee);
+		// 	
+		// 	// 무기 교체에 따른 이동 속도 업데이트
+		// 	UpdateEquipSpeedMultiplier();
+		// }
+	}
+	else
+	{
+		Server_SwitchWeapon(InteractorType);
+	}
+}
+
+// 서버 RPC 구현
+void ABaseAgent::Server_SwitchWeapon_Implementation(EInteractorType InteractorType)
+{
+	SwitchWeapon(InteractorType);
 }
