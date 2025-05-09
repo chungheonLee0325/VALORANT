@@ -3,23 +3,17 @@
 
 #include "Spike.h"
 
-#include "Components/SphereComponent.h"
-
 
 ASpike::ASpike()
 {
 	PrimaryActorTick.bCanEverTick = true;
-
-	SpikeMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("SpikeMesh"));
+	
 	ConstructorHelpers::FObjectFinder<USkeletalMesh> SpikeMeshObj(TEXT("/Script/Engine.SkeletalMesh'/Game/Resource/Props/Spike/Spike.Spike'"));
 	if (SpikeMeshObj.Succeeded())
 	{
-		SpikeMesh->SetSkeletalMesh(SpikeMeshObj.Object);
+		Mesh->SetSkeletalMesh(SpikeMeshObj.Object);
 	}
-	SetRootComponent(SpikeMesh);
-	
-	InteractWidget->SetupAttachment(GetRootComponent());
-	Sphere->SetupAttachment(RootComponent);
+	Mesh->SetRelativeScale3D(FVector(0.34f));
 }
 
 void ASpike::BeginPlay()

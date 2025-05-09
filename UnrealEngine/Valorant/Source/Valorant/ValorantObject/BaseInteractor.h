@@ -3,13 +3,12 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Components/WidgetComponent.h"
 #include "GameFramework/Actor.h"
 #include "ResourceManager/ValorantGameType.h"
 #include "BaseInteractor.generated.h"
 
+class UWidgetComponent;
 class USphereComponent;
-class UValorantPickUpComponent;
 class ABaseAgent;
 
 UCLASS()
@@ -21,7 +20,10 @@ public:
 	ABaseInteractor();
 
 protected:
-	UPROPERTY()
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess = "true"))
+	TObjectPtr<USkeletalMeshComponent> Mesh;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess = "true"))
 	TObjectPtr<USphereComponent> Sphere = nullptr;
 
 	UPROPERTY()

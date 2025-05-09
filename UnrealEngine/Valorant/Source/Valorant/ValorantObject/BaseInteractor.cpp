@@ -5,6 +5,7 @@
 
 #include "Components/CapsuleComponent.h"
 #include "Components/SphereComponent.h"
+#include "Components/WidgetComponent.h"
 #include "GameFramework/PawnMovementComponent.h"
 #include "Player/Agent/BaseAgent.h"
 
@@ -12,11 +13,19 @@
 ABaseInteractor::ABaseInteractor()
 {
 	PrimaryActorTick.bCanEverTick = true;
+	bReplicates = true;
+
+	Mesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("WeaponMesh"));
+	SetRootComponent(Mesh);
+	
 	InteractWidget = CreateDefaultSubobject<UWidgetComponent>("InteractWidget");
 	InteractWidget->SetVisibility(false);
+	InteractWidget->SetupAttachment(GetRootComponent());
 
 	Sphere = CreateDefaultSubobject<USphereComponent>(TEXT("Sphere"));
 	Sphere->SetSphereRadius(32.f);
+	Sphere->SetCollisionProfileName(TEXT("Interactable"));
+	Sphere->SetupAttachment(GetRootComponent());
 }
 
 void ABaseInteractor::BeginPlay()

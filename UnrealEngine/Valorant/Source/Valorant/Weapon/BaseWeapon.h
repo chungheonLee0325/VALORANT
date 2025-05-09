@@ -8,14 +8,8 @@
 #include "ValorantObject/BaseInteractor.h"
 #include "BaseWeapon.generated.h"
 
-class UValorantPickUpComponent;
-class UGameplayEffect;
-class UPickUpComponent;
 class UInputMappingContext;
 class UInputAction;
-class ABaseAgent;
-struct FGunRecoilData;
-struct FWeaponData;
 
 UCLASS(config=Game)
 class VALORANT_API ABaseWeapon : public ABaseInteractor
@@ -32,27 +26,24 @@ class VALORANT_API ABaseWeapon : public ABaseInteractor
 	float FireInterval = 0.08f;
 	// 탄창 크기
 	int MagazineSize = 0;
-	
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess = "true"))
-	TObjectPtr<USkeletalMeshComponent> WeaponMesh;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category=Input, meta=(AllowPrivateAccess = "true"))
-	UInputMappingContext* FireMappingContext;
+	UInputMappingContext* FireMappingContext = nullptr;
 
 	/** Fire Input Action */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category=Input, meta=(AllowPrivateAccess = "true"))
-	UInputAction* StartFireAction;
+	UInputAction* StartFireAction = nullptr;
 
 	/** EndFire Input Action */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category=Input, meta=(AllowPrivateAccess = "true"))
-	UInputAction* EndFireAction;
+	UInputAction* EndFireAction = nullptr;
 
 	/** StartReload Input Action */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category=Input, meta=(AllowPrivateAccess = "true"))
-	UInputAction* StartReloadAction;
+	UInputAction* StartReloadAction = nullptr;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category=Input, meta=(AllowPrivateAccess = "true"))
-	UInputAction* DropAction;
+	UInputAction* DropAction = nullptr;
 
 	bool bIsFiring = false;
 	int RecoilLevel = 0;
@@ -101,7 +92,7 @@ public:
 	void StartReload();
 	
 	UFUNCTION(BlueprintCallable)
-	EWeaponCategory GetWeaponCategory() { return WeaponData->WeaponCategory; }
+	EWeaponCategory GetWeaponCategory() const { return WeaponData->WeaponCategory; }
 
 	UPROPERTY(EditDefaultsOnly)
 	TSubclassOf<UGameplayEffect> DamageEffectClass;

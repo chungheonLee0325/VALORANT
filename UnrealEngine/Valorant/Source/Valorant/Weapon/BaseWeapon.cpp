@@ -6,7 +6,6 @@
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "Valorant.h"
-#include "Components/SphereComponent.h"
 #include "GameManager/SubsystemSteamManager.h"
 #include "GameManager/ValorantGameInstance.h"
 #include "Kismet/GameplayStatics.h"
@@ -16,13 +15,6 @@
 ABaseWeapon::ABaseWeapon()
 {
 	PrimaryActorTick.bCanEverTick = true;
-	bReplicates = true;
-	
-	WeaponMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("WeaponMesh"));
-	SetRootComponent(WeaponMesh);
-
-	InteractWidget->SetupAttachment(RootComponent);
-	Sphere->SetupAttachment(RootComponent);
 }
 
 void ABaseWeapon::BeginPlay()
@@ -46,13 +38,13 @@ void ABaseWeapon::BeginPlay()
 	// TODO: WeaponID에 맞는 SkeletalMesh 불러오기
 	FSoftObjectPath MeshRef(TEXT("/Script/Engine.SkeletalMesh'/Game/Resource/Weapons/BasicPhantom/Mesh/GN_Carbine_Clean_S0_Skelmesh.GN_Carbine_Clean_S0_Skelmesh'"));
 	auto* WeaponMeshAsset = Cast<USkeletalMesh>(StaticLoadObject(USkeletalMesh::StaticClass(), nullptr, *MeshRef.ToString()));
-	if (nullptr == WeaponMeshAsset || nullptr == WeaponMesh)
+	if (nullptr == WeaponMeshAsset || nullptr == Mesh)
 	{
 		UE_LOG(LogTemp, Error, TEXT("ABaseWeapon::BeginPlay: WeaponMeshAsset Load Fail (WeaponID : %d)"), WeaponID);
 		return;
 	}
-	WeaponMesh->SetSkeletalMeshAsset(WeaponMeshAsset);
-	WeaponMesh->SetRelativeScale3D(FVector(0.34f));
+	Mesh->SetSkeletalMeshAsset(WeaponMeshAsset);
+	Mesh->SetRelativeScale3D(FVector(0.34f));
 
 	if (WeaponData->WeaponCategory == EWeaponCategory::Sidearm)
 	{
