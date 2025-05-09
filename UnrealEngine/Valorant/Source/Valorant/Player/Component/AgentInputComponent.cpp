@@ -140,7 +140,7 @@ void UAgentInputComponent::StartFire(const FInputActionValue& InputActionValue)
 			return;
 		}
 		
-		// UE_LOG(LogTemp, Warning, TEXT("파이어 시도"));
+		// NET_LOG(LogTemp, Warning, TEXT("파이어 시도"));
 		Agent->StartFire();
 	}
 }
@@ -149,7 +149,7 @@ void UAgentInputComponent::EndFire(const FInputActionValue& InputActionValue)
 {
 	if (Agent)
 	{
-		// UE_LOG(LogTemp, Warning, TEXT("파이어 종료"));
+		// NET_LOG(LogTemp, Warning, TEXT("파이어 종료"));
 		Agent->EndFire();
 	}
 }

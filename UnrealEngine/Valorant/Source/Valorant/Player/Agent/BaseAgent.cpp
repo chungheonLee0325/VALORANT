@@ -283,11 +283,11 @@ void ABaseAgent::StartFire()
 {
 	if (CurrentInteractor == nullptr)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("현재 인터랙터 없음"));
+		NET_LOG(LogTemp, Warning, TEXT("현재 인터랙터 없음"));
 		return;
 	}
 
-	// TODO: 무기를 발사하다가 교체하였을 때, EndFire() 호출 
+	// TODO: 무기를 발사하다가 교체하였을 때, EndFire() 호출?
 	if (auto* weapon = Cast<ABaseWeapon>(CurrentInteractor))
 	{
 		weapon->StartFire();
@@ -366,13 +366,18 @@ ABaseWeapon* ABaseAgent::GetSubWeapon() const
 	return SubWeapon;
 }
 
-/** 장착 X, 획득하는 개념 (땅에 떨어진 무기 줍기, 상점에서 무기 구매) */
 void ABaseAgent::AcquireWeapon(ABaseWeapon* weapon)
 {
-	// UE_LOG(LogTemp,Warning,TEXT("이큅 웨폰"));
+	// NET_LOG(LogTemp,Warning,TEXT("이큅 웨폰"));
+	if (!HasAuthority())
+	{
+		Server_AcquireWeapon(weapon);
+		return;
+	}
+	
 	if (weapon->GetWeaponCategory() == EWeaponCategory::Sidearm)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("보조무기"));
+		// UE_LOG(LogTemp, Warning, TEXT("보조무기"));
 		if (SubWeapon)
 		{
 			// ToDO : 기본 권총을 버려야할지
@@ -384,7 +389,7 @@ void ABaseAgent::AcquireWeapon(ABaseWeapon* weapon)
 	}
 	else
 	{
-		UE_LOG(LogTemp, Warning, TEXT("주무기"));
+		// UE_LOG(LogTemp, Warning, TEXT("주무기"));
 		if (MainWeapon)
 		{
 			// UE_LOG(LogTemp,Warning,TEXT("이미 들고 있음"));
@@ -400,7 +405,6 @@ void ABaseAgent::AcquireWeapon(ABaseWeapon* weapon)
 	SwitchWeapon(weapon->GetInteractorType());
 }
 
-/**해당 슬롯의 인터랙터를 손에 들고자 할 때*/
 void ABaseAgent::SwitchWeapon(EInteractorType InteractorType)
 {
 	if (HasAuthority())
@@ -417,21 +421,47 @@ void ABaseAgent::SwitchWeapon(EInteractorType InteractorType)
 		}
 		else if (InteractorType == EInteractorType::Melee)
 		{
-			// ToDo : Melee, Spike 처리 @@HY
-			// SetCurrentInteractor();
+			EquipInteractor(MeleeKnife);
 			UpdateEquipSpeedMultiplier();
 		}
 		else if (InteractorType == EInteractorType::Spike)
 		{
-			// ToDo : Melee, Spike 처리 @@HY
-			// SetCurrentInteractor();
+			EquipInteractor(Spike);
 			UpdateEquipSpeedMultiplier();
+		}
+
+		//TODO: 위치 변경
+		CurrentInteractorState = InteractorType;
+		if (ABP_1P)
+		{
+			ABP_1P->InteractorState = CurrentInteractorState;
+		}
+		if (ABP_3P)
+		{
+			ABP_3P->InteractorState = CurrentInteractorState;
 		}
 	}
 	else
 	{
 		Server_SwitchWeapon(InteractorType);
 	}
+}
+
+void ABaseAgent::OnRep_ChangeInteractorState()
+{
+	if (ABP_1P)
+	{
+		ABP_1P->InteractorState = CurrentInteractorState;
+	}
+	if (ABP_3P)
+	{
+		ABP_3P->InteractorState = CurrentInteractorState;
+	}
+}
+
+void ABaseAgent::Server_AcquireWeapon_Implementation(ABaseWeapon* weapon)
+{
+	AcquireWeapon(weapon);
 }
 
 void ABaseAgent::Server_SwitchWeapon_Implementation(EInteractorType InteractorType)
@@ -454,19 +484,20 @@ void ABaseAgent::SetShopUI()
 void ABaseAgent::EquipInteractor(ABaseInteractor* interactor)
 {
 	//TODO: 기존 들고 있던 물건 숨기고 새로운 인터랙터 활성화
-	//TODO: EInteractorType 따른 애니메이션 재생
 	
 	CurrentInteractor = interactor;
 
-	if (CurrentInteractor == nullptr)
-	{
-		CurrentInteractorState = EInteractorType::None;
-		CurrentInteractorState = EInteractorType::None;
-		UE_LOG(LogTemp, Warning, TEXT("빈손이네요"));
-		return;
-	}
-
-	UE_LOG(LogTemp, Warning, TEXT("현재 들고 있는 인터랙터: %s"), *CurrentInteractor->GetActorNameOrLabel());
+	// if (CurrentInteractor == nullptr)
+	// {
+	// 	CurrentInteractorState = EInteractorType::None;
+	// 	CurrentInteractorState = EInteractorType::None;
+	// 	NET_LOG(LogTemp, Warning, TEXT("빈손이네요"));
+	// 	return;
+	// }
+	//
+	// CurrentInteractorState;
+	//
+	// NET_LOG(LogTemp, Warning, TEXT("현재 들고 있는 인터랙터: %s"), *CurrentInteractor->GetActorNameOrLabel());
 }
 
 void ABaseAgent::OnFindInteraction(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
@@ -718,10 +749,10 @@ void ABaseAgent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifeti
 	DOREPLIFETIME(ABaseAgent, LastVisibleTime);
 	DOREPLIFETIME(ABaseAgent, TeamID);
 	DOREPLIFETIME(ABaseAgent, bIsRun);
-	DOREPLIFETIME(ABaseAgent, CurrentInteractorState);
 	DOREPLIFETIME(ABaseAgent, MainWeapon);
 	DOREPLIFETIME(ABaseAgent, SubWeapon);
 	DOREPLIFETIME(ABaseAgent, CurrentInteractor);
+	DOREPLIFETIME(ABaseAgent, CurrentInteractorState);
 }
 
 // 특정 플레이어에게 보이는지 체크
