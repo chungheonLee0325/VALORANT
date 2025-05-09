@@ -93,18 +93,12 @@ protected:
 	virtual void BeginPlay() override;
 
 	virtual void Tick(float DeltaSeconds) override;
-
-	UFUNCTION(BlueprintCallable, Category="Weapon")
-	void StartFire();
 	
 	UFUNCTION(BlueprintCallable, Category="Weapon")
 	void Fire();
 
 	UFUNCTION(Server, Reliable)
 	void ServerRPC_Fire(const FVector& Location, const FVector& Direction);
-
-	UFUNCTION(BlueprintCallable, Category="Weapon")
-	void EndFire();
 	
 	UFUNCTION(BlueprintCallable, Category="Weapon")
 	void Reload();
@@ -115,6 +109,12 @@ protected:
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 public:
+	UFUNCTION(BlueprintCallable, Category="Weapon")
+	void StartFire();
+
+	UFUNCTION(BlueprintCallable, Category="Weapon")
+	void EndFire();
+	
 	UFUNCTION(BlueprintCallable, Category="Weapon")
 	void StartReload();
 	

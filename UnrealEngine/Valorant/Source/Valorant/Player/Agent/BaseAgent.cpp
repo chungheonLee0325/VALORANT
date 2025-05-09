@@ -279,13 +279,33 @@ void ABaseAgent::OnEndCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjus
 	TL_Crouch->Reverse();
 }
 
-void ABaseAgent::HandleCrouchProgress(float Value)
+void ABaseAgent::StartFire()
 {
-	float newHalfHeight = BaseCapsuleHalfHeight - Value;
-	//NET_LOG(LogTemp,Warning,TEXT("HandleCrouchProgress %f"), newHalfHeight);
-	GetCapsuleComponent()->SetCapsuleHalfHeight(newHalfHeight, true);
+	if (CurrentInteractor == nullptr)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("현재 인터랙터 없음"));
+		return;
+	}
+
+	// TODO: 무기를 발사하다가 교체하였을 때, EndFire() 호출 
+	if (auto* weapon = Cast<ABaseWeapon>(CurrentInteractor))
+	{
+		weapon->StartFire();
+	}
 }
 
+void ABaseAgent::EndFire()
+{
+	if (CurrentInteractor == nullptr)
+	{
+		return;
+	}
+
+	if (auto* weapon = Cast<ABaseWeapon>(CurrentInteractor))
+	{
+		weapon->EndFire();
+	}
+}
 
 void ABaseAgent::Reload()
 {
@@ -305,14 +325,34 @@ void ABaseAgent::Reload()
 	}
 }
 
-void ABaseAgent::SetShopUI()
+void ABaseAgent::Interact()
 {
-	if (IsLocallyControlled())
+	if (FindInteractActor)
 	{
-		PC->RequestShopUI();
+		if (ABaseWeapon* weapon = Cast<ABaseWeapon>(FindInteractActor))
+		{
+			AcquireWeapon(weapon);
+		}
+		else if (ASpike* spike = Cast<ASpike>(FindInteractActor))
+		{
+		}
 	}
-	else
+}
+
+void ABaseAgent::DropCurrentInteractor()
+{
+	if (CurrentInteractor && CurrentInteractor->ServerOnly_CanDrop())
 	{
+		if (CurrentInteractor == MainWeapon)
+		{
+			MainWeapon = nullptr;
+		}
+		else if (CurrentInteractor == SubWeapon)
+		{
+			SubWeapon = nullptr;
+		}
+		CurrentInteractor->ServerRPC_Drop();
+		EquipInteractor(nullptr);
 	}
 }
 
@@ -365,23 +405,23 @@ void ABaseAgent::SwitchWeapon(EInteractorType InteractorType)
 {
 	if (HasAuthority())
 	{
-		if (InteractorType == EInteractorType::MainWeapon && MainWeapon)
+		if (InteractorType == EInteractorType::MainWeapon)
 		{
 			EquipInteractor(MainWeapon);
 			UpdateEquipSpeedMultiplier();
 		}
-		else if (InteractorType == EInteractorType::SubWeapon && SubWeapon)
+		else if (InteractorType == EInteractorType::SubWeapon)
 		{
 			EquipInteractor(SubWeapon);
 			UpdateEquipSpeedMultiplier();
 		}
-		else if (InteractorType == EInteractorType::Melee && SubWeapon)
+		else if (InteractorType == EInteractorType::Melee)
 		{
 			// ToDo : Melee, Spike 처리 @@HY
 			// SetCurrentInteractor();
 			UpdateEquipSpeedMultiplier();
 		}
-		else if (InteractorType == EInteractorType::Spike && SubWeapon)
+		else if (InteractorType == EInteractorType::Spike)
 		{
 			// ToDo : Melee, Spike 처리 @@HY
 			// SetCurrentInteractor();
@@ -394,10 +434,20 @@ void ABaseAgent::SwitchWeapon(EInteractorType InteractorType)
 	}
 }
 
-// 서버 RPC 구현
 void ABaseAgent::Server_SwitchWeapon_Implementation(EInteractorType InteractorType)
 {
 	SwitchWeapon(InteractorType);
+}
+
+void ABaseAgent::SetShopUI()
+{
+	if (IsLocallyControlled())
+	{
+		PC->RequestShopUI();
+	}
+	else
+	{
+	}
 }
 
 /** 실 장착관련 로직 */
@@ -412,41 +462,11 @@ void ABaseAgent::EquipInteractor(ABaseInteractor* interactor)
 	{
 		CurrentInteractorState = EInteractorType::None;
 		CurrentInteractorState = EInteractorType::None;
+		UE_LOG(LogTemp, Warning, TEXT("빈손이네요"));
 		return;
 	}
 
 	UE_LOG(LogTemp, Warning, TEXT("현재 들고 있는 인터랙터: %s"), *CurrentInteractor->GetActorNameOrLabel());
-}
-
-void ABaseAgent::Interact()
-{
-	if (FindInteractActor)
-	{
-		if (ABaseWeapon* weapon = Cast<ABaseWeapon>(FindInteractActor))
-		{
-			AcquireWeapon(weapon);
-		}
-		else if (ASpike* spike = Cast<ASpike>(FindInteractActor))
-		{
-		}
-	}
-}
-
-void ABaseAgent::DropCurrentInteractor()
-{
-	if (CurrentInteractor && CurrentInteractor->ServerOnly_CanDrop())
-	{
-		if (CurrentInteractor == MainWeapon)
-		{
-			MainWeapon = nullptr;
-		}
-		else if (CurrentInteractor == SubWeapon)
-		{
-			SubWeapon = nullptr;
-		}
-		CurrentInteractor->ServerRPC_Drop();
-		EquipInteractor(nullptr);
-	}
 }
 
 void ABaseAgent::OnFindInteraction(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
@@ -486,6 +506,13 @@ void ABaseAgent::OnInteractionCapsuleEndOverlap(UPrimitiveComponent* OverlappedC
 			FindInteractActor = nullptr;
 		}
 	}
+}
+
+void ABaseAgent::HandleCrouchProgress(float Value)
+{
+	float newHalfHeight = BaseCapsuleHalfHeight - Value;
+	//NET_LOG(LogTemp,Warning,TEXT("HandleCrouchProgress %f"), newHalfHeight);
+	GetCapsuleComponent()->SetCapsuleHalfHeight(newHalfHeight, true);
 }
 
 void ABaseAgent::HandleDieCamera(FVector newPos)

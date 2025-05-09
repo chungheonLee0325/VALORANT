@@ -153,12 +153,21 @@ public:
 	void ServerApplyHitScanGE(TSubclassOf<UGameplayEffect> geClass, const int Damage);
 
 	UFUNCTION(BlueprintCallable)
-	bool GetIsRun() const { return bIsRun; }
-
-	UFUNCTION(BlueprintCallable)
 	void SetIsRun(const bool _bIsRun);
 	UFUNCTION(Server, Reliable)
 	void Server_SetIsRun(const bool _bIsRun);
+
+	UFUNCTION(Category= "Input")
+	void StartFire();
+	UFUNCTION(Category= "Input")
+	void EndFire();
+	
+	UFUNCTION(Category= "Input")
+	void Reload();
+	UFUNCTION(Category= "Input")
+	void Interact();
+	UFUNCTION(Category= "Input")
+	void DropCurrentInteractor();
 
 	UFUNCTION(BlueprintCallable)
 	EInteractorType GetInteractorState() const { return CurrentInteractorState; }
@@ -170,30 +179,26 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Weapon")
 	void AcquireWeapon(ABaseWeapon* weapon);
 	
-	/**해당 슬롯의 인터랙터를 손에 들고자 할 때*/
+	/** 해당 슬롯의 인터랙터를 손에 들고자 할 때 */
 	UFUNCTION(BlueprintCallable, Category = "Weapon")
 	void SwitchWeapon(EInteractorType InteractorType);
 
 	UFUNCTION(Server, Reliable, Category = "Weapon")
 	void Server_SwitchWeapon(EInteractorType InteractorType);
-	
-	void Reload();
-	void Interact();
-	void DropCurrentInteractor();
 
-	UFUNCTION(BlueprintCallable)
+	UFUNCTION(BlueprintCallable, Category = "GAS")
 	float GetEffectSpeedMulitiplier() const { return EffectSpeedMultiplier; }
 
-	UFUNCTION(BlueprintCallable)
+	UFUNCTION(BlueprintCallable, Category = "GAS")
 	void SetEffectSpeedMultiplier(const float newEffectSpeed) { EffectSpeedMultiplier = newEffectSpeed; }
 
-	UFUNCTION(BlueprintCallable)
+	UFUNCTION(BlueprintCallable, Category = "GAS")
 	float GetEquipSpeedMuliplier() const { return EquipSpeedMultiplier; }
 
-	UFUNCTION(BlueprintCallable)
+	UFUNCTION(BlueprintCallable, Category = "GAS")
 	void SetEquipSpeedMultiplier(const float newEquipSpeed) { EquipSpeedMultiplier = newEquipSpeed; }
 
-	UFUNCTION(BlueprintCallable)
+	UFUNCTION(BlueprintCallable, Category = "Shop")
 	void SetShopUI();
 
 
@@ -257,11 +262,11 @@ protected:
 	virtual void Tick(float DeltaTime) override;
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
-	UFUNCTION()
+	UFUNCTION(Category= "Timeline Handle")
 	void HandleCrouchProgress(float Value);
-	UFUNCTION()
+	UFUNCTION(Category= "Timeline Handle")
 	void HandleDieCamera(FVector newPos);
-	UFUNCTION()
+	UFUNCTION(Category= "Timeline Handle")
 	void HandleDieCameraPitch(float newPitch);
 
 	virtual void OnStartCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust) override;

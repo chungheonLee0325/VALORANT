@@ -6,6 +6,7 @@
 #include "EnhancedInputSubsystems.h"
 #include "EnhancedInputComponent.h"
 #include "Valorant.h"
+#include "AbilitySystem/AgentAbilitySystemComponent.h"
 #include "GameFramework/PlayerController.h"
 #include "GameManager/SubsystemSteamManager.h"
 #include "Player/Agent/BaseAgent.h"
@@ -52,6 +53,11 @@ void UAgentInputComponent::BindInput(UInputComponent* InputComponent)
 	NET_LOG(LogTemp, Warning, TEXT("%hs Called"), __FUNCTION__);
 	if (auto* eic = Cast<UEnhancedInputComponent>(InputComponent))
 	{
+		if (LeftMouseStartAction && LeftMouseEndAction)
+		{
+			eic->BindAction(LeftMouseStartAction,ETriggerEvent::Triggered, this, &UAgentInputComponent::StartFire);
+			eic->BindAction(LeftMouseEndAction,ETriggerEvent::Triggered, this, &UAgentInputComponent::EndFire);
+		}
 		if (MoveAction)
 			eic->BindAction(MoveAction,ETriggerEvent::Triggered, this, &UAgentInputComponent::OnMove);
 
@@ -124,6 +130,30 @@ void UAgentInputComponent::OnLook(const FInputActionValue& value)
 	}
 }
 
+void UAgentInputComponent::StartFire(const FInputActionValue& InputActionValue)
+{
+	if (Agent)
+	{
+		// 스킬을 실행했다면, 리턴
+		if (Agent->GetASC()->TrySkillInput(LeftClickTag))
+		{
+			return;
+		}
+		
+		// UE_LOG(LogTemp, Warning, TEXT("파이어 시도"));
+		Agent->StartFire();
+	}
+}
+
+void UAgentInputComponent::EndFire(const FInputActionValue& InputActionValue)
+{
+	if (Agent)
+	{
+		// UE_LOG(LogTemp, Warning, TEXT("파이어 종료"));
+		Agent->EndFire();
+	}
+}
+
 void UAgentInputComponent::JumpStart(const FInputActionValue& InputActionValue)
 {
 	if (Agent)
@@ -131,7 +161,7 @@ void UAgentInputComponent::JumpStart(const FInputActionValue& InputActionValue)
 		if (Agent->bIsCrouched)
 		{
 			Agent->UnCrouch();
-			UE_LOG(LogTemp, Warning, TEXT("앉기 중 점프"));
+			// UE_LOG(LogTemp, Warning, TEXT("앉기 중 점프"));
 		}
 		
 		Agent->Jump();

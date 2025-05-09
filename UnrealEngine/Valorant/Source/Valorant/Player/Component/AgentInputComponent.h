@@ -3,7 +3,9 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "GameplayTagContainer.h"
 #include "InputActionValue.h"
+#include "AbilitySystem/ValorantGameplayTags.h"
 #include "Components/ActorComponent.h"
 #include "AgentInputComponent.generated.h"
 
@@ -50,7 +52,9 @@ public:
 
 	/** Attack Input Action */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
-	UInputAction* LeftMouseAction;
+	UInputAction* LeftMouseStartAction;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	UInputAction* LeftMouseEndAction;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	UInputAction* RightMouseAction;
@@ -91,6 +95,9 @@ private:
 
 	UPROPERTY(VisibleAnywhere)
 	ABaseAgent* Agent = nullptr;
+
+	FGameplayTag LeftClickTag = FValorantGameplayTags::Get().InputTag_Default_LeftClick;	
+	FGameplayTag LeftClick= FValorantGameplayTags::Get().InputTag_Ability_C;
 	
 protected:
 	virtual void BeginPlay() override;
@@ -98,17 +105,20 @@ protected:
 public:
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType,
 	                           FActorComponentTickFunction* ThisTickFunction) override;
-
 	void BindInput(UInputComponent* InputComponent);
 	
 	void OnMove(const FInputActionValue& value);
 	void OnLook(const FInputActionValue& value);
+	
+	void StartFire(const FInputActionValue& InputActionValue);
+	void EndFire(const FInputActionValue& InputActionValue);
+	
+	void WalkStart(const FInputActionValue& InputActionValue);
+	void WalkComplete(const FInputActionValue& InputActionValue);
 	void JumpStart(const FInputActionValue& InputActionValue);
 	void JumpComplete(const FInputActionValue& InputActionValue);
 	void CrouchStart(const FInputActionValue& InputActionValue);
 	void CrouchComplete(const FInputActionValue& InputActionValue);
-	void WalkStart(const FInputActionValue& InputActionValue);
-	void WalkComplete(const FInputActionValue& InputActionValue);
 
 	void Drop(const FInputActionValue& InputActionValue);
 	void Interact(const FInputActionValue& InputActionValue);

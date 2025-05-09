@@ -84,7 +84,7 @@ void ABaseWeapon::Tick(float DeltaSeconds)
 		TotalRecoilOffsetYaw += SubYawValue;
 		OwnerAgent->AddControllerYawInput(SubYawValue);
 
-		UE_LOG(LogTemp, Warning, TEXT("Recoil Recovery TotalRecoilOffsetPitch : %f, TotalRecoilOffsetYaw : %f"), TotalRecoilOffsetPitch, TotalRecoilOffsetYaw);
+		// UE_LOG(LogTemp, Warning, TEXT("Recoil Recovery TotalRecoilOffsetPitch : %f, TotalRecoilOffsetYaw : %f"), TotalRecoilOffsetPitch, TotalRecoilOffsetYaw);
 	}
 }
 
@@ -150,7 +150,7 @@ void ABaseWeapon::Fire()
 		
 		RecoilLevel = FMath::Clamp(RecoilLevel + 1, 0, RecoilData.Num() - 1);
 		
-		UE_LOG(LogTemp, Warning, TEXT("Ammo : %d, Total : (%f, %f), Add : (%f, %f)"), MagazineAmmo, TotalRecoilOffsetPitch, TotalRecoilOffsetYaw, PitchValue, YawValue);
+		// UE_LOG(LogTemp, Warning, TEXT("Ammo : %d, Total : (%f, %f), Add : (%f, %f)"), MagazineAmmo, TotalRecoilOffsetPitch, TotalRecoilOffsetYaw, PitchValue, YawValue);
 	}
 
 	// 서버 쪽에서 처리해야 하는 발사 로직 호출
@@ -196,7 +196,7 @@ void ABaseWeapon::ServerRPC_Fire_Implementation(const FVector& Location, const F
 	
 	const FVector& Start = Location;
 	const FVector End = Start + Direction * 99999;
-	NET_LOG(LogTemp, Warning, TEXT("ServerRPC_Fire_Implementation, Start : %s, End : %s"), *Start.ToString(), *End.ToString());
+	// NET_LOG(LogTemp, Warning, TEXT("ServerRPC_Fire_Implementation, Start : %s, End : %s"), *Start.ToString(), *End.ToString());
 	
 	// 궤적, 탄착군 디버깅
 	TArray<AActor*> ActorsToIgnore;
@@ -377,9 +377,9 @@ void ABaseWeapon::ServerOnly_AttachWeapon(ABaseAgent* PickUpAgent)
 		if (UEnhancedInputComponent* EnhancedInputComponent = Cast<UEnhancedInputComponent>(PlayerController->InputComponent))
 		{
 			// Fire
-			EnhancedInputComponent->BindAction(StartFireAction, ETriggerEvent::Triggered, this, &ABaseWeapon::StartFire);
-			EnhancedInputComponent->BindAction(EndFireAction, ETriggerEvent::Triggered, this, &ABaseWeapon::EndFire);
-			EnhancedInputComponent->BindAction(StartReloadAction, ETriggerEvent::Triggered, this, &ABaseWeapon::StartReload);
+			// EnhancedInputComponent->BindAction(StartFireAction, ETriggerEvent::Triggered, this, &ABaseWeapon::StartFire);
+			// EnhancedInputComponent->BindAction(EndFireAction, ETriggerEvent::Triggered, this, &ABaseWeapon::EndFire);
+			// EnhancedInputComponent->BindAction(StartReloadAction, ETriggerEvent::Triggered, this, &ABaseWeapon::StartReload);
 		}
 	}
 }
