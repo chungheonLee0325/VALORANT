@@ -183,6 +183,11 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Weapon")
 	void SwitchWeapon(EInteractorType InteractorType);
 
+	UFUNCTION()
+	void OnRep_ChangeInteractorState();
+	
+	UFUNCTION(Server, Reliable, Category = "Weapon")
+	void Server_AcquireWeapon(ABaseWeapon* weapon);
 	UFUNCTION(Server, Reliable, Category = "Weapon")
 	void Server_SwitchWeapon(EInteractorType InteractorType);
 
@@ -249,9 +254,15 @@ protected:
 	ABaseWeapon* SubWeapon = nullptr;
 
 	UPROPERTY(Replicated)
-	ABaseInteractor* CurrentInteractor = nullptr;
+	ABaseWeapon* MeleeKnife = nullptr;
 
 	UPROPERTY(Replicated)
+	ASpike* Spike = nullptr;
+
+	UPROPERTY(Replicated)
+	ABaseInteractor* CurrentInteractor = nullptr;
+
+	UPROPERTY(Replicated, ReplicatedUsing=OnRep_ChangeInteractorState)
 	EInteractorType CurrentInteractorState = EInteractorType::None;
 
 protected:
