@@ -76,11 +76,12 @@ void UAgentInputComponent::BindInput(UInputComponent* InputComponent)
 			eic->BindAction(CtrlAction, ETriggerEvent::Completed, this, &UAgentInputComponent::CrouchComplete);
 		}
 		
-		if (Num_1Action && Num_2Action && Num_3Action)
+		if (Num_1Action && Num_2Action && Num_3Action && Num_4Action)
 		{
 			eic->BindAction(Num_1Action, ETriggerEvent::Started, this, &UAgentInputComponent::Weapon1);
 			eic->BindAction(Num_2Action, ETriggerEvent::Started, this, &UAgentInputComponent::Weapon2);
 			eic->BindAction(Num_3Action, ETriggerEvent::Started, this, &UAgentInputComponent::Weapon3);
+			eic->BindAction(Num_4Action, ETriggerEvent::Started, this, &UAgentInputComponent::Weapon4);
 		}
 		if (ReloadAction)
 		{
@@ -202,7 +203,7 @@ void UAgentInputComponent::Weapon1(const FInputActionValue& InputActionValue)
 {
 	if (Agent)
 	{
-		Agent->SetInteractorState(EInteractorType::MainWeapon);
+		Agent->SwitchWeapon(EInteractorType::MainWeapon);
 	}
 }
 
@@ -210,7 +211,7 @@ void UAgentInputComponent::Weapon2(const FInputActionValue& InputActionValue)
 {
 	if (Agent)
 	{
-		Agent->SetInteractorState(EInteractorType::SubWeapon);
+		Agent->SwitchWeapon(EInteractorType::SubWeapon);
 	}
 }
 
@@ -218,7 +219,15 @@ void UAgentInputComponent::Weapon3(const FInputActionValue& InputActionValue)
 {
 	if (Agent)
 	{
-		Agent->SetInteractorState(EInteractorType::Melee);
+		Agent->SwitchWeapon(EInteractorType::Melee);
+	}
+}
+
+void UAgentInputComponent::Weapon4(const FInputActionValue& InputActionValue)
+{
+	if (Agent)
+	{
+		Agent->SwitchWeapon(EInteractorType::Spike);
 	}
 }
 
