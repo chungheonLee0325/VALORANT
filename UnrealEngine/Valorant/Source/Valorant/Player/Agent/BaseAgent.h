@@ -179,6 +179,19 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	void SetShopUI();
+
+	UFUNCTION(BlueprintCallable, Category = "Weapon")
+	void SwitchWeapon();
+	
+	UFUNCTION(Server, Reliable)
+	void Server_SwitchWeapon();
+	
+	UFUNCTION(BlueprintCallable, Category = "Weapon")
+	void SelectWeapon(int32 WeaponSlot);
+	
+	UFUNCTION(Server, Reliable)
+	void Server_SelectWeapon(int32 WeaponSlot);
+
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	UValorantGameInstance* m_GameInstance;
@@ -280,6 +293,9 @@ protected:
 	void UpdateArmor(float newArmor);
 	UFUNCTION()
 	void UpdateEffectSpeed(float newEffectSpeed);
+
+	// 무기 카테고리에 따른 이동 속도 멀티플라이어 업데이트
+	void UpdateEquipSpeedMultiplier();
 };
 
 

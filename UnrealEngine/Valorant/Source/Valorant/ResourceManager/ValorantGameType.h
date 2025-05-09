@@ -55,20 +55,25 @@ enum class EPlayerRole : uint8
 };
 
 
+// 무기 카테고리
 UENUM(BlueprintType)
 enum class EWeaponCategory : uint8
 {
 	None UMETA(DisplayName = "None"),
-
-	// 무기 카테고리
+	
+	// SubWeapon 
 	Sidearm UMETA(DisplayName = "Sidearm"),
+	// MainWeapon
 	SMG UMETA(DisplayName = "SMG"),
+	// MainWeapon
 	Shotgun UMETA(DisplayName = "Shotgun"),
+	// MainWeapon
 	Rifle UMETA(DisplayName = "Rifle"),
+	// MainWeapon
 	Sniper UMETA(DisplayName = "Sniper"),
+	// MainWeapon
 	Heavy UMETA(DisplayName = "Heavy Weapon")
 };
-
 
 // 무기 타입 
 UENUM(BlueprintType)
@@ -265,6 +270,9 @@ struct FWeaponData : public FTableRowBase
 	GENERATED_BODY()
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Data")
 	int32 WeaponID = 0;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Data")
+	EWeaponCategory WeaponCategory = EWeaponCategory::None;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Data")
 	EWeaponType WeaponName = EWeaponType::None;

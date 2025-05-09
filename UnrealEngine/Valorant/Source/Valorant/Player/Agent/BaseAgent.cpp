@@ -15,6 +15,7 @@
 #include "Components/TimelineComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "GameManager/SubsystemSteamManager.h"
+#include "GameManager/ValorantGameInstance.h"
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "Net/UnrealNetwork.h"
@@ -261,6 +262,9 @@ void ABaseAgent::SetWeaponState(const uint8 newState)
 		WeaponState = newState;
 		ABP_1P->WeaponState = WeaponState;
 		ABP_3P->WeaponState = WeaponState;
+		
+		// 무기 상태에 따른 이동 속도 설정
+		UpdateEquipSpeedMultiplier();
 	}
 	else
 	{
@@ -572,6 +576,63 @@ void ABaseAgent::UpdateEffectSpeed(float newSpeed)
 	EffectSpeedMultiplier = newSpeed;
 }
 
+// 무기 카테고리에 따른 이동 속도 멀티플라이어 업데이트
+void ABaseAgent::UpdateEquipSpeedMultiplier()
+{
+	if (HasAuthority())
+	{
+		// 기본값으로 리셋
+		EquipSpeedMultiplier = 1.0f;
+		
+		// 현재 장착 중인 무기 참조
+		ABaseWeapon* CurrentWeapon = nullptr;
+		if (WeaponState == 1 && PrimaryWeapon)
+		{
+			CurrentWeapon = PrimaryWeapon;
+		}
+		else if (WeaponState == 2 && SecondWeapon)
+		{
+			CurrentWeapon = SecondWeapon;
+		}
+		
+		// 무기가 있으면 카테고리에 따라 속도 설정
+		if (CurrentWeapon)
+		{
+			// GameInstance에서 무기 데이터 가져오기
+			UValorantGameInstance* GameInstance = Cast<UValorantGameInstance>(GetGameInstance());
+			if (GameInstance)
+			{
+				FWeaponData* WeaponData = GameInstance->GetWeaponData(CurrentWeapon->GetWeaponID());
+				if (WeaponData)
+				{
+					// 무기 종류에 따른 이동 속도 조정
+					switch (WeaponData->WeaponCategory)
+					{
+					case EWeaponCategory::Sidearm:
+						EquipSpeedMultiplier = 1.0f; // 기본 속도
+						break;
+					case EWeaponCategory::SMG:
+						EquipSpeedMultiplier = 0.95f; // 약간 감소
+						break;
+					case EWeaponCategory::Rifle:
+					case EWeaponCategory::Shotgun:
+						EquipSpeedMultiplier = 0.9f; // 더 감소
+						break;
+					case EWeaponCategory::Sniper:
+						EquipSpeedMultiplier = 0.85f; // 많이 감소
+						break;
+					case EWeaponCategory::Heavy:
+						EquipSpeedMultiplier = 0.8f; // 가장 많이 감소
+						break;
+					default:
+						EquipSpeedMultiplier = 1.0f; // 기본값
+						break;
+					}
+				}
+			}
+		}
+	}
+}
 
 //ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ
 //             CYT             ♣
@@ -724,4 +785,109 @@ bool ABaseAgent::IsVisibleToOpponents() const
 	}
 	// 아무도 볼수 없다면 false 반환 
 	return false;
+}
+
+// 무기 전환 함수 추가 (Primary <-> Secondary)
+void ABaseAgent::SwitchWeapon()
+{
+	if (HasAuthority())
+	{
+		// 현재 무기 상태에 따른 전환
+		if (WeaponState == 1) // Primary 사용 중
+		{
+			// Secondary 무기가 있으면 전환
+			if (SecondWeapon)
+			{
+				WeaponState = 2;
+				ABP_1P->WeaponState = WeaponState;
+				ABP_3P->WeaponState = WeaponState;
+				
+				// 무기 교체에 따른 이동 속도 업데이트
+				UpdateEquipSpeedMultiplier();
+			}
+		}
+		else if (WeaponState == 2) // Secondary 사용 중
+		{
+			// Primary 무기가 있으면 전환
+			if (PrimaryWeapon)
+			{
+				WeaponState = 1;
+				ABP_1P->WeaponState = WeaponState;
+				ABP_3P->WeaponState = WeaponState;
+				
+				// 무기 교체에 따른 이동 속도 업데이트
+				UpdateEquipSpeedMultiplier();
+			}
+		}
+		else
+		{
+			// 3번 상태(무기 없음)에서는 가능한 무기를 선택
+			if (PrimaryWeapon)
+			{
+				WeaponState = 1;
+				ABP_1P->WeaponState = WeaponState;
+				ABP_3P->WeaponState = WeaponState;
+				
+				// 무기 교체에 따른 이동 속도 업데이트
+				UpdateEquipSpeedMultiplier();
+			}
+			else if (SecondWeapon)
+			{
+				WeaponState = 2;
+				ABP_1P->WeaponState = WeaponState;
+				ABP_3P->WeaponState = WeaponState;
+				
+				// 무기 교체에 따른 이동 속도 업데이트
+				UpdateEquipSpeedMultiplier();
+			}
+		}
+	}
+	else
+	{
+		Server_SwitchWeapon();
+	}
+}
+
+// 서버 RPC 구현
+void ABaseAgent::Server_SwitchWeapon_Implementation()
+{
+	SwitchWeapon();
+}
+
+// 무기 교체 시 입력 처리 함수 (선택된 무기로 직접 전환)
+void ABaseAgent::SelectWeapon(int32 WeaponSlot)
+{
+	if (HasAuthority())
+	{
+		// 선택한 슬롯에 무기가 있는지 확인
+		if (WeaponSlot == 1 && PrimaryWeapon)
+		{
+			WeaponState = 1;
+			ABP_1P->WeaponState = WeaponState;
+			ABP_3P->WeaponState = WeaponState;
+			
+			// 무기 교체에 따른 이동 속도 업데이트
+			UpdateEquipSpeedMultiplier();
+		}
+		else if (WeaponSlot == 2 && SecondWeapon)
+		{
+			WeaponState = 2;
+			ABP_1P->WeaponState = WeaponState;
+			ABP_3P->WeaponState = WeaponState;
+			
+			// 무기 교체에 따른 이동 속도 업데이트
+			UpdateEquipSpeedMultiplier();
+		}
+		// 무기 없음 상태 (칼 등)도 필요하면 추가
+	}
+	else
+	{
+		Server_SelectWeapon(WeaponSlot);
+	}
+}
+
+// 서버 RPC 구현
+void ABaseAgent::Server_SelectWeapon_Implementation(int32 WeaponSlot)
+{
+	SelectWeapon(WeaponSlot);
 }

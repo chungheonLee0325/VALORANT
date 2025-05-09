@@ -143,7 +143,15 @@ void UCreditComponent::SetCurrentCredit(int32 NewAmount)
 		
 		if (OldCredit != CurrentCredit)
 		{
+			// 크레딧 변경 이벤트 발생
 			OnCreditChanged.Broadcast(CurrentCredit);
 		}
 	}
+}
+
+void UCreditComponent::OnRep_CurrentCredit()
+{
+	// 클라이언트에서 CurrentCredit 값이 복제될 때 호출됨
+	// UI 업데이트 등을 위해 델리게이트 호출
+	OnCreditChanged.Broadcast(CurrentCredit);
 } 

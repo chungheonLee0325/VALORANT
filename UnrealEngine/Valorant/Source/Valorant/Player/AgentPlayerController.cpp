@@ -211,15 +211,17 @@ void AAgentPlayerController::RequestShopUI()
 {
 	if (ShopComponent)
 	{
-		// 이미 열려있으면 닫기
-		// ToDo : Shopcomponent로 캡슐화 -> 열어야하는지 확인 로직 추가
-		if (ShopUI)
+		// 이미 UI가 열려있는지 확인
+		bool bIsShopUIOpen = (ShopUI != nullptr && ShopUI->IsVisible());
+		
+		if (bIsShopUIOpen)
 		{
+			// UI가 열려있으면 닫기
 			RequestCloseShopUI();
 		}
-		// 닫혀있으면 열기
 		else
 		{
+			// UI가 닫혀있으면 열기
 			RequestOpenShopUI();
 		}
 	}
@@ -229,7 +231,10 @@ void AAgentPlayerController::RequestOpenShopUI()
 {
 	if (ShopComponent)
 	{
-		ShopComponent->OpenShop();
+		// 상점 활성화 요청
+		ShopComponent->SetShopActive(true);
+		
+		// 상점 UI 표시
 		OpenShopUI();
 	}
 }
@@ -238,7 +243,10 @@ void AAgentPlayerController::RequestCloseShopUI()
 {
 	if (ShopComponent)
 	{
-		ShopComponent->CloseShop();
+		// 상점 비활성화 요청
+		ShopComponent->SetShopActive(false);
+		
+		// 상점 UI 닫기
 		CloseShopUI();
 	}
 }
@@ -249,6 +257,16 @@ void AAgentPlayerController::OpenShopUI()
 	if (ShopUI)
 	{
 		ShopUI->SetVisibility(ESlateVisibility::Visible);
+		
+		// 입력 모드 설정 (UI에 포커스)
+		FInputModeGameAndUI InputMode;
+		InputMode.SetWidgetToFocus(ShopUI->TakeWidget());
+		InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+		SetInputMode(InputMode);
+		
+		// 마우스 커서 표시
+		bShowMouseCursor = true;
+		
 		return;
 	}
 	
@@ -275,6 +293,13 @@ void AAgentPlayerController::OpenShopUI()
 		
 		// 마우스 커서 표시
 		bShowMouseCursor = true;
+		
+		// 상점 컴포넌트의 이벤트에 UI 업데이트 연결
+		if (ShopComponent)
+		{
+			// 상점 가용성 변경 이벤트에 UI 갱신 함수 연결
+			ShopComponent->OnShopAvailabilityChanged.AddDynamic(this, &AAgentPlayerController::OnShopAvailabilityChanged);
+		}
 	}
 }
 
@@ -285,6 +310,7 @@ void AAgentPlayerController::CloseShopUI()
 		// UI 숨기기 또는 제거
 		//ShopUI->SetVisibility(ESlateVisibility::Collapsed);
 		ShopUI->RemoveFromParent(); // 완전히 제거하려면 이 라인 사용
+		ShopUI = nullptr; // 참조 제거
 		
 		// 입력 모드를 게임으로 되돌리기
 		FInputModeGameOnly InputMode;
@@ -292,6 +318,24 @@ void AAgentPlayerController::CloseShopUI()
 		
 		// 마우스 커서 숨기기
 		bShowMouseCursor = false;
+	}
+}
+
+// 상점 가용성 변경 시 호출될 이벤트 핸들러
+void AAgentPlayerController::OnShopAvailabilityChanged()
+{
+	if (ShopComponent)
+	{
+		// 상점이 비활성화되면 UI도 닫기
+		if (!ShopComponent->IsShopActive() && ShopUI)
+		{
+			CloseShopUI();
+		}
+		// 상점이 활성화되고 UI가 없으면 열기
+		else if (ShopComponent->IsShopActive() && !ShopUI)
+		{
+			OpenShopUI();
+		}
 	}
 }
 
@@ -349,25 +393,38 @@ bool AAgentPlayerController::Server_RequestPurchaseArmor_Validate(int32 ArmorID)
 
 void AAgentPlayerController::BindCreditWidgetDelegate()
 {
-	if (!AgentWidget)
-	{
-		UE_LOG(LogTemp, Error, TEXT("AgentWidget이 없습니다."));
-		return;
-	}
+	// AgentBaseWidget에는 크레딧 기능 필요 없음
+	// 기존 크레딧 관련 바인딩 제거
+	
+	// AAgentPlayerState* PS = GetPlayerState<AAgentPlayerState>();
+	// if (!PS)
+	// {
+	// 	UE_LOG(LogTemp, Error, TEXT("PlayerState가 없습니다."));
+	// 	return;
+	// }
+	// 
+	// // 크레딧 UI 바인딩 - PlayerState의 델리게이트 사용
+	// PS->OnCreditChangedDelegate.AddDynamic(AgentWidget, &UMatchMapHUD::UpdateCreditDisplay);
+	// 
+	// // 초기 크레딧 값으로 UI 업데이트
+	// AgentWidget->UpdateCreditDisplay(PS->GetCurrentCredit());
+	
+	// 이 함수는 더 이상 크레딧 바인딩에 사용되지 않음
+	// 필요한 경우 다른 UI 요소 바인딩에 활용
+}
 
-	AAgentPlayerState* PS = GetPlayerState<AAgentPlayerState>();
-	if (!PS)
+void AAgentPlayerController::ServerRequestWeaponPurchase_Implementation(int32 WeaponID)
+{
+	// 플레이어의 ShopComponent 찾기
+	UShopComponent* ShopComp = FindComponentByClass<UShopComponent>();
+	if (ShopComp)
 	{
-		UE_LOG(LogTemp, Error, TEXT("PlayerState가 없습니다."));
-		return;
+		// 무기 구매 로직 실행
+		ShopComp->PurchaseWeapon(WeaponID);
 	}
+}
 
-	UCreditComponent* CreditComp = PS->FindComponentByClass<UCreditComponent>();
-	if (!CreditComp)
-	{
-		UE_LOG(LogTemp, Error, TEXT("CreditComponent가 없습니다."));
-		return;
-	}
-
-	// ToDo : 위젯에 크레딧 변경 이벤트 바인딩
+void AAgentPlayerController::Client_ReceivePurchaseResult_Implementation(bool bSuccess, int32 ItemID, EShopItemType ItemType, const FString& FailureReason)
+{
+	OnServerPurchaseResult.Broadcast(bSuccess, ItemID, ItemType, FailureReason);
 }
