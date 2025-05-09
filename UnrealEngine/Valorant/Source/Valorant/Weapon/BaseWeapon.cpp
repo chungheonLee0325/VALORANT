@@ -410,7 +410,11 @@ void ABaseWeapon::SetWeaponID(int32 NewWeaponID)
 			}
 			
 			// 메시 업데이트 (실제 구현에서는 무기 ID에 따라 다른 메시 적용)
-			// TODO: 여기서 무기 ID에 맞는 메시 로드 로직 추가
+			if (WeaponData->WeaponMesh != nullptr)
+			{
+				Mesh->SetSkeletalMesh(WeaponData->WeaponMesh);
+				// TODO: 여기서 무기 ABP 로드 로직 추가 OR BP 로딩으로 변경
+			}
 		}
 	}
 }

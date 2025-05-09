@@ -319,6 +319,10 @@ struct FWeaponData : public FTableRowBase
 	// 크레딧 비용
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Data")
 	int32 Cost = 0;
+
+	// 무기 메쉬
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Data")
+	USkeletalMesh* WeaponMesh = nullptr;
 	
 	// 무기 대미지 이펙트
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Data")
