@@ -35,6 +35,12 @@ void UMatchMapSelectAgentUI::NativeDestruct()
 
 void UMatchMapSelectAgentUI::OnClickedButtonLockIn()
 {
+	if (CurrentSelectedAgentID == 0)
+	{
+		NET_LOG(LogTemp, Warning, TEXT("%hs Called, Abort LockIn. Because CurrentSelectedAgentID is 0"), __FUNCTION__);
+		return;
+	}
+	
 	auto* Controller = Cast<AAgentPlayerController>(GetOwningPlayer());
 	if (nullptr == Controller)
 	{
@@ -175,12 +181,12 @@ void UMatchMapSelectAgentUI::OnSelectedAgentChanged(const FString& DisplayName, 
 }
 
 
-void UMatchMapSelectAgentUI::OnLockIn(const FString& DisplayName)
+void UMatchMapSelectAgentUI::OnLockIn(const FString& DisplayName, const int AgentId)
 {
 	if (false == TeamSelectAgentBoxMap.Contains(DisplayName))
 	{
 		NET_LOG(LogTemp, Warning, TEXT("%hs Called, WhoAreYou?? DisplayName: %s"), __FUNCTION__, *DisplayName);
 		return;
 	}
-	TeamSelectAgentBoxMap[DisplayName]->LockIn();
+	TeamSelectAgentBoxMap[DisplayName]->LockIn(AgentId);
 }

@@ -55,7 +55,7 @@ public:
 	UFUNCTION(Client, Reliable)
 	void ClientRPC_OnAgentSelected(const FString& DisplayName, int SelectedAgentID);
 	UFUNCTION(Client, Reliable)
-	void ClientRPC_OnLockIn(const FString& DisplayName);
+	void ClientRPC_OnLockIn(const FString& DisplayName, const int AgentId);
 	UFUNCTION(Client, Reliable)
 	void ClientRPC_CleanUpSession();
 };
