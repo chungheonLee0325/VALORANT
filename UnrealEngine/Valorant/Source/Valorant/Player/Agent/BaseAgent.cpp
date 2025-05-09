@@ -71,7 +71,7 @@ ABaseAgent::ABaseAgent()
 	ThirdPersonMesh->bCastDynamicShadow = true;
 	ThirdPersonMesh->bAffectDynamicIndirectLighting = true;
 	ThirdPersonMesh->PrimaryComponentTick.TickGroup = TG_PrePhysics;
-	ThirdPersonMesh->SetGenerateOverlapEvents(false);
+	ThirdPersonMesh->SetGenerateOverlapEvents(true);
 	ThirdPersonMesh->SetCollisionProfileName(TEXT("Agent"));
 	ThirdPersonMesh->SetCanEverAffectNavigation(false);
 
@@ -286,10 +286,6 @@ void ABaseAgent::HandleCrouchProgress(float Value)
 	GetCapsuleComponent()->SetCapsuleHalfHeight(newHalfHeight, true);
 }
 
-ABaseWeapon* ABaseAgent::GetSubWeapon() const
-{
-	return SubWeapon;
-}
 
 void ABaseAgent::Reload()
 {
@@ -320,12 +316,18 @@ void ABaseAgent::SetShopUI()
 	}
 }
 
-void ABaseAgent::EquipSpike(ASpike* spike)
+ABaseWeapon* ABaseAgent::GetMainWeapon() const
 {
-	//TODO: 픽업 성공했는지 여부에 따라 다르게 처리
+	return MainWeapon;
 }
 
-void ABaseAgent::EquipWeapon(ABaseWeapon* weapon)
+ABaseWeapon* ABaseAgent::GetSubWeapon() const
+{
+	return SubWeapon;
+}
+
+/** 장착 X, 획득하는 개념 (땅에 떨어진 무기 줍기, 상점에서 무기 구매) */
+void ABaseAgent::AcquireWeapon(ABaseWeapon* weapon)
 {
 	// UE_LOG(LogTemp,Warning,TEXT("이큅 웨폰"));
 	if (weapon->GetWeaponCategory() == EWeaponCategory::Sidearm)
@@ -353,43 +355,57 @@ void ABaseAgent::EquipWeapon(ABaseWeapon* weapon)
 	}
 
 	weapon->ServerRPC_PickUp(this);
-	SetInteractorState(weapon->GetInteractorType());
+
+	// 무기를 얻으면, 해당 무기의 타입의 슬롯으로 전환해 바로 장착하도록
+	SwitchWeapon(weapon->GetInteractorType());
 }
 
-ABaseWeapon* ABaseAgent::GetMainWeapon() const
+/**해당 슬롯의 인터랙터를 손에 들고자 할 때*/
+void ABaseAgent::SwitchWeapon(EInteractorType InteractorType)
 {
-	return MainWeapon;
+	if (HasAuthority())
+	{
+		if (InteractorType == EInteractorType::MainWeapon && MainWeapon)
+		{
+			EquipInteractor(MainWeapon);
+			UpdateEquipSpeedMultiplier();
+		}
+		else if (InteractorType == EInteractorType::SubWeapon && SubWeapon)
+		{
+			EquipInteractor(SubWeapon);
+			UpdateEquipSpeedMultiplier();
+		}
+		else if (InteractorType == EInteractorType::Melee && SubWeapon)
+		{
+			// ToDo : Melee, Spike 처리 @@HY
+			// SetCurrentInteractor();
+			UpdateEquipSpeedMultiplier();
+		}
+		else if (InteractorType == EInteractorType::Spike && SubWeapon)
+		{
+			// ToDo : Melee, Spike 처리 @@HY
+			// SetCurrentInteractor();
+			UpdateEquipSpeedMultiplier();
+		}
+	}
+	else
+	{
+		Server_SwitchWeapon(InteractorType);
+	}
 }
 
-void ABaseAgent::SetInteractorState(const EInteractorType newState)
+// 서버 RPC 구현
+void ABaseAgent::Server_SwitchWeapon_Implementation(EInteractorType InteractorType)
 {
-	CurrentInteractorState = newState;
-
-	if (newState == EInteractorType::MainWeapon)
-	{
-		SetCurrentInteractor(MainWeapon);
-	}
-	else if (newState == EInteractorType::SubWeapon)
-	{
-		SetCurrentInteractor(SubWeapon);
-	}
-	else if (newState == EInteractorType::Melee)
-	{
-		//TODO: 칼 넣어주기
-		SetCurrentInteractor(nullptr);
-	}
-	else if (newState == EInteractorType::Spike)
-	{
-		//TODO: 스파이크 넣어주기
-		SetCurrentInteractor(nullptr);
-	}
+	SwitchWeapon(InteractorType);
 }
 
-void ABaseAgent::SetCurrentInteractor(ABaseInteractor* interactor)
+/** 실 장착관련 로직 */
+void ABaseAgent::EquipInteractor(ABaseInteractor* interactor)
 {
 	//TODO: 기존 들고 있던 물건 숨기고 새로운 인터랙터 활성화
 	//TODO: EInteractorType 따른 애니메이션 재생
-
+	
 	CurrentInteractor = interactor;
 
 	if (CurrentInteractor == nullptr)
@@ -402,35 +418,16 @@ void ABaseAgent::SetCurrentInteractor(ABaseInteractor* interactor)
 	UE_LOG(LogTemp, Warning, TEXT("현재 들고 있는 인터랙터: %s"), *CurrentInteractor->GetActorNameOrLabel());
 }
 
-void ABaseAgent::Server_SetInteractorState_Implementation(EInteractorType newState)
-{
-	CurrentInteractorState = newState;
-}
-
-/** CurrentInteractorState 변경시 호출 */
-void ABaseAgent::OnRep_InteractorState()
-{
-	if (ABP_1P)
-	{
-		ABP_1P->InteractorState = CurrentInteractorState;
-	}
-	if (ABP_3P)
-	{
-		ABP_3P->InteractorState = CurrentInteractorState;
-	}
-}
-
 void ABaseAgent::Interact()
 {
 	if (FindInteractActor)
 	{
 		if (ABaseWeapon* weapon = Cast<ABaseWeapon>(FindInteractActor))
 		{
-			EquipWeapon(weapon);
+			AcquireWeapon(weapon);
 		}
 		else if (ASpike* spike = Cast<ASpike>(FindInteractActor))
 		{
-			EquipSpike(spike);
 		}
 	}
 }
@@ -448,7 +445,7 @@ void ABaseAgent::DropCurrentInteractor()
 			SubWeapon = nullptr;
 		}
 		CurrentInteractor->ServerRPC_Drop();
-		SetCurrentInteractor(nullptr);
+		EquipInteractor(nullptr);
 	}
 }
 
@@ -835,51 +832,4 @@ bool ABaseAgent::IsVisibleToOpponents() const
 	}
 	// 아무도 볼수 없다면 false 반환 
 	return false;
-}
-
-void ABaseAgent::SwitchWeapon(EInteractorType InteractorType)
-{
-	if (HasAuthority())
-	{
-		if (InteractorType == EInteractorType::MainWeapon && MainWeapon)
-		{
-			EquipWeapon(MainWeapon);
-
-			// 무기 교체에 따른 이동 속도 업데이트
-			UpdateEquipSpeedMultiplier();
-		}
-		else if (InteractorType == EInteractorType::SubWeapon && SubWeapon)
-		{
-			EquipWeapon(SubWeapon);
-
-			// 무기 교체에 따른 이동 속도 업데이트
-			UpdateEquipSpeedMultiplier();
-		}
-		// else if (InteractorType == EInteractorType::Melee && SubWeapon)
-		// {
-		// 	// ToDo : Melee, Spike 처리 @@HY
-		// 	//EquipWeapon(Melee);
-		// 	
-		// 	// 무기 교체에 따른 이동 속도 업데이트
-		// 	UpdateEquipSpeedMultiplier();
-		// }
-		// else if (InteractorType == EInteractorType::Spike && SubWeapon)
-		// {
-		// 	// ToDo : Melee, Spike 처리 @@HY
-		// 	//EquipWeapon(Melee);
-		// 	
-		// 	// 무기 교체에 따른 이동 속도 업데이트
-		// 	UpdateEquipSpeedMultiplier();
-		// }
-	}
-	else
-	{
-		Server_SwitchWeapon(InteractorType);
-	}
-}
-
-// 서버 RPC 구현
-void ABaseAgent::Server_SwitchWeapon_Implementation(EInteractorType InteractorType)
-{
-	SwitchWeapon(InteractorType);
 }

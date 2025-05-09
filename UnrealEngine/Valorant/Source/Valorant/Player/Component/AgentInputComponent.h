@@ -67,6 +67,8 @@ public:
 	UInputAction* Num_2Action;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	UInputAction* Num_3Action;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	UInputAction* Num_4Action;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	UInputAction* QAction;
@@ -115,6 +117,7 @@ public:
 	void Weapon1(const FInputActionValue& InputActionValue);
 	void Weapon2(const FInputActionValue& InputActionValue);
 	void Weapon3(const FInputActionValue& InputActionValue);
+	void Weapon4(const FInputActionValue& InputActionValue);
 	
 	void StartReload(const FInputActionValue& InputActionValue);
 

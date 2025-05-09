@@ -6,6 +6,7 @@
 #include "Blueprint/UserWidget.h"
 #include "TeamSelectAgentBox.generated.h"
 
+class UTextBlock;
 class UImage;
 /**
  * 
@@ -18,7 +19,9 @@ class VALORANT_API UTeamSelectAgentBox : public UUserWidget
 public:
 	UPROPERTY(meta=(BindWidget))
 	TObjectPtr<UImage> ImageAgentThumb = nullptr;
+	UPROPERTY(meta=(BindWidget))
+	TObjectPtr<UTextBlock> TextStatus = nullptr;
 	
 	void ChangeAgentThumbImage(const int AgentId);
-	void LockIn();
+	void LockIn(int AgentId);
 };
