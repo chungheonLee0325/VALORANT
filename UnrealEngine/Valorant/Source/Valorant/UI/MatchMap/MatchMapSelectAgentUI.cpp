@@ -181,12 +181,12 @@ void UMatchMapSelectAgentUI::OnSelectedAgentChanged(const FString& DisplayName, 
 }
 
 
-void UMatchMapSelectAgentUI::OnLockIn(const FString& DisplayName)
+void UMatchMapSelectAgentUI::OnLockIn(const FString& DisplayName, const int AgentId)
 {
 	if (false == TeamSelectAgentBoxMap.Contains(DisplayName))
 	{
 		NET_LOG(LogTemp, Warning, TEXT("%hs Called, WhoAreYou?? DisplayName: %s"), __FUNCTION__, *DisplayName);
 		return;
 	}
-	TeamSelectAgentBoxMap[DisplayName]->LockIn();
+	TeamSelectAgentBoxMap[DisplayName]->LockIn(AgentId);
 }

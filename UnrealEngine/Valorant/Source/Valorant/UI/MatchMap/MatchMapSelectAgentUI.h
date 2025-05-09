@@ -62,5 +62,5 @@ public:
 	
 	void FillTeamSelectAgentList(const TArray<FString>& TeamPlayerNameArray);
 	void OnSelectedAgentChanged(const FString& DisplayName, int SelectedAgentID);
-	void OnLockIn(const FString& DisplayName);
+	void OnLockIn(const FString& DisplayName, const int AgentId);
 };

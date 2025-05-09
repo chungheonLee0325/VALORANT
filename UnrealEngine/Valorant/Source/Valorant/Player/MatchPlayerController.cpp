@@ -55,14 +55,14 @@ void AMatchPlayerController::ClientRPC_CleanUpSession_Implementation()
 	}
 }
 
-void AMatchPlayerController::ClientRPC_OnLockIn_Implementation(const FString& DisplayName)
+void AMatchPlayerController::ClientRPC_OnLockIn_Implementation(const FString& DisplayName, const int AgentId)
 {
 	if (nullptr == SelectUIWidget)
 	{
 		NET_LOG(LogTemp, Warning, TEXT("%hs Called, SelectUIWidget is nullptr"), __FUNCTION__);
 		return;
 	}
-	SelectUIWidget->OnLockIn(DisplayName);
+	SelectUIWidget->OnLockIn(DisplayName, AgentId);
 }
 
 void AMatchPlayerController::ClientRPC_OnAgentSelected_Implementation(const FString& DisplayName, int SelectedAgentID)

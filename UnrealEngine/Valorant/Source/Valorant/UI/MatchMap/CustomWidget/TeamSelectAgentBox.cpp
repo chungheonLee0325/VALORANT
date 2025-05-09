@@ -4,6 +4,7 @@
 #include "TeamSelectAgentBox.h"
 
 #include "Components/Image.h"
+#include "Components/TextBlock.h"
 #include "GameManager/ValorantGameInstance.h"
 
 void UTeamSelectAgentBox::ChangeAgentThumbImage(const int AgentId)
@@ -29,9 +30,19 @@ void UTeamSelectAgentBox::ChangeAgentThumbImage(const int AgentId)
 	ImageAgentThumb->SetBrush(Brush);
 }
 
-void UTeamSelectAgentBox::LockIn()
+void UTeamSelectAgentBox::LockIn(const int AgentId)
 {
 	FSlateBrush Brush = ImageAgentThumb->GetBrush();
 	Brush.TintColor = FSlateColor(FLinearColor::White);
 	ImageAgentThumb->SetBrush(Brush);
+
+	auto* GameInstance = GetGameInstance<UValorantGameInstance>();
+	const auto* Data = GameInstance->GetAgentData(AgentId);
+	if (nullptr == Data)
+	{
+		return;
+	}
+	const FString& AgentName = Data->LocalName;
+	TextStatus->SetText(FText::FromString(AgentName));
+	TextStatus->SetColorAndOpacity(FSlateColor(FLinearColor::White));
 }

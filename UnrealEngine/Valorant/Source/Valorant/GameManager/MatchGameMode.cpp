@@ -150,7 +150,7 @@ void AMatchGameMode::OnLockIn(AMatchPlayerController* Player, int AgentId)
 	{
 		if (bIsBlueTeam == PlayerInfo.bIsBlueTeam)
 		{
-			PlayerInfo.Controller->ClientRPC_OnLockIn(PS->DisplayName);
+			PlayerInfo.Controller->ClientRPC_OnLockIn(PS->DisplayName, AgentId);
 		}
 	}
 
