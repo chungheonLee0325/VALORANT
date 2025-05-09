@@ -140,8 +140,8 @@ void UAgentInputComponent::StartFire(const FInputActionValue& InputActionValue)
 			return;
 		}
 		
+		// UE_LOG(LogTemp, Warning, TEXT("파이어 시도"));
 		Agent->StartFire();
-		UE_LOG(LogTemp, Warning, TEXT("파이어 시도"));
 	}
 }
 
@@ -149,7 +149,7 @@ void UAgentInputComponent::EndFire(const FInputActionValue& InputActionValue)
 {
 	if (Agent)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("파이어 종료"));
+		// UE_LOG(LogTemp, Warning, TEXT("파이어 종료"));
 		Agent->EndFire();
 	}
 }
@@ -161,7 +161,7 @@ void UAgentInputComponent::JumpStart(const FInputActionValue& InputActionValue)
 		if (Agent->bIsCrouched)
 		{
 			Agent->UnCrouch();
-			UE_LOG(LogTemp, Warning, TEXT("앉기 중 점프"));
+			// UE_LOG(LogTemp, Warning, TEXT("앉기 중 점프"));
 		}
 		
 		Agent->Jump();
