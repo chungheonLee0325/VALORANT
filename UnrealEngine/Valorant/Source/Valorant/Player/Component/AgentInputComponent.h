@@ -45,6 +45,8 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	UInputAction* InteractAction;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	UInputAction* DropAction;
 
 	/** Attack Input Action */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
@@ -80,6 +82,7 @@ public:
 	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	UInputAction* ShopUIAction;
+	
 private:
 	UPROPERTY()
 	UEnhancedInputLocalPlayerSubsystem* InputSubsystem = nullptr;
@@ -105,6 +108,7 @@ public:
 	void WalkStart(const FInputActionValue& InputActionValue);
 	void WalkComplete(const FInputActionValue& InputActionValue);
 
+	void Drop(const FInputActionValue& InputActionValue);
 	void Interact(const FInputActionValue& InputActionValue);
 	
 	void WeaponChange(const FInputActionValue& value);

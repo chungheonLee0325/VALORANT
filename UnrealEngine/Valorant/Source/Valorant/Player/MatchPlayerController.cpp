@@ -47,6 +47,14 @@ void AMatchPlayerController::SetGameMode(AMatchGameMode* MatchGameMode)
 	this->GameMode = MatchGameMode;
 }
 
+void AMatchPlayerController::ClientRPC_CleanUpSession_Implementation()
+{
+	if (auto* SubsystemManager = GetGameInstance()->GetSubsystem<USubsystemSteamManager>())
+	{
+		SubsystemManager->DestroySession();
+	}
+}
+
 void AMatchPlayerController::ClientRPC_OnLockIn_Implementation(const FString& DisplayName)
 {
 	if (nullptr == SelectUIWidget)
@@ -131,9 +139,9 @@ void AMatchPlayerController::ClientRPC_DisplayHud_Implementation(bool bDisplay)
 	}
 }
 
-void AMatchPlayerController::ServerRPC_LockIn_Implementation()
+void AMatchPlayerController::ServerRPC_LockIn_Implementation(int SelectedAgentID)
 {
-	GameMode->OnLockIn(this, 0);
+	GameMode->OnLockIn(this, SelectedAgentID);
 }
 
 void AMatchPlayerController::ServerRPC_OnAgentSelectButtonClicked_Implementation(int SelectedAgentID)

@@ -174,7 +174,7 @@ bool UShopComponent::PurchaseWeapon(int32 WeaponID)
 	// 새 무기가 Sidearm(보조무기)인 경우
 	if (NewWeaponCategory == EWeaponCategory::Sidearm)
 	{
-		CurrentWeapon = Agent->GetSecondWeapon();
+		CurrentWeapon = Agent->GetSubWeapon();
 		if (CurrentWeapon)
 		{
 			// 정확히 같은 무기인지 확인
@@ -204,7 +204,7 @@ bool UShopComponent::PurchaseWeapon(int32 WeaponID)
 	// 새 무기가 주무기인 경우(Sidearm이 아닌 모든 무기)
 	else
 	{
-		CurrentWeapon = Agent->GetPrimaryWeapon();
+		CurrentWeapon = Agent->GetMainWeapon();
 		if (CurrentWeapon)
 		{
 			// 정확히 같은 무기인지 확인
@@ -285,7 +285,8 @@ bool UShopComponent::PurchaseWeapon(int32 WeaponID)
 
 		return bSuccess; // 이 반환 값은 서버 내부 로직용
 	}
-	else // CanUseCredits(Cost) 실패 또는 이미 환불로도 구매 불가 처리됨
+	// CanUseCredits(Cost) 실패 또는 이미 환불로도 구매 불가 처리됨
+	else
 	{
 		// 클라이언트에 실패 결과 전송
 		if (m_Owner)
@@ -540,11 +541,11 @@ void UShopComponent::SpawnWeaponForPlayer(int32 WeaponID)
 		ABaseWeapon* CurrentWeapon = nullptr;
 		if (WeaponCategory == EWeaponCategory::Sidearm)
 		{
-			CurrentWeapon = Agent->GetSecondWeapon();
+			CurrentWeapon = Agent->GetSubWeapon();
 		}
 		else
 		{
-			CurrentWeapon = Agent->GetPrimaryWeapon();
+			CurrentWeapon = Agent->GetMainWeapon();
 		}
 		
 		// 이제 새 무기 생성 및 할당
@@ -562,56 +563,46 @@ void UShopComponent::SpawnWeaponForPlayer(int32 WeaponID)
 		{
 			// 무기 ID 설정
 			NewWeapon->SetWeaponID(WeaponID);
+			// // 무기 카테고리에 따라 장착 방식 결정
+			// if (WeaponCategory == EWeaponCategory::Sidearm)
+			// {
+			// 	// Sidearm은 SubWeapon 슬롯에 장착
+			// 	if (CurrentWeapon)
+			// 	{
+			// 		// 기존 무기가 사용된 경우 드롭, 아닌 경우 제거
+			// 		if (CurrentWeapon->GetWasUsed())
+			// 		{
+			// 			CurrentWeapon->Drop();
+			// 		}
+			// 		else
+			// 		{
+			// 			// 사용되지 않은 무기 제거
+			// 			// 환불은 이미 PurchaseWeapon에서 처리되었음
+			// 			CurrentWeapon->Destroy();
+			// 		}
+			// 	}
+			// 	
+			// }
+			// else
+			// {
+			// 	// 다른 모든 무기는 MainWeapon 슬롯에 장착
+			// 	if (CurrentWeapon)
+			// 	{
+			// 		// 기존 무기가 사용된 경우 드롭, 아닌 경우 제거
+			// 		if (CurrentWeapon->GetWasUsed())
+			// 		{
+			// 			CurrentWeapon->Drop();
+			// 		}
+			// 		else
+			// 		{
+			// 			// 사용되지 않은 무기 제거
+			// 			// 환불은 이미 PurchaseWeapon에서 처리되었음
+			// 			CurrentWeapon->Destroy();
+			// 		}
+			// 	}
+			// }
+			Agent->EquipWeapon(NewWeapon);
 			
-			// 무기 카테고리에 따라 장착 방식 결정
-			if (WeaponCategory == EWeaponCategory::Sidearm)
-			{
-				// Sidearm은 SecondWeapon 슬롯에 장착
-				if (CurrentWeapon)
-				{
-					// 기존 무기가 사용된 경우 드롭, 아닌 경우 제거
-					if (CurrentWeapon->GetWasUsed())
-					{
-						CurrentWeapon->Drop();
-					}
-					else
-					{
-						// 사용되지 않은 무기 제거
-						// 환불은 이미 PurchaseWeapon에서 처리되었음
-						CurrentWeapon->Destroy();
-					}
-				}
-				
-				Agent->SetSecondWeapon(NewWeapon);
-				// 장착한 무기로 상태 변경
-				Agent->SetWeaponState(2); // Secondary weapon state
-			}
-			else
-			{
-				// 다른 모든 무기는 PrimaryWeapon 슬롯에 장착
-				if (CurrentWeapon)
-				{
-					// 기존 무기가 사용된 경우 드롭, 아닌 경우 제거
-					if (CurrentWeapon->GetWasUsed())
-					{
-						CurrentWeapon->Drop();
-					}
-					else
-					{
-						// 사용되지 않은 무기 제거
-						// 환불은 이미 PurchaseWeapon에서 처리되었음
-						CurrentWeapon->Destroy();
-					}
-				}
-				
-				Agent->SetPrimaryWeapon(NewWeapon);
-				// 장착한 무기로 상태 변경
-				Agent->SetWeaponState(1); // Primary weapon state
-			}
-			
-			// 무기 장착
-			NewWeapon->AttachWeapon(Agent);
-
 			// // 무기가 장착된 후 이벤트 발생
 			// OnEquippedWeaponsChanged.Broadcast();
 		}
@@ -641,17 +632,17 @@ TArray<int32> UShopComponent::GetEquippedWeaponIDs() const
 	}
     
 	// 주무기 확인
-	ABaseWeapon* PrimaryWeapon = Agent->GetPrimaryWeapon();
-	if (PrimaryWeapon)
+	ABaseWeapon* MainWeapon = Agent->GetMainWeapon();
+	if (MainWeapon)
 	{
-		EquippedWeaponIDs.Add(PrimaryWeapon->GetWeaponID());
+		EquippedWeaponIDs.Add(MainWeapon->GetWeaponID());
 	}
     
 	// 보조무기 확인
-	ABaseWeapon* SecondWeapon = Agent->GetSecondWeapon();
-	if (SecondWeapon)
+	ABaseWeapon* SubWeapon = Agent->GetSubWeapon();
+	if (SubWeapon)
 	{
-		EquippedWeaponIDs.Add(SecondWeapon->GetWeaponID());
+		EquippedWeaponIDs.Add(SubWeapon->GetWeaponID());
 	}
     
 	return EquippedWeaponIDs;
@@ -671,14 +662,14 @@ bool UShopComponent::IsWeaponEquipped(int32 WeaponID) const
 	}
     
 	// 주무기 확인
-	ABaseWeapon* PrimaryWeapon = Agent->GetPrimaryWeapon();
+	ABaseWeapon* PrimaryWeapon = Agent->GetMainWeapon();
 	if (PrimaryWeapon && PrimaryWeapon->GetWeaponID() == WeaponID)
 	{
 		return true;
 	}
     
 	// 보조무기 확인
-	ABaseWeapon* SecondWeapon = Agent->GetSecondWeapon();
+	ABaseWeapon* SecondWeapon = Agent->GetSubWeapon();
 	if (SecondWeapon && SecondWeapon->GetWeaponID() == WeaponID)
 	{
 		return true;

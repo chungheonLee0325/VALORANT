@@ -4,9 +4,12 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+#include "ResourceManager/ValorantGameType.h"
 #include "ValorantObject/BaseInteractor.h"
 #include "BaseWeapon.generated.h"
 
+class UValorantPickUpComponent;
+class UGameplayEffect;
 class UPickUpComponent;
 class UInputMappingContext;
 class UInputAction;
@@ -32,12 +35,6 @@ class VALORANT_API ABaseWeapon : public ABaseInteractor
 	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess = "true"))
 	TObjectPtr<USkeletalMeshComponent> WeaponMesh;
-	
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess = "true"))
-	TObjectPtr<UPickUpComponent> PickUpModule;
-
-	UPROPERTY()
-	TObjectPtr<ABaseAgent> Agent;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category=Input, meta=(AllowPrivateAccess = "true"))
 	UInputMappingContext* FireMappingContext;
@@ -130,10 +127,21 @@ public:
 	UFUNCTION(BlueprintCallable, Category="Weapon")
 	void StartReload();
 	
-	UFUNCTION(BlueprintCallable, Category="Weapon")
-	void Drop();
+	UFUNCTION(BlueprintCallable)
+	EWeaponCategory GetWeaponCategory() { return WeaponData->WeaponCategory; }
 
-	// 무기를 플레이어에게 장착하는 함수
+	UPROPERTY(EditDefaultsOnly)
+	TSubclassOf<UGameplayEffect> DamageEffectClass;
+
+	/*
+	 *	PickUp & Drop 관련
+	 */
+public:
+	virtual bool CanAutoPickUp(ABaseAgent* Agent) const override;
+	virtual bool CanDrop() const override;
+	virtual void PickUp(ABaseAgent* Agent) override;
+	virtual void Drop() override;
+	
 	UFUNCTION()
 	void AttachWeapon(ABaseAgent* PickUpAgent);
 

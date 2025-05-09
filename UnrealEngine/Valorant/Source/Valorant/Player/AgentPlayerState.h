@@ -25,6 +25,7 @@ class VALORANT_API AAgentPlayerState : public AMatchPlayerState, public IAbility
 
 public:
 	AAgentPlayerState();
+	virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;
 
 	UFUNCTION(BlueprintCallable)
 	UAbilitySystemComponent* GetAbilitySystemComponent() const override;
@@ -94,7 +95,7 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
 	UValorantGameInstance* m_GameInstance = nullptr;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Replicated)
 	int32 m_AgentID = 0;
 	
 private:

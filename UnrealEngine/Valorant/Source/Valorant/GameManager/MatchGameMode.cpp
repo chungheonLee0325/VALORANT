@@ -3,12 +3,11 @@
 
 #include "MatchGameMode.h"
 
-#include "EngineUtils.h"
 #include "MatchGameState.h"
 #include "OnlineSessionSettings.h"
 #include "SubsystemSteamManager.h"
 #include "Valorant.h"
-#include "ValorantCharacter.h"
+#include "AbilitySystem/Attributes/BaseAttributeSet.h"
 #include "GameFramework/PlayerStart.h"
 #include "GameManager/ValorantGameInstance.h"
 #include "Kismet/GameplayStatics.h"
@@ -62,6 +61,31 @@ void AMatchGameMode::BeginPlay()
 void AMatchGameMode::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
+
+	// InRound상태일 때 종료 조건인지 확인
+	// 굳이 Tick에서 확인하는 이유는 동시 전멸 체크를 위함임.
+	if (RoundSubState == ERoundSubState::RSS_InRound)
+	{
+		if (TeamBlueRemainingAgentNum <= 0 && TeamRedRemainingAgentNum <= 0)
+		{
+			// 동시에 전멸하면 블루팀이 이기는가? (선공: 블루)
+			// 스파이크설치X && 교대X -> 패배
+			// 스파이크설치O && 교대X -> 승리
+			// 스파이크설치X && 교대O -> 승리
+			// 스파이크설치O && 교대O -> 패배
+			// 스파이크설치와 교대 bool값이 서로 다르면 승리 -> XOR연산
+			StartEndPhaseByEliminated(bSpikePlanted ^ !IsShifted());
+		}
+		else if (TeamBlueRemainingAgentNum <= 0)
+		{
+			StartEndPhaseByEliminated(false);
+		}
+		else if (TeamRedRemainingAgentNum <= 0)
+		{
+			StartEndPhaseByEliminated(true);
+		}
+	}
+	
 	RemainRoundStateTime = FMath::Clamp(RemainRoundStateTime - DeltaSeconds, 0.0f, MaxTime);
 	
 	AMatchGameState* MatchGameState = GetGameState<AMatchGameState>();
@@ -120,6 +144,7 @@ void AMatchGameMode::OnLockIn(AMatchPlayerController* Player, int AgentId)
 		NET_LOG(LogTemp, Warning, TEXT("%hs Called, PS is nullptr"), __FUNCTION__);
 		return;
 	}
+	
 	bool bIsBlueTeam = PS->bIsBlueTeam;
 	for (const auto& PlayerInfo : MatchPlayers)
 	{
@@ -127,6 +152,11 @@ void AMatchGameMode::OnLockIn(AMatchPlayerController* Player, int AgentId)
 		{
 			PlayerInfo.Controller->ClientRPC_OnLockIn(PS->DisplayName);
 		}
+	}
+
+	if (auto* agentPS = Player->GetPlayerState<AAgentPlayerState>())
+	{
+		agentPS->SetAgentID(AgentId);
 	}
 	
 	if (++LockedInPlayerNum >= RequiredPlayerCount)
@@ -185,17 +215,13 @@ void AMatchGameMode::HandleMatchHasStarted()
 			UE_LOG(LogTemp, Warning, TEXT("DefendersStartPoint Found"));
 		}
 	}
-	
-	for(FConstPlayerControllerIterator Iterator = GetWorld()->GetPlayerControllerIterator(); Iterator; ++Iterator )
+
+	for (const auto& PlayerInfo : MatchPlayers)
 	{
-		APlayerController* PlayerController = Iterator->Get();
-		if (PlayerController && (PlayerController->GetPawn() == nullptr))
+		if (AgentSelectStartPoint)
 		{
-			if (AgentSelectStartPoint)
-			{
-				FViewTargetTransitionParams Params;
-				PlayerController->ClientSetViewTarget(AgentSelectStartPoint, Params);
-			}
+			const FViewTargetTransitionParams Params;
+			PlayerInfo.Controller->ClientSetViewTarget(AgentSelectStartPoint, Params);
 		}
 	}
 	
@@ -207,10 +233,20 @@ bool AMatchGameMode::ReadyToEndMatch_Implementation()
 	return bReadyToEndMatch;
 }
 
+void AMatchGameMode::LeavingMatch()
+{
+	for (const auto& PlayerInfo : MatchPlayers)
+	{
+		PlayerInfo.Controller->ClientRPC_CleanUpSession();
+		PlayerInfo.Controller->ClientTravel("/Game/Maps/MainMap.MainMap", TRAVEL_Absolute);
+	}
+}
+
 void AMatchGameMode::HandleMatchHasEnded()
 {
 	Super::HandleMatchHasEnded();
-	// TODO: 결과 레벨로 전환?
+	// 일정 시간 이후 매치 완전 종료
+	GetWorld()->GetTimerManager().SetTimer(RoundTimerHandle, this, &AMatchGameMode::LeavingMatch, LeavingMatchTime);
 }
 
 void AMatchGameMode::StartSelectAgent()
@@ -238,28 +274,28 @@ void AMatchGameMode::StartInRound()
 void AMatchGameMode::StartEndPhaseByTimeout()
 {
 	bool bBlueWin = IsShifted(); // Blue가 선공이니까 false라면 공격->진다, true라면 수비->이긴다
-	SetRoundSubState(ERoundSubState::RSS_EndPhase);
 	HandleRoundEnd(bBlueWin, ERoundEndReason::ERER_Timeout);
+	SetRoundSubState(ERoundSubState::RSS_EndPhase);
 }
 
 void AMatchGameMode::StartEndPhaseByEliminated(const bool bBlueWin)
 {
-	SetRoundSubState(ERoundSubState::RSS_EndPhase);
 	HandleRoundEnd(bBlueWin, ERoundEndReason::ERER_Eliminated);
+	SetRoundSubState(ERoundSubState::RSS_EndPhase);
 }
 
 void AMatchGameMode::StartEndPhaseBySpikeActive()
 {
 	bool bBlueWin = !IsShifted(); // Blue가 선공이니까 false라면 공격->이긴다, true라면 수비->진다
-	SetRoundSubState(ERoundSubState::RSS_EndPhase);
 	HandleRoundEnd(bBlueWin, ERoundEndReason::ERER_SpikeActive);
+	SetRoundSubState(ERoundSubState::RSS_EndPhase);
 }
 
 void AMatchGameMode::StartEndPhaseBySpikeDefuse()
 {
 	bool bBlueWin = IsShifted(); // Blue가 선공이니까 false라면 공격->해체당했으니 진다, true라면 수비->해체했으니 이긴다
-	SetRoundSubState(ERoundSubState::RSS_EndPhase);
 	HandleRoundEnd(bBlueWin, ERoundEndReason::ERER_SpikeDefuse);
+	SetRoundSubState(ERoundSubState::RSS_EndPhase);
 }
 
 void AMatchGameMode::HandleRoundSubState_SelectAgent()
@@ -283,30 +319,8 @@ void AMatchGameMode::HandleRoundSubState_SelectAgent()
 
 void AMatchGameMode::HandleRoundSubState_PreRound()
 {
-	if (CurrentRound == ShiftRound)
-	{
-		// TODO: 공수교대
-	}
-	{
-		FActorSpawnParameters SpawnParams;
-		SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-		for (const auto& MatchPlayer : MatchPlayers)
-		{
-			FTransform SpawnTransform  = FTransform::Identity;
-			if (MatchPlayer.bIsBlueTeam)
-			{
-				SpawnTransform = AttackersStartPoint->GetTransform();
-			}
-			else
-			{
-				SpawnTransform = DefendersStartPoint->GetTransform();
-			}
-			auto* Agent = GetWorld()->SpawnActor<ABaseAgent>(AgentClass, SpawnTransform, SpawnParams);
-			MatchPlayer.Controller->ClientSetViewTarget(Agent);
-			MatchPlayer.Controller->Possess(Agent);
-		}
-	}
 	RespawnAll();
+	TeamBlueRemainingAgentNum = TeamRedRemainingAgentNum = MatchPlayers.Num();
 	// 일정 시간 후에 라운드 시작
 	MaxTime = PreRoundTime;
 	GetWorld()->GetTimerManager().ClearTimer(RoundTimerHandle);
@@ -316,6 +330,7 @@ void AMatchGameMode::HandleRoundSubState_PreRound()
 void AMatchGameMode::HandleRoundSubState_BuyPhase()
 {
 	RespawnAll();
+	TeamBlueRemainingAgentNum = TeamRedRemainingAgentNum = MatchPlayers.Num();
 	// 일정 시간 후에 라운드 시작
 	MaxTime = BuyPhaseTime;
 	GetWorld()->GetTimerManager().ClearTimer(RoundTimerHandle);
@@ -338,13 +353,28 @@ void AMatchGameMode::HandleRoundSubState_EndPhase()
 	// TODO: 라운드 상황에 따라 BuyPhase로 전환할 것인지 InRound로 전환할 것인지 아예 매치가 끝난 상태로 전환할 것인지 판단
 	// 공수교대(->InRound) 조건: 3라운드가 끝나고 4라운드 시작되는 시점
 	// 매치 종료 조건: 4승을 먼저 달성한 팀이 있는 경우 (6전 4선승제, 만약 3:3일 경우 단판 승부전)
+	NET_LOG(LogTemp, Warning, TEXT("TeamBlueScore: %d, TeamRedScore: %d"), TeamBlueScore, TeamRedScore);
+	if (RequiredScore <= TeamBlueScore || RequiredScore <= TeamRedScore)
+	{
+		NET_LOG(LogTemp, Warning, TEXT("ReadyToEndMatch"));
+		bReadyToEndMatch = true; // true가 되면 MatchState가 WaitingPostMatch로 전환되고 HandleMatchHasEnded 이벤트 발생
+		// TODO: 매치 승리/패배를 알림
+		if (RequiredScore <= TeamBlueScore)
+		{
+			//
+		}
+		else
+		{
+			//
+		}
+		return;
+	}
 	
 	// 일정 시간 후에 라운드 재시작
 	MaxTime = EndPhaseTime;
 	GetWorld()->GetTimerManager().ClearTimer(RoundTimerHandle);
 	if (CurrentRound == TotalRound)
 	{
-		// TODO: 
 	}
 	else if (CurrentRound == TotalRound - 1)
 	{
@@ -405,15 +435,68 @@ AActor* AMatchGameMode::ChoosePlayerStart_Implementation(AController* Player)
 
 void AMatchGameMode::RespawnAll()
 {
-	for (auto& PlayerInfo : MatchPlayers)
+	NET_LOG(LogTemp, Warning, TEXT("리스폰 올"));
+	for (auto& MatchPlayer : MatchPlayers)
 	{
-		if (PlayerInfo.bIsDead)
+		MatchPlayer.bIsDead = false;
+		
+		FTransform SpawnTransform = FTransform::Identity;
+		if (MatchPlayer.bIsBlueTeam)
 		{
-			PlayerInfo.bIsDead = false;
-			// TODO: 체력 등 정상화
-			// TODO: 팀 & 공수교대 여부에 따라 처리
+			if (IsShifted()) { SpawnTransform = AttackersStartPoint->GetTransform(); }
+			else { SpawnTransform = DefendersStartPoint->GetTransform(); }
+		}
+		else
+		{
+			if (IsShifted()) { SpawnTransform = DefendersStartPoint->GetTransform(); }
+			else { SpawnTransform = AttackersStartPoint->GetTransform(); }
+		}
+			
+		auto* agentPS = MatchPlayer.Controller->GetPlayerState<AAgentPlayerState>();
+		if (nullptr == agentPS)
+		{
+			NET_LOG(LogTemp, Error, TEXT("%hs Called, agentPS is nullptr"), __FUNCTION__);
+			return;
+		}
+
+		ResetAgentAtrributeData(agentPS);
+		RespawnPlayer(agentPS, MatchPlayer.Controller, SpawnTransform);
+	}
+	// TODO: 팀 & 공수교대 여부에 따라 처리
+}
+
+void AMatchGameMode::RespawnPlayer(AAgentPlayerState* ps, AAgentPlayerController* pc, FTransform spawnTransform)
+{
+	FActorSpawnParameters SpawnParams;
+	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+	
+	if (ps->IsSpectator() || ps->GetPawn() == nullptr)
+	{
+		FAgentData* agentData = Cast<UValorantGameInstance>(GetGameInstance())->GetAgentData(ps->GetAgentID());
+		auto* Agent = GetWorld()->SpawnActor<ABaseAgent>(agentData->AgentAsset, spawnTransform);
+		
+		ps->SetIsSpectator(false);
+		ps->SetIsOnlyASpectator(false);
+		
+		APawn* oldPawn = pc->GetPawn();
+		
+		pc->Possess(Agent);
+		
+		if (oldPawn)
+		{
+			oldPawn->Destroy();
 		}
 	}
+	else
+	{
+		ps->GetPawn()->SetActorTransform(spawnTransform);
+	}
+}
+
+// 체력 등 정상화
+void AMatchGameMode::ResetAgentAtrributeData(AAgentPlayerState* AgentPS)
+{
+	AgentPS->GetBaseAttributeSet()->ResetAttributeData();
 }
 
 void AMatchGameMode::OnKill(AMatchPlayerController* Killer, AMatchPlayerController* Victim)
@@ -468,40 +551,27 @@ void AMatchGameMode::OnKill(AMatchPlayerController* Killer, AMatchPlayerControll
 		}
 	}
 
+	int Blue = 0;
+	int Red = 0;
 	// 생존 플레이어 카운트 및 라운드 종료 처리
-	int TeamBlueSurvivorNum = 0;
-	int TeamRedSurvivorNum = 0;
 	for (auto& PlayerInfo : MatchPlayers)
 	{
-		if (PlayerInfo.Controller == Cast<AAgentPlayerController>(Victim))
+		if (PlayerInfo.Controller == Victim)
 		{
 			PlayerInfo.bIsDead = true;
 		}
 		
 		if (PlayerInfo.bIsBlueTeam && false == PlayerInfo.bIsDead)
 		{
-			++TeamBlueSurvivorNum;
+			Blue++;
 		}
 		else if (!PlayerInfo.bIsBlueTeam && false == PlayerInfo.bIsDead)
 		{
-			++TeamRedSurvivorNum;
+			Red++;
 		}
 	}
-	
-	if (TeamBlueSurvivorNum == 0 && TeamRedSurvivorNum == 0)
-	{
-		// TODO: 동시에 죽는것을 감지하려면 시간차를 두거나 HandleKill을 배열로 받는 변경 필요
-		// TODO: 스파이크 설치 여부에 따라 결정
-		StartEndPhaseByEliminated(true);
-	}
-	else if (TeamBlueSurvivorNum == 0)
-	{
-		StartEndPhaseByEliminated(false);
-	}
-	else if (TeamRedSurvivorNum == 0)
-	{
-		StartEndPhaseByEliminated(true);
-	}
+	TeamBlueRemainingAgentNum = Blue;
+	TeamRedRemainingAgentNum = Red;
 }
 
 void AMatchGameMode::OnRevive(AMatchPlayerController* Reviver, AMatchPlayerController* Target)
@@ -670,13 +740,13 @@ void AMatchGameMode::MarkAllWeaponsAsUsed()
 			continue;
 			
 		// 플레이어가 가진 모든 무기를 사용된 상태로 표시
-		ABaseWeapon* PrimaryWeapon = Agent->GetPrimaryWeapon();
+		ABaseWeapon* PrimaryWeapon = Agent->GetMainWeapon();
 		if (PrimaryWeapon)
 		{
 			PrimaryWeapon->SetWasUsed(true);
 		}
 		
-		ABaseWeapon* SecondWeapon = Agent->GetSecondWeapon();
+		ABaseWeapon* SecondWeapon = Agent->GetSubWeapon();
 		if (SecondWeapon)
 		{
 			SecondWeapon->SetWasUsed(true);

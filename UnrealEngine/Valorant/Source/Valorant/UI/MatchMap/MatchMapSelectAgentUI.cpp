@@ -41,13 +41,14 @@ void UMatchMapSelectAgentUI::OnClickedButtonLockIn()
 		NET_LOG(LogTemp, Warning, TEXT("%hs Called, Controller is nullptr"), __FUNCTION__);
 		return;
 	}
-
-	Controller->ServerRPC_LockIn();
+	
+	Controller->ServerRPC_LockIn(CurrentSelectedAgentID);
 }
 
 void UMatchMapSelectAgentUI::OnClickedAgentSelectButton(int AgentId)
 {
 	NET_LOG(LogTemp, Warning, TEXT("%hs Called, AgentId: %d"), __FUNCTION__, AgentId);
+	CurrentSelectedAgentID = AgentId;
 	OnClickAgentSelectButtonDelegate.Broadcast(AgentId);
 }
 

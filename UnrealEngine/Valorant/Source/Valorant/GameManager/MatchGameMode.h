@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/GameMode.h"
+#include "Player/AgentPlayerState.h"
 #include "MatchGameMode.generated.h"
 
 class ABaseAgent;
@@ -44,7 +45,6 @@ struct FMatchPlayer
 	TObjectPtr<AAgentPlayerController> Controller = nullptr;
 	FString Nickname = "UNKNOWN";
 	bool bIsBlueTeam = true;
-	int SelectedAgentID = 0;
 	bool bIsDead = false;
 };
 
@@ -111,10 +111,12 @@ protected:
 	float EndPhaseTime = 10.0f;		// org: 10.0f
 	float SpikeActiveTime = 15.0f;	// org: 45.0f
 	bool bReadyToEndMatch = false;
+	float LeavingMatchTime = 10.0f;
 	
 	virtual bool ReadyToStartMatch_Implementation() override;
 	virtual void HandleMatchHasStarted() override;
 	virtual bool ReadyToEndMatch_Implementation() override;
+	void LeavingMatch();
 	virtual void HandleMatchHasEnded() override;
 	void StartSelectAgent();
 	void StartPreRound();
@@ -130,13 +132,6 @@ protected:
 	void HandleRoundSubState_InRound();
 	void HandleRoundSubState_EndPhase();
 	void SetRoundSubState(ERoundSubState NewRoundSubState);
-
-	virtual AActor* ChoosePlayerStart_Implementation(AController* Player) override;
-	void RespawnAll();
-	void OnKill(AMatchPlayerController* Killer, AMatchPlayerController* Victim);
-	void OnRevive(AMatchPlayerController* Reviver, AMatchPlayerController* Target);
-	void OnSpikePlanted(AMatchPlayerController* Planter);
-	void OnSpikeDefused(AMatchPlayerController* Defuser);
 	
 	int TotalRound = 6;
 	int CurrentRound = 0;
@@ -151,4 +146,17 @@ protected:
 
 	// 크레딧 시스템 관련 함수
 	void AwardRoundEndCredits();
+
+public:
+	bool bSpikePlanted = false;
+	int TeamBlueRemainingAgentNum = 0;
+	int TeamRedRemainingAgentNum = 0;
+	virtual AActor* ChoosePlayerStart_Implementation(AController* Player) override;
+	void RespawnAll();
+	void RespawnPlayer(AAgentPlayerState* ps, AAgentPlayerController* pc, FTransform spawnTransform);
+	void ResetAgentAtrributeData(AAgentPlayerState* AgentPS);
+	void OnKill(AMatchPlayerController* Killer, AMatchPlayerController* Victim);
+	void OnRevive(AMatchPlayerController* Reviver, AMatchPlayerController* Target);
+	void OnSpikePlanted(AMatchPlayerController* Planter);
+	void OnSpikeDefused(AMatchPlayerController* Defuser);
 };

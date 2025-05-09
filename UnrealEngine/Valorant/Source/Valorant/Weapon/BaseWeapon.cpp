@@ -5,8 +5,8 @@
 
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
-#include "PickUpComponent.h"
 #include "Valorant.h"
+#include "Components/SphereComponent.h"
 #include "GameManager/SubsystemSteamManager.h"
 #include "GameManager/ValorantGameInstance.h"
 #include "Kismet/GameplayStatics.h"
@@ -21,17 +21,14 @@ ABaseWeapon::ABaseWeapon()
 	
 	WeaponMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("WeaponMesh"));
 	SetRootComponent(WeaponMesh);
-	PickUpModule = CreateDefaultSubobject<UPickUpComponent>(TEXT("PickUpModule"));
-	PickUpModule->SetupAttachment(GetRootComponent());
 
 	InteractWidget->SetupAttachment(RootComponent);
+	Sphere->SetupAttachment(RootComponent);
 }
 
 void ABaseWeapon::BeginPlay()
 {
 	Super::BeginPlay();
-
-	PickUpModule->OnPickUp.AddDynamic(this, &ABaseWeapon::AttachWeapon);
 	
 	auto* GameInstance = Cast<UValorantGameInstance>(UGameplayStatics::GetGameInstance(GetWorld()));
 	if (nullptr == GameInstance)
@@ -60,6 +57,15 @@ void ABaseWeapon::BeginPlay()
 	}
 	WeaponMesh->SetSkeletalMeshAsset(WeaponMeshAsset);
 	WeaponMesh->SetRelativeScale3D(FVector(0.34f));
+
+	if (WeaponData->WeaponCategory == EWeaponCategory::Sidearm)
+	{
+		InteractorType = EInteractorType::SubWeapon;
+	}
+	else
+	{
+		InteractorType = EInteractorType::MainWeapon;
+	}
 	
 	MagazineSize = WeaponData->MagazineSize;
 	MagazineAmmo = MagazineSize;
@@ -76,79 +82,23 @@ void ABaseWeapon::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
 
-	if (Agent && Agent->GetController() && false == bIsFiring && false == FMath::IsNearlyZero(FMath::Abs(TotalRecoilOffsetPitch) + FMath::Abs(TotalRecoilOffsetYaw), 0.05f))
+	if (OwnerAgent && OwnerAgent->GetController() && false == bIsFiring && false == FMath::IsNearlyZero(FMath::Abs(TotalRecoilOffsetPitch) + FMath::Abs(TotalRecoilOffsetYaw), 0.05f))
 	{
 		const float SubPitchValue = -FMath::Lerp(TotalRecoilOffsetPitch, 0.0f, 0.88f);
 		TotalRecoilOffsetPitch += SubPitchValue;
-		Agent->AddControllerPitchInput(SubPitchValue);
+		OwnerAgent->AddControllerPitchInput(SubPitchValue);
 
 		const float SubYawValue = -FMath::Lerp(TotalRecoilOffsetYaw, 0.0f, 0.88f);
 		TotalRecoilOffsetYaw += SubYawValue;
-		Agent->AddControllerYawInput(SubYawValue);
+		OwnerAgent->AddControllerYawInput(SubYawValue);
 
 		UE_LOG(LogTemp, Warning, TEXT("Recoil Recovery TotalRecoilOffsetPitch : %f, TotalRecoilOffsetYaw : %f"), TotalRecoilOffsetPitch, TotalRecoilOffsetYaw);
 	}
 }
 
-void ABaseWeapon::AttachWeapon(ABaseAgent* PickUpAgent)
-{
-	Agent = PickUpAgent;
-
-	if (nullptr == Agent)
-	{
-		return;
-	}
-
-	// if (const auto* Owner = GetOwner())
-	// {
-	// 	if (auto* PickUpUI = Owner->FindComponentByClass<UWidgetComponent>())
-	// 	{
-	// 		PickUpUI->SetVisibility(false);
-	// 	}
-	// }
-
-	FAttachmentTransformRules AttachmentRules(
-		EAttachmentRule::SnapToTarget,
-		EAttachmentRule::SnapToTarget,
-		EAttachmentRule::KeepRelative,
-		true
-	);
-	AttachToComponent(Agent->GetMesh(), AttachmentRules, FName(TEXT("R_WeaponPointSocket")));
-	SetOwner(Agent);
-
-	// 일정 시간 후 무기 사용 여부를 true로 설정하는 타이머 설정
-	if (HasAuthority())
-	{
-		FTimerHandle UseTimerHandle;
-		GetWorldTimerManager().SetTimer(UseTimerHandle, FTimerDelegate::CreateLambda([this]()
-		{
-			bWasUsed = true;
-		}), 10.0f, false); // 10초 후 사용된 것으로 간주
-	}
-
-	// Set up action bindings
-	if (const AAgentPlayerController* PlayerController = Cast<AAgentPlayerController>(Agent->GetController()))
-	{
-		if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PlayerController->GetLocalPlayer()))
-		{
-			// Set the priority of the mapping to 1, so that it overrides the Jump action with the Fire action when using touch input
-			Subsystem->AddMappingContext(FireMappingContext, 1);
-		}
-
-		if (UEnhancedInputComponent* EnhancedInputComponent = Cast<UEnhancedInputComponent>(PlayerController->InputComponent))
-		{
-			// Fire
-			EnhancedInputComponent->BindAction(StartFireAction, ETriggerEvent::Triggered, this, &ABaseWeapon::StartFire);
-			EnhancedInputComponent->BindAction(EndFireAction, ETriggerEvent::Triggered, this, &ABaseWeapon::EndFire);
-			EnhancedInputComponent->BindAction(StartReloadAction, ETriggerEvent::Triggered, this, &ABaseWeapon::StartReload);
-			EnhancedInputComponent->BindAction(DropAction, ETriggerEvent::Triggered, this, &ABaseWeapon::Drop);
-		}
-	}
-}
-
 void ABaseWeapon::StartFire()
 {
-	if (nullptr == Agent || nullptr == Agent->GetController())
+	if (nullptr == OwnerAgent || nullptr == OwnerAgent->GetController())
 	{
 		return;
 	}
@@ -167,7 +117,7 @@ void ABaseWeapon::StartFire()
 
 void ABaseWeapon::Fire()
 {
-	if (nullptr == Agent || nullptr == Agent->GetController() || false == bIsFiring)
+	if (nullptr == OwnerAgent || nullptr == OwnerAgent->GetController() || false == bIsFiring)
 	{
 		return;
 	}
@@ -199,11 +149,11 @@ void ABaseWeapon::Fire()
 	if (RecoilData.Num() > 0)
 	{
 		const float PitchValue = RecoilData[RecoilLevel].OffsetPitch;
-		Agent->AddControllerPitchInput(PitchValue);
+		OwnerAgent->AddControllerPitchInput(PitchValue);
 		TotalRecoilOffsetPitch += PitchValue;
 
 		const float YawValue = RecoilData[RecoilLevel].OffsetYaw;
-		Agent->AddControllerYawInput(YawValue);
+		OwnerAgent->AddControllerYawInput(YawValue);
 		TotalRecoilOffsetYaw += YawValue;
 		
 		RecoilLevel = FMath::Clamp(RecoilLevel + 1, 0, RecoilData.Num() - 1);
@@ -213,7 +163,7 @@ void ABaseWeapon::Fire()
 
 	// 서버 쪽에서 처리해야 하는 발사 로직 호출
 	// 서버 입장에서는 클라이언트의 ViewportSize를 모르고, 반응성 등의 문제 때문에 발사 지점, 방향은 클라에서 계산 후 넘겨줌
-	const auto* PlayerController = Cast<AAgentPlayerController>(Agent->GetController());
+	const auto* PlayerController = Cast<AAgentPlayerController>(OwnerAgent->GetController());
 	if (nullptr == PlayerController)
 	{
 		NET_LOG(LogTemp, Error, TEXT("%hs Called, Agent Controller is incorrect"), __FUNCTION__);
@@ -259,7 +209,7 @@ void ABaseWeapon::ServerRPC_Fire_Implementation(const FVector& Location, const F
 	// 궤적, 탄착군 디버깅
 	TArray<AActor*> ActorsToIgnore;
 	ActorsToIgnore.Add(GetOwner());
-	ActorsToIgnore.Add(Agent);
+	ActorsToIgnore.Add(OwnerAgent);
 	FHitResult OutHit;
 	const bool bHit = UKismetSystemLibrary::LineTraceSingle(
 		WorldContext,
@@ -277,7 +227,23 @@ void ABaseWeapon::ServerRPC_Fire_Implementation(const FVector& Location, const F
 	);
 	if (bHit)
 	{
-		NET_LOG(LogTemp, Warning, TEXT("LineTraceSingle Hit : %s"), *OutHit.GetActor()->GetName());
+		const auto& DamageFalloffArray = WeaponData->GunDamageFalloffArray;
+		int FinalDamage = WeaponData->BaseDamage;
+		for (int i = DamageFalloffArray.Num() - 1; i >= 0; i--)
+		{
+			const auto& DamageFalloff = DamageFalloffArray[i];
+			if (OutHit.Distance >= DamageFalloff.RangeStart)
+			{
+				FinalDamage *= DamageFalloff.DamageMultiplier;
+				break;
+			}
+		}
+		
+		NET_LOG(LogTemp, Warning, TEXT("LineTraceSingle Hit: %s, BoneName: %s, Distance: %f, FinalDamage: %d"), *OutHit.GetActor()->GetName(), *OutHit.BoneName.ToString(), OutHit.Distance, FinalDamage);
+		if (ABaseAgent* HitAgent = Cast<ABaseAgent>(OutHit.GetActor()))
+		{
+			HitAgent->ServerApplyGE(DamageEffectClass);
+		}
 		DrawDebugPoint(WorldContext, OutHit.ImpactPoint, 5, FColor::Green, false, 30);
 	}
 }
@@ -339,14 +305,35 @@ void ABaseWeapon::StopReload()
 	}
 }
 
+bool ABaseWeapon::CanAutoPickUp(ABaseAgent* Agent) const
+{
+	// TODO: 현재 이미 똑같은 종류의 무기를 들고 있을 경우 false 반환
+	return Super::CanAutoPickUp(Agent);
+}
+
+bool ABaseWeapon::CanDrop() const
+{
+	// TODO: 근접무기인 경우 false
+	return Super::CanDrop();
+}
+
+void ABaseWeapon::PickUp(ABaseAgent* Agent)
+{
+	Super::PickUp(Agent);
+	AttachWeapon(Agent);
+}
+
 void ABaseWeapon::Drop()
 {
-	if (nullptr == Agent)
+	Super::Drop();
+
+	//TODO: 이미 Super에서 Onwer가 Null로 처리됨. 필요시 수정
+	if (nullptr == OwnerAgent)
 	{
 		return;
 	}
-
-	if (const AAgentPlayerController* PlayerController = Cast<AAgentPlayerController>(Agent->GetController()))
+	
+	if (const AAgentPlayerController* PlayerController = Cast<AAgentPlayerController>(OwnerAgent->GetController()))
 	{
 		if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PlayerController->GetLocalPlayer()))
 		{
@@ -354,14 +341,40 @@ void ABaseWeapon::Drop()
 			Subsystem->RemoveMappingContext(FireMappingContext);
 		}
 	}
+}
 
-	PickUpModule->SetEnableBeginOverlap();
+void ABaseWeapon::AttachWeapon(ABaseAgent* PickUpAgent)
+{
+	if (nullptr == OwnerAgent)
+	{
+		return;
+	}
 
-	DetachFromActor(FDetachmentTransformRules::KeepWorldTransform);
-	const FVector ForwardVector = Agent->GetActorForwardVector();
-	SetActorLocation(GetActorLocation() + ForwardVector * 300);
-	
-	Agent = nullptr;
+	FAttachmentTransformRules AttachmentRules(
+		EAttachmentRule::SnapToTarget,
+		EAttachmentRule::SnapToTarget,
+		EAttachmentRule::KeepRelative,
+		true
+	);
+	AttachToComponent(OwnerAgent->GetMesh(), AttachmentRules, FName(TEXT("R_WeaponPointSocket")));
+
+	// Set up action bindings
+	if (const AAgentPlayerController* PlayerController = Cast<AAgentPlayerController>(OwnerAgent->GetController()))
+	{
+		if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PlayerController->GetLocalPlayer()))
+		{
+			// Set the priority of the mapping to 1, so that it overrides the Jump action with the Fire action when using touch input
+			Subsystem->AddMappingContext(FireMappingContext, 1);
+		}
+
+		if (UEnhancedInputComponent* EnhancedInputComponent = Cast<UEnhancedInputComponent>(PlayerController->InputComponent))
+		{
+			// Fire
+			EnhancedInputComponent->BindAction(StartFireAction, ETriggerEvent::Triggered, this, &ABaseWeapon::StartFire);
+			EnhancedInputComponent->BindAction(EndFireAction, ETriggerEvent::Triggered, this, &ABaseWeapon::EndFire);
+			EnhancedInputComponent->BindAction(StartReloadAction, ETriggerEvent::Triggered, this, &ABaseWeapon::StartReload);
+		}
+	}
 }
 
 void ABaseWeapon::SetWeaponID(int32 NewWeaponID)

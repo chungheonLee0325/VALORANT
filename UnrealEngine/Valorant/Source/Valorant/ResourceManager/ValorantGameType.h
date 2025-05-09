@@ -54,6 +54,15 @@ enum class EPlayerRole : uint8
 	IGL UMETA(DisplayName = "In-Game Leader")
 };
 
+UENUM(BlueprintType)
+enum class EInteractorType : uint8
+{
+	None UMETA(DisplayName = "None"),
+	MainWeapon UMETA(DisplayName = "MainWeapon"),
+	SubWeapon UMETA(DisplayName = "SubWeapon"),
+	Melee UMETA(DisplayName = "Melee"),
+	Spike UMETA(DisplayName = "Spike")
+};
 
 // 무기 카테고리
 UENUM(BlueprintType)
@@ -176,6 +185,18 @@ enum class EAbilitySlotType : uint8
 	Slot_Q UMETA(DisplayName = "Slot Q"),
 	Slot_E UMETA(DisplayName = "Slot E"),
 	Slot_X UMETA(DisplayName = "Slot X"),
+};
+
+USTRUCT(BlueprintType)
+struct FGunDamageFalloffData : public FTableRowBase
+{
+	GENERATED_BODY()
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Data")
+	int RangeStart = 0;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Data")
+	float DamageMultiplier = 1.0f;
 };
 
 USTRUCT(BlueprintType)
@@ -307,6 +328,9 @@ struct FWeaponData : public FTableRowBase
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Data")
 	TArray<FGameplayTag> WeaponTags;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Data")
+	TArray<FGunDamageFalloffData> GunDamageFalloffArray;
+	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Data")
 	TArray<FGunRecoilData> GunRecoilMap;
 };

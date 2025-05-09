@@ -49,11 +49,13 @@ public:
 	UFUNCTION(Client, Reliable)
 	void ClientRPC_DisplayHud(bool bDisplay);
 	UFUNCTION(Server, Reliable)
-	void ServerRPC_LockIn();
+	void ServerRPC_LockIn(int SelectedAgentID);
 	UFUNCTION(Server, Reliable)
 	void ServerRPC_OnAgentSelectButtonClicked(int SelectedAgentID);
 	UFUNCTION(Client, Reliable)
 	void ClientRPC_OnAgentSelected(const FString& DisplayName, int SelectedAgentID);
 	UFUNCTION(Client, Reliable)
 	void ClientRPC_OnLockIn(const FString& DisplayName);
+	UFUNCTION(Client, Reliable)
+	void ClientRPC_CleanUpSession();
 };

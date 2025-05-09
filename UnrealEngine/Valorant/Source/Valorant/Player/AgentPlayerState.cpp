@@ -8,6 +8,7 @@
 #include "Valorant/AbilitySystem/Attributes/BaseAttributeSet.h"
 #include "Valorant/GameManager/ValorantGameInstance.h"
 #include "Component/CreditComponent.h"
+#include "Net/UnrealNetwork.h"
 #include "Valorant/Player/AgentPlayerController.h"
 
 AAgentPlayerState::AAgentPlayerState()
@@ -27,6 +28,12 @@ AAgentPlayerState::AAgentPlayerState()
 
 	SetNetUpdateFrequency(100.f);
 	SetMinNetUpdateFrequency(33.f);
+}
+
+void AAgentPlayerState::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+	DOREPLIFETIME(AAgentPlayerState, m_AgentID);
 }
 
 int32 AAgentPlayerState::GetAbilityStack(int32 AbilityID) const
@@ -103,7 +110,7 @@ void AAgentPlayerState::Server_PurchaseAbility_Implementation(int32 AbilityID)
 
 	FAbilityData* AbilityData = m_GameInstance->GetAbilityData(AbilityID);
 	if (!AbilityData) return;
-
+	
 	// 1. 비용 확인
 	int32 Cost = AbilityData->ChargeCost;
 
