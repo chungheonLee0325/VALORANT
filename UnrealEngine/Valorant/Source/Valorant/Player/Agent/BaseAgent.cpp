@@ -329,7 +329,7 @@ void ABaseAgent::EquipWeapon(ABaseWeapon* weapon)
 		if (SecondWeapon)
 		{
 			// UE_LOG(LogTemp,Warning,TEXT("이미 들고 있음"));
-			SecondWeapon->Drop();
+			SecondWeapon->ServerRPC_Drop();
 		}
 		
 		SecondWeapon = weapon;
@@ -340,13 +340,13 @@ void ABaseAgent::EquipWeapon(ABaseWeapon* weapon)
 		if (PrimaryWeapon)
 		{
 			// UE_LOG(LogTemp,Warning,TEXT("이미 들고 있음"));
-			PrimaryWeapon->Drop();
+			PrimaryWeapon->ServerRPC_Drop();
 		}
             
 		PrimaryWeapon = weapon;
 	}
 
-	weapon->PickUp(this);
+	weapon->ServerRPC_PickUp(this);
 	SetInteractorState(weapon->GetInteractorType());
 }
 
@@ -426,7 +426,7 @@ void ABaseAgent::Interact()
 
 void ABaseAgent::DropCurrentInteractor()
 {
-	if (CurrentInteractor && CurrentInteractor->CanDrop())
+	if (CurrentInteractor && CurrentInteractor->ServerOnly_CanDrop())
 	{
 		if (CurrentInteractor == PrimaryWeapon)
 		{
@@ -437,7 +437,7 @@ void ABaseAgent::DropCurrentInteractor()
 			SecondWeapon = nullptr;
 		}
 		
-		CurrentInteractor->Drop();
+		CurrentInteractor->ServerRPC_Drop();
 		SetCurrentInteractor(nullptr);
 	}
 }
@@ -500,11 +500,11 @@ void ABaseAgent::Die()
 	//TODO: 복제 어떻게 진행할지
 	if (PrimaryWeapon)
 	{
-		PrimaryWeapon->Drop();
+		PrimaryWeapon->ServerRPC_Drop();
 	}
 	if (SecondWeapon)
 	{
-		SecondWeapon->Drop();
+		SecondWeapon->ServerRPC_Drop();
 	}
 	
 	if (IsLocallyControlled())

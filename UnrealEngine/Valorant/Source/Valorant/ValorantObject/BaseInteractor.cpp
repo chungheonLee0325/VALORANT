@@ -31,7 +31,10 @@ ABaseInteractor::ABaseInteractor()
 void ABaseInteractor::BeginPlay()
 {
 	Super::BeginPlay();
-	Sphere->OnComponentBeginOverlap.AddDynamic(this, &ABaseInteractor::OnSphereBeginOverlap);
+	if (HasAuthority())
+	{
+		Sphere->OnComponentBeginOverlap.AddDynamic(this, &ABaseInteractor::ServerOnly_OnSphereBeginOverlap);
+	}
 }
 
 void ABaseInteractor::Tick(float DeltaTime)
@@ -39,7 +42,7 @@ void ABaseInteractor::Tick(float DeltaTime)
 	Super::Tick(DeltaTime);
 }
 
-void ABaseInteractor::OnSphereBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
+void ABaseInteractor::ServerOnly_OnSphereBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
 	UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
 	if (nullptr != OwnerAgent)
@@ -62,12 +65,12 @@ void ABaseInteractor::OnSphereBeginOverlap(UPrimitiveComponent* OverlappedCompon
 	Agent->GetMesh()->GetChildrenComponents(true, ChildrenArray);
 		
 	// 자동으로 주워지는지 여부는 각자 CanAutoPickUp을 Override 해서 판단하도록 한다
-	if (CanAutoPickUp(Agent) == false)
+	if (ServerOnly_CanAutoPickUp(Agent) == false)
 	{
 		return;
 	}
 
-	PickUp(Agent);
+	ServerRPC_PickUp(Agent);
 }
 
 void ABaseInteractor::InteractActive(bool bIsActive)
@@ -75,23 +78,23 @@ void ABaseInteractor::InteractActive(bool bIsActive)
 	InteractWidget->SetVisibility(bIsActive);
 }
 
-bool ABaseInteractor::CanAutoPickUp(ABaseAgent* Agent) const
+bool ABaseInteractor::ServerOnly_CanAutoPickUp(ABaseAgent* Agent) const
 {
 	return true;
 }
 
-bool ABaseInteractor::CanDrop() const
+bool ABaseInteractor::ServerOnly_CanDrop() const
 {
 	return true;
 }
 
-void ABaseInteractor::PickUp(ABaseAgent* Agent)
+void ABaseInteractor::ServerRPC_PickUp_Implementation(ABaseAgent* Agent)
 {
 	OwnerAgent = Agent;
 	SetOwner(OwnerAgent);
 }
 
-void ABaseInteractor::Drop()
+void ABaseInteractor::ServerRPC_Drop_Implementation()
 {
 	if (nullptr == OwnerAgent)
 	{

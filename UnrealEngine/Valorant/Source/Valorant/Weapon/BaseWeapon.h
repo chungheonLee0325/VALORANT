@@ -104,10 +104,9 @@ public:
 	 *	PickUp & Drop 관련
 	 */
 public:
-	virtual bool CanAutoPickUp(ABaseAgent* Agent) const override;
-	virtual bool CanDrop() const override;
-	virtual void PickUp(ABaseAgent* Agent) override;
-	virtual void Drop() override;
-	UFUNCTION()
-	void AttachWeapon(ABaseAgent* PickUpAgent);
+	virtual bool ServerOnly_CanAutoPickUp(ABaseAgent* Agent) const override;
+	virtual bool ServerOnly_CanDrop() const override;
+	virtual void ServerRPC_PickUp(ABaseAgent* Agent) override;
+	virtual void ServerRPC_Drop() override;
+	void ServerOnly_AttachWeapon(ABaseAgent* PickUpAgent);
 };

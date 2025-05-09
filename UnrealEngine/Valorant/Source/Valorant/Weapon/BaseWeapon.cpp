@@ -295,27 +295,27 @@ void ABaseWeapon::StopReload()
 	}
 }
 
-bool ABaseWeapon::CanAutoPickUp(ABaseAgent* Agent) const
+bool ABaseWeapon::ServerOnly_CanAutoPickUp(ABaseAgent* Agent) const
 {
 	// TODO: 현재 이미 똑같은 종류의 무기를 들고 있을 경우 false 반환
-	return Super::CanAutoPickUp(Agent);
+	return Super::ServerOnly_CanAutoPickUp(Agent);
 }
 
-bool ABaseWeapon::CanDrop() const
+bool ABaseWeapon::ServerOnly_CanDrop() const
 {
 	// TODO: 근접무기인 경우 false
-	return Super::CanDrop();
+	return Super::ServerOnly_CanDrop();
 }
 
-void ABaseWeapon::PickUp(ABaseAgent* Agent)
+void ABaseWeapon::ServerRPC_PickUp(ABaseAgent* Agent)
 {
-	Super::PickUp(Agent);
-	AttachWeapon(Agent);
+	Super::ServerRPC_PickUp(Agent);
+	ServerOnly_AttachWeapon(Agent);
 }
 
-void ABaseWeapon::Drop()
+void ABaseWeapon::ServerRPC_Drop()
 {
-	Super::Drop();
+	Super::ServerRPC_Drop();
 
 	//TODO: 이미 Super에서 Onwer가 Null로 처리됨. 필요시 수정
 	if (nullptr == OwnerAgent)
@@ -333,7 +333,7 @@ void ABaseWeapon::Drop()
 	}
 }
 
-void ABaseWeapon::AttachWeapon(ABaseAgent* PickUpAgent)
+void ABaseWeapon::ServerOnly_AttachWeapon(ABaseAgent* PickUpAgent)
 {
 	if (nullptr == OwnerAgent)
 	{
