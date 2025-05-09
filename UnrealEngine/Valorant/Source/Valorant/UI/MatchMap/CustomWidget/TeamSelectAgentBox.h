@@ -8,6 +8,8 @@
 
 class UTextBlock;
 class UImage;
+class UBorder;
+
 /**
  * 
  */
@@ -17,6 +19,11 @@ class VALORANT_API UTeamSelectAgentBox : public UUserWidget
 	GENERATED_BODY()
 
 public:
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	TObjectPtr<UMaterialInterface> NoiseMaterial = nullptr;
+
+	UPROPERTY(meta=(BindWidget))
+	TObjectPtr<UBorder> BorderThumb = nullptr;
 	UPROPERTY(meta=(BindWidget))
 	TObjectPtr<UImage> ImageAgentThumb = nullptr;
 	UPROPERTY(meta=(BindWidget))
