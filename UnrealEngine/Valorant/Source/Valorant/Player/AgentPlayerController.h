@@ -16,6 +16,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnHealthChanged_PC, float, newHealt
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnMaxHealthChanged_PC, float, newMaxHealth);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnArmorChanged_PC, float, newArmor);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnEffectSpeedChanged_PC, float, newSpeed);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_FourParams(FOnServerPurchaseResult, bool, bSuccess, int32, ItemID, EShopItemType, ItemType, const FString&, FailureReason);
 
 UCLASS()
 class VALORANT_API AAgentPlayerController : public AMatchPlayerController
@@ -40,6 +41,9 @@ public:
 	FOnEffectSpeedChanged_PC OnEffectSpeedChanged_PC;
 	UPROPERTY()
 	UShopComponent* ShopComponent;
+
+	UPROPERTY(BlueprintAssignable, Category = "Shop")
+	FOnServerPurchaseResult OnServerPurchaseResult;
 
 	// 클라이언트에서 호출 -> 서버로 스킬 구매 요청
 	UFUNCTION(BlueprintCallable, Category = "Shop")
@@ -98,6 +102,17 @@ public:
 	// 상점 UI 닫기
 	UFUNCTION(BlueprintCallable, Category = "UI")
 	void CloseShopUI();
+
+	// 상점 가용성 변경 이벤트 핸들러
+	UFUNCTION()
+	void OnShopAvailabilityChanged();
+
+	// 서버에 무기 구매 요청
+	UFUNCTION(Server, Reliable)
+	void ServerRequestWeaponPurchase(int32 WeaponID);
+
+	UFUNCTION(Client, Reliable)
+	void Client_ReceivePurchaseResult(bool bSuccess, int32 ItemID, EShopItemType ItemType, const FString& FailureReason);
 
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)

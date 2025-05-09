@@ -17,6 +17,8 @@ class VALORANT_API UCreditComponent : public UActorComponent
 
 public:	
 	UCreditComponent();
+	
+	virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;
 
 	// 크레딧 변경 이벤트
 	UPROPERTY(BlueprintAssignable, Category = "Credits")
@@ -65,7 +67,7 @@ public:
 protected:
 	virtual void BeginPlay() override;
 	
-	UPROPERTY(Replicated, EditDefaultsOnly, Category = "Credits")
+	UPROPERTY(ReplicatedUsing = OnRep_CurrentCredit, EditDefaultsOnly, Category = "Credits")
 	int32 CurrentCredit;
 	
 	UPROPERTY(EditDefaultsOnly, Category = "Credits")
@@ -99,4 +101,7 @@ protected:
 private:
 	// 서버에서 크레딧 변경 적용
 	void SetCurrentCredit(int32 NewAmount);
+
+	UFUNCTION()
+	void OnRep_CurrentCredit();
 }; 

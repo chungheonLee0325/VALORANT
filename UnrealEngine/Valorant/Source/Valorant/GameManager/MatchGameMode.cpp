@@ -17,6 +17,7 @@
 #include "Player/MatchPlayerState.h"
 #include "Player/Agent/BaseAgent.h"
 #include "Player/Component/CreditComponent.h"
+#include "Weapon/BaseWeapon.h"
 
 AMatchGameMode::AMatchGameMode()
 {
@@ -338,6 +339,9 @@ void AMatchGameMode::HandleRoundSubState_BuyPhase()
 
 void AMatchGameMode::HandleRoundSubState_InRound()
 {
+	// 구매 페이즈가 끝나고 인 라운드로 전환될 때 모든 무기를 사용됨으로 표시
+	MarkAllWeaponsAsUsed();
+	
 	// 일정 시간 후에 라운드 종료
 	MaxTime = InRoundTime;
 	GetWorld()->GetTimerManager().ClearTimer(RoundTimerHandle);
@@ -717,6 +721,35 @@ void AMatchGameMode::AwardRoundEndCredits()
 					CreditComp->AwardRoundEndCredits(bIsWinner, ConsecutiveLosses);
 				}
 			}
+		}
+	}
+}
+
+// 모든 무기의 사용 상태를 true로 설정하는 함수 추가
+void AMatchGameMode::MarkAllWeaponsAsUsed()
+{
+	// 모든 플레이어를 순회하면서 무기 사용 상태를 true로 설정
+	for (FConstPlayerControllerIterator It = GetWorld()->GetPlayerControllerIterator(); It; ++It)
+	{
+		AAgentPlayerController* PC = Cast<AAgentPlayerController>(It->Get());
+		if (!PC)
+			continue;
+			
+		ABaseAgent* Agent = PC->GetPawn<ABaseAgent>();
+		if (!Agent)
+			continue;
+			
+		// 플레이어가 가진 모든 무기를 사용된 상태로 표시
+		ABaseWeapon* PrimaryWeapon = Agent->GetMainWeapon();
+		if (PrimaryWeapon)
+		{
+			PrimaryWeapon->SetWasUsed(true);
+		}
+		
+		ABaseWeapon* SecondWeapon = Agent->GetSubWeapon();
+		if (SecondWeapon)
+		{
+			SecondWeapon->SetWasUsed(true);
 		}
 	}
 }

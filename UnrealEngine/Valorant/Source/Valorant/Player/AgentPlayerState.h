@@ -10,6 +10,11 @@
 class UValorantGameInstance;
 class UAgentAbilitySystemComponent;
 class UBaseAttributeSet;
+class UCreditComponent;
+
+// 크레딧 변경 델리게이트 선언
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnCreditChangedDelegate, int32, NewCredit);
+
 /**
  * 
  */
@@ -50,6 +55,26 @@ public:
 	// 크레딧 시스템 관련 함수
 	UFUNCTION(BlueprintCallable, Category = "Agent|Credits")
 	UCreditComponent* GetCreditComponent() const { return CreditComponent; }
+	
+	// 현재 크레딧 가져오기
+	UFUNCTION(BlueprintCallable, Category = "Agent|Credits")
+	int32 GetCurrentCredit() const;
+
+	// 크레딧 변경 델리게이트
+	UPROPERTY(BlueprintAssignable, Category = "Agent|Credits")
+	FOnCreditChangedDelegate OnCreditChangedDelegate;
+	
+	// 크레딧 변경 이벤트 핸들러
+	UFUNCTION()
+	void OnCreditChanged(int32 NewCredit);
+	
+	// 클라이언트에 크레딧 정보 동기화 요청
+	UFUNCTION(Client, Reliable)
+	void Client_SyncCredit(int32 ServerCredit);
+	
+	// 서버에서 크레딧 정보 동기화 요청
+	UFUNCTION(Server, Reliable)
+	void Server_RequestCreditSync();
 
 	// 능력 스택 관련 함수
 	int32 GetAbilityStack(int32 AbilityID) const;

@@ -69,8 +69,33 @@ public:
 	UPROPERTY(BlueprintReadOnly)
 	int SpareAmmo = 0;
 	
+	// 무기가 이전에 사용된 적이 있는지 (발사, 라운드 경험 등)
+	// true인 경우 판매 불가, 땅에 드롭함
+	UPROPERTY(Replicated, BlueprintReadOnly, Category="Weapon")
+	bool bWasUsed = false;
+	
 	// Sets default values for this component's properties
 	ABaseWeapon();
+
+	// WeaponID 설정
+	UFUNCTION(BlueprintCallable, Category="Weapon")
+	void SetWeaponID(int32 NewWeaponID);
+	
+	// WeaponID 반환
+	UFUNCTION(BlueprintCallable, Category="Weapon")
+	int32 GetWeaponID() const { return WeaponID; }
+	
+	// 무기 사용 여부 설정
+	UFUNCTION(BlueprintCallable, Category="Weapon")
+	void SetWasUsed(bool bNewWasUsed);
+	
+	// 무기 사용 여부 반환
+	UFUNCTION(BlueprintCallable, Category="Weapon")
+	bool GetWasUsed() const { return bWasUsed; }
+
+	// 무기 사용 여부에 따른 시각적 효과 업데이트
+	UFUNCTION(BlueprintCallable, Category="Weapon")
+	void UpdateVisualState();
 
 protected:
 	// Called when the game starts
@@ -95,6 +120,8 @@ protected:
 
 	UFUNCTION(BlueprintCallable, Category="Weapon")
 	void StopReload();
+	
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 public:
 	UFUNCTION(BlueprintCallable, Category="Weapon")
@@ -117,6 +144,12 @@ public:
 	virtual bool CanDrop() const override;
 	virtual void PickUp(ABaseAgent* Agent) override;
 	virtual void Drop() override;
+	
 	UFUNCTION()
 	void AttachWeapon(ABaseAgent* PickUpAgent);
+
+	// 무기 사용 여부 리셋 (라운드 시작 시)
+	UFUNCTION(BlueprintCallable, Category="Weapon")
+	void ResetUsedStatus();
+
 };
