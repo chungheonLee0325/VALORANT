@@ -24,6 +24,8 @@ void UTeamSelectAgentBox::ChangeAgentThumbImage(const int AgentId)
 	);
 	FSlateBrush Brush = ImageAgentThumb->GetBrush();
 	Brush.SetResourceObject(Texture);
+	Brush.ImageSize = FVector2D(128.f);
+	Brush.TintColor = FSlateColor(FLinearColor(0.119745f, 0.262328f, 1.f, 1.f));
 	ImageAgentThumb->SetBrush(Brush);
 }
 

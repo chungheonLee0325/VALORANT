@@ -35,6 +35,12 @@ void UMatchMapSelectAgentUI::NativeDestruct()
 
 void UMatchMapSelectAgentUI::OnClickedButtonLockIn()
 {
+	if (CurrentSelectedAgentID == 0)
+	{
+		NET_LOG(LogTemp, Warning, TEXT("%hs Called, Abort LockIn. Because CurrentSelectedAgentID is 0"), __FUNCTION__);
+		return;
+	}
+	
 	auto* Controller = Cast<AAgentPlayerController>(GetOwningPlayer());
 	if (nullptr == Controller)
 	{
