@@ -3,8 +3,10 @@
 
 #include "Spike.h"
 
+#include "Components/WidgetComponent.h"
 #include "GameManager/MatchGameMode.h"
 #include "Player/Agent/BaseAgent.h"
+#include "UI/DetectWidget.h"
 
 
 ASpike::ASpike()
@@ -22,6 +24,11 @@ ASpike::ASpike()
 void ASpike::BeginPlay()
 {
 	Super::BeginPlay();
+
+	if (const auto* DetectWidget = Cast<UDetectWidget>(DetectWidgetComponent->GetUserWidgetObject()))
+	{
+		DetectWidget->SetName(TEXT("획득 스파이크"));
+	}
 }
 
 void ASpike::Tick(float DeltaTime)

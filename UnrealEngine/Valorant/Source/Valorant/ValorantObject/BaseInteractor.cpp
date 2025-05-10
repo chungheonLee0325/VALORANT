@@ -22,6 +22,7 @@ ABaseInteractor::ABaseInteractor()
 	DetectWidgetComponent = CreateDefaultSubobject<UWidgetComponent>("DetectWidget");
 	DetectWidgetComponent->SetVisibility(false);
 	DetectWidgetComponent->SetWidgetSpace(EWidgetSpace::Screen);
+	DetectWidgetComponent->SetPivot(FVector2D(0.5f, 1.f));
 	DetectWidgetComponent->SetupAttachment(GetRootComponent());
 
 	Sphere = CreateDefaultSubobject<USphereComponent>(TEXT("Sphere"));
