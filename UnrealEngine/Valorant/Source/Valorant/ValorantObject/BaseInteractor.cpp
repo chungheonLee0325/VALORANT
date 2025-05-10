@@ -85,6 +85,16 @@ void ABaseInteractor::ServerOnly_OnSphereBeginOverlap(UPrimitiveComponent* Overl
 void ABaseInteractor::OnDetect(bool bIsDetect)
 {
 	DetectWidgetComponent->SetVisibility(bIsDetect);
+	if (bIsDetect)
+	{
+		Mesh->SetRenderCustomDepth(true);
+		Mesh->SetCustomDepthStencilValue(1);
+	}
+	else
+	{
+		Mesh->SetRenderCustomDepth(false);
+		Mesh->SetCustomDepthStencilValue(0);
+	}
 }
 
 bool ABaseInteractor::ServerOnly_CanAutoPickUp(ABaseAgent* Agent) const
