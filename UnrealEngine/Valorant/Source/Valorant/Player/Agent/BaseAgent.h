@@ -189,7 +189,7 @@ public:
 	UFUNCTION(Server, Reliable, Category = "Weapon")
 	void Server_AcquireInteractor(ABaseInteractor* Interactor);
 	UFUNCTION(Server, Reliable, Category = "Weapon")
-	void Server_SwitchInteractor(EInteractorType InteractorType);
+	void ServerRPC_SwitchInteractor(EInteractorType InteractorType);
 
 	UFUNCTION(BlueprintCallable, Category = "GAS")
 	float GetEffectSpeedMulitiplier() const { return EffectSpeedMultiplier; }

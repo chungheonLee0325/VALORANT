@@ -355,7 +355,7 @@ void ABaseWeapon::ServerRPC_Interact(ABaseAgent* InteractAgent)
 	Super::ServerRPC_Interact(InteractAgent);
 	if (ServerOnly_CanInteract())
 	{
-		ServerOnly_AttachWeapon(InteractAgent);
+		ServerRPC_PickUp(InteractAgent);
 	}
 }
 
@@ -365,7 +365,7 @@ void ABaseWeapon::ServerOnly_AttachWeapon(ABaseAgent* Agent)
 	{
 		return;
 	}
-
+	
 	FAttachmentTransformRules AttachmentRules(
 		EAttachmentRule::SnapToTarget,
 		EAttachmentRule::SnapToTarget,
@@ -391,6 +391,8 @@ void ABaseWeapon::ServerOnly_AttachWeapon(ABaseAgent* Agent)
 			// EnhancedInputComponent->BindAction(StartReloadAction, ETriggerEvent::Triggered, this, &ABaseWeapon::StartReload);
 		}
 	}
+
+	Agent->AcquireInteractor(this);
 }
 
 void ABaseWeapon::SetWeaponID(int32 NewWeaponID)

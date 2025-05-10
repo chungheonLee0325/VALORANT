@@ -331,7 +331,7 @@ void ABaseAgent::Interact()
 	{
 		if (ABaseInteractor* Interactor = Cast<ABaseInteractor>(FindInteractActor))
 		{
-			AcquireInteractor(Interactor);
+			Interactor->ServerRPC_Interact(this);
 		}
 	}
 }
@@ -365,7 +365,7 @@ ABaseWeapon* ABaseAgent::GetSubWeapon() const
 
 void ABaseAgent::AcquireInteractor(ABaseInteractor* Interactor)
 {
-	// NET_LOG(LogTemp,Warning,TEXT("이큅 웨폰"));
+	NET_LOG(LogTemp,Warning,TEXT("%hs Called"), __FUNCTION__);
 	if (!HasAuthority())
 	{
 		Server_AcquireInteractor(Interactor);
@@ -398,8 +398,6 @@ void ABaseAgent::AcquireInteractor(ABaseInteractor* Interactor)
 			MainWeapon = Weapon;
 		}
 	}
-
-	Interactor->ServerRPC_PickUp(this);
 
 	// 무기를 얻으면, 해당 무기의 타입의 슬롯으로 전환해 바로 장착하도록
 	SwitchInteractor(Interactor->GetInteractorType());
@@ -443,7 +441,7 @@ void ABaseAgent::SwitchInteractor(EInteractorType InteractorType)
 	}
 	else
 	{
-		Server_SwitchInteractor(InteractorType);
+		ServerRPC_SwitchInteractor(InteractorType);
 	}
 }
 
@@ -464,7 +462,7 @@ void ABaseAgent::Server_AcquireInteractor_Implementation(ABaseInteractor* Intera
 	AcquireInteractor(Interactor);
 }
 
-void ABaseAgent::Server_SwitchInteractor_Implementation(EInteractorType InteractorType)
+void ABaseAgent::ServerRPC_SwitchInteractor_Implementation(EInteractorType InteractorType)
 {
 	SwitchInteractor(InteractorType);
 }

@@ -77,7 +77,7 @@ void ABaseInteractor::ServerOnly_OnSphereBeginOverlap(UPrimitiveComponent* Overl
 		return;
 	}
 
-	ServerRPC_PickUp(Agent);
+	ServerRPC_Interact(Agent);
 }
 
 void ABaseInteractor::OnDetect(bool bIsDetect)
