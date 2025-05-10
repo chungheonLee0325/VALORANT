@@ -34,7 +34,7 @@ protected:
 
 public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	UWidgetComponent* InteractWidget;
+	TObjectPtr<UWidgetComponent> DetectWidgetComponent = nullptr;
 
 protected:
 	virtual void BeginPlay() override;

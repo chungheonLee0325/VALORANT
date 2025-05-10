@@ -297,6 +297,9 @@ struct FWeaponData : public FTableRowBase
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Data")
 	EWeaponType WeaponName = EWeaponType::None;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Data")
+	FString LocalName = "";
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Data")
 	int32 BaseDamage = 1;

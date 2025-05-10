@@ -19,9 +19,10 @@ ABaseInteractor::ABaseInteractor()
 	Mesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("WeaponMesh"));
 	SetRootComponent(Mesh);
 	
-	InteractWidget = CreateDefaultSubobject<UWidgetComponent>("InteractWidget");
-	InteractWidget->SetVisibility(false);
-	InteractWidget->SetupAttachment(GetRootComponent());
+	DetectWidgetComponent = CreateDefaultSubobject<UWidgetComponent>("DetectWidget");
+	DetectWidgetComponent->SetVisibility(false);
+	DetectWidgetComponent->SetWidgetSpace(EWidgetSpace::Screen);
+	DetectWidgetComponent->SetupAttachment(GetRootComponent());
 
 	Sphere = CreateDefaultSubobject<USphereComponent>(TEXT("Sphere"));
 	Sphere->SetSphereRadius(32.f);
@@ -82,7 +83,7 @@ void ABaseInteractor::ServerOnly_OnSphereBeginOverlap(UPrimitiveComponent* Overl
 
 void ABaseInteractor::OnDetect(bool bIsDetect)
 {
-	InteractWidget->SetVisibility(bIsDetect);
+	DetectWidgetComponent->SetVisibility(bIsDetect);
 }
 
 bool ABaseInteractor::ServerOnly_CanAutoPickUp(ABaseAgent* Agent) const

@@ -6,12 +6,14 @@
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "Valorant.h"
+#include "Components/WidgetComponent.h"
 #include "GameManager/SubsystemSteamManager.h"
 #include "GameManager/ValorantGameInstance.h"
 #include "Kismet/GameplayStatics.h"
 #include "Player/AgentPlayerController.h"
 #include "Player/Agent/BaseAgent.h"
 #include "Net/UnrealNetwork.h"
+#include "UI/DetectWidget.h"
 
 ABaseWeapon::ABaseWeapon()
 {
@@ -34,6 +36,10 @@ void ABaseWeapon::BeginPlay()
 	{
 		UE_LOG(LogTemp, Error, TEXT("ABaseWeapon::BeginPlay: WeaponData Load Fail (WeaponID : %d)"), WeaponID);
 		return;
+	}
+	if (const auto* DetectWidget = Cast<UDetectWidget>(DetectWidgetComponent->GetUserWidgetObject()))
+	{
+		DetectWidget->SetName(TEXT("획득 ") + WeaponData->LocalName);
 	}
 	
 	// 무기 사용 여부에 따른 시각적 효과 적용
