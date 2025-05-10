@@ -58,6 +58,8 @@ class VALORANT_API AMatchGameMode : public AGameMode
 
 public:
 	AMatchGameMode();
+	static bool IsAttacker(const bool bIsBlueTeam);
+	static bool IsShifted();
 
 protected:
 	virtual void BeginPlay() override;
@@ -132,22 +134,21 @@ protected:
 	void HandleRoundSubState_InRound();
 	void HandleRoundSubState_EndPhase();
 	void SetRoundSubState(ERoundSubState NewRoundSubState);
-	
+
+public:
 	int TotalRound = 6;
-	int CurrentRound = 0;
+	// static int CurrentRound;
 	int RequiredScore = 4;
 	int TeamBlueScore = 0;
 	int TeamRedScore = 0;
-	int ShiftRound = 4;
+	// static int ShiftRound;
 	int BlueTeamConsecutiveLosses = 0;
 	int RedTeamConsecutiveLosses = 0;
-	bool IsShifted() const { return CurrentRound >= ShiftRound; }
 	void HandleRoundEnd(bool bBlueWin, const ERoundEndReason RoundEndReason);
 
 	// 크레딧 시스템 관련 함수
 	void AwardRoundEndCredits();
 
-public:
 	bool bSpikePlanted = false;
 	int TeamBlueRemainingAgentNum = 0;
 	int TeamRedRemainingAgentNum = 0;

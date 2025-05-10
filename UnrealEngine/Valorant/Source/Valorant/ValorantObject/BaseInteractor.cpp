@@ -80,9 +80,9 @@ void ABaseInteractor::ServerOnly_OnSphereBeginOverlap(UPrimitiveComponent* Overl
 	ServerRPC_PickUp(Agent);
 }
 
-void ABaseInteractor::InteractActive(bool bIsActive)
+void ABaseInteractor::OnDetect(bool bIsDetect)
 {
-	InteractWidget->SetVisibility(bIsActive);
+	InteractWidget->SetVisibility(bIsDetect);
 }
 
 bool ABaseInteractor::ServerOnly_CanAutoPickUp(ABaseAgent* Agent) const
@@ -91,6 +91,11 @@ bool ABaseInteractor::ServerOnly_CanAutoPickUp(ABaseAgent* Agent) const
 }
 
 bool ABaseInteractor::ServerOnly_CanDrop() const
+{
+	return true;
+}
+
+bool ABaseInteractor::ServerOnly_CanInteract() const
 {
 	return true;
 }
@@ -125,4 +130,9 @@ void ABaseInteractor::ServerRPC_Drop_Implementation()
 	
 	OwnerAgent = nullptr;
 	SetOwner(nullptr);
+}
+
+void ABaseInteractor::ServerRPC_Interact_Implementation(ABaseAgent* InteractAgent)
+{
+	//
 }

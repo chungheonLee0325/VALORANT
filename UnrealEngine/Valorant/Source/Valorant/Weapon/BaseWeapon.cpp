@@ -350,9 +350,18 @@ void ABaseWeapon::ServerRPC_Drop()
 	}
 }
 
-void ABaseWeapon::ServerOnly_AttachWeapon(ABaseAgent* PickUpAgent)
+void ABaseWeapon::ServerRPC_Interact(ABaseAgent* InteractAgent)
 {
-	if (nullptr == OwnerAgent)
+	Super::ServerRPC_Interact(InteractAgent);
+	if (ServerOnly_CanInteract())
+	{
+		ServerOnly_AttachWeapon(InteractAgent);
+	}
+}
+
+void ABaseWeapon::ServerOnly_AttachWeapon(ABaseAgent* Agent)
+{
+	if (nullptr == Agent)
 	{
 		return;
 	}
@@ -363,10 +372,10 @@ void ABaseWeapon::ServerOnly_AttachWeapon(ABaseAgent* PickUpAgent)
 		EAttachmentRule::KeepRelative,
 		true
 	);
-	AttachToComponent(OwnerAgent->GetMesh(), AttachmentRules, FName(TEXT("R_WeaponPointSocket")));
+	AttachToComponent(Agent->GetMesh(), AttachmentRules, FName(TEXT("R_WeaponPointSocket")));
 
 	// Set up action bindings
-	if (const AAgentPlayerController* PlayerController = Cast<AAgentPlayerController>(OwnerAgent->GetController()))
+	if (const AAgentPlayerController* PlayerController = Cast<AAgentPlayerController>(Agent->GetController()))
 	{
 		if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PlayerController->GetLocalPlayer()))
 		{

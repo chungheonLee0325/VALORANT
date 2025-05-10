@@ -329,12 +329,9 @@ void ABaseAgent::Interact()
 {
 	if (FindInteractActor)
 	{
-		if (ABaseWeapon* weapon = Cast<ABaseWeapon>(FindInteractActor))
+		if (ABaseInteractor* Interactor = Cast<ABaseInteractor>(FindInteractActor))
 		{
-			AcquireWeapon(weapon);
-		}
-		else if (ASpike* spike = Cast<ASpike>(FindInteractActor))
-		{
+			AcquireInteractor(Interactor);
 		}
 	}
 }
@@ -366,46 +363,49 @@ ABaseWeapon* ABaseAgent::GetSubWeapon() const
 	return SubWeapon;
 }
 
-void ABaseAgent::AcquireWeapon(ABaseWeapon* weapon)
+void ABaseAgent::AcquireInteractor(ABaseInteractor* Interactor)
 {
 	// NET_LOG(LogTemp,Warning,TEXT("이큅 웨폰"));
 	if (!HasAuthority())
 	{
-		Server_AcquireWeapon(weapon);
+		Server_AcquireInteractor(Interactor);
 		return;
 	}
-	
-	if (weapon->GetWeaponCategory() == EWeaponCategory::Sidearm)
+
+	if (auto* Weapon = Cast<ABaseWeapon>(Interactor))
 	{
-		// UE_LOG(LogTemp, Warning, TEXT("보조무기"));
-		if (SubWeapon)
+		if (Weapon->GetWeaponCategory() == EWeaponCategory::Sidearm)
 		{
-			// ToDO : 기본 권총을 버려야할지
-			// UE_LOG(LogTemp,Warning,TEXT("이미 들고 있음"));
-			SubWeapon->ServerRPC_Drop();
-		}
+			// UE_LOG(LogTemp, Warning, TEXT("보조무기"));
+			if (SubWeapon)
+			{
+				// ToDO : 기본 권총을 버려야할지
+				// UE_LOG(LogTemp,Warning,TEXT("이미 들고 있음"));
+				SubWeapon->ServerRPC_Drop();
+			}
 		
-		SubWeapon = weapon;
-	}
-	else
-	{
-		// UE_LOG(LogTemp, Warning, TEXT("주무기"));
-		if (MainWeapon)
-		{
-			// UE_LOG(LogTemp,Warning,TEXT("이미 들고 있음"));
-			MainWeapon->ServerRPC_Drop();
+			SubWeapon = Weapon;
 		}
+		else
+		{
+			// UE_LOG(LogTemp, Warning, TEXT("주무기"));
+			if (MainWeapon)
+			{
+				// UE_LOG(LogTemp,Warning,TEXT("이미 들고 있음"));
+				MainWeapon->ServerRPC_Drop();
+			}
 
-		MainWeapon = weapon;
+			MainWeapon = Weapon;
+		}
 	}
 
-	weapon->ServerRPC_PickUp(this);
+	Interactor->ServerRPC_PickUp(this);
 
 	// 무기를 얻으면, 해당 무기의 타입의 슬롯으로 전환해 바로 장착하도록
-	SwitchWeapon(weapon->GetInteractorType());
+	SwitchInteractor(Interactor->GetInteractorType());
 }
 
-void ABaseAgent::SwitchWeapon(EInteractorType InteractorType)
+void ABaseAgent::SwitchInteractor(EInteractorType InteractorType)
 {
 	if (HasAuthority())
 	{
@@ -443,7 +443,7 @@ void ABaseAgent::SwitchWeapon(EInteractorType InteractorType)
 	}
 	else
 	{
-		Server_SwitchWeapon(InteractorType);
+		Server_SwitchInteractor(InteractorType);
 	}
 }
 
@@ -459,14 +459,14 @@ void ABaseAgent::OnRep_ChangeInteractorState()
 	}
 }
 
-void ABaseAgent::Server_AcquireWeapon_Implementation(ABaseWeapon* weapon)
+void ABaseAgent::Server_AcquireInteractor_Implementation(ABaseInteractor* Interactor)
 {
-	AcquireWeapon(weapon);
+	AcquireInteractor(Interactor);
 }
 
-void ABaseAgent::Server_SwitchWeapon_Implementation(EInteractorType InteractorType)
+void ABaseAgent::Server_SwitchInteractor_Implementation(EInteractorType InteractorType)
 {
-	SwitchWeapon(InteractorType);
+	SwitchInteractor(InteractorType);
 }
 
 void ABaseAgent::SetShopUI()
@@ -513,7 +513,7 @@ void ABaseAgent::OnFindInteraction(UPrimitiveComponent* OverlappedComponent, AAc
 	// 이미 바라보고 있는 총이 있으면 리턴
 	if (FindInteractActor)
 	{
-		if (auto* weapon = Cast<ABaseWeapon>(FindInteractActor))
+		if (auto* interactor = Cast<ABaseInteractor>(FindInteractActor))
 		{
 			return;
 		}
@@ -522,7 +522,7 @@ void ABaseAgent::OnFindInteraction(UPrimitiveComponent* OverlappedComponent, AAc
 	if (auto* interactor = Cast<ABaseInteractor>(OtherActor))
 	{
 		FindInteractActor = interactor;
-		FindInteractActor->InteractActive(true);
+		FindInteractActor->OnDetect(true);
 	}
 }
 
@@ -533,7 +533,7 @@ void ABaseAgent::OnInteractionCapsuleEndOverlap(UPrimitiveComponent* OverlappedC
 	{
 		if (interactor == FindInteractActor)
 		{
-			FindInteractActor->InteractActive(false);
+			FindInteractActor->OnDetect(false);
 			FindInteractActor = nullptr;
 		}
 	}

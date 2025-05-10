@@ -3,6 +3,9 @@
 
 #include "Spike.h"
 
+#include "GameManager/MatchGameMode.h"
+#include "Player/Agent/BaseAgent.h"
+
 
 ASpike::ASpike()
 {
@@ -24,4 +27,39 @@ void ASpike::BeginPlay()
 void ASpike::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+}
+
+void ASpike::ServerRPC_PickUp(ABaseAgent* Agent)
+{
+	Super::ServerRPC_PickUp(Agent);
+}
+
+void ASpike::ServerRPC_Drop()
+{
+	Super::ServerRPC_Drop();
+}
+
+void ASpike::ServerRPC_Interact(ABaseAgent* InteractAgent)
+{
+	Super::ServerRPC_Interact(InteractAgent);
+}
+
+bool ASpike::ServerOnly_CanAutoPickUp(ABaseAgent* Agent) const
+{
+	const auto* PS = Agent->GetPlayerState<AAgentPlayerState>();
+	if (nullptr == PS)
+	{
+		return false;
+	}
+	return AMatchGameMode::IsAttacker(PS->bIsBlueTeam);
+}
+
+bool ASpike::ServerOnly_CanDrop() const
+{
+	return true;
+}
+
+bool ASpike::ServerOnly_CanInteract() const
+{
+	return ServerOnly_CanAutoPickUp(OwnerAgent);
 }

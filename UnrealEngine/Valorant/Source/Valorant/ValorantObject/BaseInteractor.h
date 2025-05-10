@@ -46,15 +46,19 @@ protected:
 	void ServerOnly_OnSphereBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
 
 public:
-	void InteractActive(bool bIsActive);
+	void OnDetect(bool bIsDetect);
 	// 현재 Agent가 이 Interactor를 자동으로 주울 수 있는지 여부
 	virtual bool ServerOnly_CanAutoPickUp(ABaseAgent* Agent) const;
 	// 버릴 수 있는지 여부
 	virtual bool ServerOnly_CanDrop() const;
+	// Agent가 가까이 가서 바라보았을 때 상호작용 가능한지 여부
+	virtual bool ServerOnly_CanInteract() const;
 	UFUNCTION(Server, Reliable)
 	virtual void ServerRPC_PickUp(ABaseAgent* Agent);
 	UFUNCTION(Server, Reliable)
 	virtual void ServerRPC_Drop();
+	UFUNCTION(Server, Reliable)
+	virtual void ServerRPC_Interact(ABaseAgent* InteractAgent);
 
 	EInteractorType GetInteractorType() const { return InteractorType; }
 };

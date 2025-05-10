@@ -177,19 +177,19 @@ public:
 
 	/** 장착 X, 획득하는 개념 (땅에 떨어진 무기 줍기, 상점에서 무기 구매) */
 	UFUNCTION(BlueprintCallable, Category = "Weapon")
-	void AcquireWeapon(ABaseWeapon* weapon);
+	void AcquireInteractor(ABaseInteractor* Interactor);
 	
 	/** 해당 슬롯의 인터랙터를 손에 들고자 할 때 */
 	UFUNCTION(BlueprintCallable, Category = "Weapon")
-	void SwitchWeapon(EInteractorType InteractorType);
+	void SwitchInteractor(EInteractorType InteractorType);
 
 	UFUNCTION()
 	void OnRep_ChangeInteractorState();
 	
 	UFUNCTION(Server, Reliable, Category = "Weapon")
-	void Server_AcquireWeapon(ABaseWeapon* weapon);
+	void Server_AcquireInteractor(ABaseInteractor* Interactor);
 	UFUNCTION(Server, Reliable, Category = "Weapon")
-	void Server_SwitchWeapon(EInteractorType InteractorType);
+	void Server_SwitchInteractor(EInteractorType InteractorType);
 
 	UFUNCTION(BlueprintCallable, Category = "GAS")
 	float GetEffectSpeedMulitiplier() const { return EffectSpeedMultiplier; }
