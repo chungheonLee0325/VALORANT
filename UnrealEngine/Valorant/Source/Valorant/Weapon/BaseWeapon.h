@@ -52,6 +52,11 @@ class VALORANT_API ABaseWeapon : public ABaseInteractor
 	FTimerHandle AutoFireHandle;
 	FTimerHandle ReloadHandle;
 
+	UPROPERTY()
+	UAnimMontage* AM_Fire;
+	UPROPERTY()
+	UAnimMontage* AM_Reload;
+
 public:
 	// 탄창 내 남은 탄약
 	UPROPERTY(BlueprintReadOnly)
