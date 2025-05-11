@@ -409,16 +409,19 @@ void ABaseAgent::SwitchInteractor(EInteractorType InteractorType)
 	{
 		if (InteractorType == EInteractorType::MainWeapon)
 		{
+			WeaponIdxOffset = 11;
 			EquipInteractor(MainWeapon);
 			UpdateEquipSpeedMultiplier();
 		}
 		else if (InteractorType == EInteractorType::SubWeapon)
 		{
+			WeaponIdxOffset = 2;
 			EquipInteractor(SubWeapon);
 			UpdateEquipSpeedMultiplier();
 		}
 		else if (InteractorType == EInteractorType::Melee)
 		{
+			WeaponIdxOffset = 0;
 			EquipInteractor(MeleeKnife);
 			UpdateEquipSpeedMultiplier();
 		}
@@ -482,20 +485,24 @@ void ABaseAgent::SetShopUI()
 void ABaseAgent::EquipInteractor(ABaseInteractor* interactor)
 {
 	//TODO: 기존 들고 있던 물건 숨기고 새로운 인터랙터 활성화
-	
 	CurrentInteractor = interactor;
 
-	// if (CurrentInteractor == nullptr)
-	// {
-	// 	CurrentInteractorState = EInteractorType::None;
-	// 	CurrentInteractorState = EInteractorType::None;
-	// 	NET_LOG(LogTemp, Warning, TEXT("빈손이네요"));
-	// 	return;
-	// }
-	//
-	// CurrentInteractorState;
-	//
-	// NET_LOG(LogTemp, Warning, TEXT("현재 들고 있는 인터랙터: %s"), *CurrentInteractor->GetActorNameOrLabel());
+	if (CurrentInteractor == nullptr)
+	{
+		CurrentInteractorState = EInteractorType::None;
+		CurrentInteractorState = EInteractorType::None;
+		NET_LOG(LogTemp, Warning, TEXT("빈손이네요"));
+		return;
+	}
+
+	//TODO: 인터랙터에도 적용할지 말지
+	if (auto* weapon = Cast<ABaseWeapon>(CurrentInteractor))
+	{
+		ABP_1P->InteractorPoseIdx = weapon->GetWeaponID()-WeaponIdxOffset;
+		ABP_3P->InteractorPoseIdx = weapon->GetWeaponID()-WeaponIdxOffset;
+	}
+	
+	NET_LOG(LogTemp, Warning, TEXT("현재 들고 있는 인터랙터: %s"), *CurrentInteractor->GetActorNameOrLabel());
 }
 
 void ABaseAgent::OnFindInteraction(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,

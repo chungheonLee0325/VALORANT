@@ -265,6 +265,8 @@ protected:
 	UPROPERTY(Replicated, ReplicatedUsing=OnRep_ChangeInteractorState)
 	EInteractorType CurrentInteractorState = EInteractorType::None;
 
+	int WeaponIdxOffset = 0;
+
 protected:
 	virtual void PossessedBy(AController* NewController) override;
 	virtual void OnRep_PlayerState() override;
