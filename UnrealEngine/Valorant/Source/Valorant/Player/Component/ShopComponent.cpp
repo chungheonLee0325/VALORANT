@@ -586,7 +586,7 @@ void UShopComponent::SpawnWeaponForPlayer(int32 WeaponID)
 				}
 			}
 			
-			Agent->AcquireWeapon(NewWeapon);
+			Agent->AcquireInteractor(NewWeapon);
 
 			// // 무기가 장착된 후 이벤트 발생
 			// OnEquippedWeaponsChanged.Broadcast();

@@ -19,9 +19,11 @@ ABaseInteractor::ABaseInteractor()
 	Mesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("WeaponMesh"));
 	SetRootComponent(Mesh);
 	
-	InteractWidget = CreateDefaultSubobject<UWidgetComponent>("InteractWidget");
-	InteractWidget->SetVisibility(false);
-	InteractWidget->SetupAttachment(GetRootComponent());
+	DetectWidgetComponent = CreateDefaultSubobject<UWidgetComponent>("DetectWidget");
+	DetectWidgetComponent->SetVisibility(false);
+	DetectWidgetComponent->SetWidgetSpace(EWidgetSpace::Screen);
+	DetectWidgetComponent->SetPivot(FVector2D(0.5f, 1.f));
+	DetectWidgetComponent->SetupAttachment(GetRootComponent());
 
 	Sphere = CreateDefaultSubobject<USphereComponent>(TEXT("Sphere"));
 	Sphere->SetSphereRadius(32.f);
@@ -77,12 +79,22 @@ void ABaseInteractor::ServerOnly_OnSphereBeginOverlap(UPrimitiveComponent* Overl
 		return;
 	}
 
-	ServerRPC_PickUp(Agent);
+	ServerRPC_Interact(Agent);
 }
 
-void ABaseInteractor::InteractActive(bool bIsActive)
+void ABaseInteractor::OnDetect(bool bIsDetect)
 {
-	InteractWidget->SetVisibility(bIsActive);
+	DetectWidgetComponent->SetVisibility(bIsDetect);
+	if (bIsDetect)
+	{
+		Mesh->SetRenderCustomDepth(true);
+		Mesh->SetCustomDepthStencilValue(1);
+	}
+	else
+	{
+		Mesh->SetRenderCustomDepth(false);
+		Mesh->SetCustomDepthStencilValue(0);
+	}
 }
 
 bool ABaseInteractor::ServerOnly_CanAutoPickUp(ABaseAgent* Agent) const
@@ -91,6 +103,11 @@ bool ABaseInteractor::ServerOnly_CanAutoPickUp(ABaseAgent* Agent) const
 }
 
 bool ABaseInteractor::ServerOnly_CanDrop() const
+{
+	return true;
+}
+
+bool ABaseInteractor::ServerOnly_CanInteract() const
 {
 	return true;
 }
@@ -125,4 +142,9 @@ void ABaseInteractor::ServerRPC_Drop_Implementation()
 	
 	OwnerAgent = nullptr;
 	SetOwner(nullptr);
+}
+
+void ABaseInteractor::ServerRPC_Interact_Implementation(ABaseAgent* InteractAgent)
+{
+	//
 }

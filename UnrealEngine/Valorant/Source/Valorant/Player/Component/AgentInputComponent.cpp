@@ -233,7 +233,7 @@ void UAgentInputComponent::Weapon1(const FInputActionValue& InputActionValue)
 {
 	if (Agent)
 	{
-		Agent->SwitchWeapon(EInteractorType::MainWeapon);
+		Agent->SwitchInteractor(EInteractorType::MainWeapon);
 	}
 }
 
@@ -241,7 +241,7 @@ void UAgentInputComponent::Weapon2(const FInputActionValue& InputActionValue)
 {
 	if (Agent)
 	{
-		Agent->SwitchWeapon(EInteractorType::SubWeapon);
+		Agent->SwitchInteractor(EInteractorType::SubWeapon);
 	}
 }
 
@@ -249,7 +249,7 @@ void UAgentInputComponent::Weapon3(const FInputActionValue& InputActionValue)
 {
 	if (Agent)
 	{
-		Agent->SwitchWeapon(EInteractorType::Melee);
+		Agent->SwitchInteractor(EInteractorType::Melee);
 	}
 }
 
@@ -257,7 +257,7 @@ void UAgentInputComponent::Weapon4(const FInputActionValue& InputActionValue)
 {
 	if (Agent)
 	{
-		Agent->SwitchWeapon(EInteractorType::Spike);
+		Agent->SwitchInteractor(EInteractorType::Spike);
 	}
 }
 

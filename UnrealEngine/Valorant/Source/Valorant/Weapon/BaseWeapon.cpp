@@ -6,12 +6,14 @@
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "Valorant.h"
+#include "Components/WidgetComponent.h"
 #include "GameManager/SubsystemSteamManager.h"
 #include "GameManager/ValorantGameInstance.h"
 #include "Kismet/GameplayStatics.h"
 #include "Player/AgentPlayerController.h"
 #include "Player/Agent/BaseAgent.h"
 #include "Net/UnrealNetwork.h"
+#include "UI/DetectWidget.h"
 
 ABaseWeapon::ABaseWeapon()
 {
@@ -34,6 +36,10 @@ void ABaseWeapon::BeginPlay()
 	{
 		UE_LOG(LogTemp, Error, TEXT("ABaseWeapon::BeginPlay: WeaponData Load Fail (WeaponID : %d)"), WeaponID);
 		return;
+	}
+	if (const auto* DetectWidget = Cast<UDetectWidget>(DetectWidgetComponent->GetUserWidgetObject()))
+	{
+		DetectWidget->SetName(TEXT("획득 ") + WeaponData->LocalName);
 	}
 	
 	// 무기 사용 여부에 따른 시각적 효과 적용
@@ -350,23 +356,32 @@ void ABaseWeapon::ServerRPC_Drop()
 	}
 }
 
-void ABaseWeapon::ServerOnly_AttachWeapon(ABaseAgent* PickUpAgent)
+void ABaseWeapon::ServerRPC_Interact(ABaseAgent* InteractAgent)
 {
-	if (nullptr == OwnerAgent)
+	Super::ServerRPC_Interact(InteractAgent);
+	if (ServerOnly_CanInteract())
+	{
+		ServerRPC_PickUp(InteractAgent);
+	}
+}
+
+void ABaseWeapon::ServerOnly_AttachWeapon(ABaseAgent* Agent)
+{
+	if (nullptr == Agent)
 	{
 		return;
 	}
-
+	
 	FAttachmentTransformRules AttachmentRules(
 		EAttachmentRule::SnapToTarget,
 		EAttachmentRule::SnapToTarget,
 		EAttachmentRule::KeepRelative,
 		true
 	);
-	AttachToComponent(OwnerAgent->GetMesh(), AttachmentRules, FName(TEXT("R_WeaponPointSocket")));
+	AttachToComponent(Agent->GetMesh(), AttachmentRules, FName(TEXT("R_WeaponPointSocket")));
 
 	// Set up action bindings
-	if (const AAgentPlayerController* PlayerController = Cast<AAgentPlayerController>(OwnerAgent->GetController()))
+	if (const AAgentPlayerController* PlayerController = Cast<AAgentPlayerController>(Agent->GetController()))
 	{
 		if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PlayerController->GetLocalPlayer()))
 		{
@@ -382,6 +397,8 @@ void ABaseWeapon::ServerOnly_AttachWeapon(ABaseAgent* PickUpAgent)
 			// EnhancedInputComponent->BindAction(StartReloadAction, ETriggerEvent::Triggered, this, &ABaseWeapon::StartReload);
 		}
 	}
+
+	Agent->AcquireInteractor(this);
 }
 
 void ABaseWeapon::SetWeaponID(int32 NewWeaponID)

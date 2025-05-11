@@ -135,7 +135,8 @@ public:
 	virtual bool ServerOnly_CanDrop() const override;
 	virtual void ServerRPC_PickUp(ABaseAgent* Agent) override;
 	virtual void ServerRPC_Drop() override;
-	void ServerOnly_AttachWeapon(ABaseAgent* PickUpAgent);
+	virtual void ServerRPC_Interact(ABaseAgent* InteractAgent) override;
+	void ServerOnly_AttachWeapon(ABaseAgent* Agent);
 
 	// 무기 사용 여부 리셋 (라운드 시작 시)
 	UFUNCTION(BlueprintCallable, Category="Weapon")

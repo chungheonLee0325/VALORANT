@@ -19,9 +19,21 @@
 #include "Player/Component/CreditComponent.h"
 #include "Weapon/BaseWeapon.h"
 
+static int CurrentRound = 0;
+static int ShiftRound = 4;
+
 AMatchGameMode::AMatchGameMode()
 {
-	// PlayerControllerClass = AMatchPlayerController::StaticClass();
+}
+
+/* static */ bool AMatchGameMode::IsAttacker(const bool bIsBlueTeam)
+{
+	return bIsBlueTeam ? !IsShifted() : IsShifted();
+}
+
+/* static */ bool AMatchGameMode::IsShifted()
+{
+	return CurrentRound >= ShiftRound;
 }
 
 void AMatchGameMode::BeginPlay()
