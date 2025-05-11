@@ -104,6 +104,10 @@ protected:
 
 	UFUNCTION(Server, Reliable)
 	void ServerRPC_Fire(const FVector& Location, const FVector& Direction);
+	UFUNCTION(NetMulticast, Reliable)
+	void MulticastRPC_PlayFireSound();
+	UFUNCTION(BlueprintImplementableEvent)
+	void PlayFireSound();
 	
 	UFUNCTION(BlueprintCallable, Category="Weapon")
 	void Reload();

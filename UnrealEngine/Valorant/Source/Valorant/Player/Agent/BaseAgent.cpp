@@ -13,6 +13,7 @@
 #include "Components/TimelineComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "GameManager/MatchGameMode.h"
+#include "GameManager/MatchGameState.h"
 #include "GameManager/SubsystemSteamManager.h"
 #include "GameManager/ValorantGameInstance.h"
 #include "Kismet/GameplayStatics.h"
@@ -25,20 +26,21 @@
 #include "ValorantObject/Spike/Spike.h"
 #include "Player/Component/CreditComponent.h"
 
-/* static */ EAgentDamagedPart ABaseAgent::GetHitDamagedPart(const FName& BoneName)
+/* static */
+EAgentDamagedPart ABaseAgent::GetHitDamagedPart(const FName& BoneName)
 {
 	const FString& NameStr = BoneName.ToString();
 	if (NameStr.Contains(TEXT("Neck"), ESearchCase::IgnoreCase))
 		return EAgentDamagedPart::Head;
-	if (NameStr.Contains(TEXT("Clavicle"), ESearchCase::IgnoreCase) || 
-		NameStr.Contains(TEXT("Shoulder"), ESearchCase::IgnoreCase) || 
+	if (NameStr.Contains(TEXT("Clavicle"), ESearchCase::IgnoreCase) ||
+		NameStr.Contains(TEXT("Shoulder"), ESearchCase::IgnoreCase) ||
 		NameStr.Contains(TEXT("Elbow"), ESearchCase::IgnoreCase) ||
 		NameStr.Contains(TEXT("Hand"), ESearchCase::IgnoreCase) ||
 		NameStr.Contains(TEXT("Spine"), ESearchCase::IgnoreCase))
 		return EAgentDamagedPart::Body;
-	if (NameStr.Contains(TEXT("Hip"), ESearchCase::IgnoreCase) || 
-		NameStr.Contains(TEXT("Knee"), ESearchCase::IgnoreCase) || 
-		NameStr.Contains(TEXT("Foot"), ESearchCase::IgnoreCase) || 
+	if (NameStr.Contains(TEXT("Hip"), ESearchCase::IgnoreCase) ||
+		NameStr.Contains(TEXT("Knee"), ESearchCase::IgnoreCase) ||
+		NameStr.Contains(TEXT("Foot"), ESearchCase::IgnoreCase) ||
 		NameStr.Contains(TEXT("Toe"), ESearchCase::IgnoreCase))
 		return EAgentDamagedPart::Legs;
 	return EAgentDamagedPart::None;
@@ -126,6 +128,12 @@ void ABaseAgent::PossessedBy(AController* NewController)
 	{
 		BindToDelegatePC(pc);
 	}
+
+	if (IsLocallyControlled())
+	{
+		InteractionCapsule->OnComponentBeginOverlap.AddDynamic(this, &ABaseAgent::OnFindInteraction);
+		InteractionCapsule->OnComponentEndOverlap.AddDynamic(this, &ABaseAgent::OnInteractionCapsuleEndOverlap);
+	}
 }
 
 // 클라이언트 전용. 서버로부터 PlayerState를 최초로 받을 때 호출됨
@@ -181,8 +189,11 @@ void ABaseAgent::BeginPlay()
 	// 	TL_DieCamera->SetTimelineFinishedFunc(finishDieCamera);
 	// }
 
-	InteractionCapsule->OnComponentBeginOverlap.AddDynamic(this, &ABaseAgent::OnFindInteraction);
-	InteractionCapsule->OnComponentEndOverlap.AddDynamic(this, &ABaseAgent::OnInteractionCapsuleEndOverlap);
+	if (HasAuthority() == false && IsLocallyControlled())
+	{
+		InteractionCapsule->OnComponentBeginOverlap.AddDynamic(this, &ABaseAgent::OnFindInteraction);
+		InteractionCapsule->OnComponentEndOverlap.AddDynamic(this, &ABaseAgent::OnInteractionCapsuleEndOverlap);
+	}
 
 	//TODO: 기본 총, 칼 스폰해서 붙여주기
 
@@ -361,6 +372,7 @@ void ABaseAgent::StartFire()
 	// TODO: 무기를 발사하다가 교체하였을 때, EndFire() 호출?
 	if (auto* weapon = Cast<ABaseWeapon>(CurrentInteractor))
 	{
+		NET_LOG(LogTemp, Warning, TEXT("스타트 파이어"));
 		weapon->StartFire();
 	}
 }
@@ -402,12 +414,23 @@ void ABaseAgent::Interact()
 	{
 		if (ABaseInteractor* Interactor = Cast<ABaseInteractor>(FindInteractActor))
 		{
-			Interactor->ServerRPC_Interact(this);
+			ServerRPC_Interact(Interactor);
+			FindInteractActor->OnDetect(false);
+			FindInteractActor = nullptr;
 		}
 	}
 }
 
-void ABaseAgent::DropCurrentInteractor()
+void ABaseAgent::ServerRPC_Interact_Implementation(ABaseInteractor* Interactor)
+{
+	if (nullptr == Interactor)
+	{
+		NET_LOG(LogTemp, Warning, TEXT("%hs Called, Interactor is nullptr"), __FUNCTION__);
+	}
+	Interactor->ServerRPC_Interact(this);
+}
+
+void ABaseAgent::ServerRPC_DropCurrentInteractor_Implementation()
 {
 	if (CurrentInteractor && CurrentInteractor->ServerOnly_CanDrop())
 	{
@@ -420,10 +443,15 @@ void ABaseAgent::DropCurrentInteractor()
 			SubWeapon = nullptr;
 		}
 		CurrentInteractor->ServerRPC_Drop();
-		CurrentInteractor = nullptr;
-		
+		ServerRPC_SetCurrentInteractor(nullptr);
+
 		EquipInteractor(CurrentInteractor);
 	}
+}
+
+void ABaseAgent::ServerRPC_SetCurrentInteractor_Implementation(ABaseInteractor* interactor)
+{
+	CurrentInteractor = interactor;
 }
 
 ABaseWeapon* ABaseAgent::GetMainWeapon() const
@@ -436,12 +464,30 @@ ABaseWeapon* ABaseAgent::GetSubWeapon() const
 	return SubWeapon;
 }
 
+ABaseWeapon* ABaseAgent::GetMeleeWeapon() const
+{
+	return MeleeKnife;
+}
+
+void ABaseAgent::ResetOwnSpike()
+{
+	Spike = nullptr;
+}
+
 void ABaseAgent::AcquireInteractor(ABaseInteractor* Interactor)
 {
-	NET_LOG(LogTemp,Warning,TEXT("%hs Called"), __FUNCTION__);
+	NET_LOG(LogTemp, Warning, TEXT("%hs Called"), __FUNCTION__);
 	if (!HasAuthority())
 	{
 		Server_AcquireInteractor(Interactor);
+		return;
+	}
+
+	// 스파이크일 경우 처리
+	auto* spike = Cast<ASpike>(Interactor);
+	if (spike)
+	{
+		Spike = spike;
 		return;
 	}
 
@@ -450,7 +496,7 @@ void ABaseAgent::AcquireInteractor(ABaseInteractor* Interactor)
 	{
 		return;
 	}
-	
+
 	if (weapon->GetWeaponCategory() == EWeaponCategory::Sidearm)
 	{
 		if (SubWeapon)
@@ -460,7 +506,7 @@ void ABaseAgent::AcquireInteractor(ABaseInteractor* Interactor)
 		}
 		SubWeapon = weapon;
 	}
-	else
+	else if (weapon->GetWeaponCategory() != EWeaponCategory::None)
 	{
 		if (MainWeapon)
 		{
@@ -468,7 +514,7 @@ void ABaseAgent::AcquireInteractor(ABaseInteractor* Interactor)
 		}
 		MainWeapon = weapon;
 	}
-	
+
 
 	// 무기를 얻으면, 해당 무기의 타입의 슬롯으로 전환해 바로 장착하도록
 	SwitchInteractor(Interactor->GetInteractorType());
@@ -482,7 +528,7 @@ void ABaseAgent::SwitchInteractor(EInteractorType InteractorType)
 		{
 			CurrentInteractor->SetActive(false);
 		}
-		
+
 		if (InteractorType == EInteractorType::MainWeapon)
 		{
 			PoseIdxOffset = -11;
@@ -513,6 +559,60 @@ void ABaseAgent::SwitchInteractor(EInteractorType InteractorType)
 	}
 }
 
+void ABaseAgent::ActivateSpike()
+{
+	if (IsInPlantZone)
+	{
+		// 스파이크 소지자이고, 설치 상태이면 설치
+		if (Spike && Spike->GetSpikeState() == ESpikeState::Carried)
+		{
+			ServerRPC_Interact(Spike);
+		}
+		// 스파이크 해제 가능 상태이면 스파이크 해제
+		else if (Cast<ASpike>(FindInteractActor))
+		{
+			ServerRPC_Interact(FindInteractActor);
+		}
+	}
+	else
+	{
+		SwitchInteractor(EInteractorType::Spike);
+	}
+}
+
+void ABaseAgent::CancelSpike(ASpike* CancelObject)
+{
+	if (CancelObject == nullptr)
+	{
+		if (Spike)
+		{
+			CancelObject = Spike;
+		}
+		else if (ASpike* spike = Cast<ASpike>(FindInteractActor))
+		{
+			CancelObject = spike;
+		}
+		else
+		{
+			return;
+		}
+	}
+
+	if (HasAuthority() && CancelObject)
+	{
+		CancelObject->ServerRPC_Cancel(this);
+	}
+	else
+	{
+		ServerRPC_CancelSpike(CancelObject);
+	}
+}
+
+void ABaseAgent::ServerRPC_CancelSpike_Implementation(ASpike* CancelObject)
+{
+	CancelSpike(CancelObject);
+}
+
 void ABaseAgent::OnRep_ChangeInteractorState()
 {
 	if (ABP_1P)
@@ -527,8 +627,14 @@ void ABaseAgent::OnRep_ChangeInteractorState()
 
 void ABaseAgent::OnRep_ChangePoseIdx()
 {
-	ABP_1P->InteractorPoseIdx = PoseIdx;
-	ABP_3P->InteractorPoseIdx = PoseIdx;
+	if (ABP_1P)
+	{
+		ABP_1P->InteractorPoseIdx = PoseIdx;
+	}
+	if (ABP_3P)
+	{
+		ABP_3P->InteractorPoseIdx = PoseIdx;
+	}
 }
 
 void ABaseAgent::Server_AcquireInteractor_Implementation(ABaseInteractor* Interactor)
@@ -545,33 +651,59 @@ void ABaseAgent::SetShopUI()
 {
 	if (IsLocallyControlled())
 	{
-		PC->RequestShopUI();
-	}
-	else
-	{
+		// 현재 라운드 상태 확인
+		// GameMode 대신 GameState를 사용 (클라이언트에서 접근 가능)
+		AMatchGameState* GameState = GetWorld()->GetGameState<AMatchGameState>();
+		if (GameState)
+		{
+			// 구매 페이즈인지 확인
+			if (GameState->CanOpenShop())
+			{
+				// 구매 페이즈일 때만 상점 UI 열기
+				PC->RequestShopUI();
+			}
+			else
+			{
+				// 구매 페이즈가 아닐 때는 알림 메시지 표시
+				FString Message = TEXT("상점은 구매 페이즈에서만 이용할 수 있습니다.");
+
+				// 알림 메시지 표시 (이미 열려있는 상점이 있으면 닫음)
+				if (PC)
+				{
+					PC->Client_ReceivePurchaseResult(false, 0, EShopItemType::None, Message);
+					PC->CloseShopUI();
+				}
+			}
+		}
+		else
+		{
+			// GameState를 찾을 수 없는 경우 기존 동작 유지
+			PC->RequestShopUI();
+		}
 	}
 }
 
 /** 실 장착관련 로직 */
 void ABaseAgent::EquipInteractor(ABaseInteractor* interactor)
 {
-	CurrentInteractor = interactor;
+	ServerRPC_SetCurrentInteractor(interactor);
 
 	if (CurrentInteractor == nullptr)
 	{
 		CurrentInteractorState = EInteractorType::None;
 		ABP_1P->InteractorState = EInteractorType::None;
 		ABP_3P->InteractorState = EInteractorType::None;
-		
+
 		NET_LOG(LogTemp, Warning, TEXT("빈손이네요"));
 		return;
 	}
 
 	CurrentInteractor->SetActive(true);
 	CurrentInteractorState = CurrentInteractor->GetInteractorType();
-	
+
 	if (ABP_1P)
 	{
+		NET_LOG(LogTemp,Warning,TEXT("스테이트 변경"));
 		ABP_1P->InteractorState = CurrentInteractorState;
 	}
 	if (ABP_3P)
@@ -586,7 +718,7 @@ void ABaseAgent::EquipInteractor(ABaseInteractor* interactor)
 		ABP_1P->InteractorPoseIdx = PoseIdx;
 		ABP_3P->InteractorPoseIdx = PoseIdx;
 	}
-	
+
 	NET_LOG(LogTemp, Warning, TEXT("현재 들고 있는 인터랙터: %s"), *CurrentInteractor->GetActorNameOrLabel());
 }
 
@@ -603,15 +735,25 @@ void ABaseAgent::OnFindInteraction(UPrimitiveComponent* OverlappedComponent, AAc
 	// 이미 바라보고 있는 총이 있으면 리턴
 	if (FindInteractActor)
 	{
-		if (auto* interactor = Cast<ABaseInteractor>(FindInteractActor))
+		if (auto* Interactor = Cast<ABaseInteractor>(FindInteractActor))
 		{
 			return;
 		}
 	}
 
-	if (auto* interactor = Cast<ABaseInteractor>(OtherActor))
+	if (auto* Interactor = Cast<ABaseInteractor>(OtherActor))
 	{
-		FindInteractActor = interactor;
+		if (CurrentInteractor == Interactor)
+		{
+			return;
+		}
+		// 주인이 없고, 스파이크가 아닐때만 리턴 -> 스파이크는 주인이 있더라도 감지해야함
+		if (Interactor->HasOwnerAgent() && !Cast<ASpike>(Interactor))
+		{
+			return;
+		}
+		NET_LOG(LogTemp, Warning, TEXT("FindInteraction: %s"), *Interactor->GetName());
+		FindInteractActor = Interactor;
 		FindInteractActor->OnDetect(true);
 	}
 }
@@ -677,7 +819,7 @@ void ABaseAgent::Die()
 	{
 		// 킬러 플레이어 컨트롤러 찾기
 		AMatchPlayerController* KillerPC = nullptr;
-		
+
 		// Instigator 로그 추가
 		AActor* InstigatorActor = GetInstigator();
 		if (InstigatorActor)
@@ -688,16 +830,16 @@ void ABaseAgent::Die()
 		{
 			NET_LOG(LogTemp, Warning, TEXT("Die() - Instigator가 없습니다. 데미지 적용 시 Instigator가 제대로 설정되지 않았습니다."));
 		}
-		
+
 		if (GetInstigator() && GetInstigator() != this)
 		{
 			KillerPC = Cast<AMatchPlayerController>(GetInstigator()->GetController());
 			// 키의 유효성 검사
 			NET_LOG(LogTemp, Warning, TEXT("죽음 처리: 킬러 컨트롤러 - %s"), KillerPC ? *KillerPC->GetName() : TEXT("없음"));
-			
+
 			if (KillerPC)
 			{
-				GetWorld()->GetAuthGameMode<AMatchGameMode>()->OnKill(KillerPC ,PC);
+				GetWorld()->GetAuthGameMode<AMatchGameMode>()->OnKill(KillerPC, PC);
 				// AAgentPlayerState* KillerPS = KillerPC->GetPlayerState<AAgentPlayerState>();
 				// if (KillerPS)
 				// {
@@ -775,7 +917,8 @@ void ABaseAgent::ServerApplyGE_Implementation(TSubclassOf<UGameplayEffect> geCla
 	}
 }
 
-void ABaseAgent::ServerApplyHitScanGE_Implementation(TSubclassOf<UGameplayEffect> GEClass, const int Damage, ABaseAgent* DamageInstigator)
+void ABaseAgent::ServerApplyHitScanGE_Implementation(TSubclassOf<UGameplayEffect> GEClass, const int Damage,
+                                                     ABaseAgent* DamageInstigator)
 {
 	if (!GEClass)
 	{
@@ -786,18 +929,18 @@ void ABaseAgent::ServerApplyHitScanGE_Implementation(TSubclassOf<UGameplayEffect
 	FGameplayEffectContextHandle Context = FGameplayEffectContextHandle(new FHitScanGameplayEffectContext());
 	FHitScanGameplayEffectContext* HitScanContext = static_cast<FHitScanGameplayEffectContext*>(Context.Get());
 	HitScanContext->Damage = Damage;
-	
+
 	// Instigator 설정
 	if (DamageInstigator)
 	{
 		// GAS에서 Instigator를 설정하고 Die() 함수에서 GetInstigator()로 확인
 		SetInstigator(DamageInstigator);
-		
+
 		// 디버깅 로그
-		NET_LOG(LogTemp, Warning, TEXT("데미지 적용: %s가 %s에게 %d 데미지를 입혔습니다."), 
-			*DamageInstigator->GetName(), *GetName(), Damage);
+		NET_LOG(LogTemp, Warning, TEXT("데미지 적용: %s가 %s에게 %d 데미지를 입혔습니다."),
+		        *DamageInstigator->GetName(), *GetName(), Damage);
 	}
-	
+
 	FGameplayEffectSpecHandle SpecHandle = ASC->MakeOutgoingSpec(GEClass, 1.f, Context);
 	if (SpecHandle.IsValid())
 	{
@@ -1137,15 +1280,15 @@ void ABaseAgent::OnRep_VisibilityStateArray()
 void ABaseAgent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
-	
 	DOREPLIFETIME(ABaseAgent, VisibilityStateArray);
-	
 	DOREPLIFETIME(ABaseAgent, bIsRun);
 	DOREPLIFETIME(ABaseAgent, MainWeapon);
 	DOREPLIFETIME(ABaseAgent, SubWeapon);
+	DOREPLIFETIME(ABaseAgent, Spike);
 	DOREPLIFETIME(ABaseAgent, CurrentInteractor);
 	DOREPLIFETIME(ABaseAgent, CurrentInteractorState);
 	DOREPLIFETIME(ABaseAgent, PoseIdx);
+	DOREPLIFETIME(ABaseAgent, IsInPlantZone);
 }
 
 
@@ -1164,8 +1307,8 @@ void ABaseAgent::AddCredits(int32 Amount)
 		if (CreditComp)
 		{
 			CreditComp->AddCredits(Amount);
-			NET_LOG(LogTemp, Warning, TEXT("%s에게 %d 크레딧 지급. 현재 총 크레딧: %d"), 
-				*GetName(), Amount, CreditComp->GetCurrentCredit());
+			NET_LOG(LogTemp, Warning, TEXT("%s에게 %d 크레딧 지급. 현재 총 크레딧: %d"),
+			        *GetName(), Amount, CreditComp->GetCurrentCredit());
 		}
 	}
 }
@@ -1197,8 +1340,8 @@ void ABaseAgent::RewardSpikeInstall()
 			if (CreditComp)
 			{
 				CreditComp->AwardSpikeActionCredits(true);
-				NET_LOG(LogTemp, Warning, TEXT("%s가 스파이크를 설치하여 보상을 받았습니다."), 
-					*GetPlayerState<APlayerState>()->GetPlayerName());
+				NET_LOG(LogTemp, Warning, TEXT("%s가 스파이크를 설치하여 보상을 받았습니다."),
+				        *GetPlayerState<APlayerState>()->GetPlayerName());
 			}
 		}
 	}

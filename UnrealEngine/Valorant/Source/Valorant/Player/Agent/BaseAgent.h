@@ -6,6 +6,7 @@
 #include "Player/Animaiton/AgentAnimInstance.h"
 #include "Valorant/ResourceManager/ValorantGameType.h"
 #include "Weapon/BaseWeapon.h"
+#include "ValorantObject/Spike/Spike.h"
 #include "BaseAgent.generated.h"
 
 class UAgentAnimInstance;
@@ -70,7 +71,7 @@ public:
 	ABaseAgent();
 
 	static EAgentDamagedPart GetHitDamagedPart(const FName& BoneName);
-	
+
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
 	class UCameraComponent* Camera;
 
@@ -208,49 +209,63 @@ public:
 	UFUNCTION(Server, Reliable)
 	void ServerApplyGE(TSubclassOf<UGameplayEffect> geClass);
 	UFUNCTION(Server, Reliable)
-	void ServerApplyHitScanGE(TSubclassOf<UGameplayEffect> GEClass, const int Damage, ABaseAgent* DamageInstigator = nullptr);
+	void ServerApplyHitScanGE(TSubclassOf<UGameplayEffect> GEClass, const int Damage,
+	                          ABaseAgent* DamageInstigator = nullptr);
 
 	UFUNCTION(BlueprintCallable)
 	void SetIsRun(const bool _bIsRun);
 	UFUNCTION(Server, Reliable)
 	void Server_SetIsRun(const bool _bIsRun);
-	
+
 	UFUNCTION(Category= "Input")
 	void StartFire();
 	UFUNCTION(Category= "Input")
 	void EndFire();
-	
+
 	UFUNCTION(Category= "Input")
 	void Reload();
 	UFUNCTION(Category= "Input")
 	void Interact();
-	UFUNCTION(Category= "Input")
-	void DropCurrentInteractor();
+
+	UFUNCTION(Server, Reliable, Category= "Input")
+	void ServerRPC_DropCurrentInteractor();
 
 	UFUNCTION(BlueprintCallable)
 	EInteractorType GetInteractorState() const { return CurrentInteractorState; }
-	
+
 	UFUNCTION(BlueprintCallable)
 	ABaseInteractor* GetCurrentInterator() const { return CurrentInteractor; }
-	UFUNCTION(BlueprintCallable)
-	void SetCurrentInteractor(ABaseInteractor* interactor) { CurrentInteractor = interactor; } 
+
+	UFUNCTION(Server, Reliable)
+	void ServerRPC_SetCurrentInteractor(ABaseInteractor* interactor);
 
 	ABaseWeapon* GetMainWeapon() const;
 	ABaseWeapon* GetSubWeapon() const;
+	ABaseWeapon* GetMeleeWeapon() const;
+
+	void SetMeleeWeapon(ABaseWeapon* knife) { MeleeKnife = knife; }
+	void ResetOwnSpike();
 
 	/** 장착 X, 획득하는 개념 (땅에 떨어진 무기 줍기, 상점에서 무기 구매) */
 	UFUNCTION(BlueprintCallable, Category = "Weapon")
 	void AcquireInteractor(ABaseInteractor* Interactor);
-	
+
 	/** 해당 슬롯의 인터랙터를 손에 들고자 할 때 */
 	UFUNCTION(BlueprintCallable, Category = "Weapon")
 	void SwitchInteractor(EInteractorType InteractorType);
+
+	void ActivateSpike();
+	void CancelSpike(ASpike* CancelObject);
+	UFUNCTION(Server, Reliable)
+	void ServerRPC_CancelSpike(ASpike* CancelObject);
 
 	UFUNCTION()
 	void OnRep_ChangeInteractorState();
 	UFUNCTION()
 	void OnRep_ChangePoseIdx();
-	
+
+	UFUNCTION(Server, Reliable, Category = "Weapon")
+	void ServerRPC_Interact(ABaseInteractor* Interactor);
 	UFUNCTION(Server, Reliable, Category = "Weapon")
 	void Server_AcquireInteractor(ABaseInteractor* Interactor);
 	UFUNCTION(Server, Reliable, Category = "Weapon")
@@ -282,6 +297,11 @@ public:
 	// 스파이크 설치 보상
 	UFUNCTION(BlueprintCallable, Category = "Agent|Credits")
 	void RewardSpikeInstall();
+
+	bool GetIsInPlantZone() const { return IsInPlantZone; }
+	void SetIsInPlantZone(bool IsInZone) { IsInPlantZone = IsInZone; }
+
+	bool IsDead() const { return bIsDead; }
 
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
@@ -335,7 +355,7 @@ protected:
 	UPROPERTY(Replicated)
 	ASpike* Spike = nullptr;
 
-	UPROPERTY(Replicated)
+	UPROPERTY(VisibleAnywhere, Replicated)
 	ABaseInteractor* CurrentInteractor = nullptr;
 
 	UPROPERTY(Replicated, ReplicatedUsing=OnRep_ChangeInteractorState)
@@ -344,7 +364,7 @@ protected:
 	UPROPERTY(Replicated, ReplicatedUsing=OnRep_ChangePoseIdx)
 	int PoseIdx = 0;
 	int PoseIdxOffset = 0;
-	
+
 protected:
 	virtual void PossessedBy(AController* NewController) override;
 	virtual void OnRep_PlayerState() override;
@@ -394,4 +414,9 @@ protected:
 
 	// 무기 카테고리에 따른 이동 속도 멀티플라이어 업데이트
 	void UpdateEquipSpeedMultiplier();
+
+private:
+	// ToDo : 수정
+	UPROPERTY(Replicated)
+	bool IsInPlantZone = true;
 };

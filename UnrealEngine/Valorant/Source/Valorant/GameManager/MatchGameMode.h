@@ -5,8 +5,10 @@
 #include "CoreMinimal.h"
 #include "GameFramework/GameMode.h"
 #include "Player/AgentPlayerState.h"
+#include "ValorantObject/Spike/Spike.h"
 #include "MatchGameMode.generated.h"
 
+class ABaseWeapon;
 class ABaseAgent;
 class AMatchPlayerController;
 class AAgentPlayerController;
@@ -92,7 +94,15 @@ private:
 	TObjectPtr<APlayerStart> DefendersStartPoint = nullptr;
 	UPROPERTY(EditDefaultsOnly, Category="Gameflow", meta=(AllowPrivateAccess))
 	TSubclassOf<ABaseAgent> AgentClass;
+	UPROPERTY(EditDefaultsOnly, Category="Gameflow", meta=(AllowPrivateAccess))
+	TSubclassOf<ABaseWeapon> MeleeAsset;
+	UPROPERTY(EditDefaultsOnly, Category="Gameflow", meta=(AllowPrivateAccess))
+	TSubclassOf<ABaseWeapon> ClassicAsset;
 	
+
+	UPROPERTY()
+	ASpike* Spike;
+
 public:
 	void OnControllerBeginPlay(AMatchPlayerController* Controller, const FString& Nickname);
 	void OnLockIn(AMatchPlayerController* Player, int AgentId);
@@ -102,8 +112,17 @@ public:
 	UFUNCTION(BlueprintCallable, Category="Round")
 	void MarkAllWeaponsAsUsed();
 
+	// 현재 라운드 상태 가져오기
+	UFUNCTION(BlueprintCallable, Category="Round")
+	ERoundSubState GetRoundSubState() const;
+
+	// 현재 상점을 열 수 있는 상태인지 확인
+	UFUNCTION(BlueprintCallable, Category="Shop")
+	bool CanOpenShop() const;
+
 protected:
 	FTimerHandle RoundTimerHandle;
+#ifdef DEBUGTEST
 	float MaxTime = 0.0f;
 	float RemainRoundStateTime = 0.0f;
 	float SelectAgentTime = 60.0f;
@@ -112,6 +131,17 @@ protected:
 	float InRoundTime = 20.0f;		// org: 100.0f
 	float EndPhaseTime = 10.0f;		// org: 10.0f
 	float SpikeActiveTime = 15.0f;	// org: 45.0f
+	bool bReadyToEndMatch = false;
+	float LeavingMatchTime = 10.0f;
+#endif
+	float MaxTime = 0.0f;
+	float RemainRoundStateTime = 0.0f;
+	float SelectAgentTime = 60.0f;
+	float PreRoundTime = 45.0f;		// org: 45.0f
+	float BuyPhaseTime = 30.0f;		// org: 30.0f
+	float InRoundTime = 100.0f;		// org: 100.0f
+	float EndPhaseTime = 7.0f;		// org: 10.0f
+	float SpikeActiveTime = 45.0f;	// org: 45.0f
 	bool bReadyToEndMatch = false;
 	float LeavingMatchTime = 10.0f;
 	
@@ -160,4 +190,10 @@ public:
 	void OnRevive(AMatchPlayerController* Reviver, AMatchPlayerController* Target);
 	void OnSpikePlanted(AMatchPlayerController* Planter);
 	void OnSpikeDefused(AMatchPlayerController* Defuser);
+	
+	// 공격팀에게 스파이크 스폰
+	void SpawnSpikeForAttackers();
+
+	UFUNCTION()
+	void DestroySpikeInWorld();
 };

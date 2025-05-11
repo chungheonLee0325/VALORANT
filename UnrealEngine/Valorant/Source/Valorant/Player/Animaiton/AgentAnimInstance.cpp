@@ -26,5 +26,18 @@ void UAgentAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 		
 		bIsCrouch = player->bIsCrouched;
 		bIsInAir = player->GetCharacterMovement()->IsFalling();
+
+		// if (InteractorState == EInteractorType::Melee)
+		// {
+		// 	NET_LOG(LogTemp,Warning,TEXT("밀리"));
+		// }
+		// else if (InteractorState == EInteractorType::None)
+		// {
+		// 	NET_LOG(LogTemp,Warning,TEXT("None"));
+		// }
+		// else if (InteractorState == EInteractorType::MainWeapon)
+		// {
+		// 	NET_LOG(LogTemp,Warning,TEXT("Main"));
+		// }
 	}
 }

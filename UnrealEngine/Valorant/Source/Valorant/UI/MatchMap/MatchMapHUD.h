@@ -28,6 +28,15 @@ class VALORANT_API UMatchMapHUD : public UUserWidget
 {
 	GENERATED_BODY()
 
+	UPROPERTY(BlueprintReadWrite, meta=(AllowPrivateAccess))
+	bool bPlayed60SecLeftVo = true;
+	UPROPERTY(BlueprintReadWrite, meta=(AllowPrivateAccess))
+	bool bPlayed30SecLeftVo = true;
+	UPROPERTY(BlueprintReadWrite, meta=(AllowPrivateAccess))
+	bool bPlayed10SecLeftVo = true;
+	void SetTrueVo();
+	void SetFalseVo();
+	
 protected:
 	virtual void NativeConstruct() override;
 	
@@ -39,6 +48,10 @@ protected:
 	void OnRoundSubStateChanged(const ERoundSubState RoundSubState, const float TransitionTime);
 	UFUNCTION()
 	void OnRoundEnd(bool bBlueWin, const ERoundEndReason RoundEndReason, const float TransitionTime);
+	UFUNCTION(BlueprintImplementableEvent)
+	void PlayRoundEndVFX(bool bWin);
+	UFUNCTION(BlueprintImplementableEvent)
+	void PlayRemTimeVO(const int Level);
 
 	FTimerHandle AnnouncementTimerHandle;
 	UFUNCTION()

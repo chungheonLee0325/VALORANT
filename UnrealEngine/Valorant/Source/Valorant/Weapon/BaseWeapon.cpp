@@ -100,9 +100,10 @@ void ABaseWeapon::StartFire()
 {
 	if (nullptr == OwnerAgent || nullptr == OwnerAgent->GetController())
 	{
+		NET_LOG(LogTemp, Warning, TEXT("%hs Called, OwnerAgent or Controller is nullptr"), __FUNCTION__);
 		return;
 	}
-
+	
 	bIsFiring = true;
 	if (FMath::IsNearlyZero(FMath::Abs(TotalRecoilOffsetPitch) + FMath::Abs(TotalRecoilOffsetYaw), 0.05f))
 	{
@@ -110,7 +111,7 @@ void ABaseWeapon::StartFire()
 		TotalRecoilOffsetPitch = 0.0f;
 		TotalRecoilOffsetYaw = 0.0f;
 	}
-	UE_LOG(LogTemp, Warning, TEXT("StartFire, RecoilLevel : %d"), RecoilLevel);
+	NET_LOG(LogTemp, Warning, TEXT("%hs Called, RecoilLevel: %d"), __FUNCTION__, RecoilLevel);
 
 	GetWorld()->GetTimerManager().SetTimer(AutoFireHandle, this, &ABaseWeapon::Fire, 0.01f, true, 0);
 
@@ -269,6 +270,7 @@ void ABaseWeapon::ServerRPC_Fire_Implementation(const FVector& Location, const F
 		}
 		DrawDebugPoint(WorldContext, OutHit.ImpactPoint, 5, FColor::Green, false, 30);
 	}
+	MulticastRPC_PlayFireSound();
 }
 
 void ABaseWeapon::EndFire()
@@ -300,6 +302,11 @@ void ABaseWeapon::StartReload()
 			}
 		}
 	}
+}
+
+void ABaseWeapon::MulticastRPC_PlayFireSound_Implementation()
+{
+	PlayFireSound();
 }
 
 void ABaseWeapon::Reload()
@@ -336,8 +343,24 @@ void ABaseWeapon::StopReload()
 
 bool ABaseWeapon::ServerOnly_CanAutoPickUp(ABaseAgent* Agent) const
 {
-	// TODO: 현재 이미 똑같은 종류의 무기를 들고 있을 경우 false 반환
-	return Super::ServerOnly_CanAutoPickUp(Agent);
+	// 요원이 현재 똑같은 종류의 무기를 들고 있을 경우 false 반환
+	switch (GetWeaponCategory()) {
+	case EWeaponCategory::None:
+		return false;
+	case EWeaponCategory::Sidearm:
+		return Agent->GetSubWeapon() == nullptr;
+	case EWeaponCategory::SMG:
+		return Agent->GetMainWeapon() == nullptr;
+	case EWeaponCategory::Shotgun:
+		return Agent->GetMainWeapon() == nullptr;
+	case EWeaponCategory::Rifle:
+		return Agent->GetMainWeapon() == nullptr;
+	case EWeaponCategory::Sniper:
+		return Agent->GetMainWeapon() == nullptr;
+	case EWeaponCategory::Heavy:
+		return Agent->GetMainWeapon() == nullptr;
+	}
+	return false;
 }
 
 bool ABaseWeapon::ServerOnly_CanDrop() const
@@ -396,23 +419,23 @@ void ABaseWeapon::ServerOnly_AttachWeapon(ABaseAgent* Agent)
 	);
 	AttachToComponent(Agent->GetMesh(), AttachmentRules, FName(TEXT("R_WeaponPointSocket")));
 
-	// Set up action bindings
-	if (const AAgentPlayerController* PlayerController = Cast<AAgentPlayerController>(Agent->GetController()))
-	{
-		if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PlayerController->GetLocalPlayer()))
-		{
-			// Set the priority of the mapping to 1, so that it overrides the Jump action with the Fire action when using touch input
-			Subsystem->AddMappingContext(FireMappingContext, 1);
-		}
-
-		if (UEnhancedInputComponent* EnhancedInputComponent = Cast<UEnhancedInputComponent>(PlayerController->InputComponent))
-		{
-			// Fire
-			// EnhancedInputComponent->BindAction(StartFireAction, ETriggerEvent::Triggered, this, &ABaseWeapon::StartFire);
-			// EnhancedInputComponent->BindAction(EndFireAction, ETriggerEvent::Triggered, this, &ABaseWeapon::EndFire);
-			// EnhancedInputComponent->BindAction(StartReloadAction, ETriggerEvent::Triggered, this, &ABaseWeapon::StartReload);
-		}
-	}
+	// // Set up action bindings
+	// if (const AAgentPlayerController* PlayerController = Cast<AAgentPlayerController>(Agent->GetController()))
+	// {
+	// 	if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PlayerController->GetLocalPlayer()))
+	// 	{
+	// 		// Set the priority of the mapping to 1, so that it overrides the Jump action with the Fire action when using touch input
+	// 		Subsystem->AddMappingContext(FireMappingContext, 1);
+	// 	}
+	//
+	// 	if (UEnhancedInputComponent* EnhancedInputComponent = Cast<UEnhancedInputComponent>(PlayerController->InputComponent))
+	// 	{
+	// 		// Fire
+	// 		// EnhancedInputComponent->BindAction(StartFireAction, ETriggerEvent::Triggered, this, &ABaseWeapon::StartFire);
+	// 		// EnhancedInputComponent->BindAction(EndFireAction, ETriggerEvent::Triggered, this, &ABaseWeapon::EndFire);
+	// 		// EnhancedInputComponent->BindAction(StartReloadAction, ETriggerEvent::Triggered, this, &ABaseWeapon::StartReload);
+	// 	}
+	// }
 
 	Agent->AcquireInteractor(this);
 }
