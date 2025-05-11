@@ -119,6 +119,12 @@ void ABaseAgent::PossessedBy(AController* NewController)
 	{
 		BindToDelegatePC(pc);
 	}
+
+	if (IsLocallyControlled())
+	{
+		InteractionCapsule->OnComponentBeginOverlap.AddDynamic(this, &ABaseAgent::OnFindInteraction);
+		InteractionCapsule->OnComponentEndOverlap.AddDynamic(this, &ABaseAgent::OnInteractionCapsuleEndOverlap);
+	}
 }
 
 // 클라이언트 전용. 서버로부터 PlayerState를 최초로 받을 때 호출됨
@@ -174,8 +180,11 @@ void ABaseAgent::BeginPlay()
 	// 	TL_DieCamera->SetTimelineFinishedFunc(finishDieCamera);
 	// }
 
-	InteractionCapsule->OnComponentBeginOverlap.AddDynamic(this, &ABaseAgent::OnFindInteraction);
-	InteractionCapsule->OnComponentEndOverlap.AddDynamic(this, &ABaseAgent::OnInteractionCapsuleEndOverlap);
+	if (HasAuthority() == false && IsLocallyControlled())
+	{
+		InteractionCapsule->OnComponentBeginOverlap.AddDynamic(this, &ABaseAgent::OnFindInteraction);
+		InteractionCapsule->OnComponentEndOverlap.AddDynamic(this, &ABaseAgent::OnInteractionCapsuleEndOverlap);
+	}
 
 	//TODO: 기본 총, 칼 스폰해서 붙여주기
 }
@@ -331,9 +340,14 @@ void ABaseAgent::Interact()
 	{
 		if (ABaseInteractor* Interactor = Cast<ABaseInteractor>(FindInteractActor))
 		{
-			Interactor->ServerRPC_Interact(this);
+			ServerRPC_Interact(Interactor);
 		}
 	}
+}
+
+void ABaseAgent::ServerRPC_Interact_Implementation(ABaseInteractor* Interactor)
+{
+	Interactor->ServerRPC_Interact(this);
 }
 
 void ABaseAgent::DropCurrentInteractor()
@@ -532,15 +546,24 @@ void ABaseAgent::OnFindInteraction(UPrimitiveComponent* OverlappedComponent, AAc
 	// 이미 바라보고 있는 총이 있으면 리턴
 	if (FindInteractActor)
 	{
-		if (auto* interactor = Cast<ABaseInteractor>(FindInteractActor))
+		if (auto* Interactor = Cast<ABaseInteractor>(FindInteractActor))
 		{
 			return;
 		}
 	}
 
-	if (auto* interactor = Cast<ABaseInteractor>(OtherActor))
+	if (auto* Interactor = Cast<ABaseInteractor>(OtherActor))
 	{
-		FindInteractActor = interactor;
+		if (CurrentInteractor == Interactor)
+		{
+			return;
+		}
+		if (Interactor->HasOwnerAgent())
+		{
+			return;
+		}
+		NET_LOG(LogTemp, Warning, TEXT("FindInteraction: %s"), *Interactor->GetName());
+		FindInteractActor = Interactor;
 		FindInteractActor->OnDetect(true);
 	}
 }

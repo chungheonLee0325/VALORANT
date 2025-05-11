@@ -17,6 +17,8 @@ ABaseInteractor::ABaseInteractor()
 {
 	PrimaryActorTick.bCanEverTick = true;
 	bReplicates = true;
+	bNetLoadOnClient = true;
+	SetReplicatingMovement(true);
 
 	Mesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("WeaponMesh"));
 	SetRootComponent(Mesh);
@@ -130,6 +132,14 @@ void ABaseInteractor::SetActive(bool bActive)
 
 void ABaseInteractor::ServerRPC_PickUp_Implementation(ABaseAgent* Agent)
 {
+	if (nullptr == Agent)
+	{
+		NET_LOG(LogTemp, Warning, TEXT("%hs Called, InteractorName: %s, Agent is nullptr"), __FUNCTION__, *GetName());
+		return;
+	}
+
+	NET_LOG(LogTemp, Warning, TEXT("%hs Called, InteractorName: %s"), __FUNCTION__, *GetName());
+	
 	OwnerAgent = Agent;
 	SetOwner(OwnerAgent);
 }
@@ -138,17 +148,18 @@ void ABaseInteractor::ServerRPC_Drop_Implementation()
 {
 	if (nullptr == OwnerAgent)
 	{
+		NET_LOG(LogTemp, Warning, TEXT("%hs Called, InteractorName: %s, OwnerAgent is nullptr"), __FUNCTION__, *GetName());
 		return;
 	}
 
+	NET_LOG(LogTemp, Warning, TEXT("%hs Called, InteractorName: %s"), __FUNCTION__, *GetName());
+	
 	if (OwnerAgent->GetCurrentInterator() == this)
 	{
 		OwnerAgent->SetCurrentInteractor(nullptr);
 	}
 	
 	SetActive(true);
-	
-	UE_LOG(LogTemp, Warning, TEXT("드롭"));
 	
 	// TODO: 툭 놓는게 아니라 던지도록 변경
 	FDetachmentTransformRules DetachmentRule(

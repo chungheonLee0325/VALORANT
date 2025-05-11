@@ -166,6 +166,9 @@ public:
 	void Reload();
 	UFUNCTION(Category= "Input")
 	void Interact();
+	UFUNCTION(Server, Reliable)
+	void ServerRPC_Interact(ABaseInteractor* Interactor);
+	
 	UFUNCTION(Category= "Input")
 	void DropCurrentInteractor();
 
