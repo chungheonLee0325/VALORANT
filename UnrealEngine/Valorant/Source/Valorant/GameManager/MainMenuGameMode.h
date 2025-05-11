@@ -16,4 +16,7 @@ class VALORANT_API AMainMenuGameMode : public AGameMode
 
 public:
 	AMainMenuGameMode();
+
+	UFUNCTION(BlueprintImplementableEvent)
+	void OnMatchFound();
 };

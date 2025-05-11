@@ -67,6 +67,7 @@ public:
 	 * TimerHandle
 	 */
 	FTimerHandle CheckSessionHandle;
+	FTimerHandle MatchStartHandle;
 	
 	int ReqMatchAutoStartPlayerCount = 4;
 
@@ -74,7 +75,8 @@ private:
 	void CheckHostingSession();
 	void CheckJoinSession();
 	void StartMatch();
-	
+	void JoinMatch();
+
 	/*
 	* Internal callbacks for the delegates we'll add to the Online Session Interface delegate list.
 	* This don't need to be called outside this class.
@@ -108,4 +110,5 @@ private:
 
 	const FName NAME_Identifier = TEXT("Identifier");
 	const FString SessionIdentifier = TEXT("VALORITHM");
+	FString ConnectString = TEXT("");
 };

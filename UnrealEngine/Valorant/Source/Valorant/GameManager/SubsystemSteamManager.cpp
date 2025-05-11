@@ -3,6 +3,7 @@
 
 #include "SubsystemSteamManager.h"
 
+#include "MainMenuGameMode.h"
 #include "OnlineSessionSettings.h"
 #include "OnlineSubsystem.h"
 #include "OnlineSubsystemUtils.h"
@@ -309,7 +310,11 @@ void USubsystemSteamManager::CheckHostingSession()
 	{
 		UE_LOG(LogSubsystemSteam, Warning, TEXT("매치 자동 시작을 위해 필요한 인원 수가 충족됨"));
 		GetWorld()->GetTimerManager().ClearTimer(CheckSessionHandle);
-		StartMatch();
+		if (auto* MainMenuGameMode = GetWorld()->GetAuthGameMode<AMainMenuGameMode>())
+		{
+			MainMenuGameMode->OnMatchFound();
+		}
+		GetWorld()->GetTimerManager().SetTimer(MatchStartHandle, this, &USubsystemSteamManager::StartMatch, 3.0f, false);
 	}
 }
 void USubsystemSteamManager::CheckJoinSession()
@@ -328,12 +333,14 @@ void USubsystemSteamManager::CheckJoinSession()
 	{
 		UE_LOG(LogSubsystemSteam, Warning, TEXT("%hs Called, Ready to ClientTravel"), __FUNCTION__);
 		GetWorld()->GetTimerManager().ClearTimer(CheckSessionHandle);
-		FString ConnectString;
 		bool bSuccess = GetSessionInterface()->GetResolvedConnectString(NAME_GameSession, ConnectString);
 		if (bSuccess)
 		{
-			UE_LOG(LogSubsystemSteam, Warning, TEXT("ClientTravel to %s"), *ConnectString);
-			GetGameInstance()->GetFirstLocalPlayerController()->ClientTravel(ConnectString, TRAVEL_Absolute, false);
+			if (auto* MainMenuGameMode = GetWorld()->GetAuthGameMode<AMainMenuGameMode>())
+			{
+				MainMenuGameMode->OnMatchFound();
+			}
+			GetWorld()->GetTimerManager().SetTimer(MatchStartHandle, this, &USubsystemSteamManager::JoinMatch, 3.0f, false);
 		}	
 		else
 		{
@@ -348,6 +355,12 @@ void USubsystemSteamManager::CheckJoinSession()
 void USubsystemSteamManager::StartMatch()
 {
 	GetWorld()->ServerTravel(TEXT("/Game/Maps/MatchMap?listen"));
+}
+
+void USubsystemSteamManager::JoinMatch()
+{
+	UE_LOG(LogSubsystemSteam, Warning, TEXT("ClientTravel to %s"), *ConnectString);
+	GetGameInstance()->GetFirstLocalPlayerController()->ClientTravel(ConnectString, TRAVEL_Absolute, false);
 }
 
 FNamedOnlineSession* USubsystemSteamManager::GetNamedOnlineSession(FName SessionName)
