@@ -95,7 +95,7 @@ void AMatchGameState::HandleRoundSubState_SelectAgent()
 		return;
 	}
 	NET_LOG(LogTemp, Warning, TEXT("%hs Called"), __FUNCTION__);
-	
+
 	// PC->ClientRPC_ShowSelectUI(true);
 }
 
@@ -171,4 +171,20 @@ void AMatchGameState::SetTeamScore(int NewTeamBlueScore, int NewTeamRedScore)
 		this->TeamRedScore = NewTeamRedScore;
 		OnRep_TeamScore();
 	}
+}
+
+bool AMatchGameState::CanOpenShop() const
+{
+	return (RoundSubState == ERoundSubState::RSS_BuyPhase || RoundSubState == ERoundSubState::RSS_PreRound);
+}
+
+ERoundSubState AMatchGameState::GetRoundSubState() const
+{
+	return RoundSubState;
+}
+
+void AMatchGameState::MulticastRPC_CloseAllShops_Implementation()
+{
+	// 상점 닫기 이벤트 브로드캐스트
+	OnShopClosed.Broadcast();
 }

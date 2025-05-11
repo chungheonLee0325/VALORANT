@@ -73,6 +73,9 @@ void ABaseWeapon::BeginPlay()
 	{
 		RecoilData.Add(Element);
 	}
+
+	AM_Fire = WeaponData->FireAnim;
+	AM_Reload = WeaponData->ReloadAnim;
 }
 
 void ABaseWeapon::Tick(float DeltaSeconds)
@@ -100,7 +103,7 @@ void ABaseWeapon::StartFire()
 		NET_LOG(LogTemp, Warning, TEXT("%hs Called, OwnerAgent or Controller is nullptr"), __FUNCTION__);
 		return;
 	}
-
+	
 	bIsFiring = true;
 	if (FMath::IsNearlyZero(FMath::Abs(TotalRecoilOffsetPitch) + FMath::Abs(TotalRecoilOffsetYaw), 0.05f))
 	{
@@ -111,6 +114,13 @@ void ABaseWeapon::StartFire()
 	NET_LOG(LogTemp, Warning, TEXT("%hs Called, RecoilLevel: %d"), __FUNCTION__, RecoilLevel);
 
 	GetWorld()->GetTimerManager().SetTimer(AutoFireHandle, this, &ABaseWeapon::Fire, 0.01f, true, 0);
+
+	if (AM_Fire)
+	{
+		OwnerAgent->GetABP_1P()->Montage_Play(AM_Fire);
+		OwnerAgent->GetABP_3P()->Montage_Play(AM_Fire);
+	}
+	
 }
 
 void ABaseWeapon::Fire()
@@ -255,7 +265,8 @@ void ABaseWeapon::ServerRPC_Fire_Implementation(const FVector& Location, const F
 		NET_LOG(LogTemp, Warning, TEXT("LineTraceSingle Hit: %s, BoneName: %s, Distance: %f, FinalDamage: %d"), *OutHit.GetActor()->GetName(), *OutHit.BoneName.ToString(), OutHit.Distance, FinalDamage);
 		if (ABaseAgent* HitAgent = Cast<ABaseAgent>(OutHit.GetActor()))
 		{
-			HitAgent->ServerApplyHitScanGE(NewDamageEffectClass, FinalDamage);
+			// 공격자 정보 전달
+			HitAgent->ServerApplyHitScanGE(NewDamageEffectClass, FinalDamage, OwnerAgent);
 		}
 		DrawDebugPoint(WorldContext, OutHit.ImpactPoint, 5, FColor::Green, false, 30);
 	}
@@ -282,6 +293,12 @@ void ABaseWeapon::StartReload()
 			UE_LOG(LogTemp, Warning, TEXT("StartReload %p"), this);
 			bIsFiring = false;
 			World->GetTimerManager().SetTimer(ReloadHandle, this, &ABaseWeapon::Reload, 3, false, WeaponData->ReloadTime);
+
+			if (AM_Reload)
+			{
+				OwnerAgent->GetABP_1P()->Montage_Play(AM_Reload);
+				OwnerAgent->GetABP_3P()->Montage_Play(AM_Reload);
+			}
 		}
 	}
 }

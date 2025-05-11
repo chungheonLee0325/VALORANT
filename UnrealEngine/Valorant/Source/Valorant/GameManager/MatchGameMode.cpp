@@ -26,12 +26,14 @@ AMatchGameMode::AMatchGameMode()
 {
 }
 
-/* static */ bool AMatchGameMode::IsAttacker(const bool bIsBlueTeam)
+/* static */
+bool AMatchGameMode::IsAttacker(const bool bIsBlueTeam)
 {
 	return bIsBlueTeam ? !IsShifted() : IsShifted();
 }
 
-/* static */ bool AMatchGameMode::IsShifted()
+/* static */
+bool AMatchGameMode::IsShifted()
 {
 	return CurrentRound >= ShiftRound;
 }
@@ -39,7 +41,7 @@ AMatchGameMode::AMatchGameMode()
 void AMatchGameMode::BeginPlay()
 {
 	Super::BeginPlay();
-	
+
 	ValorantGameInstance = Cast<UValorantGameInstance>(GetGameInstance());
 
 	SubsystemManager = GetGameInstance()->GetSubsystem<USubsystemSteamManager>();
@@ -48,7 +50,7 @@ void AMatchGameMode::BeginPlay()
 		NET_LOG(LogTemp, Warning, TEXT("%hs Called, SubsystemManager is nullptr"), __FUNCTION__);
 		return;
 	}
-	
+
 	const IOnlineSessionPtr SessionInterface = SubsystemManager->GetSessionInterface();
 	if (!SessionInterface.IsValid())
 	{
@@ -62,7 +64,8 @@ void AMatchGameMode::BeginPlay()
 	}
 	else
 	{
-		Session->SessionSettings.Set(FName("bReadyToTravel"), true, EOnlineDataAdvertisementType::ViaOnlineServiceAndPing);
+		Session->SessionSettings.Set(FName("bReadyToTravel"), true,
+		                             EOnlineDataAdvertisementType::ViaOnlineServiceAndPing);
 		SessionInterface->UpdateSession(NAME_GameSession, Session->SessionSettings, true);
 		NET_LOG(LogTemp, Warning, TEXT("%hs Called, Try UpdateSession Completed"), __FUNCTION__);
 	}
@@ -97,9 +100,9 @@ void AMatchGameMode::Tick(float DeltaSeconds)
 			StartEndPhaseByEliminated(true);
 		}
 	}
-	
+
 	RemainRoundStateTime = FMath::Clamp(RemainRoundStateTime - DeltaSeconds, 0.0f, MaxTime);
-	
+
 	AMatchGameState* MatchGameState = GetGameState<AMatchGameState>();
 	if (MatchGameState)
 	{
@@ -111,7 +114,9 @@ void AMatchGameMode::PreLogin(const FString& Options, const FString& Address, co
                               FString& ErrorMessage)
 {
 	Super::PreLogin(Options, Address, UniqueId, ErrorMessage);
-	NET_LOG(LogTemp, Warning, TEXT("AMainMenuGameMode::PreLogin Options: %s, Address: %s, UniqueId: %s, ErrorMessage: %s"), *Options, *Address, *(UniqueId.IsValid() ? UniqueId->ToString() : FString(TEXT("INVALID"))), *ErrorMessage);
+	NET_LOG(LogTemp, Warning,
+	        TEXT("AMainMenuGameMode::PreLogin Options: %s, Address: %s, UniqueId: %s, ErrorMessage: %s"), *Options,
+	        *Address, *(UniqueId.IsValid() ? UniqueId->ToString() : FString(TEXT("INVALID"))), *ErrorMessage);
 }
 
 void AMatchGameMode::PostLogin(APlayerController* NewPlayer)
@@ -156,7 +161,7 @@ void AMatchGameMode::OnLockIn(AMatchPlayerController* Player, int AgentId)
 		NET_LOG(LogTemp, Warning, TEXT("%hs Called, PS is nullptr"), __FUNCTION__);
 		return;
 	}
-	
+
 	bool bIsBlueTeam = PS->bIsBlueTeam;
 	for (const auto& PlayerInfo : MatchPlayers)
 	{
@@ -170,7 +175,7 @@ void AMatchGameMode::OnLockIn(AMatchPlayerController* Player, int AgentId)
 	{
 		agentPS->SetAgentID(AgentId);
 	}
-	
+
 	if (++LockedInPlayerNum >= RequiredPlayerCount)
 	{
 		NET_LOG(LogTemp, Warning, TEXT("%hs Called, All Players Completed Lock In"), __FUNCTION__);
@@ -236,7 +241,7 @@ void AMatchGameMode::HandleMatchHasStarted()
 			PlayerInfo.Controller->ClientSetViewTarget(AgentSelectStartPoint, Params);
 		}
 	}
-	
+
 	StartSelectAgent();
 }
 
@@ -353,11 +358,19 @@ void AMatchGameMode::HandleRoundSubState_InRound()
 {
 	// 구매 페이즈가 끝나고 인 라운드로 전환될 때 모든 무기를 사용됨으로 표시
 	MarkAllWeaponsAsUsed();
-	
+
+	// 열려있는 모든 상점 UI 강제로 닫기
+	AMatchGameState* MatchGameState = GetGameState<AMatchGameState>();
+	if (MatchGameState)
+	{
+		MatchGameState->MulticastRPC_CloseAllShops();
+	}
+
 	// 일정 시간 후에 라운드 종료
 	MaxTime = InRoundTime;
 	GetWorld()->GetTimerManager().ClearTimer(RoundTimerHandle);
-	GetWorld()->GetTimerManager().SetTimer(RoundTimerHandle, this, &AMatchGameMode::StartEndPhaseByTimeout, InRoundTime);
+	GetWorld()->GetTimerManager().SetTimer(RoundTimerHandle, this, &AMatchGameMode::StartEndPhaseByTimeout,
+	                                       InRoundTime);
 }
 
 void AMatchGameMode::HandleRoundSubState_EndPhase()
@@ -381,7 +394,7 @@ void AMatchGameMode::HandleRoundSubState_EndPhase()
 		}
 		return;
 	}
-	
+
 	// 일정 시간 후에 라운드 재시작
 	MaxTime = EndPhaseTime;
 	GetWorld()->GetTimerManager().ClearTimer(RoundTimerHandle);
@@ -396,7 +409,7 @@ void AMatchGameMode::HandleRoundSubState_EndPhase()
 	{
 		GetWorld()->GetTimerManager().SetTimer(RoundTimerHandle, this, &AMatchGameMode::StartBuyPhase, EndPhaseTime);
 	}
-	
+
 	// 라운드 종료 시 크레딧 보상 지급
 	AwardRoundEndCredits();
 }
@@ -411,7 +424,15 @@ void AMatchGameMode::SetRoundSubState(ERoundSubState NewRoundSubState)
 			NET_LOG(LogTemp, Warning, TEXT("%hs Called, MatchGameState is nullptr"), __FUNCTION__);
 		}
 		RoundSubState = NewRoundSubState;
-		
+
+		// 구매 페이즈가 아닌 다른 상태로 변경될 때 열려있는 상점 UI 모두 닫기
+		if (MatchGameState && RoundSubState != ERoundSubState::RSS_BuyPhase || RoundSubState !=
+			ERoundSubState::RSS_PreRound)
+		{
+			// 모든 클라이언트에게 상점 닫기 이벤트 전파
+			MatchGameState->MulticastRPC_CloseAllShops();
+		}
+
 		if (RoundSubState == ERoundSubState::RSS_SelectAgent)
 		{
 			HandleRoundSubState_SelectAgent();
@@ -433,7 +454,7 @@ void AMatchGameMode::SetRoundSubState(ERoundSubState NewRoundSubState)
 			HandleRoundSubState_EndPhase();
 		}
 		MatchGameState->SetRoundSubState(RoundSubState, MaxTime);
-		
+
 		RemainRoundStateTime = MaxTime;
 		MatchGameState->SetRemainRoundStateTime(RemainRoundStateTime);
 	}
@@ -451,7 +472,7 @@ void AMatchGameMode::RespawnAll()
 	for (auto& MatchPlayer : MatchPlayers)
 	{
 		MatchPlayer.bIsDead = false;
-		
+
 		FTransform SpawnTransform = FTransform::Identity;
 		if (MatchPlayer.bIsBlueTeam)
 		{
@@ -463,7 +484,7 @@ void AMatchGameMode::RespawnAll()
 			if (IsShifted()) { SpawnTransform = DefendersStartPoint->GetTransform(); }
 			else { SpawnTransform = AttackersStartPoint->GetTransform(); }
 		}
-			
+
 		auto* agentPS = MatchPlayer.Controller->GetPlayerState<AAgentPlayerState>();
 		if (nullptr == agentPS)
 		{
@@ -481,19 +502,19 @@ void AMatchGameMode::RespawnPlayer(AAgentPlayerState* ps, AAgentPlayerController
 {
 	FActorSpawnParameters SpawnParams;
 	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-	
+
 	if (ps->IsSpectator() || ps->GetPawn() == nullptr)
 	{
 		FAgentData* agentData = Cast<UValorantGameInstance>(GetGameInstance())->GetAgentData(ps->GetAgentID());
 		auto* Agent = GetWorld()->SpawnActor<ABaseAgent>(agentData->AgentAsset, spawnTransform);
-		
+
 		ps->SetIsSpectator(false);
 		ps->SetIsOnlyASpectator(false);
-		
+
 		APawn* oldPawn = pc->GetPawn();
-		
+
 		pc->Possess(Agent);
-		
+
 		if (oldPawn)
 		{
 			oldPawn->Destroy();
@@ -513,33 +534,41 @@ void AMatchGameMode::ResetAgentAtrributeData(AAgentPlayerState* AgentPS)
 
 void AMatchGameMode::OnKill(AMatchPlayerController* Killer, AMatchPlayerController* Victim)
 {
+	// 킬러/희생자 정보 로깅
+	FString KillerName = Killer ? Killer->GetPlayerState<APlayerState>()->GetPlayerName() : TEXT("없음");
+	FString VictimName = Victim ? Victim->GetPlayerState<APlayerState>()->GetPlayerName() : TEXT("없음");
+	NET_LOG(LogTemp, Warning, TEXT("OnKill 호출: 킬러=%s, 희생자=%s"), *KillerName, *VictimName);
+
 	// 킬러에게 크레딧 보상
 	if (Killer)
 	{
 		AAgentPlayerState* KillerPS = Killer->GetPlayerState<AAgentPlayerState>();
 		if (KillerPS)
 		{
+			// TODO: 헤드샷 여부 확인 로직 추가
+			bool bIsHeadshot = false; // 임시로 false로 설정
+
 			UCreditComponent* CreditComp = KillerPS->FindComponentByClass<UCreditComponent>();
 			if (CreditComp)
 			{
-				// TODO: 헤드샷 여부 확인 로직 추가
-				bool bIsHeadshot = false; // 임시로 false로 설정
-				CreditComp->AwardKillCredits(bIsHeadshot);
+				CreditComp->AwardKillCredits();
+
+				NET_LOG(LogTemp, Warning, TEXT("크레딧 보상 지급: %s가 킬 보상을 받았습니다."), *KillerName);
 			}
 		}
 	}
-	
-	// 팀원들에게 어시스트 크레딧 보상 - 나중에 실제 어시스트 로직으로 교체
+
+	// 팀원들에게 어시스트 로깅 - 나중에 실제 어시스트 로직으로 교체
 	if (Killer && Victim)
 	{
 		AAgentPlayerState* KillerPS = Killer->GetPlayerState<AAgentPlayerState>();
 		AAgentPlayerState* VictimPS = Victim->GetPlayerState<AAgentPlayerState>();
-		
+
 		if (KillerPS && VictimPS)
 		{
 			bool bKillerIsBlue = KillerPS->bIsBlueTeam;
-			
-			// 같은 팀 플레이어에게 어시스트 크레딧 지급 (실제로는 어시스트 여부 체크 필요)
+
+			// 같은 팀 플레이어에게 어시스트 데이터 추가 (실제로는 어시스트 여부 체크 필요)
 			for (const FMatchPlayer& Player : MatchPlayers)
 			{
 				if (Player.Controller && Player.Controller != Killer && Player.bIsBlueTeam == bKillerIsBlue)
@@ -547,16 +576,7 @@ void AMatchGameMode::OnKill(AMatchPlayerController* Killer, AMatchPlayerControll
 					AAgentPlayerState* PS = Player.Controller->GetPlayerState<AAgentPlayerState>();
 					if (PS)
 					{
-						UCreditComponent* CreditComp = PS->FindComponentByClass<UCreditComponent>();
-						if (CreditComp)
-						{
-							// TODO: 실제 어시스트 여부 확인 필요
-							// 임시로 50% 확률로 어시스트 크레딧 지급
-							if (FMath::RandBool())
-							{
-								CreditComp->AwardAssistCredits();
-							}
-						}
+						// TODO: 실제 어시스트 여부 확인 필요
 					}
 				}
 			}
@@ -572,7 +592,7 @@ void AMatchGameMode::OnKill(AMatchPlayerController* Killer, AMatchPlayerControll
 		{
 			PlayerInfo.bIsDead = true;
 		}
-		
+
 		if (PlayerInfo.bIsBlueTeam && false == PlayerInfo.bIsDead)
 		{
 			Blue++;
@@ -613,12 +633,13 @@ void AMatchGameMode::OnSpikePlanted(AMatchPlayerController* Planter)
 			}
 		}
 	}
-	
+
 	// 라운드 타이머 수정
 	MaxTime = SpikeActiveTime;
 	RemainRoundStateTime = MaxTime;
 	GetWorld()->GetTimerManager().ClearTimer(RoundTimerHandle);
-	GetWorld()->GetTimerManager().SetTimer(RoundTimerHandle, this, &AMatchGameMode::StartEndPhaseBySpikeActive, SpikeActiveTime);
+	GetWorld()->GetTimerManager().SetTimer(RoundTimerHandle, this, &AMatchGameMode::StartEndPhaseBySpikeActive,
+	                                       SpikeActiveTime);
 }
 
 void AMatchGameMode::OnSpikeDefused(AMatchPlayerController* Defuser)
@@ -636,7 +657,7 @@ void AMatchGameMode::OnSpikeDefused(AMatchPlayerController* Defuser)
 			}
 		}
 	}
-	
+
 	StartEndPhaseBySpikeDefuse();
 }
 
@@ -656,10 +677,14 @@ void AMatchGameMode::HandleRoundEnd(bool bBlueWin, const ERoundEndReason RoundEn
 				{
 					// 팀 승패에 따라 크레딧 지급
 					bool bIsWinner = (Player.bIsBlueTeam == bBlueWin);
-					
+
 					// 연속 패배 보너스 계산
-					int32 ConsecutiveLosses = bIsWinner ? 0 : (Player.bIsBlueTeam ? BlueTeamConsecutiveLosses : RedTeamConsecutiveLosses);
-					
+					int32 ConsecutiveLosses = bIsWinner
+						                          ? 0
+						                          : (Player.bIsBlueTeam
+							                             ? BlueTeamConsecutiveLosses
+							                             : RedTeamConsecutiveLosses);
+
 					CreditComp->AwardRoundEndCredits(bIsWinner, ConsecutiveLosses);
 				}
 			}
@@ -671,7 +696,7 @@ void AMatchGameMode::HandleRoundEnd(bool bBlueWin, const ERoundEndReason RoundEn
 	{
 		BlueTeamConsecutiveLosses = 0;
 		RedTeamConsecutiveLosses++;
-		
+
 		// 최대 3까지만 보너스 적용
 		RedTeamConsecutiveLosses = FMath::Min(RedTeamConsecutiveLosses, 3);
 	}
@@ -679,7 +704,7 @@ void AMatchGameMode::HandleRoundEnd(bool bBlueWin, const ERoundEndReason RoundEn
 	{
 		RedTeamConsecutiveLosses = 0;
 		BlueTeamConsecutiveLosses++;
-		
+
 		// 최대 3까지만 보너스 적용
 		BlueTeamConsecutiveLosses = FMath::Min(BlueTeamConsecutiveLosses, 3);
 	}
@@ -706,7 +731,7 @@ void AMatchGameMode::AwardRoundEndCredits()
 {
 	// 현재 라운드 승패 정보 얻기 (임시로 팀 A가 이겼다고 가정)
 	bool bTeamAWon = true; // 실제로는 라운드 결과에 따라 설정
-	
+
 	// 라운드 종료 후 모든 플레이어에게 크레딧 보상 지급
 	for (const FMatchPlayer& Player : MatchPlayers)
 	{
@@ -721,7 +746,7 @@ void AMatchGameMode::AwardRoundEndCredits()
 				{
 					// 팀 승패에 따라 크레딧 지급
 					bool bIsWinner = (Player.bIsBlueTeam == bTeamAWon);
-					
+
 					// 연속 패배 보너스 계산 (실제로는 팀별 연속 패배 횟수를 추적해야 함)
 					int32 ConsecutiveLosses = 0;
 					if (!bIsWinner)
@@ -729,7 +754,7 @@ void AMatchGameMode::AwardRoundEndCredits()
 						// TODO: 팀별 연속 패배 횟수 추적 구현
 						ConsecutiveLosses = 1; // 임시로 1로 설정
 					}
-					
+
 					CreditComp->AwardRoundEndCredits(bIsWinner, ConsecutiveLosses);
 				}
 			}
@@ -746,22 +771,32 @@ void AMatchGameMode::MarkAllWeaponsAsUsed()
 		AAgentPlayerController* PC = Cast<AAgentPlayerController>(It->Get());
 		if (!PC)
 			continue;
-			
+
 		ABaseAgent* Agent = PC->GetPawn<ABaseAgent>();
 		if (!Agent)
 			continue;
-			
+
 		// 플레이어가 가진 모든 무기를 사용된 상태로 표시
 		ABaseWeapon* PrimaryWeapon = Agent->GetMainWeapon();
 		if (PrimaryWeapon)
 		{
 			PrimaryWeapon->SetWasUsed(true);
 		}
-		
+
 		ABaseWeapon* SecondWeapon = Agent->GetSubWeapon();
 		if (SecondWeapon)
 		{
 			SecondWeapon->SetWasUsed(true);
 		}
 	}
+}
+
+ERoundSubState AMatchGameMode::GetRoundSubState() const
+{
+	return RoundSubState;
+}
+
+bool AMatchGameMode::CanOpenShop() const
+{
+	return RoundSubState == ERoundSubState::RSS_BuyPhase;
 }

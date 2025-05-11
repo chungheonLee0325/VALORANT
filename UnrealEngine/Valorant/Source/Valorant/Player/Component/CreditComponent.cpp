@@ -15,8 +15,6 @@ UCreditComponent::UCreditComponent()
 	
 	// 보상 크레딧 기본값 설정
 	KillReward = 200;
-	HeadshotBonusReward = 100;
-	AssistReward = 100;
 	SpikeReward = 300;
 	RoundWinReward = 3000;
 	RoundLossReward = 1900;
@@ -105,24 +103,12 @@ void UCreditComponent::AwardRoundEndCredits(bool bIsWinner, int32 ConsecutiveLos
 	}
 }
 
-void UCreditComponent::AwardKillCredits(bool bIsHeadshot)
+void UCreditComponent::AwardKillCredits()
 {
 	if (GetOwnerRole() == ROLE_Authority)
 	{
 		int32 Award = KillReward;
-		if (bIsHeadshot)
-		{
-			Award += HeadshotBonusReward;
-		}
 		AddCredits(Award);
-	}
-}
-
-void UCreditComponent::AwardAssistCredits()
-{
-	if (GetOwnerRole() == ROLE_Authority)
-	{
-		AddCredits(AssistReward);
 	}
 }
 
