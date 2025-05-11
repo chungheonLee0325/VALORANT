@@ -35,6 +35,8 @@ public:
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category=Interactor)
 	EInteractorType InteractorState = EInteractorType::None;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category=Interactor)
+	int InteractorPoseIdx = 0;
 	
 	virtual  void NativeUpdateAnimation(float DeltaSeconds) override;
 	void SetWeaponState(const EInteractorType newState) { InteractorState = newState; }

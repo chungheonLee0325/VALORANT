@@ -44,15 +44,14 @@ void ABaseWeapon::BeginPlay()
 	
 	// 무기 사용 여부에 따른 시각적 효과 적용
 	UpdateVisualState();
-
-	// TODO: WeaponID에 맞는 SkeletalMesh 불러오기
-	FSoftObjectPath MeshRef(TEXT("/Script/Engine.SkeletalMesh'/Game/Resource/Weapons/BasicPhantom/Mesh/GN_Carbine_Clean_S0_Skelmesh.GN_Carbine_Clean_S0_Skelmesh'"));
-	auto* WeaponMeshAsset = Cast<USkeletalMesh>(StaticLoadObject(USkeletalMesh::StaticClass(), nullptr, *MeshRef.ToString()));
+	auto* WeaponMeshAsset = WeaponData->WeaponMesh;
+	
 	if (nullptr == WeaponMeshAsset || nullptr == Mesh)
 	{
 		UE_LOG(LogTemp, Error, TEXT("ABaseWeapon::BeginPlay: WeaponMeshAsset Load Fail (WeaponID : %d)"), WeaponID);
 		return;
 	}
+	
 	Mesh->SetSkeletalMeshAsset(WeaponMeshAsset);
 	Mesh->SetRelativeScale3D(FVector(0.34f));
 
