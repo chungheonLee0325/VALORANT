@@ -35,6 +35,18 @@ ABaseInteractor::ABaseInteractor()
 	Sphere->SetupAttachment(GetRootComponent());
 }
 
+void ABaseInteractor::OnRep_OwnerAgent()
+{
+	if (OwnerAgent)
+	{
+		NET_LOG(LogTemp, Warning, TEXT("%hs Called, AgentName: %s"), __FUNCTION__, *OwnerAgent->GetName());
+	}
+	else
+	{
+		NET_LOG(LogTemp, Warning, TEXT("%hs Called, OwnerAgent is nullptr"), __FUNCTION__);
+	}
+}
+
 void ABaseInteractor::BeginPlay()
 {
 	Super::BeginPlay();
@@ -156,7 +168,7 @@ void ABaseInteractor::ServerRPC_Drop_Implementation()
 	
 	if (OwnerAgent->GetCurrentInterator() == this)
 	{
-		OwnerAgent->SetCurrentInteractor(nullptr);
+		OwnerAgent->ServerRPC_SetCurrentInteractor(nullptr);
 	}
 	
 	SetActive(true);

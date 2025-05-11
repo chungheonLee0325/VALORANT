@@ -26,8 +26,10 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess = "true"))
 	TObjectPtr<USphereComponent> Sphere = nullptr;
 
-	UPROPERTY(Replicated)
+	UPROPERTY(VisibleAnywhere, ReplicatedUsing=OnRep_OwnerAgent)
 	TObjectPtr<ABaseAgent> OwnerAgent = nullptr;
+	UFUNCTION()
+	void OnRep_OwnerAgent();
 
 	UPROPERTY()
 	EInteractorType InteractorType = EInteractorType::None;

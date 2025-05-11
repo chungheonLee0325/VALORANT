@@ -347,10 +347,14 @@ void ABaseAgent::Interact()
 
 void ABaseAgent::ServerRPC_Interact_Implementation(ABaseInteractor* Interactor)
 {
+	if (nullptr == Interactor)
+	{
+		NET_LOG(LogTemp, Warning, TEXT("%hs Called, Interactor is nullptr"), __FUNCTION__);
+	}
 	Interactor->ServerRPC_Interact(this);
 }
 
-void ABaseAgent::DropCurrentInteractor()
+void ABaseAgent::ServerRPC_DropCurrentInteractor_Implementation()
 {
 	if (CurrentInteractor && CurrentInteractor->ServerOnly_CanDrop())
 	{
@@ -363,10 +367,15 @@ void ABaseAgent::DropCurrentInteractor()
 			SubWeapon = nullptr;
 		}
 		CurrentInteractor->ServerRPC_Drop();
-		CurrentInteractor = nullptr;
+		ServerRPC_SetCurrentInteractor(nullptr);
 		
 		EquipInteractor(CurrentInteractor);
 	}
+}
+
+void ABaseAgent::ServerRPC_SetCurrentInteractor_Implementation(ABaseInteractor* interactor)
+{
+	CurrentInteractor = interactor;
 }
 
 ABaseWeapon* ABaseAgent::GetMainWeapon() const
@@ -498,7 +507,7 @@ void ABaseAgent::SetShopUI()
 /** 실 장착관련 로직 */
 void ABaseAgent::EquipInteractor(ABaseInteractor* interactor)
 {
-	CurrentInteractor = interactor;
+	ServerRPC_SetCurrentInteractor(interactor);
 
 	if (CurrentInteractor == nullptr)
 	{

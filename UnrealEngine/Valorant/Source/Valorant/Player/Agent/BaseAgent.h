@@ -169,16 +169,16 @@ public:
 	UFUNCTION(Server, Reliable)
 	void ServerRPC_Interact(ABaseInteractor* Interactor);
 	
-	UFUNCTION(Category= "Input")
-	void DropCurrentInteractor();
+	UFUNCTION(Server, Reliable, Category= "Input")
+	void ServerRPC_DropCurrentInteractor();
 
 	UFUNCTION(BlueprintCallable)
 	EInteractorType GetInteractorState() const { return CurrentInteractorState; }
 	
 	UFUNCTION(BlueprintCallable)
 	ABaseInteractor* GetCurrentInterator() const { return CurrentInteractor; }
-	UFUNCTION(BlueprintCallable)
-	void SetCurrentInteractor(ABaseInteractor* interactor) { CurrentInteractor = interactor; } 
+	UFUNCTION(Server, Reliable)
+	void ServerRPC_SetCurrentInteractor(ABaseInteractor* interactor);
 
 	ABaseWeapon* GetMainWeapon() const;
 	ABaseWeapon* GetSubWeapon() const;
@@ -269,7 +269,7 @@ protected:
 	UPROPERTY(Replicated)
 	ASpike* Spike = nullptr;
 
-	UPROPERTY(Replicated)
+	UPROPERTY(VisibleAnywhere, Replicated)
 	ABaseInteractor* CurrentInteractor = nullptr;
 
 	UPROPERTY(Replicated, ReplicatedUsing=OnRep_ChangeInteractorState)
