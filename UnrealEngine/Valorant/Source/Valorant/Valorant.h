@@ -9,8 +9,9 @@
  */
 #define NET_LOG(CategoryName, Verbosity, Format, ...) \
 	{ \
+		const auto* World = GetWorld(); \
 		FString Prefix; \
-		if (auto* World = GetWorld()) \
+		if (World) \
 		{ \
 			ENetMode NetMode = World->GetNetMode(); \
 			if (NetMode == NM_DedicatedServer || NetMode == NM_ListenServer) \
@@ -25,13 +26,14 @@
 			{ \
 				Prefix = TEXT("[STANDALONE] "); \
 			} \
+			const FString& Nickname = USubsystemSteamManager::GetDisplayName(GetWorld()); \
+			Prefix += Nickname; \
 		} \
 		else \
 		{ \
 			Prefix = TEXT("[UNKNOWN] "); \
 		} \
-		FString Nickname = USubsystemSteamManager::GetDisplayName(GetWorld()); \
-		UE_LOG(CategoryName, Verbosity, TEXT("%s%s: %s"), *Prefix, *Nickname, *FString::Printf(Format, ##__VA_ARGS__)); \
+		UE_LOG(CategoryName, Verbosity, TEXT("%s: %s"), *Prefix, *FString::Printf(Format, ##__VA_ARGS__)); \
 	}
 
 #define SCREEN_LOG(Format, ...) \
