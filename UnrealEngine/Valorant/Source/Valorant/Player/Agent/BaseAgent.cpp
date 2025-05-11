@@ -13,6 +13,7 @@
 #include "Components/TimelineComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "GameManager/MatchGameMode.h"
+#include "GameManager/MatchGameState.h"
 #include "GameManager/SubsystemSteamManager.h"
 #include "GameManager/ValorantGameInstance.h"
 #include "Kismet/GameplayStatics.h"
@@ -475,10 +476,35 @@ void ABaseAgent::SetShopUI()
 {
 	if (IsLocallyControlled())
 	{
-		PC->RequestShopUI();
-	}
-	else
-	{
+		// 현재 라운드 상태 확인
+		// GameMode 대신 GameState를 사용 (클라이언트에서 접근 가능)
+		AMatchGameState* GameState = GetWorld()->GetGameState<AMatchGameState>();
+		if (GameState)
+		{
+			// 구매 페이즈인지 확인
+			if (GameState->CanOpenShop())
+			{
+				// 구매 페이즈일 때만 상점 UI 열기
+				PC->RequestShopUI();
+			}
+			else
+			{
+				// 구매 페이즈가 아닐 때는 알림 메시지 표시
+				FString Message = TEXT("상점은 구매 페이즈에서만 이용할 수 있습니다.");
+				
+				// 알림 메시지 표시 (이미 열려있는 상점이 있으면 닫음)
+				if (PC)
+				{
+					PC->Client_ReceivePurchaseResult(false, 0, EShopItemType::None, Message);
+					PC->CloseShopUI();
+				}
+			}
+		}
+		else
+		{
+			// GameState를 찾을 수 없는 경우 기존 동작 유지
+			PC->RequestShopUI();
+		}
 	}
 }
 
