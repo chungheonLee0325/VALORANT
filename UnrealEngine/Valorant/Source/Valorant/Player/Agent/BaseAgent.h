@@ -169,8 +169,6 @@ public:
 	void Reload();
 	UFUNCTION(Category= "Input")
 	void Interact();
-	UFUNCTION(Server, Reliable)
-	void ServerRPC_Interact(ABaseInteractor* Interactor);
 	
 	UFUNCTION(Server, Reliable, Category= "Input")
 	void ServerRPC_DropCurrentInteractor();
@@ -200,8 +198,7 @@ public:
 	void OnRep_ChangePoseIdx();
 
 	UFUNCTION(Server, Reliable, Category = "Weapon")
-	void Server_Interact(ABaseInteractor* Interactor);
-	
+	void ServerRPC_Interact(ABaseInteractor* Interactor);
 	UFUNCTION(Server, Reliable, Category = "Weapon")
 	void Server_AcquireInteractor(ABaseInteractor* Interactor);
 	UFUNCTION(Server, Reliable, Category = "Weapon")
