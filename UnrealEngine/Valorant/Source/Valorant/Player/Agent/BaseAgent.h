@@ -66,6 +66,11 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
 	UCapsuleComponent* InteractionCapsule;
 
+	UPROPERTY(EditDefaultsOnly, Category="Asset")
+	TSubclassOf<ABaseWeapon> MeleeAsset;
+	UPROPERTY(EditDefaultsOnly, Category="Asset")
+	TSubclassOf<ABaseWeapon> ClassicAsset;
+
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category= "Anim")
 	UAnimMontage* AM_Die;
 
@@ -89,7 +94,7 @@ public:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category= "Die")
 	UCurveVector* DieCameraCurve;
-
+	
 	//ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ
 	//             CYT             ♣
 	//ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ
@@ -181,7 +186,12 @@ public:
 	void SetCurrentInteractor(ABaseInteractor* interactor) { CurrentInteractor = interactor; } 
 
 	ABaseWeapon* GetMainWeapon() const;
-	ABaseWeapon* GetSubWeapon() const;
+
+	ABaseWeapon* GetSubWeapon() const { return  SubWeapon; }
+	void SetSubWeapon(ABaseWeapon* gun) { SubWeapon = gun; }
+
+	ABaseWeapon* GetMeleeWeapon() const { return MeleeKnife; }
+	void SetMeleeWeapon(ABaseWeapon* knife) { MeleeKnife = knife; }
 
 	/** 장착 X, 획득하는 개념 (땅에 떨어진 무기 줍기, 상점에서 무기 구매) */
 	UFUNCTION(BlueprintCallable, Category = "Weapon")
@@ -190,7 +200,7 @@ public:
 	/** 해당 슬롯의 인터랙터를 손에 들고자 할 때 */
 	UFUNCTION(BlueprintCallable, Category = "Weapon")
 	void SwitchInteractor(EInteractorType InteractorType);
-
+	
 	UFUNCTION()
 	void OnRep_ChangeInteractorState();
 	UFUNCTION()
@@ -198,6 +208,8 @@ public:
 
 	UFUNCTION(Server, Reliable, Category = "Weapon")
 	void Server_Interact(ABaseInteractor* Interactor);
+	UFUNCTION(Server, Reliable, Category = "Weapon")
+	void Server_DropInteractor();
 	
 	UFUNCTION(Server, Reliable, Category = "Weapon")
 	void Server_AcquireInteractor(ABaseInteractor* Interactor);
