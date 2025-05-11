@@ -88,6 +88,7 @@ void UAgentInputComponent::BindInput(UInputComponent* InputComponent)
 			eic->BindAction(Num_2Action, ETriggerEvent::Started, this, &UAgentInputComponent::Weapon2);
 			eic->BindAction(Num_3Action, ETriggerEvent::Started, this, &UAgentInputComponent::Weapon3);
 			eic->BindAction(Num_4Action, ETriggerEvent::Started, this, &UAgentInputComponent::Weapon4);
+			eic->BindAction(Num_4Action, ETriggerEvent::Completed, this, &UAgentInputComponent::Weapon4Released);
 		}
 		if (ReloadAction)
 		{
@@ -257,7 +258,15 @@ void UAgentInputComponent::Weapon4(const FInputActionValue& InputActionValue)
 {
 	if (Agent)
 	{
-		Agent->SwitchInteractor(EInteractorType::Spike);
+		Agent->ActivateSpike();
+	}
+}
+
+void UAgentInputComponent::Weapon4Released(const FInputActionValue& InputActionValue)
+{
+	if (Agent)
+	{
+		Agent->CancelSpike(nullptr);
 	}
 }
 

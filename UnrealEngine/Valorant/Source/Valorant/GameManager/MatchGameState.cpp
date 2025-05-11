@@ -188,3 +188,15 @@ void AMatchGameState::MulticastRPC_CloseAllShops_Implementation()
 	// 상점 닫기 이벤트 브로드캐스트
 	OnShopClosed.Broadcast();
 }
+
+void AMatchGameState::MulticastRPC_OnSpikePlanted_Implementation(AMatchPlayerController* Planter)
+{
+	// 모든 클라이언트에게 스파이크 설치 이벤트 브로드캐스트
+	OnSpikePlanted.Broadcast(Planter);
+}
+
+void AMatchGameState::MulticastRPC_OnSpikeDefused_Implementation(AMatchPlayerController* Defuser)
+{
+	// 모든 클라이언트에게 스파이크 해제 이벤트 브로드캐스트
+	OnSpikeDefused.Broadcast(Defuser);
+}

@@ -4,21 +4,29 @@
 #include "Spike.h"
 
 #include "Components/WidgetComponent.h"
+#include "GameFramework/PawnMovementComponent.h"
 #include "GameManager/MatchGameMode.h"
 #include "Player/Agent/BaseAgent.h"
 #include "UI/DetectWidget.h"
+#include "Net/UnrealNetwork.h"
+#include "Kismet/GameplayStatics.h"
+#include "GameManager/MatchGameState.h"
 
 
 ASpike::ASpike()
 {
 	PrimaryActorTick.bCanEverTick = true;
-	
-	ConstructorHelpers::FObjectFinder<USkeletalMesh> SpikeMeshObj(TEXT("/Script/Engine.SkeletalMesh'/Game/Resource/Props/Spike/Spike.Spike'"));
+
+	ConstructorHelpers::FObjectFinder<USkeletalMesh> SpikeMeshObj(
+		TEXT("/Script/Engine.SkeletalMesh'/Game/Resource/Props/Spike/Spike.Spike'"));
 	if (SpikeMeshObj.Succeeded())
 	{
 		Mesh->SetSkeletalMesh(SpikeMeshObj.Object);
 	}
 	Mesh->SetRelativeScale3D(FVector(0.34f));
+
+	// 인터랙터 타입 설정
+	InteractorType = EInteractorType::Spike;
 }
 
 void ASpike::BeginPlay()
@@ -34,39 +42,485 @@ void ASpike::BeginPlay()
 void ASpike::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+
+	if (HasAuthority())
+	{
+		// 설치 중인 경우 진행 상황 업데이트
+		if (SpikeState == ESpikeState::Planting && InteractingAgent)
+		{
+			InteractProgress += DeltaTime;
+			AddActorWorldOffset(FVector(0,0,10)*DeltaTime);
+			if (InteractProgress >= PlantTime)
+			{
+				ServerRPC_FinishPlanting();
+			}
+		}
+		// 해제 중인 경우 진행 상황 업데이트
+		else if (SpikeState == ESpikeState::Defusing && InteractingAgent)
+		{
+			InteractProgress += DeltaTime;
+			AddActorWorldOffset(FVector(0,0,-10)*DeltaTime);
+			if (InteractProgress >= DefuseTime)
+			{
+				ServerRPC_FinishDefusing();
+			}
+		}
+		// 설치 완료된 스파이크 폭발 타이머 업데이트
+		else if (SpikeState == ESpikeState::Planted)
+		{
+			RemainingDetonationTime -= DeltaTime;
+			if (RemainingDetonationTime <= 0)
+			{
+				ServerRPC_Detonate();
+			}
+		}
+	}
 }
 
-void ASpike::ServerRPC_PickUp(ABaseAgent* Agent)
+void ASpike::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
-	Super::ServerRPC_PickUp(Agent);
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	DOREPLIFETIME(ASpike, SpikeState);
+	DOREPLIFETIME(ASpike, InteractProgress);
+	DOREPLIFETIME(ASpike, RemainingDetonationTime);
+	DOREPLIFETIME(ASpike, InteractingAgent);
 }
 
-void ASpike::ServerRPC_Drop()
+void ASpike::OnRep_SpikeState()
 {
-	Super::ServerRPC_Drop();
+	// 스파이크 상태에 따른 시각적/청각적 효과 업데이트
+	switch (SpikeState)
+	{
+	case ESpikeState::Dropped:
+		// 떨어진 상태 - 시각적 표시 활성화
+		DetectWidgetComponent->SetVisibility(true);
+		break;
+
+	case ESpikeState::Carried:
+		// 소지 상태 - 위젯 비활성화
+		DetectWidgetComponent->SetVisibility(false);
+		break;
+
+	case ESpikeState::Planting:
+		// 설치 중 효과
+		break;
+
+	case ESpikeState::Planted:
+		// 설치 완료 효과 (경고음, 불빛 등)
+		break;
+
+	case ESpikeState::Defusing:
+		// 해제 중 효과
+		break;
+
+	case ESpikeState::Defused:
+		// 해제 완료 효과
+		break;
+	}
 }
 
-void ASpike::ServerRPC_Interact(ABaseAgent* InteractAgent)
+void ASpike::ServerRPC_PickUp_Implementation(ABaseAgent* Agent)
 {
-	Super::ServerRPC_Interact(InteractAgent);
+	if (!Agent || SpikeState != ESpikeState::Dropped)
+	{
+		return;
+	}
+
+	// 공격팀만 스파이크를 주울 수 있음
+	auto* PS = Agent->GetPlayerState<AAgentPlayerState>();
+	if (!PS || !AMatchGameMode::IsAttacker(PS->bIsBlueTeam))
+	{
+		return;
+	}
+
+	// Agent에게 spike 수여
+	Agent->AcquireInteractor(this);
+	OwnerAgent = Agent;
+
+	// 스파이크 Mesh 숨기기
+	SetActive(false);
+
+	// 스파이크 상태 업데이트
+	SpikeState = ESpikeState::Carried;
+
+	// 위젯 숨기기
+	DetectWidgetComponent->SetVisibility(false);
+}
+
+void ASpike::ServerRPC_Drop_Implementation()
+{
+	if (SpikeState != ESpikeState::Carried)
+	{
+		return;
+	}
+
+	Super::ServerRPC_Drop_Implementation();
+
+	// 스파이크 Mesh 보이기
+	SetActive(true);
+
+	// 스파이크 상태 업데이트
+	SpikeState = ESpikeState::Dropped;
+
+	// 위젯 표시
+	DetectWidgetComponent->SetVisibility(true);
+}
+
+void ASpike::ServerRPC_Interact_Implementation(ABaseAgent* InteractAgent)
+{
+	if (!InteractAgent)
+	{
+		return;
+	}
+
+	auto* PS = InteractAgent->GetPlayerState<AAgentPlayerState>();
+	if (!PS)
+	{
+		return;
+	}
+
+	// 상태에 따른 상호작용 처리
+	switch (SpikeState)
+	{
+	case ESpikeState::Dropped:
+		// 떨어진 스파이크 - 공격팀만 주울 수 있음
+		if (AMatchGameMode::IsAttacker(PS->bIsBlueTeam))
+		{
+			// 스파이크 줍기
+			ServerRPC_PickUp_Implementation(InteractAgent);
+		}
+		break;
+
+	case ESpikeState::Carried:
+		// 이미 소지 중인 스파이크 - 공격팀은 설치 가능
+		if (OwnerAgent == InteractAgent && AMatchGameMode::IsAttacker(PS->bIsBlueTeam) && IsInPlantZone())
+		{
+			// 스파이크 설치 시작
+			ServerRPC_StartPlanting(InteractAgent);
+		}
+		break;
+
+	case ESpikeState::Planted:
+		// 설치된 스파이크 - 수비팀만 해제 가능
+		if (!AMatchGameMode::IsAttacker(PS->bIsBlueTeam))
+		{
+			// 스파이크 해제 시작
+			ServerRPC_StartDefusing(InteractAgent);
+		}
+		break;
+
+	default:
+		break;
+	}
+}
+
+void ASpike::ServerRPC_Cancel_Implementation(ABaseAgent* InteractAgent)
+{
+	if (!InteractAgent)
+	{
+		return;
+	}
+
+	auto* PS = InteractAgent->GetPlayerState<AAgentPlayerState>();
+	if (!PS)
+	{
+		return;
+	}
+
+	// 상태에 따른 상호작용 처리
+	switch (SpikeState)
+	{
+	case ESpikeState::Planting:
+		// 이미 설치 중인 스파이크
+		if (OwnerAgent == InteractAgent && AMatchGameMode::IsAttacker(PS->bIsBlueTeam) && IsInPlantZone())
+		{
+			// 스파이크 설치 취소
+			ServerRPC_CancelPlanting();
+		}
+		break;
+
+	case ESpikeState::Defusing:
+		// 해제 중인 스파이크
+		if (!AMatchGameMode::IsAttacker(PS->bIsBlueTeam))
+		{
+			// 스파이크 해제 취소
+			ServerRPC_CancelDefusing();
+		}
+		break;
+
+	default:
+		break;
+	}
+}
+
+void ASpike::ServerRPC_StartPlanting_Implementation(ABaseAgent* Agent)
+{
+	if (!Agent || SpikeState != ESpikeState::Carried || OwnerAgent != Agent || !IsInPlantZone())
+	{
+		return;
+	}
+
+	// 스파이크 설치 시작
+	SpikeState = ESpikeState::Planting;
+	InteractingAgent = Agent;
+	InteractProgress = 0.0f;
+
+	// 스파이크 Mesh 보이기
+	PlantingLocation = OwnerAgent->GetMovementComponent()->GetActorFeetLocation() + OwnerAgent->GetActorForwardVector() * 80 + FVector(0, 0, -50);
+	SetActorLocation(PlantingLocation);
+	SetActive(true);
+
+	// 설치 시작 이벤트 발생
+	MulticastRPC_OnPlantingStarted();
+}
+
+void ASpike::ServerRPC_CancelPlanting_Implementation()
+{
+	if (SpikeState != ESpikeState::Planting)
+	{
+		return;
+	}
+
+	// 설치 취소
+	SpikeState = ESpikeState::Carried;
+	InteractingAgent = nullptr;
+	InteractProgress = 0.0f;
+
+	// 스파이크 Mesh 숨기기
+	SetActive(false);
+
+	// 설치 취소 이벤트 발생
+	MulticastRPC_OnPlantingCancelled();
+}
+
+void ASpike::ServerRPC_FinishPlanting_Implementation()
+{
+	if (SpikeState != ESpikeState::Planting || !InteractingAgent)
+	{
+		return;
+	}
+
+	// 설치 완료
+	SpikeState = ESpikeState::Planted;
+	RemainingDetonationTime = 45.0f; // 폭발까지 45초
+
+	// 스파이크 위치 고정
+	PlantingLocation = GetActorLocation() + FVector(0, 0, 10);
+	SetActorLocation(PlantingLocation); // 바닥에서 약간 띄움
+
+	// 상호작용 메시 설정
+	Mesh->SetSimulatePhysics(false);
+	Mesh->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+
+	// 게임 모드에 설치 완료 알림
+	AMatchGameMode* GameMode = Cast<AMatchGameMode>(UGameplayStatics::GetGameMode(GetWorld()));
+	if (GameMode)
+	{
+		AMatchPlayerController* PC = Cast<AMatchPlayerController>(InteractingAgent->GetController());
+		if (PC)
+		{
+			GameMode->OnSpikePlanted(PC);
+			GameMode->bSpikePlanted = true;
+		}
+	}
+
+	// 보상 지급
+	InteractingAgent->RewardSpikeInstall();
+
+	InteractingAgent = nullptr;
+	InteractProgress = 0.0f;
+
+	// 설치 완료 이벤트 발생
+	MulticastRPC_OnPlantingFinished();
+}
+
+void ASpike::ServerRPC_StartDefusing_Implementation(ABaseAgent* Agent)
+{
+	if (!Agent || SpikeState != ESpikeState::Planted)
+	{
+		return;
+	}
+
+	// 수비팀만 해제 가능
+	auto* PS = Agent->GetPlayerState<AAgentPlayerState>();
+	if (!PS || AMatchGameMode::IsAttacker(PS->bIsBlueTeam))
+	{
+		return;
+	}
+
+	// 스파이크 해제 시작
+	SpikeState = ESpikeState::Defusing;
+	InteractingAgent = Agent;
+	InteractProgress = 0.0f;
+
+	// 해제 시작 이벤트 발생
+	MulticastRPC_OnDefusingStarted();
+}
+
+void ASpike::ServerRPC_CancelDefusing_Implementation()
+{
+	if (SpikeState != ESpikeState::Defusing)
+	{
+		return;
+	}
+
+	// 해제 취소
+	SpikeState = ESpikeState::Planted;
+	InteractingAgent = nullptr;
+	InteractProgress = 0.0f;
+	SetActorLocation(PlantingLocation);
+
+	// 해제 취소 이벤트 발생
+	MulticastRPC_OnDefusingCancelled();
+}
+
+void ASpike::ServerRPC_FinishDefusing_Implementation()
+{
+	if (SpikeState != ESpikeState::Defusing || !InteractingAgent)
+	{
+		return;
+	}
+
+	// 스파이크 Mesh 숨기기
+	SetActive(false);
+
+	// 해제 완료
+	SpikeState = ESpikeState::Defused;
+
+	// 게임 모드에 해제 완료 알림
+	AMatchGameMode* GameMode = Cast<AMatchGameMode>(UGameplayStatics::GetGameMode(GetWorld()));
+	if (GameMode)
+	{
+		AMatchPlayerController* PC = Cast<AMatchPlayerController>(InteractingAgent->GetController());
+		if (PC)
+		{
+			GameMode->OnSpikeDefused(PC);
+		}
+	}
+
+	InteractingAgent = nullptr;
+	InteractProgress = 0.0f;
+
+	// 해제 완료 이벤트 발생
+	MulticastRPC_OnDefusingFinished();
+}
+
+void ASpike::ServerRPC_Detonate_Implementation()
+{
+	if (SpikeState != ESpikeState::Planted)
+	{
+		return;
+	}
+
+	// 폭발 처리
+	// AMatchGameMode* GameMode = Cast<AMatchGameMode>(UGameplayStatics::GetGameMode(GetWorld()));
+	// if (GameMode)
+	// {
+	// 	// 스파이크 폭발 시 공격팀 승리
+	// 	GameMode->StartEndPhaseBySpikeActive();
+	// }
+
+	// 폭발 이벤트 발생
+	MulticastRPC_OnDetonated();
+
+	// 스파이크 제거 (폭발 이펙트 후 삭제)
+	FTimerHandle DestroyTimerHandle;
+	GetWorldTimerManager().SetTimer(DestroyTimerHandle, [this]()
+	{
+		Destroy();
+	}, 3.0f, false);
 }
 
 bool ASpike::ServerOnly_CanAutoPickUp(ABaseAgent* Agent) const
 {
-	const auto* PS = Agent->GetPlayerState<AAgentPlayerState>();
-	if (nullptr == PS)
+	if (!Agent || SpikeState != ESpikeState::Dropped)
 	{
 		return false;
 	}
+
+	const auto* PS = Agent->GetPlayerState<AAgentPlayerState>();
+	if (!PS)
+	{
+		return false;
+	}
+
+	// 공격팀만 스파이크를 주울 수 있음
 	return AMatchGameMode::IsAttacker(PS->bIsBlueTeam);
 }
 
 bool ASpike::ServerOnly_CanDrop() const
 {
-	return true;
+	// 소지 중인 상태에서만 떨어뜨릴 수 있음
+	return SpikeState == ESpikeState::Carried;
 }
 
 bool ASpike::ServerOnly_CanInteract() const
 {
-	return ServerOnly_CanAutoPickUp(OwnerAgent);
+	if (!OwnerAgent)
+	{
+		return false;
+	}
+
+	const auto* PS = OwnerAgent->GetPlayerState<AAgentPlayerState>();
+	if (!PS)
+	{
+		return false;
+	}
+
+	// 공격팀이고 플랜트 영역에 있을 때만 설치 가능
+	if (SpikeState == ESpikeState::Carried)
+	{
+		return AMatchGameMode::IsAttacker(PS->bIsBlueTeam) && IsInPlantZone();
+	}
+
+	return false;
+}
+
+bool ASpike::IsInPlantZone() const
+{
+	// 임시 구현: 현재는 항상 설치 가능
+	// 실제 구현에서는 플랜트 영역 콜리전 체크 필요
+	return OwnerAgent->GetIsInPlantZone();
+}
+
+void ASpike::MulticastRPC_OnPlantingStarted_Implementation()
+{
+	// 설치 시작 효과 (사운드, 애니메이션 등)
+}
+
+void ASpike::MulticastRPC_OnPlantingCancelled_Implementation()
+{
+	// 설치 취소 효과
+}
+
+void ASpike::MulticastRPC_OnPlantingFinished_Implementation()
+{
+	// 설치 완료 효과
+}
+
+void ASpike::MulticastRPC_OnDefusingStarted_Implementation()
+{
+	// 해제 시작 효과
+}
+
+void ASpike::MulticastRPC_OnDefusingCancelled_Implementation()
+{
+	// 해제 취소 효과
+}
+
+void ASpike::MulticastRPC_OnDefusingFinished_Implementation()
+{
+	// 해제 완료 효과
+}
+
+void ASpike::MulticastRPC_OnDetonated_Implementation()
+{
+	// 폭발 효과 (사운드, 파티클 등)
+}
+
+void ASpike::Destroyed()
+{
+	Super::Destroyed();
+	OwnerAgent->ResetOwnSpike();
 }
