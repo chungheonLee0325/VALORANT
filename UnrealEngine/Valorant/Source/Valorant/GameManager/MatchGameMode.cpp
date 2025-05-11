@@ -522,6 +522,17 @@ void AMatchGameMode::RespawnPlayer(AAgentPlayerState* ps, AAgentPlayerController
 		{
 			oldPawn->Destroy();
 		}
+		if (Agent->GetMeleeWeapon() == nullptr) { 
+			{
+				if (MeleeAsset)
+				{
+					NET_LOG(LogTemp,Warning,TEXT("MeleeAsset"));
+					ABaseWeapon* knife = GetWorld()->SpawnActor<ABaseWeapon>(MeleeAsset);
+					Agent->SetMeleeWeapon(knife);
+					knife->ServerRPC_PickUp(Agent);
+				}
+			}
+		}
 	}
 	else
 	{
