@@ -264,7 +264,8 @@ void ABaseWeapon::ServerRPC_Fire_Implementation(const FVector& Location, const F
 		NET_LOG(LogTemp, Warning, TEXT("LineTraceSingle Hit: %s, BoneName: %s, Distance: %f, FinalDamage: %d"), *OutHit.GetActor()->GetName(), *OutHit.BoneName.ToString(), OutHit.Distance, FinalDamage);
 		if (ABaseAgent* HitAgent = Cast<ABaseAgent>(OutHit.GetActor()))
 		{
-			HitAgent->ServerApplyHitScanGE(NewDamageEffectClass, FinalDamage);
+			// 공격자 정보 전달
+			HitAgent->ServerApplyHitScanGE(NewDamageEffectClass, FinalDamage, OwnerAgent);
 		}
 		DrawDebugPoint(WorldContext, OutHit.ImpactPoint, 5, FColor::Green, false, 30);
 	}

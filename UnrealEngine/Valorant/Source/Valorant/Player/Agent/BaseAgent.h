@@ -153,13 +153,13 @@ public:
 	UFUNCTION(Server, Reliable)
 	void ServerApplyGE(TSubclassOf<UGameplayEffect> geClass);
 	UFUNCTION(Server, Reliable)
-	void ServerApplyHitScanGE(TSubclassOf<UGameplayEffect> geClass, const int Damage);
+	void ServerApplyHitScanGE(TSubclassOf<UGameplayEffect> GEClass, const int Damage, ABaseAgent* DamageInstigator = nullptr);
 
 	UFUNCTION(BlueprintCallable)
 	void SetIsRun(const bool _bIsRun);
 	UFUNCTION(Server, Reliable)
 	void Server_SetIsRun(const bool _bIsRun);
-
+	
 	UFUNCTION(Category= "Input")
 	void StartFire();
 	UFUNCTION(Category= "Input")
@@ -216,6 +216,17 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Shop")
 	void SetShopUI();
 
+	// 크레딧 보상 함수
+	UFUNCTION(BlueprintCallable, Category = "Agent|Credits")
+	void AddCredits(int32 Amount);
+
+	// 킬 보상 처리
+	UFUNCTION(BlueprintCallable, Category = "Agent|Credits")
+	void RewardKill();
+
+	// 스파이크 설치 보상
+	UFUNCTION(BlueprintCallable, Category = "Agent|Credits")
+	void RewardSpikeInstall();
 
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)

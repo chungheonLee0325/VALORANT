@@ -23,6 +23,7 @@
 #include "Valorant/Player/AgentPlayerState.h"
 #include "ValorantObject/BaseInteractor.h"
 #include "ValorantObject/Spike/Spike.h"
+#include "Player/Component/CreditComponent.h"
 
 /* static */ EAgentDamagedPart ABaseAgent::GetHitDamagedPart(const FName& BoneName)
 {
@@ -604,9 +605,50 @@ void ABaseAgent::Die()
 
 	if (HasAuthority())
 	{
+		// 킬러 플레이어 컨트롤러 찾기
+		AMatchPlayerController* KillerPC = nullptr;
+		
+		// Instigator 로그 추가
+		AActor* InstigatorActor = GetInstigator();
+		if (InstigatorActor)
+		{
+			NET_LOG(LogTemp, Warning, TEXT("Die() - Instigator 정보: %s"), *InstigatorActor->GetName());
+		}
+		else
+		{
+			NET_LOG(LogTemp, Warning, TEXT("Die() - Instigator가 없습니다. 데미지 적용 시 Instigator가 제대로 설정되지 않았습니다."));
+		}
+		
+		if (GetInstigator() && GetInstigator() != this)
+		{
+			KillerPC = Cast<AMatchPlayerController>(GetInstigator()->GetController());
+			// 키의 유효성 검사
+			NET_LOG(LogTemp, Warning, TEXT("죽음 처리: 킬러 컨트롤러 - %s"), KillerPC ? *KillerPC->GetName() : TEXT("없음"));
+			
+			if (KillerPC)
+			{
+				GetWorld()->GetAuthGameMode<AMatchGameMode>()->OnKill(KillerPC ,PC);
+				// AAgentPlayerState* KillerPS = KillerPC->GetPlayerState<AAgentPlayerState>();
+				// if (KillerPS)
+				// {
+				// 	UCreditComponent* CreditComp = KillerPS->FindComponentByClass<UCreditComponent>();
+				// 	if (CreditComp)
+				// 	{
+				// 		// 헤드샷 여부 체크 (데미지 시스템에서 구현 필요)
+				// 		bool bIsHeadshot = false; // 임시로 false 설정
+				// 		CreditComp->AwardKillCredits(bIsHeadshot);
+				// 		
+				// 		NET_LOG(LogTemp, Warning, TEXT("%s가 %s를 처치하여 크레딧 보상을 받았습니다."), 
+				// 			*KillerPC->GetPlayerState<APlayerState>()->GetPlayerName(), 
+				// 			*GetPlayerState<APlayerState>()->GetPlayerName());
+				// 		
+				// 	}
+				// }
+			}
+		}
+
 		// NET_LOG(LogTemp,Warning,TEXT("다이 캠 피니쉬 타이머 설정"));
-		GetWorld()->GetAuthGameMode<AMatchGameMode>()->OnKill(Cast<AMatchPlayerController>(GetOwner()),
-		                                                      Cast<AMatchPlayerController>(GetOwner()));
+
 		FTimerHandle deadTimerHandle;
 		GetWorldTimerManager().SetTimer(deadTimerHandle, FTimerDelegate::CreateLambda([this]()
 		{
@@ -663,9 +705,9 @@ void ABaseAgent::ServerApplyGE_Implementation(TSubclassOf<UGameplayEffect> geCla
 	}
 }
 
-void ABaseAgent::ServerApplyHitScanGE_Implementation(TSubclassOf<UGameplayEffect> geClass, const int Damage)
+void ABaseAgent::ServerApplyHitScanGE_Implementation(TSubclassOf<UGameplayEffect> GEClass, const int Damage, ABaseAgent* DamageInstigator)
 {
-	if (!geClass)
+	if (!GEClass)
 	{
 		NET_LOG(LogTemp, Error, TEXT("올바른 게임이펙트를 넣어주세요."));
 		return;
@@ -675,7 +717,18 @@ void ABaseAgent::ServerApplyHitScanGE_Implementation(TSubclassOf<UGameplayEffect
 	FHitScanGameplayEffectContext* HitScanContext = static_cast<FHitScanGameplayEffectContext*>(Context.Get());
 	HitScanContext->Damage = Damage;
 	
-	FGameplayEffectSpecHandle SpecHandle = ASC->MakeOutgoingSpec(geClass, 1.f, Context);
+	// Instigator 설정
+	if (DamageInstigator)
+	{
+		// GAS에서 Instigator를 설정하고 Die() 함수에서 GetInstigator()로 확인
+		SetInstigator(DamageInstigator);
+		
+		// 디버깅 로그
+		NET_LOG(LogTemp, Warning, TEXT("데미지 적용: %s가 %s에게 %d 데미지를 입혔습니다."), 
+			*DamageInstigator->GetName(), *GetName(), Damage);
+	}
+	
+	FGameplayEffectSpecHandle SpecHandle = ASC->MakeOutgoingSpec(GEClass, 1.f, Context);
 	if (SpecHandle.IsValid())
 	{
 		ASC->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
@@ -910,4 +963,59 @@ bool ABaseAgent::IsVisibleToOpponents() const
 	}
 	// 아무도 볼수 없다면 false 반환 
 	return false;
+}
+
+// 크레딧 보상 함수 구현
+void ABaseAgent::AddCredits(int32 Amount)
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+
+	AAgentPlayerState* PS = GetPlayerState<AAgentPlayerState>();
+	if (PS)
+	{
+		UCreditComponent* CreditComp = PS->FindComponentByClass<UCreditComponent>();
+		if (CreditComp)
+		{
+			CreditComp->AddCredits(Amount);
+			NET_LOG(LogTemp, Warning, TEXT("%s에게 %d 크레딧 지급. 현재 총 크레딧: %d"), 
+				*GetName(), Amount, CreditComp->GetCurrentCredit());
+		}
+	}
+}
+
+void ABaseAgent::RewardKill()
+{
+	if (HasAuthority())
+	{
+		AAgentPlayerState* PS = GetPlayerState<AAgentPlayerState>();
+		if (PS)
+		{
+			UCreditComponent* CreditComp = PS->FindComponentByClass<UCreditComponent>();
+			if (CreditComp)
+			{
+				CreditComp->AwardKillCredits();
+			}
+		}
+	}
+}
+
+void ABaseAgent::RewardSpikeInstall()
+{
+	if (HasAuthority())
+	{
+		AAgentPlayerState* PS = GetPlayerState<AAgentPlayerState>();
+		if (PS)
+		{
+			UCreditComponent* CreditComp = PS->FindComponentByClass<UCreditComponent>();
+			if (CreditComp)
+			{
+				CreditComp->AwardSpikeActionCredits(true);
+				NET_LOG(LogTemp, Warning, TEXT("%s가 스파이크를 설치하여 보상을 받았습니다."), 
+					*GetPlayerState<APlayerState>()->GetPlayerName());
+			}
+		}
+	}
 }
