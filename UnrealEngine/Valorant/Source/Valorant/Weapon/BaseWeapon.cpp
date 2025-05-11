@@ -100,9 +100,10 @@ void ABaseWeapon::StartFire()
 {
 	if (nullptr == OwnerAgent || nullptr == OwnerAgent->GetController())
 	{
+		NET_LOG(LogTemp, Warning, TEXT("OwnAgent Null"));
 		return;
 	}
-
+	
 	bIsFiring = true;
 	if (FMath::IsNearlyZero(FMath::Abs(TotalRecoilOffsetPitch) + FMath::Abs(TotalRecoilOffsetYaw), 0.05f))
 	{
@@ -336,8 +337,21 @@ void ABaseWeapon::StopReload()
 
 bool ABaseWeapon::ServerOnly_CanAutoPickUp(ABaseAgent* Agent) const
 {
-	// TODO: 현재 이미 똑같은 종류의 무기를 들고 있을 경우 false 반환
-	return Super::ServerOnly_CanAutoPickUp(Agent);
+	if (GetWeaponCategory() == EWeaponCategory::Sidearm)
+	{
+		if (Agent->GetSubWeapon())
+		{
+			return false;
+		}
+	}
+	else
+	{
+		if (Agent->GetMainWeapon())
+		{
+			return false;
+		}
+	}
+	return true;
 }
 
 bool ABaseWeapon::ServerOnly_CanDrop() const
