@@ -147,6 +147,9 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void SetAgentID(const int32 id) { m_AgentID = id; }
 
+	UAgentAnimInstance* GetABP_1P() const { return ABP_1P; }
+	UAgentAnimInstance* GetABP_3P() const { return ABP_3P; }
+
 	UFUNCTION(Server, Reliable)
 	void ServerApplyGE(TSubclassOf<UGameplayEffect> geClass);
 	UFUNCTION(Server, Reliable)
