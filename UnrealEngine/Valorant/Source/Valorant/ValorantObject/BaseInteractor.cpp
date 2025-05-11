@@ -3,10 +3,12 @@
 
 #include "BaseInteractor.h"
 
+#include "Valorant.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/SphereComponent.h"
 #include "Components/WidgetComponent.h"
 #include "GameFramework/PawnMovementComponent.h"
+#include "GameManager/SubsystemSteamManager.h"
 #include "Net/UnrealNetwork.h"
 #include "Player/Agent/BaseAgent.h"
 
@@ -112,6 +114,20 @@ bool ABaseInteractor::ServerOnly_CanInteract() const
 	return true;
 }
 
+void ABaseInteractor::SetActive(bool bActive)
+{
+	if (HasAuthority())
+	{
+		Mesh->SetVisibility(bActive);
+		Net_SetActive(bActive);
+		//NET_LOG(LogTemp, Warning,TEXT("%s, 활성 상태: %d"), *GetActorNameOrLabel() ,bActive);
+	}
+	else
+	{
+		ServerRPC_SetActive(bActive);
+	}
+}
+
 void ABaseInteractor::ServerRPC_PickUp_Implementation(ABaseAgent* Agent)
 {
 	OwnerAgent = Agent;
@@ -125,6 +141,13 @@ void ABaseInteractor::ServerRPC_Drop_Implementation()
 		return;
 	}
 
+	if (OwnerAgent->GetCurrentInterator() == this)
+	{
+		OwnerAgent->SetCurrentInteractor(nullptr);
+	}
+	
+	SetActive(true);
+	
 	UE_LOG(LogTemp, Warning, TEXT("드롭"));
 	
 	// TODO: 툭 놓는게 아니라 던지도록 변경
@@ -147,4 +170,14 @@ void ABaseInteractor::ServerRPC_Drop_Implementation()
 void ABaseInteractor::ServerRPC_Interact_Implementation(ABaseAgent* InteractAgent)
 {
 	//
+}
+
+void ABaseInteractor::ServerRPC_SetActive_Implementation(bool bActive)
+{
+	SetActive(bActive);
+}
+
+void ABaseInteractor::Net_SetActive_Implementation(bool bActive)
+{
+	Mesh->SetVisibility(bActive);
 }

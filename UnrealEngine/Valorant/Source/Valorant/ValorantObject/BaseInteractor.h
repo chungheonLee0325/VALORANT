@@ -61,4 +61,10 @@ public:
 	virtual void ServerRPC_Interact(ABaseAgent* InteractAgent);
 
 	EInteractorType GetInteractorType() const { return InteractorType; }
+
+	void SetActive(bool bActive);
+	UFUNCTION(Server, Reliable)
+	void ServerRPC_SetActive(bool bActive);
+	UFUNCTION(NetMulticast, Reliable)
+	void Net_SetActive(bool bActive);
 };
