@@ -37,6 +37,9 @@ void ASpike::BeginPlay()
 	{
 		DetectWidget->SetName(TEXT("획득 스파이크"));
 	}
+
+	// 게임 스테이트 캐싱
+	CachedGameState = GetWorld()->GetGameState<AMatchGameState>();
 }
 
 void ASpike::Tick(float DeltaTime)
@@ -218,7 +221,9 @@ void ASpike::ServerRPC_Interact_Implementation(ABaseAgent* InteractAgent)
 
 	case ESpikeState::Carried:
 		// 이미 소지 중인 스파이크 - 공격팀은 설치 가능
-		if (OwnerAgent == InteractAgent && AMatchGameMode::IsAttacker(PS->bIsBlueTeam) && IsInPlantZone())
+		// 현재 라운드가 InRound 상태인지 확인
+		if (OwnerAgent == InteractAgent && AMatchGameMode::IsAttacker(PS->bIsBlueTeam) && 
+			IsInPlantZone() && IsGameStateInRound())
 		{
 			// 스파이크 설치 시작
 			ServerRPC_StartPlanting(InteractAgent);
@@ -284,7 +289,13 @@ void ASpike::ServerRPC_StartPlanting_Implementation(ABaseAgent* Agent)
 	{
 		return;
 	}
-
+	
+	// 현재 라운드가 InRound 상태인지 확인
+	if (!IsGameStateInRound())
+	{
+		return;
+	}
+	
 	// 스파이크 설치 시작
 	SpikeState = ESpikeState::Planting;
 	InteractingAgent = Agent;
@@ -507,19 +518,19 @@ bool ASpike::ServerOnly_CanInteract() const
 	{
 		return false;
 	}
-
+	
 	const auto* PS = OwnerAgent->GetPlayerState<AAgentPlayerState>();
 	if (!PS)
 	{
 		return false;
 	}
-
-	// 공격팀이고 플랜트 영역에 있을 때만 설치 가능
+	
+	// 공격팀이고 플랜트 영역에 있고 게임 상태가 InRound일 때만 설치 가능
 	if (SpikeState == ESpikeState::Carried)
 	{
-		return AMatchGameMode::IsAttacker(PS->bIsBlueTeam) && IsInPlantZone();
+		return AMatchGameMode::IsAttacker(PS->bIsBlueTeam) && IsInPlantZone() && IsGameStateInRound();
 	}
-
+	
 	return false;
 }
 
@@ -528,6 +539,15 @@ bool ASpike::IsInPlantZone() const
 	// 임시 구현: 현재는 항상 설치 가능
 	// 실제 구현에서는 플랜트 영역 콜리전 체크 필요
 	return OwnerAgent->GetIsInPlantZone();
+}
+
+bool ASpike::IsGameStateInRound() const
+{
+	if (CachedGameState)
+	{
+		return CachedGameState->GetRoundSubState() == ERoundSubState::RSS_InRound;
+	}
+	return false;
 }
 
 void ASpike::MulticastRPC_OnPlantingStarted_Implementation()

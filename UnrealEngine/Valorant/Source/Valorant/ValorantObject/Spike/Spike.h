@@ -6,6 +6,8 @@
 #include "ValorantObject/BaseInteractor.h"
 #include "Spike.generated.h"
 
+class ABaseAgent;
+class AMatchGameState;
 UENUM(BlueprintType)
 enum class ESpikeState : uint8
 {
@@ -76,6 +78,10 @@ protected:
 	// 마지막으로 해제를 시도한 에이전트
 	UPROPERTY(Replicated)
 	ABaseAgent* LastDefusingAgent = nullptr;
+	
+	// 캐싱된 게임 스테이트 참조
+	UPROPERTY()
+	AMatchGameState* CachedGameState = nullptr;
 
 public:
 	virtual void ServerRPC_PickUp_Implementation(ABaseAgent* Agent) override;
@@ -143,6 +149,9 @@ protected:
 
 	// 스파이크 설치 가능한 위치인지 확인
 	bool IsInPlantZone() const;
+	
+	// 현재 게임 상태가 InRound인지 확인
+	bool IsGameStateInRound() const;
 
 	// 효과음 재생 등을 위한 이벤트 함수
 	UFUNCTION(NetMulticast, Reliable)

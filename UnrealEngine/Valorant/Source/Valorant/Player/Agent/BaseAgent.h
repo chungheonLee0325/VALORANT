@@ -243,7 +243,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Agent|Credits")
 	void RewardSpikeInstall();
 
+	UFUNCTION(BlueprintCallable)
 	bool GetIsInPlantZone() const { return IsInPlantZone; }
+	UFUNCTION(BlueprintCallable)
 	void SetIsInPlantZone(bool IsInZone) { IsInPlantZone = IsInZone; }
 
 	bool IsDead() const { return bIsDead; }
