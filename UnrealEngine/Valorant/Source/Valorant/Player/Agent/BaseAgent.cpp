@@ -506,6 +506,10 @@ void ABaseAgent::ActivateSpike()
 	}
 	else
 	{
+		if (Spike && Spike->GetSpikeState() == ESpikeState::Planted)
+		{
+			return;
+		}
 		SwitchInteractor(EInteractorType::Spike);
 	}
 }
@@ -627,13 +631,18 @@ void ABaseAgent::EquipInteractor(ABaseInteractor* interactor)
 		NET_LOG(LogTemp, Warning, TEXT("빈손이네요"));
 		return;
 	}
+	CurrentInteractorState = CurrentInteractor->GetInteractorType();
+	if (CurrentInteractorState == EInteractorType::Spike)
+	{
+		// ToDo : 위치 맞게 수정
+		CurrentInteractor->SetActorLocation(GetActorLocation() + GetActorUpVector() * -200);
+	}
 
 	CurrentInteractor->SetActive(true);
-	CurrentInteractorState = CurrentInteractor->GetInteractorType();
 
 	if (ABP_1P)
 	{
-		NET_LOG(LogTemp,Warning,TEXT("스테이트 변경"));
+		NET_LOG(LogTemp, Warning, TEXT("스테이트 변경"));
 		ABP_1P->InteractorState = CurrentInteractorState;
 	}
 	if (ABP_3P)

@@ -59,7 +59,7 @@ void ASpike::Tick(float DeltaTime)
 			}
 
 			InteractProgress += DeltaTime;
-			AddActorWorldOffset(FVector(0, 0, 16.66f) * DeltaTime);
+			AddActorWorldOffset(FVector(0, 0, 12.66f) * DeltaTime);
 			if (InteractProgress >= PlantTime)
 			{
 				ServerRPC_FinishPlanting();
@@ -186,6 +186,8 @@ void ASpike::ServerRPC_Drop_Implementation()
 
 	// 스파이크 Mesh 보이기
 	SetActive(true);
+	// OwnerAgent = nullptr;
+	OwnerAgent->ResetOwnSpike();
 
 	// 스파이크 상태 업데이트
 	SpikeState = ESpikeState::Dropped;

@@ -365,5 +365,5 @@ protected:
 private:
 	// ToDo : 수정
 	UPROPERTY(Replicated)
-	bool IsInPlantZone = true;
+	bool IsInPlantZone = false;
 };
