@@ -50,6 +50,10 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Spike")
 	float DefuseTime = 7.0f;
 
+	// 반 해제 필요 시간 (기본 해제 시간의 절반)
+	UPROPERTY(EditDefaultsOnly, Category = "Spike")
+	float HalfDefuseTime = 3.5f;
+
 	// 현재 상호작용 중인 에이전트 (설치 또는 해제 중인 에이전트)
 	UPROPERTY(Replicated)
 	ABaseAgent* InteractingAgent = nullptr;
@@ -64,6 +68,14 @@ protected:
 	// 스파이크 상태 변경 시 호출되는 함수
 	UFUNCTION()
 	void OnRep_SpikeState();
+	
+	// 스파이크가 반 해제되었는지 여부
+	UPROPERTY(Replicated)
+	bool bIsHalfDefused = false;
+	
+	// 마지막으로 해제를 시도한 에이전트
+	UPROPERTY(Replicated)
+	ABaseAgent* LastDefusingAgent = nullptr;
 
 public:
 	virtual void ServerRPC_PickUp_Implementation(ABaseAgent* Agent) override;
@@ -113,6 +125,14 @@ public:
 	// 스파이크 폭발까지 남은 시간 반환
 	UFUNCTION(BlueprintCallable, Category = "Spike")
 	float GetRemainingDetonationTime() const { return RemainingDetonationTime; }
+	
+	// 현재 스파이크와 상호작용 중인 에이전트 반환
+	UFUNCTION(BlueprintCallable, Category = "Spike")
+	ABaseAgent* GetInteractingAgent() const { return InteractingAgent; }
+	
+	// 반 해제 여부 반환
+	UFUNCTION(BlueprintCallable, Category = "Spike")
+	bool IsHalfDefused() const { return bIsHalfDefused; }
 
 	virtual void Destroyed() override;
 
@@ -135,7 +155,7 @@ protected:
 	void MulticastRPC_OnPlantingFinished();
 	
 	UFUNCTION(NetMulticast, Reliable)
-	void MulticastRPC_OnDefusingStarted();
+	void MulticastRPC_OnDefusingStarted(bool bHalfDefuse);
 	
 	UFUNCTION(NetMulticast, Reliable)
 	void MulticastRPC_OnDefusingCancelled();
@@ -145,4 +165,7 @@ protected:
 	
 	UFUNCTION(NetMulticast, Reliable)
 	void MulticastRPC_OnDetonated();
+	
+	// 해제 진행도 체크하여 반 해제 여부 설정
+	void CheckHalfDefuse();
 };

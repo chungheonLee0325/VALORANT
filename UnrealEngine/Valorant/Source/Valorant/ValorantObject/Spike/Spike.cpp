@@ -16,7 +16,7 @@
 ASpike::ASpike()
 {
 	PrimaryActorTick.bCanEverTick = true;
-	
+
 	ConstructorHelpers::FObjectFinder<USkeletalMesh> SpikeMeshObj(
 		TEXT("/Script/Engine.SkeletalMesh'/Game/Resource/Props/Spike/Spike.Spike'"));
 	if (SpikeMeshObj.Succeeded())
@@ -48,8 +48,15 @@ void ASpike::Tick(float DeltaTime)
 		// 설치 중인 경우 진행 상황 업데이트
 		if (SpikeState == ESpikeState::Planting && InteractingAgent)
 		{
+			// 플레이어가 죽었는지 확인
+			if (InteractingAgent->IsDead())
+			{
+				ServerRPC_CancelPlanting();
+				return;
+			}
+
 			InteractProgress += DeltaTime;
-			AddActorWorldOffset(FVector(0,0,10)*DeltaTime);
+			AddActorWorldOffset(FVector(0, 0, 16.66f) * DeltaTime);
 			if (InteractProgress >= PlantTime)
 			{
 				ServerRPC_FinishPlanting();
@@ -58,8 +65,23 @@ void ASpike::Tick(float DeltaTime)
 		// 해제 중인 경우 진행 상황 업데이트
 		else if (SpikeState == ESpikeState::Defusing && InteractingAgent)
 		{
+			// 플레이어가 죽었는지 확인
+			if (InteractingAgent->IsDead())
+			{
+				ServerRPC_CancelDefusing();
+				return;
+			}
+
 			InteractProgress += DeltaTime;
-			AddActorWorldOffset(FVector(0,0,-4)*DeltaTime);
+			AddActorWorldOffset(FVector(0, 0, -7.14f) * DeltaTime);
+
+			// 반 해제 체크
+			if (!bIsHalfDefused && InteractProgress >= HalfDefuseTime)
+			{
+				CheckHalfDefuse();
+			}
+
+			// 해제 완료 체크
 			if (InteractProgress >= DefuseTime)
 			{
 				ServerRPC_FinishDefusing();
@@ -85,6 +107,8 @@ void ASpike::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimePr
 	DOREPLIFETIME(ASpike, InteractProgress);
 	DOREPLIFETIME(ASpike, RemainingDetonationTime);
 	DOREPLIFETIME(ASpike, InteractingAgent);
+	DOREPLIFETIME(ASpike, bIsHalfDefused);
+	DOREPLIFETIME(ASpike, LastDefusingAgent);
 }
 
 void ASpike::OnRep_SpikeState()
@@ -267,7 +291,8 @@ void ASpike::ServerRPC_StartPlanting_Implementation(ABaseAgent* Agent)
 	InteractProgress = 0.0f;
 
 	// 스파이크 Mesh 보이기
-	PlantingLocation = OwnerAgent->GetMovementComponent()->GetActorFeetLocation() + OwnerAgent->GetActorForwardVector() * 80 + FVector(0, 0, -50);
+	PlantingLocation = OwnerAgent->GetMovementComponent()->GetActorFeetLocation() + OwnerAgent->GetActorForwardVector()
+		* 80 + FVector(0, 0, -50);
 	SetActorLocation(PlantingLocation);
 	SetActive(true);
 
@@ -306,7 +331,7 @@ void ASpike::ServerRPC_FinishPlanting_Implementation()
 	RemainingDetonationTime = 45.0f; // 폭발까지 45초
 
 	// 스파이크 위치 고정
-	PlantingLocation = GetActorLocation() + FVector(0, 0, 10);
+	PlantingLocation = GetActorLocation();
 	SetActorLocation(PlantingLocation); // 바닥에서 약간 띄움
 
 	// 상호작용 메시 설정
@@ -349,13 +374,18 @@ void ASpike::ServerRPC_StartDefusing_Implementation(ABaseAgent* Agent)
 		return;
 	}
 
+	// 같은 에이전트가 다시 해제하는 경우 반 해제 적용
+	// bool isHalfDefuse = bIsHalfDefused && LastDefusingAgent == Agent;
+
 	// 스파이크 해제 시작
 	SpikeState = ESpikeState::Defusing;
 	InteractingAgent = Agent;
-	InteractProgress = 0.0f;
+
+	// 반 해제 상태라면 진행도를 절반으로 설정
+	InteractProgress = bIsHalfDefused ? HalfDefuseTime : 0.0f;
 
 	// 해제 시작 이벤트 발생
-	MulticastRPC_OnDefusingStarted();
+	MulticastRPC_OnDefusingStarted(bIsHalfDefused);
 }
 
 void ASpike::ServerRPC_CancelDefusing_Implementation()
@@ -369,7 +399,9 @@ void ASpike::ServerRPC_CancelDefusing_Implementation()
 	SpikeState = ESpikeState::Planted;
 	InteractingAgent = nullptr;
 	InteractProgress = 0.0f;
-	SetActorLocation(PlantingLocation);
+	
+	FVector location = bIsHalfDefused ? PlantingLocation + FVector(0, 0, -25) : PlantingLocation;
+	SetActorLocation(location);
 
 	// 해제 취소 이벤트 발생
 	MulticastRPC_OnDefusingCancelled();
@@ -398,6 +430,10 @@ void ASpike::ServerRPC_FinishDefusing_Implementation()
 			GameMode->OnSpikeDefused(PC);
 		}
 	}
+
+	// 반 해제 상태 리셋
+	bIsHalfDefused = false;
+	LastDefusingAgent = nullptr;
 
 	InteractingAgent = nullptr;
 	InteractProgress = 0.0f;
@@ -430,6 +466,16 @@ void ASpike::ServerRPC_Detonate_Implementation()
 	{
 		Destroy();
 	}, 3.0f, false);
+}
+
+void ASpike::CheckHalfDefuse()
+{
+	if (SpikeState == ESpikeState::Defusing && InteractingAgent)
+	{
+		// 반 해제 상태 설정
+		bIsHalfDefused = true;
+		LastDefusingAgent = InteractingAgent;
+	}
 }
 
 bool ASpike::ServerOnly_CanAutoPickUp(ABaseAgent* Agent) const
@@ -499,9 +545,10 @@ void ASpike::MulticastRPC_OnPlantingFinished_Implementation()
 	// 설치 완료 효과
 }
 
-void ASpike::MulticastRPC_OnDefusingStarted_Implementation()
+void ASpike::MulticastRPC_OnDefusingStarted_Implementation(bool bHalfDefuse)
 {
 	// 해제 시작 효과
+	// bHalfDefuse가 true인 경우 반 해제 상태임을 표시
 }
 
 void ASpike::MulticastRPC_OnDefusingCancelled_Implementation()
@@ -522,5 +569,9 @@ void ASpike::MulticastRPC_OnDetonated_Implementation()
 void ASpike::Destroyed()
 {
 	Super::Destroyed();
-	OwnerAgent->ResetOwnSpike();
+
+	if (OwnerAgent)
+	{
+		OwnerAgent->ResetOwnSpike();
+	}
 }

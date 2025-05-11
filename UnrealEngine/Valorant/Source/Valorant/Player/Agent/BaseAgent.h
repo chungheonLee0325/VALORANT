@@ -246,6 +246,8 @@ public:
 	bool GetIsInPlantZone() const { return IsInPlantZone; }
 	void SetIsInPlantZone(bool IsInZone) { IsInPlantZone = IsInZone; }
 
+	bool IsDead() const { return bIsDead; }
+
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	UValorantGameInstance* m_GameInstance;
