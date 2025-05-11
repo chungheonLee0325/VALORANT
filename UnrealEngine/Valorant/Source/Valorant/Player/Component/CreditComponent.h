@@ -54,11 +54,7 @@ public:
 
 	// 킬 획득 시 크레딧 보상
 	UFUNCTION(BlueprintCallable, Category = "Credits")
-	void AwardKillCredits(bool bIsHeadshot = false);
-
-	// 어시스트 크레딧 보상
-	UFUNCTION(BlueprintCallable, Category = "Credits")
-	void AwardAssistCredits();
+	void AwardKillCredits();
 
 	// 스파이크 설치/해제 크레딧 보상
 	UFUNCTION(BlueprintCallable, Category = "Credits")
@@ -79,12 +75,6 @@ protected:
 	// 크레딧 보상 상수들 - INI에서 로드되거나 데이터 테이블에서 가져올 수 있음
 	UPROPERTY(EditDefaultsOnly, Category = "Credits|Rewards")
 	int32 KillReward;
-	
-	UPROPERTY(EditDefaultsOnly, Category = "Credits|Rewards")
-	int32 HeadshotBonusReward;
-	
-	UPROPERTY(EditDefaultsOnly, Category = "Credits|Rewards")
-	int32 AssistReward;
 	
 	UPROPERTY(EditDefaultsOnly, Category = "Credits|Rewards")
 	int32 SpikeReward;

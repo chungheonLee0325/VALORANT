@@ -513,23 +513,32 @@ void AMatchGameMode::ResetAgentAtrributeData(AAgentPlayerState* AgentPS)
 
 void AMatchGameMode::OnKill(AMatchPlayerController* Killer, AMatchPlayerController* Victim)
 {
+	// 킬러/희생자 정보 로깅
+	FString KillerName = Killer ? Killer->GetPlayerState<APlayerState>()->GetPlayerName() : TEXT("없음");
+	FString VictimName = Victim ? Victim->GetPlayerState<APlayerState>()->GetPlayerName() : TEXT("없음");
+	NET_LOG(LogTemp, Warning, TEXT("OnKill 호출: 킬러=%s, 희생자=%s"), *KillerName, *VictimName);
+	
 	// 킬러에게 크레딧 보상
 	if (Killer)
 	{
 		AAgentPlayerState* KillerPS = Killer->GetPlayerState<AAgentPlayerState>();
 		if (KillerPS)
 		{
+			
+			// TODO: 헤드샷 여부 확인 로직 추가
+			bool bIsHeadshot = false; // 임시로 false로 설정
+			
 			UCreditComponent* CreditComp = KillerPS->FindComponentByClass<UCreditComponent>();
 			if (CreditComp)
 			{
-				// TODO: 헤드샷 여부 확인 로직 추가
-				bool bIsHeadshot = false; // 임시로 false로 설정
-				CreditComp->AwardKillCredits(bIsHeadshot);
+				CreditComp->AwardKillCredits();
+				
+				NET_LOG(LogTemp, Warning, TEXT("크레딧 보상 지급: %s가 킬 보상을 받았습니다."), *KillerName);
 			}
 		}
 	}
 	
-	// 팀원들에게 어시스트 크레딧 보상 - 나중에 실제 어시스트 로직으로 교체
+	// 팀원들에게 어시스트 로깅 - 나중에 실제 어시스트 로직으로 교체
 	if (Killer && Victim)
 	{
 		AAgentPlayerState* KillerPS = Killer->GetPlayerState<AAgentPlayerState>();
@@ -539,7 +548,7 @@ void AMatchGameMode::OnKill(AMatchPlayerController* Killer, AMatchPlayerControll
 		{
 			bool bKillerIsBlue = KillerPS->bIsBlueTeam;
 			
-			// 같은 팀 플레이어에게 어시스트 크레딧 지급 (실제로는 어시스트 여부 체크 필요)
+			// 같은 팀 플레이어에게 어시스트 데이터 추가 (실제로는 어시스트 여부 체크 필요)
 			for (const FMatchPlayer& Player : MatchPlayers)
 			{
 				if (Player.Controller && Player.Controller != Killer && Player.bIsBlueTeam == bKillerIsBlue)
@@ -547,16 +556,7 @@ void AMatchGameMode::OnKill(AMatchPlayerController* Killer, AMatchPlayerControll
 					AAgentPlayerState* PS = Player.Controller->GetPlayerState<AAgentPlayerState>();
 					if (PS)
 					{
-						UCreditComponent* CreditComp = PS->FindComponentByClass<UCreditComponent>();
-						if (CreditComp)
-						{
-							// TODO: 실제 어시스트 여부 확인 필요
-							// 임시로 50% 확률로 어시스트 크레딧 지급
-							if (FMath::RandBool())
-							{
-								CreditComp->AwardAssistCredits();
-							}
-						}
+						// TODO: 실제 어시스트 여부 확인 필요
 					}
 				}
 			}
