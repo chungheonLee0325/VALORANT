@@ -102,6 +102,14 @@ public:
 	UFUNCTION(BlueprintCallable, Category="Round")
 	void MarkAllWeaponsAsUsed();
 
+	// 현재 라운드 상태 가져오기
+	UFUNCTION(BlueprintCallable, Category="Round")
+	ERoundSubState GetRoundSubState() const;
+
+	// 현재 상점을 열 수 있는 상태인지 확인
+	UFUNCTION(BlueprintCallable, Category="Shop")
+	bool CanOpenShop() const;
+
 protected:
 	FTimerHandle RoundTimerHandle;
 	float MaxTime = 0.0f;
