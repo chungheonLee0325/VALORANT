@@ -26,8 +26,10 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess = "true"))
 	TObjectPtr<USphereComponent> Sphere = nullptr;
 
-	UPROPERTY(Replicated)
+	UPROPERTY(VisibleAnywhere, ReplicatedUsing=OnRep_OwnerAgent)
 	TObjectPtr<ABaseAgent> OwnerAgent = nullptr;
+	UFUNCTION()
+	void OnRep_OwnerAgent();
 
 	UPROPERTY()
 	EInteractorType InteractorType = EInteractorType::None;
@@ -46,6 +48,7 @@ protected:
 	void ServerOnly_OnSphereBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
 
 public:
+	bool HasOwnerAgent() const { return OwnerAgent != nullptr; }
 	void OnDetect(bool bIsDetect);
 	// 현재 Agent가 이 Interactor를 자동으로 주울 수 있는지 여부
 	virtual bool ServerOnly_CanAutoPickUp(ABaseAgent* Agent) const;

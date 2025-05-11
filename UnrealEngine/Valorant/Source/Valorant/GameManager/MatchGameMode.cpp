@@ -338,6 +338,7 @@ void AMatchGameMode::HandleRoundSubState_PreRound()
 {
 	RespawnAll();
 	TeamBlueRemainingAgentNum = TeamRedRemainingAgentNum = MatchPlayers.Num();
+	
 	// 일정 시간 후에 라운드 시작
 	MaxTime = PreRoundTime;
 	GetWorld()->GetTimerManager().ClearTimer(RoundTimerHandle);
@@ -348,6 +349,7 @@ void AMatchGameMode::HandleRoundSubState_BuyPhase()
 {
 	RespawnAll();
 	TeamBlueRemainingAgentNum = TeamRedRemainingAgentNum = MatchPlayers.Num();
+	
 	// 일정 시간 후에 라운드 시작
 	MaxTime = BuyPhaseTime;
 	GetWorld()->GetTimerManager().ClearTimer(RoundTimerHandle);
@@ -468,7 +470,6 @@ AActor* AMatchGameMode::ChoosePlayerStart_Implementation(AController* Player)
 
 void AMatchGameMode::RespawnAll()
 {
-	NET_LOG(LogTemp, Warning, TEXT("리스폰 올"));
 	for (auto& MatchPlayer : MatchPlayers)
 	{
 		MatchPlayer.bIsDead = false;
@@ -503,10 +504,12 @@ void AMatchGameMode::RespawnPlayer(AAgentPlayerState* ps, AAgentPlayerController
 	FActorSpawnParameters SpawnParams;
 	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 
+	ABaseAgent* Agent = nullptr;
+	
 	if (ps->IsSpectator() || ps->GetPawn() == nullptr)
 	{
 		FAgentData* agentData = Cast<UValorantGameInstance>(GetGameInstance())->GetAgentData(ps->GetAgentID());
-		auto* Agent = GetWorld()->SpawnActor<ABaseAgent>(agentData->AgentAsset, spawnTransform);
+		Agent = GetWorld()->SpawnActor<ABaseAgent>(agentData->AgentAsset, spawnTransform);
 
 		ps->SetIsSpectator(false);
 		ps->SetIsOnlyASpectator(false);
@@ -522,7 +525,8 @@ void AMatchGameMode::RespawnPlayer(AAgentPlayerState* ps, AAgentPlayerController
 	}
 	else
 	{
-		ps->GetPawn()->SetActorTransform(spawnTransform);
+		Agent = Cast<ABaseAgent>(ps->GetPawn());
+		Agent->SetActorTransform(spawnTransform);
 	}
 }
 

@@ -121,6 +121,12 @@ void ABaseAgent::PossessedBy(AController* NewController)
 	{
 		BindToDelegatePC(pc);
 	}
+
+	if (IsLocallyControlled())
+	{
+		InteractionCapsule->OnComponentBeginOverlap.AddDynamic(this, &ABaseAgent::OnFindInteraction);
+		InteractionCapsule->OnComponentEndOverlap.AddDynamic(this, &ABaseAgent::OnInteractionCapsuleEndOverlap);
+	}
 }
 
 // 클라이언트 전용. 서버로부터 PlayerState를 최초로 받을 때 호출됨
@@ -176,31 +182,13 @@ void ABaseAgent::BeginPlay()
 	// 	TL_DieCamera->SetTimelineFinishedFunc(finishDieCamera);
 	// }
 
-	InteractionCapsule->OnComponentBeginOverlap.AddDynamic(this, &ABaseAgent::OnFindInteraction);
-	InteractionCapsule->OnComponentEndOverlap.AddDynamic(this, &ABaseAgent::OnInteractionCapsuleEndOverlap);
-	
-	if (HasAuthority())
+	if (HasAuthority() == false && IsLocallyControlled())
 	{
-		// if (GetSubWeapon() == nullptr)
-		// {
-		// 	if (ClassicAsset)
-		// 	{
-		// 		ABaseWeapon* classic = GetWorld()->SpawnActor<ABaseWeapon>(ClassicAsset);
-		// 		SetSubWeapon(classic);
-		// 		classic->ServerRPC_PickUp(this);
-		// 	}
-		// }
-		if (GetMeleeWeapon() == nullptr)
-		{
-			if (MeleeAsset)
-			{
-				NET_LOG(LogTemp,Warning,TEXT("MeleeAsset"));
-				ABaseWeapon* knife = GetWorld()->SpawnActor<ABaseWeapon>(MeleeAsset);
-				SetMeleeWeapon(knife);
-				knife->ServerRPC_PickUp(this);
-			}
-		}
+		InteractionCapsule->OnComponentBeginOverlap.AddDynamic(this, &ABaseAgent::OnFindInteraction);
+		InteractionCapsule->OnComponentEndOverlap.AddDynamic(this, &ABaseAgent::OnInteractionCapsuleEndOverlap);
 	}
+
+	//TODO: 기본 총, 칼 스폰해서 붙여주기
 }
 
 void ABaseAgent::Tick(float DeltaTime)
@@ -355,35 +343,24 @@ void ABaseAgent::Interact()
 	{
 		if (ABaseInteractor* Interactor = Cast<ABaseInteractor>(FindInteractActor))
 		{
-			if (HasAuthority())
-			{
-				Interactor->ServerRPC_Interact(this);
-			}
-			else
-			{
-				Server_Interact(Interactor);
-			}
+			ServerRPC_Interact(Interactor);
 			FindInteractActor->OnDetect(false);
 			FindInteractActor = nullptr;
 		}
 	}
 }
 
-void ABaseAgent::Server_Interact_Implementation(ABaseInteractor* Interactor)
+void ABaseAgent::ServerRPC_Interact_Implementation(ABaseInteractor* Interactor)
 {
-	if (Interactor->ServerOnly_CanInteract())
+	if (nullptr == Interactor)
 	{
-		Interactor->ServerRPC_PickUp(this);
+		NET_LOG(LogTemp, Warning, TEXT("%hs Called, Interactor is nullptr"), __FUNCTION__);
 	}
+	Interactor->ServerRPC_Interact(this);
 }
 
-void ABaseAgent::DropCurrentInteractor()
+void ABaseAgent::ServerRPC_DropCurrentInteractor_Implementation()
 {
-	if (!HasAuthority())
-	{
-		Server_DropInteractor();
-	}
-	
 	if (CurrentInteractor && CurrentInteractor->ServerOnly_CanDrop())
 	{
 		if (CurrentInteractor == MainWeapon)
@@ -394,17 +371,26 @@ void ABaseAgent::DropCurrentInteractor()
 		{
 			SubWeapon = nullptr;
 		}
-		
 		CurrentInteractor->ServerRPC_Drop();
-		CurrentInteractor = nullptr;
+		ServerRPC_SetCurrentInteractor(nullptr);
 		
 		EquipInteractor(CurrentInteractor);
 	}
 }
 
+void ABaseAgent::ServerRPC_SetCurrentInteractor_Implementation(ABaseInteractor* interactor)
+{
+	CurrentInteractor = interactor;
+}
+
 ABaseWeapon* ABaseAgent::GetMainWeapon() const
 {
 	return MainWeapon;
+}
+
+ABaseWeapon* ABaseAgent::GetSubWeapon() const
+{
+	return SubWeapon;
 }
 
 void ABaseAgent::AcquireInteractor(ABaseInteractor* Interactor)
@@ -423,6 +409,7 @@ void ABaseAgent::AcquireInteractor(ABaseInteractor* Interactor)
 	{
 		return;
 	}
+	
 	if (weapon->GetWeaponCategory() == EWeaponCategory::Sidearm)
 	{
 		if (SubWeapon)
@@ -441,6 +428,7 @@ void ABaseAgent::AcquireInteractor(ABaseInteractor* Interactor)
 		MainWeapon = weapon;
 	}
 	
+
 	// 무기를 얻으면, 해당 무기의 타입의 슬롯으로 전환해 바로 장착하도록
 	SwitchInteractor(Interactor->GetInteractorType());
 }
@@ -498,19 +486,8 @@ void ABaseAgent::OnRep_ChangeInteractorState()
 
 void ABaseAgent::OnRep_ChangePoseIdx()
 {
-	if (ABP_1P)
-	{
-		ABP_1P->InteractorPoseIdx = PoseIdx;
-	}
-	if (ABP_3P)
-	{
-		ABP_3P->InteractorPoseIdx = PoseIdx;
-	}
-}
-
-void ABaseAgent::Server_DropInteractor_Implementation()
-{
-	DropCurrentInteractor();
+	ABP_1P->InteractorPoseIdx = PoseIdx;
+	ABP_3P->InteractorPoseIdx = PoseIdx;
 }
 
 void ABaseAgent::Server_AcquireInteractor_Implementation(ABaseInteractor* Interactor)
@@ -562,28 +539,28 @@ void ABaseAgent::SetShopUI()
 /** 실 장착관련 로직 */
 void ABaseAgent::EquipInteractor(ABaseInteractor* interactor)
 {
-	CurrentInteractor = interactor;
+	ServerRPC_SetCurrentInteractor(interactor);
 
 	if (CurrentInteractor == nullptr)
 	{
 		CurrentInteractorState = EInteractorType::None;
 		ABP_1P->InteractorState = EInteractorType::None;
 		ABP_3P->InteractorState = EInteractorType::None;
+		
+		NET_LOG(LogTemp, Warning, TEXT("빈손이네요"));
 		return;
 	}
-	
+
 	CurrentInteractor->SetActive(true);
 	CurrentInteractorState = CurrentInteractor->GetInteractorType();
 	
 	if (ABP_1P)
 	{
 		ABP_1P->InteractorState = CurrentInteractorState;
-		ABP_1P->Montage_Stop(0.1f);
 	}
 	if (ABP_3P)
 	{
 		ABP_3P->InteractorState = CurrentInteractorState;
-		ABP_3P->Montage_Stop(0.1f);
 	}
 
 	//TODO: 인터랙터에도 적용할지 말지
@@ -610,20 +587,24 @@ void ABaseAgent::OnFindInteraction(UPrimitiveComponent* OverlappedComponent, AAc
 	// 이미 바라보고 있는 총이 있으면 리턴
 	if (FindInteractActor)
 	{
-		if (auto* interactor = Cast<ABaseInteractor>(FindInteractActor))
+		if (auto* Interactor = Cast<ABaseInteractor>(FindInteractActor))
 		{
 			return;
 		}
 	}
 
-	if (auto* interactor = Cast<ABaseInteractor>(OtherActor))
+	if (auto* Interactor = Cast<ABaseInteractor>(OtherActor))
 	{
-		if (interactor->GetOwner())
+		if (CurrentInteractor == Interactor)
 		{
 			return;
 		}
-		
-		FindInteractActor = interactor;
+		if (Interactor->HasOwnerAgent())
+		{
+			return;
+		}
+		NET_LOG(LogTemp, Warning, TEXT("FindInteraction: %s"), *Interactor->GetName());
+		FindInteractActor = Interactor;
 		FindInteractActor->OnDetect(true);
 	}
 }

@@ -17,6 +17,8 @@ ABaseInteractor::ABaseInteractor()
 {
 	PrimaryActorTick.bCanEverTick = true;
 	bReplicates = true;
+	bNetLoadOnClient = true;
+	SetReplicatingMovement(true);
 
 	Mesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("WeaponMesh"));
 	SetRootComponent(Mesh);
@@ -31,6 +33,18 @@ ABaseInteractor::ABaseInteractor()
 	Sphere->SetSphereRadius(32.f);
 	Sphere->SetCollisionProfileName(TEXT("Interactable"));
 	Sphere->SetupAttachment(GetRootComponent());
+}
+
+void ABaseInteractor::OnRep_OwnerAgent()
+{
+	if (OwnerAgent)
+	{
+		NET_LOG(LogTemp, Warning, TEXT("%hs Called, AgentName: %s"), __FUNCTION__, *OwnerAgent->GetName());
+	}
+	else
+	{
+		NET_LOG(LogTemp, Warning, TEXT("%hs Called, OwnerAgent is nullptr"), __FUNCTION__);
+	}
 }
 
 void ABaseInteractor::BeginPlay()
@@ -130,6 +144,14 @@ void ABaseInteractor::SetActive(bool bActive)
 
 void ABaseInteractor::ServerRPC_PickUp_Implementation(ABaseAgent* Agent)
 {
+	if (nullptr == Agent)
+	{
+		NET_LOG(LogTemp, Warning, TEXT("%hs Called, InteractorName: %s, Agent is nullptr"), __FUNCTION__, *GetName());
+		return;
+	}
+
+	NET_LOG(LogTemp, Warning, TEXT("%hs Called, InteractorName: %s"), __FUNCTION__, *GetName());
+	
 	OwnerAgent = Agent;
 	SetOwner(OwnerAgent);
 }
@@ -138,12 +160,15 @@ void ABaseInteractor::ServerRPC_Drop_Implementation()
 {
 	if (nullptr == OwnerAgent)
 	{
+		NET_LOG(LogTemp, Warning, TEXT("%hs Called, InteractorName: %s, OwnerAgent is nullptr"), __FUNCTION__, *GetName());
 		return;
 	}
 
+	NET_LOG(LogTemp, Warning, TEXT("%hs Called, InteractorName: %s"), __FUNCTION__, *GetName());
+	
 	if (OwnerAgent->GetCurrentInterator() == this)
 	{
-		OwnerAgent->SetCurrentInteractor(nullptr);
+		OwnerAgent->ServerRPC_SetCurrentInteractor(nullptr);
 	}
 	
 	SetActive(true);

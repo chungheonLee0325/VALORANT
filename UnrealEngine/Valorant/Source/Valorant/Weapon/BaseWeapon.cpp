@@ -100,7 +100,7 @@ void ABaseWeapon::StartFire()
 {
 	if (nullptr == OwnerAgent || nullptr == OwnerAgent->GetController())
 	{
-		NET_LOG(LogTemp, Warning, TEXT("OwnAgent Null"));
+		NET_LOG(LogTemp, Warning, TEXT("%hs Called, OwnerAgent or Controller is nullptr"), __FUNCTION__);
 		return;
 	}
 	
@@ -111,7 +111,7 @@ void ABaseWeapon::StartFire()
 		TotalRecoilOffsetPitch = 0.0f;
 		TotalRecoilOffsetYaw = 0.0f;
 	}
-	UE_LOG(LogTemp, Warning, TEXT("StartFire, RecoilLevel : %d"), RecoilLevel);
+	NET_LOG(LogTemp, Warning, TEXT("%hs Called, RecoilLevel: %d"), __FUNCTION__, RecoilLevel);
 
 	GetWorld()->GetTimerManager().SetTimer(AutoFireHandle, this, &ABaseWeapon::Fire, 0.01f, true, 0);
 
@@ -337,21 +337,24 @@ void ABaseWeapon::StopReload()
 
 bool ABaseWeapon::ServerOnly_CanAutoPickUp(ABaseAgent* Agent) const
 {
-	if (GetWeaponCategory() == EWeaponCategory::Sidearm)
-	{
-		if (Agent->GetSubWeapon())
-		{
-			return false;
-		}
+	// 요원이 현재 똑같은 종류의 무기를 들고 있을 경우 false 반환
+	switch (GetWeaponCategory()) {
+	case EWeaponCategory::None:
+		return false;
+	case EWeaponCategory::Sidearm:
+		return Agent->GetSubWeapon() == nullptr;
+	case EWeaponCategory::SMG:
+		return Agent->GetMainWeapon() == nullptr;
+	case EWeaponCategory::Shotgun:
+		return Agent->GetMainWeapon() == nullptr;
+	case EWeaponCategory::Rifle:
+		return Agent->GetMainWeapon() == nullptr;
+	case EWeaponCategory::Sniper:
+		return Agent->GetMainWeapon() == nullptr;
+	case EWeaponCategory::Heavy:
+		return Agent->GetMainWeapon() == nullptr;
 	}
-	else
-	{
-		if (Agent->GetMainWeapon())
-		{
-			return false;
-		}
-	}
-	return true;
+	return false;
 }
 
 bool ABaseWeapon::ServerOnly_CanDrop() const

@@ -7,6 +7,7 @@
 #include "Player/AgentPlayerState.h"
 #include "MatchGameMode.generated.h"
 
+class ABaseWeapon;
 class ABaseAgent;
 class AMatchPlayerController;
 class AAgentPlayerController;
@@ -92,6 +93,10 @@ private:
 	TObjectPtr<APlayerStart> DefendersStartPoint = nullptr;
 	UPROPERTY(EditDefaultsOnly, Category="Gameflow", meta=(AllowPrivateAccess))
 	TSubclassOf<ABaseAgent> AgentClass;
+	UPROPERTY(EditDefaultsOnly, Category="Gameflow", meta=(AllowPrivateAccess))
+	TSubclassOf<ABaseWeapon> MeleeAsset;
+	UPROPERTY(EditDefaultsOnly, Category="Gameflow", meta=(AllowPrivateAccess))
+	TSubclassOf<ABaseWeapon> ClassicAsset;
 	
 public:
 	void OnControllerBeginPlay(AMatchPlayerController* Controller, const FString& Nickname);

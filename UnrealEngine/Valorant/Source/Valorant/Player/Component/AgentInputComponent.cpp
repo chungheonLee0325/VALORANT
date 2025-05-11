@@ -212,7 +212,7 @@ void UAgentInputComponent::Drop(const FInputActionValue& InputActionValue)
 {
 	if (Agent)
 	{
-		Agent->DropCurrentInteractor();
+		Agent->ServerRPC_DropCurrentInteractor();
 	}
 }
 

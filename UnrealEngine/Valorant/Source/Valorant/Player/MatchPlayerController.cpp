@@ -26,6 +26,11 @@ void AMatchPlayerController::BeginPlay()
 void AMatchPlayerController::OnPossess(APawn* InPawn)
 {
 	Super::OnPossess(InPawn);
+	if (nullptr == InPawn)
+	{
+		NET_LOG(LogTemp, Warning, TEXT("%hs Called, Pawn is nullptr"), __FUNCTION__);
+		return;
+	}
 	NET_LOG(LogTemp, Warning, TEXT("%hs Called, PawnName Is %s"), __FUNCTION__, *InPawn->GetName());
 }
 
