@@ -171,6 +171,11 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	EInteractorType GetInteractorState() const { return CurrentInteractorState; }
+	
+	UFUNCTION(BlueprintCallable)
+	ABaseInteractor* GetCurrentInterator() const { return CurrentInteractor; }
+	UFUNCTION(BlueprintCallable)
+	void SetCurrentInteractor(ABaseInteractor* interactor) { CurrentInteractor = interactor; } 
 
 	ABaseWeapon* GetMainWeapon() const;
 	ABaseWeapon* GetSubWeapon() const;
@@ -185,6 +190,8 @@ public:
 
 	UFUNCTION()
 	void OnRep_ChangeInteractorState();
+	UFUNCTION()
+	void OnRep_ChangePoseIdx();
 	
 	UFUNCTION(Server, Reliable, Category = "Weapon")
 	void Server_AcquireInteractor(ABaseInteractor* Interactor);
@@ -265,8 +272,10 @@ protected:
 	UPROPERTY(Replicated, ReplicatedUsing=OnRep_ChangeInteractorState)
 	EInteractorType CurrentInteractorState = EInteractorType::None;
 
-	int WeaponIdxOffset = 0;
-
+	UPROPERTY(Replicated, ReplicatedUsing=OnRep_ChangePoseIdx)
+	int PoseIdx = 0;
+	int PoseIdxOffset = 0;
+	
 protected:
 	virtual void PossessedBy(AController* NewController) override;
 	virtual void OnRep_PlayerState() override;

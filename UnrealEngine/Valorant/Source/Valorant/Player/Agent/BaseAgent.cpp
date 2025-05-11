@@ -349,7 +349,9 @@ void ABaseAgent::DropCurrentInteractor()
 			SubWeapon = nullptr;
 		}
 		CurrentInteractor->ServerRPC_Drop();
-		EquipInteractor(nullptr);
+		CurrentInteractor = nullptr;
+		
+		EquipInteractor(CurrentInteractor);
 	}
 }
 
@@ -372,32 +374,30 @@ void ABaseAgent::AcquireInteractor(ABaseInteractor* Interactor)
 		return;
 	}
 
-	if (auto* Weapon = Cast<ABaseWeapon>(Interactor))
+	auto* weapon = Cast<ABaseWeapon>(Interactor);
+	if (!weapon)
 	{
-		if (Weapon->GetWeaponCategory() == EWeaponCategory::Sidearm)
-		{
-			// UE_LOG(LogTemp, Warning, TEXT("보조무기"));
-			if (SubWeapon)
-			{
-				// ToDO : 기본 권총을 버려야할지
-				// UE_LOG(LogTemp,Warning,TEXT("이미 들고 있음"));
-				SubWeapon->ServerRPC_Drop();
-			}
-		
-			SubWeapon = Weapon;
-		}
-		else
-		{
-			// UE_LOG(LogTemp, Warning, TEXT("주무기"));
-			if (MainWeapon)
-			{
-				// UE_LOG(LogTemp,Warning,TEXT("이미 들고 있음"));
-				MainWeapon->ServerRPC_Drop();
-			}
-
-			MainWeapon = Weapon;
-		}
+		return;
 	}
+	
+	if (weapon->GetWeaponCategory() == EWeaponCategory::Sidearm)
+	{
+		if (SubWeapon)
+		{
+			// ToDO : 기본 권총을 버려야할지
+			SubWeapon->ServerRPC_Drop();
+		}
+		SubWeapon = weapon;
+	}
+	else
+	{
+		if (MainWeapon)
+		{
+			MainWeapon->ServerRPC_Drop();
+		}
+		MainWeapon = weapon;
+	}
+	
 
 	// 무기를 얻으면, 해당 무기의 타입의 슬롯으로 전환해 바로 장착하도록
 	SwitchInteractor(Interactor->GetInteractorType());
@@ -407,21 +407,26 @@ void ABaseAgent::SwitchInteractor(EInteractorType InteractorType)
 {
 	if (HasAuthority())
 	{
+		if (CurrentInteractor)
+		{
+			CurrentInteractor->SetActive(false);
+		}
+		
 		if (InteractorType == EInteractorType::MainWeapon)
 		{
-			WeaponIdxOffset = 11;
+			PoseIdxOffset = -11;
 			EquipInteractor(MainWeapon);
 			UpdateEquipSpeedMultiplier();
 		}
 		else if (InteractorType == EInteractorType::SubWeapon)
 		{
-			WeaponIdxOffset = 2;
+			PoseIdxOffset = -2;
 			EquipInteractor(SubWeapon);
 			UpdateEquipSpeedMultiplier();
 		}
 		else if (InteractorType == EInteractorType::Melee)
 		{
-			WeaponIdxOffset = 0;
+			PoseIdx = 0;
 			EquipInteractor(MeleeKnife);
 			UpdateEquipSpeedMultiplier();
 		}
@@ -429,17 +434,6 @@ void ABaseAgent::SwitchInteractor(EInteractorType InteractorType)
 		{
 			EquipInteractor(Spike);
 			UpdateEquipSpeedMultiplier();
-		}
-
-		//TODO: 위치 변경
-		CurrentInteractorState = InteractorType;
-		if (ABP_1P)
-		{
-			ABP_1P->InteractorState = CurrentInteractorState;
-		}
-		if (ABP_3P)
-		{
-			ABP_3P->InteractorState = CurrentInteractorState;
 		}
 	}
 	else
@@ -458,6 +452,12 @@ void ABaseAgent::OnRep_ChangeInteractorState()
 	{
 		ABP_3P->InteractorState = CurrentInteractorState;
 	}
+}
+
+void ABaseAgent::OnRep_ChangePoseIdx()
+{
+	ABP_1P->InteractorPoseIdx = PoseIdx;
+	ABP_3P->InteractorPoseIdx = PoseIdx;
 }
 
 void ABaseAgent::Server_AcquireInteractor_Implementation(ABaseInteractor* Interactor)
@@ -484,22 +484,36 @@ void ABaseAgent::SetShopUI()
 /** 실 장착관련 로직 */
 void ABaseAgent::EquipInteractor(ABaseInteractor* interactor)
 {
-	//TODO: 기존 들고 있던 물건 숨기고 새로운 인터랙터 활성화
 	CurrentInteractor = interactor;
 
 	if (CurrentInteractor == nullptr)
 	{
 		CurrentInteractorState = EInteractorType::None;
-		CurrentInteractorState = EInteractorType::None;
+		ABP_1P->InteractorState = EInteractorType::None;
+		ABP_3P->InteractorState = EInteractorType::None;
+		
 		NET_LOG(LogTemp, Warning, TEXT("빈손이네요"));
 		return;
+	}
+
+	CurrentInteractor->SetActive(true);
+	CurrentInteractorState = CurrentInteractor->GetInteractorType();
+	
+	if (ABP_1P)
+	{
+		ABP_1P->InteractorState = CurrentInteractorState;
+	}
+	if (ABP_3P)
+	{
+		ABP_3P->InteractorState = CurrentInteractorState;
 	}
 
 	//TODO: 인터랙터에도 적용할지 말지
 	if (auto* weapon = Cast<ABaseWeapon>(CurrentInteractor))
 	{
-		ABP_1P->InteractorPoseIdx = weapon->GetWeaponID()-WeaponIdxOffset;
-		ABP_3P->InteractorPoseIdx = weapon->GetWeaponID()-WeaponIdxOffset;
+		PoseIdx = weapon->GetWeaponID() + PoseIdxOffset;
+		ABP_1P->InteractorPoseIdx = PoseIdx;
+		ABP_3P->InteractorPoseIdx = PoseIdx;
 	}
 	
 	NET_LOG(LogTemp, Warning, TEXT("현재 들고 있는 인터랙터: %s"), *CurrentInteractor->GetActorNameOrLabel());
@@ -758,6 +772,7 @@ void ABaseAgent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifeti
 	DOREPLIFETIME(ABaseAgent, SubWeapon);
 	DOREPLIFETIME(ABaseAgent, CurrentInteractor);
 	DOREPLIFETIME(ABaseAgent, CurrentInteractorState);
+	DOREPLIFETIME(ABaseAgent, PoseIdx);
 }
 
 // 특정 플레이어에게 보이는지 체크
