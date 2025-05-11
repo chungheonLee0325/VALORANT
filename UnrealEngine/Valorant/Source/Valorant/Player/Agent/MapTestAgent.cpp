@@ -59,43 +59,43 @@ bool AMapTestAgent::IsPositionIsVision(const FVector& TargetPosition) const
 // 다른 에이전트를 감지 확인
 void AMapTestAgent::DetectAgents()
 {
-	// 서버에서만 실행
-	if (GetLocalRole() != ROLE_Authority)
-	{
-		return;
-	}
-	// 월드에서 모든 BaseAgent 검색
-	TArray<AActor*> FoundActors;
-	UGameplayStatics::GetAllActorsOfClass(GetWorld(),ABaseAgent::StaticClass(),FoundActors);
-
-	// 현재 게임 시간 얻기
-	float CurrentTime = UGameplayStatics::GetTimeSeconds(GetWorld());
-
-	// 각 에이전트 검사
-	for (AActor* Actor : FoundActors)
-	{
-		// 자기자신 , 자기팀 일시 진행 
-		ABaseAgent* Agent = Cast<ABaseAgent>(Actor);
-		if (!Agent || Agent == this || Agent->TeamID == TeamID)
-		{
-			continue;
-		}
-		bool IsVisible = false;
-
-		// 시야에 있고 장애물에 가려지지 않는지 확인
-		if (!IsLineOfSightBlocked(Agent))
-		{
-			IsVisible = true;
-	
-			// 적이 보이면 상태 업데이트
-			if (Agent->MinimapVisibility != EAgentVisibility::Visible)
-			{
-				Agent->MinimapVisibility = EAgentVisibility::Visible;
-			}
-
-			Agent->LastVisibleTime = CurrentTime;
-		}
-	}
+	// // 서버에서만 실행
+	// if (GetLocalRole() != ROLE_Authority)
+	// {
+	// 	return;
+	// }
+	// // 월드에서 모든 BaseAgent 검색
+	// TArray<AActor*> FoundActors;
+	// UGameplayStatics::GetAllActorsOfClass(GetWorld(),ABaseAgent::StaticClass(),FoundActors);
+	//
+	// // 현재 게임 시간 얻기
+	// float CurrentTime = UGameplayStatics::GetTimeSeconds(GetWorld());
+	//
+	// // 각 에이전트 검사
+	// for (AActor* Actor : FoundActors)
+	// {
+	// 	// 자기자신 , 자기팀 일시 진행 
+	// 	ABaseAgent* Agent = Cast<ABaseAgent>(Actor);
+	// 	if (!Agent || Agent == this || Agent->TeamID == TeamID)
+	// 	{
+	// 		continue;
+	// 	}
+	// 	bool IsVisible = false;
+	//
+	// 	// 시야에 있고 장애물에 가려지지 않는지 확인
+	// 	if (!IsLineOfSightBlocked(Agent))
+	// 	{
+	// 		IsVisible = true;
+	//
+	// 		// 적이 보이면 상태 업데이트
+	// 		if (Agent->MinimapVisibility != EAgentVisibility::Visible)
+	// 		{
+	// 			Agent->MinimapVisibility = EAgentVisibility::Visible;
+	// 		}
+	//
+	// 		Agent->LastVisibleTime = CurrentTime;
+	// 	}
+	// }
 }
 
 // 시야가 장애물에 차단되는지 확인
