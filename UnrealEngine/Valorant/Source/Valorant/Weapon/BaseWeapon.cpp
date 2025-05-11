@@ -270,6 +270,7 @@ void ABaseWeapon::ServerRPC_Fire_Implementation(const FVector& Location, const F
 		}
 		DrawDebugPoint(WorldContext, OutHit.ImpactPoint, 5, FColor::Green, false, 30);
 	}
+	MulticastRPC_PlayFireSound();
 }
 
 void ABaseWeapon::EndFire()
@@ -301,6 +302,11 @@ void ABaseWeapon::StartReload()
 			}
 		}
 	}
+}
+
+void ABaseWeapon::MulticastRPC_PlayFireSound_Implementation()
+{
+	PlayFireSound();
 }
 
 void ABaseWeapon::Reload()
