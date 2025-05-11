@@ -73,6 +73,9 @@ void ABaseWeapon::BeginPlay()
 	{
 		RecoilData.Add(Element);
 	}
+
+	AM_Fire = WeaponData->FireAnim;
+	AM_Reload = WeaponData->ReloadAnim;
 }
 
 void ABaseWeapon::Tick(float DeltaSeconds)
@@ -110,6 +113,13 @@ void ABaseWeapon::StartFire()
 	UE_LOG(LogTemp, Warning, TEXT("StartFire, RecoilLevel : %d"), RecoilLevel);
 
 	GetWorld()->GetTimerManager().SetTimer(AutoFireHandle, this, &ABaseWeapon::Fire, 0.01f, true, 0);
+
+	if (AM_Fire)
+	{
+		OwnerAgent->GetABP_1P()->Montage_Play(AM_Fire);
+		OwnerAgent->GetABP_3P()->Montage_Play(AM_Fire);
+	}
+	
 }
 
 void ABaseWeapon::Fire()
@@ -281,6 +291,12 @@ void ABaseWeapon::StartReload()
 			UE_LOG(LogTemp, Warning, TEXT("StartReload %p"), this);
 			bIsFiring = false;
 			World->GetTimerManager().SetTimer(ReloadHandle, this, &ABaseWeapon::Reload, 3, false, WeaponData->ReloadTime);
+
+			if (AM_Reload)
+			{
+				OwnerAgent->GetABP_1P()->Montage_Play(AM_Reload);
+				OwnerAgent->GetABP_3P()->Montage_Play(AM_Reload);
+			}
 		}
 	}
 }

@@ -340,6 +340,12 @@ struct FWeaponData : public FTableRowBase
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Data")
 	TArray<FGunRecoilData> GunRecoilMap;
+
+	// 무기 관련 애니
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Data")
+	UAnimMontage* FireAnim;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Data")
+	UAnimMontage* ReloadAnim;
 };
 
 // GameplayEffectData
