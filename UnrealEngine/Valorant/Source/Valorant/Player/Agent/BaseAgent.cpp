@@ -291,6 +291,7 @@ void ABaseAgent::StartFire()
 	// TODO: 무기를 발사하다가 교체하였을 때, EndFire() 호출?
 	if (auto* weapon = Cast<ABaseWeapon>(CurrentInteractor))
 	{
+		NET_LOG(LogTemp, Warning, TEXT("스타트 파이어"));
 		weapon->StartFire();
 	}
 }
@@ -332,8 +333,25 @@ void ABaseAgent::Interact()
 	{
 		if (ABaseInteractor* Interactor = Cast<ABaseInteractor>(FindInteractActor))
 		{
-			Interactor->ServerRPC_Interact(this);
+			if (HasAuthority())
+			{
+				Interactor->ServerRPC_Interact(this);
+			}
+			else
+			{
+				Server_Interact(Interactor);
+			}
+			FindInteractActor->OnDetect(false);
+			FindInteractActor = nullptr;
 		}
+	}
+}
+
+void ABaseAgent::Server_Interact_Implementation(ABaseInteractor* Interactor)
+{
+	if (Interactor->ServerOnly_CanInteract())
+	{
+		Interactor->ServerRPC_PickUp(this);
 	}
 }
 
@@ -374,7 +392,9 @@ void ABaseAgent::AcquireInteractor(ABaseInteractor* Interactor)
 		Server_AcquireInteractor(Interactor);
 		return;
 	}
-
+	
+	//TODO: 스파이크일 경우 처리
+	
 	auto* weapon = Cast<ABaseWeapon>(Interactor);
 	if (!weapon)
 	{
@@ -541,6 +561,11 @@ void ABaseAgent::OnFindInteraction(UPrimitiveComponent* OverlappedComponent, AAc
 
 	if (auto* interactor = Cast<ABaseInteractor>(OtherActor))
 	{
+		if (interactor->GetOwner())
+		{
+			return;
+		}
+		
 		FindInteractActor = interactor;
 		FindInteractActor->OnDetect(true);
 	}

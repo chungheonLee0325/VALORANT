@@ -195,6 +195,9 @@ public:
 	void OnRep_ChangeInteractorState();
 	UFUNCTION()
 	void OnRep_ChangePoseIdx();
+
+	UFUNCTION(Server, Reliable, Category = "Weapon")
+	void Server_Interact(ABaseInteractor* Interactor);
 	
 	UFUNCTION(Server, Reliable, Category = "Weapon")
 	void Server_AcquireInteractor(ABaseInteractor* Interactor);
