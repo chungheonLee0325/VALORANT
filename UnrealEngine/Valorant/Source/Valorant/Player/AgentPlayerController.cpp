@@ -325,6 +325,8 @@ void AAgentPlayerController::CloseShopUI()
 
 		// 마우스 커서 숨기기
 		bShowMouseCursor = false;
+
+		ShopComponent->OnShopAvailabilityChanged.RemoveAll(this);
 	}
 }
 
