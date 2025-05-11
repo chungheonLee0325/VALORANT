@@ -16,7 +16,7 @@
 ASpike::ASpike()
 {
 	PrimaryActorTick.bCanEverTick = true;
-
+	
 	ConstructorHelpers::FObjectFinder<USkeletalMesh> SpikeMeshObj(
 		TEXT("/Script/Engine.SkeletalMesh'/Game/Resource/Props/Spike/Spike.Spike'"));
 	if (SpikeMeshObj.Succeeded())
@@ -59,7 +59,7 @@ void ASpike::Tick(float DeltaTime)
 		else if (SpikeState == ESpikeState::Defusing && InteractingAgent)
 		{
 			InteractProgress += DeltaTime;
-			AddActorWorldOffset(FVector(0,0,-10)*DeltaTime);
+			AddActorWorldOffset(FVector(0,0,-4)*DeltaTime);
 			if (InteractProgress >= DefuseTime)
 			{
 				ServerRPC_FinishDefusing();

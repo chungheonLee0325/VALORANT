@@ -122,6 +122,7 @@ public:
 
 protected:
 	FTimerHandle RoundTimerHandle;
+#ifdef DEBUGTEST
 	float MaxTime = 0.0f;
 	float RemainRoundStateTime = 0.0f;
 	float SelectAgentTime = 60.0f;
@@ -130,6 +131,17 @@ protected:
 	float InRoundTime = 20.0f;		// org: 100.0f
 	float EndPhaseTime = 10.0f;		// org: 10.0f
 	float SpikeActiveTime = 15.0f;	// org: 45.0f
+	bool bReadyToEndMatch = false;
+	float LeavingMatchTime = 10.0f;
+#endif
+	float MaxTime = 0.0f;
+	float RemainRoundStateTime = 0.0f;
+	float SelectAgentTime = 60.0f;
+	float PreRoundTime = 45.0f;		// org: 45.0f
+	float BuyPhaseTime = 30.0f;		// org: 30.0f
+	float InRoundTime = 100.0f;		// org: 100.0f
+	float EndPhaseTime = 7.0f;		// org: 10.0f
+	float SpikeActiveTime = 45.0f;	// org: 45.0f
 	bool bReadyToEndMatch = false;
 	float LeavingMatchTime = 10.0f;
 	
