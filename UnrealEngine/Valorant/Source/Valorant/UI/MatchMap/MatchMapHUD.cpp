@@ -3,6 +3,7 @@
 
 #include "MatchMapHUD.h"
 
+#include "OnlineSubsystemUtils.h"
 #include "Valorant.h"
 #include "Components/TextBlock.h"
 #include "Components/WidgetSwitcher.h"
@@ -10,6 +11,20 @@
 #include "GameManager/SubsystemSteamManager.h"
 #include "Player/AgentPlayerController.h"
 #include "Player/AgentPlayerState.h"
+
+void UMatchMapHUD::SetTrueVo()
+{
+	bPlayed60SecLeftVo = true;
+	bPlayed30SecLeftVo = true;
+	bPlayed10SecLeftVo = true;
+}
+
+void UMatchMapHUD::SetFalseVo()
+{
+	bPlayed60SecLeftVo = false;
+	bPlayed30SecLeftVo = false;
+	bPlayed10SecLeftVo = false;
+}
 
 void UMatchMapHUD::NativeConstruct()
 {
@@ -48,6 +63,30 @@ void UMatchMapHUD::UpdateTime(float Time)
 	const int Seconds = static_cast<int>(Time) % 60;
 	const FString TimeStr = FString::Printf(TEXT("%d:%02d"), Minute, Seconds);
 	TextBlockTime->SetText(FText::FromString(TimeStr));
+	if (Time <= 60)
+	{
+		if (false == bPlayed60SecLeftVo && FMath::IsNearlyEqual(Time, 60.f, 0.5f))
+		{
+			PlayRemTimeVO(0);
+			bPlayed60SecLeftVo = true;
+		}
+		if (Time <= 30)
+		{
+			if (false == bPlayed30SecLeftVo && FMath::IsNearlyEqual(Time, 30.f, 0.5f))
+			{
+				PlayRemTimeVO(1);
+				bPlayed30SecLeftVo = true;
+			}
+			if (Time <= 10)
+			{
+				if (false == bPlayed10SecLeftVo && FMath::IsNearlyEqual(Time, 10.f, 0.5f))
+				{
+					PlayRemTimeVO(2);
+					bPlayed10SecLeftVo = true;
+				}
+			}
+		}
+	}
 }
 
 void UMatchMapHUD::UpdateScore(int TeamBlueScore, int TeamRedScore)
@@ -58,6 +97,7 @@ void UMatchMapHUD::UpdateScore(int TeamBlueScore, int TeamRedScore)
 
 void UMatchMapHUD::OnRoundSubStateChanged(const ERoundSubState RoundSubState, const float TransitionTime)
 {
+	SetTrueVo();
 	switch (RoundSubState) {
 	case ERoundSubState::RSS_None:
 		break;
@@ -70,6 +110,7 @@ void UMatchMapHUD::OnRoundSubStateChanged(const ERoundSubState RoundSubState, co
 		DisplayAnnouncement(EMatchAnnouncement::EMA_BuyPhase, TransitionTime);
 		break;
 	case ERoundSubState::RSS_InRound:
+		SetFalseVo();
 		break;
 	case ERoundSubState::RSS_EndPhase:
 		break;
@@ -83,10 +124,12 @@ void UMatchMapHUD::OnRoundEnd(bool bBlueWin, const ERoundEndReason RoundEndReaso
 	if (PlayerState->bIsBlueTeam)
 	{
 		DisplayAnnouncement(EMatchAnnouncement::EMA_Won, TransitionTime);
+		PlayRoundEndVFX(true);
 	}
 	else
 	{
 		DisplayAnnouncement(EMatchAnnouncement::EMA_Lost, TransitionTime);
+		PlayRoundEndVFX(false);
 	}
 }
 
