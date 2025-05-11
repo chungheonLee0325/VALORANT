@@ -188,7 +188,7 @@ void ABaseAgent::BeginPlay()
 		InteractionCapsule->OnComponentEndOverlap.AddDynamic(this, &ABaseAgent::OnInteractionCapsuleEndOverlap);
 	}
 
-	//TODO: 기본 총, 칼 스폰해서 붙여주기
+	//TODO: 기본 총, 칼 스폰해서 붙여주기 
 }
 
 void ABaseAgent::Tick(float DeltaTime)
@@ -393,6 +393,11 @@ ABaseWeapon* ABaseAgent::GetSubWeapon() const
 	return SubWeapon;
 }
 
+ABaseWeapon* ABaseAgent::GetMeleeWeapon() const
+{
+	return MeleeKnife;
+}
+
 void ABaseAgent::AcquireInteractor(ABaseInteractor* Interactor)
 {
 	NET_LOG(LogTemp,Warning,TEXT("%hs Called"), __FUNCTION__);
@@ -419,7 +424,7 @@ void ABaseAgent::AcquireInteractor(ABaseInteractor* Interactor)
 		}
 		SubWeapon = weapon;
 	}
-	else
+	else if (weapon->GetWeaponCategory() != EWeaponCategory::None)
 	{
 		if (MainWeapon)
 		{
@@ -427,7 +432,6 @@ void ABaseAgent::AcquireInteractor(ABaseInteractor* Interactor)
 		}
 		MainWeapon = weapon;
 	}
-	
 
 	// 무기를 얻으면, 해당 무기의 타입의 슬롯으로 전환해 바로 장착하도록
 	SwitchInteractor(Interactor->GetInteractorType());
@@ -486,8 +490,14 @@ void ABaseAgent::OnRep_ChangeInteractorState()
 
 void ABaseAgent::OnRep_ChangePoseIdx()
 {
-	ABP_1P->InteractorPoseIdx = PoseIdx;
-	ABP_3P->InteractorPoseIdx = PoseIdx;
+	if (ABP_1P)
+	{
+		ABP_1P->InteractorPoseIdx = PoseIdx;
+	}
+	if (ABP_3P)
+	{
+		ABP_3P->InteractorPoseIdx = PoseIdx;
+	}
 }
 
 void ABaseAgent::Server_AcquireInteractor_Implementation(ABaseInteractor* Interactor)
@@ -556,6 +566,7 @@ void ABaseAgent::EquipInteractor(ABaseInteractor* interactor)
 	
 	if (ABP_1P)
 	{
+		NET_LOG(LogTemp,Warning,TEXT("스테이트 변경"));
 		ABP_1P->InteractorState = CurrentInteractorState;
 	}
 	if (ABP_3P)

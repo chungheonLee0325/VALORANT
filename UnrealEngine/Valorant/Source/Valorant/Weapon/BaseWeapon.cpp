@@ -413,23 +413,23 @@ void ABaseWeapon::ServerOnly_AttachWeapon(ABaseAgent* Agent)
 	);
 	AttachToComponent(Agent->GetMesh(), AttachmentRules, FName(TEXT("R_WeaponPointSocket")));
 
-	// Set up action bindings
-	if (const AAgentPlayerController* PlayerController = Cast<AAgentPlayerController>(Agent->GetController()))
-	{
-		if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PlayerController->GetLocalPlayer()))
-		{
-			// Set the priority of the mapping to 1, so that it overrides the Jump action with the Fire action when using touch input
-			Subsystem->AddMappingContext(FireMappingContext, 1);
-		}
-
-		if (UEnhancedInputComponent* EnhancedInputComponent = Cast<UEnhancedInputComponent>(PlayerController->InputComponent))
-		{
-			// Fire
-			// EnhancedInputComponent->BindAction(StartFireAction, ETriggerEvent::Triggered, this, &ABaseWeapon::StartFire);
-			// EnhancedInputComponent->BindAction(EndFireAction, ETriggerEvent::Triggered, this, &ABaseWeapon::EndFire);
-			// EnhancedInputComponent->BindAction(StartReloadAction, ETriggerEvent::Triggered, this, &ABaseWeapon::StartReload);
-		}
-	}
+	// // Set up action bindings
+	// if (const AAgentPlayerController* PlayerController = Cast<AAgentPlayerController>(Agent->GetController()))
+	// {
+	// 	if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PlayerController->GetLocalPlayer()))
+	// 	{
+	// 		// Set the priority of the mapping to 1, so that it overrides the Jump action with the Fire action when using touch input
+	// 		Subsystem->AddMappingContext(FireMappingContext, 1);
+	// 	}
+	//
+	// 	if (UEnhancedInputComponent* EnhancedInputComponent = Cast<UEnhancedInputComponent>(PlayerController->InputComponent))
+	// 	{
+	// 		// Fire
+	// 		// EnhancedInputComponent->BindAction(StartFireAction, ETriggerEvent::Triggered, this, &ABaseWeapon::StartFire);
+	// 		// EnhancedInputComponent->BindAction(EndFireAction, ETriggerEvent::Triggered, this, &ABaseWeapon::EndFire);
+	// 		// EnhancedInputComponent->BindAction(StartReloadAction, ETriggerEvent::Triggered, this, &ABaseWeapon::StartReload);
+	// 	}
+	// }
 
 	Agent->AcquireInteractor(this);
 }
