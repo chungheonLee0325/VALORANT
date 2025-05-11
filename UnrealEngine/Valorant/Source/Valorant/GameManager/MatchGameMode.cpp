@@ -338,6 +338,10 @@ void AMatchGameMode::HandleRoundSubState_PreRound()
 {
 	RespawnAll();
 	TeamBlueRemainingAgentNum = TeamRedRemainingAgentNum = MatchPlayers.Num();
+
+	// 스파이크 관련 상태 초기화
+	bSpikePlanted = false;
+
 	// 일정 시간 후에 라운드 시작
 	MaxTime = PreRoundTime;
 	GetWorld()->GetTimerManager().ClearTimer(RoundTimerHandle);
@@ -348,6 +352,10 @@ void AMatchGameMode::HandleRoundSubState_BuyPhase()
 {
 	RespawnAll();
 	TeamBlueRemainingAgentNum = TeamRedRemainingAgentNum = MatchPlayers.Num();
+
+	// 스파이크 관련 상태 초기화
+	bSpikePlanted = false;
+
 	// 일정 시간 후에 라운드 시작
 	MaxTime = BuyPhaseTime;
 	GetWorld()->GetTimerManager().ClearTimer(RoundTimerHandle);
@@ -412,6 +420,9 @@ void AMatchGameMode::HandleRoundSubState_EndPhase()
 
 	// 라운드 종료 시 크레딧 보상 지급
 	AwardRoundEndCredits();
+
+	// 월드에 spawn된 spike 제거
+	DestroySpikeInWorld();
 }
 
 void AMatchGameMode::SetRoundSubState(ERoundSubState NewRoundSubState)
@@ -495,7 +506,10 @@ void AMatchGameMode::RespawnAll()
 		ResetAgentAtrributeData(agentPS);
 		RespawnPlayer(agentPS, MatchPlayer.Controller, SpawnTransform);
 	}
-	// TODO: 팀 & 공수교대 여부에 따라 처리
+
+	// 3초 후에 공격팀에게 스파이크 스폰
+	FTimerHandle SpawnSpikeTimerHandle;
+	GetWorldTimerManager().SetTimer(SpawnSpikeTimerHandle, this, &AMatchGameMode::SpawnSpikeForAttackers, 3.0f, false);
 }
 
 void AMatchGameMode::RespawnPlayer(AAgentPlayerState* ps, AAgentPlayerController* pc, FTransform spawnTransform)
@@ -634,6 +648,16 @@ void AMatchGameMode::OnSpikePlanted(AMatchPlayerController* Planter)
 		}
 	}
 
+	// 스파이크 설치 상태 업데이트
+	bSpikePlanted = true;
+
+	// 설치 완료 이벤트 알림 (모든 클라이언트에게)
+	AMatchGameState* MatchGameState = GetGameState<AMatchGameState>();
+	if (MatchGameState)
+	{
+		MatchGameState->MulticastRPC_OnSpikePlanted(Planter);
+	}
+
 	// 라운드 타이머 수정
 	MaxTime = SpikeActiveTime;
 	RemainRoundStateTime = MaxTime;
@@ -656,6 +680,16 @@ void AMatchGameMode::OnSpikeDefused(AMatchPlayerController* Defuser)
 				CreditComp->AwardSpikeActionCredits(false);
 			}
 		}
+	}
+
+	// 스파이크 설치 상태 업데이트
+	bSpikePlanted = false;
+
+	// 해제 완료 이벤트 알림 (모든 클라이언트에게)
+	AMatchGameState* MatchGameState = GetGameState<AMatchGameState>();
+	if (MatchGameState)
+	{
+		MatchGameState->MulticastRPC_OnSpikeDefused(Defuser);
 	}
 
 	StartEndPhaseBySpikeDefuse();
@@ -799,4 +833,43 @@ ERoundSubState AMatchGameMode::GetRoundSubState() const
 bool AMatchGameMode::CanOpenShop() const
 {
 	return RoundSubState == ERoundSubState::RSS_BuyPhase;
+}
+
+// 공격팀에게 스파이크 스폰
+void AMatchGameMode::SpawnSpikeForAttackers()
+{
+	for (auto& MatchPlayer : MatchPlayers)
+	{
+		auto* AgentPS = MatchPlayer.Controller->GetPlayerState<AAgentPlayerState>();
+		if (!AgentPS)
+			continue;
+
+		// 공격팀 플레이어 찾기
+		if (AMatchGameMode::IsAttacker(AgentPS->bIsBlueTeam))
+		{
+			// 플레이어가 조종하는 에이전트 찾기
+			ABaseAgent* Agent = Cast<ABaseAgent>(MatchPlayer.Controller->GetPawn());
+			if (Agent)
+			{
+				// 스파이크 스폰
+				FActorSpawnParameters SpawnParams;
+				SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+
+				// 플레이어 발 아래에 스파이크 스폰
+				FVector SpawnLocation = Agent->GetActorLocation() + Agent->GetActorForwardVector() * 100.0f;
+				SpawnLocation.Z -= 80.0f; // 바닥에 가깝게
+
+				Spike = GetWorld()->SpawnActor<ASpike>(ASpike::StaticClass(), SpawnLocation,
+				                                               FRotator::ZeroRotator, SpawnParams);
+				// 공격팀 중 한 명에게만 스파이크 스폰
+
+				break;
+			}
+		}
+	}
+}
+
+void AMatchGameMode::DestroySpikeInWorld()
+{
+	Spike->Destroy();
 }

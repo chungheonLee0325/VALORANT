@@ -128,6 +128,7 @@ public:
 	void Weapon2(const FInputActionValue& InputActionValue);
 	void Weapon3(const FInputActionValue& InputActionValue);
 	void Weapon4(const FInputActionValue& InputActionValue);
+	void Weapon4Released(const FInputActionValue& InputActionValue);
 	
 	void StartReload(const FInputActionValue& InputActionValue);
 

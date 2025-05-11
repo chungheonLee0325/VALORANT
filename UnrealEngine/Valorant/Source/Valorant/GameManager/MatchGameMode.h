@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/GameMode.h"
 #include "Player/AgentPlayerState.h"
+#include "ValorantObject/Spike/Spike.h"
 #include "MatchGameMode.generated.h"
 
 class ABaseAgent;
@@ -92,7 +93,10 @@ private:
 	TObjectPtr<APlayerStart> DefendersStartPoint = nullptr;
 	UPROPERTY(EditDefaultsOnly, Category="Gameflow", meta=(AllowPrivateAccess))
 	TSubclassOf<ABaseAgent> AgentClass;
-	
+
+	UPROPERTY()
+	ASpike* Spike;
+
 public:
 	void OnControllerBeginPlay(AMatchPlayerController* Controller, const FString& Nickname);
 	void OnLockIn(AMatchPlayerController* Player, int AgentId);
@@ -168,4 +172,10 @@ public:
 	void OnRevive(AMatchPlayerController* Reviver, AMatchPlayerController* Target);
 	void OnSpikePlanted(AMatchPlayerController* Planter);
 	void OnSpikeDefused(AMatchPlayerController* Defuser);
+	
+	// 공격팀에게 스파이크 스폰
+	void SpawnSpikeForAttackers();
+
+	UFUNCTION()
+	void DestroySpikeInWorld();
 };
