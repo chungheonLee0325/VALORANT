@@ -25,13 +25,12 @@ class UAgentAbilitySystemComponent;
 //ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ
 //시야 감지 상태 (적이보임, 적이보이지않음 , 마지막보인적의위치)
 UENUM(BlueprintType)
-enum class EAgentVisibility : uint8
+enum class EVisibilityState  : uint8
 {
 	Visible,
 	Hidden,
-	LastKnown,
+	QuestionMark,
 };
-
 UENUM(BlueprintType)
 enum class EAgentDamagedPart : uint8
 {
@@ -39,6 +38,27 @@ enum class EAgentDamagedPart : uint8
 	Head,
 	Body,
 	Legs
+};
+
+
+//ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ
+//             CYT             ♣
+//ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ
+// 가시성 정보를 저장할 구조체
+USTRUCT()
+struct FAgentVisibilityInfo
+{
+	GENERATED_BODY()
+
+	UPROPERTY()
+	ABaseAgent* Observer = nullptr;
+
+	UPROPERTY()
+	EVisibilityState VisibilityState = EVisibilityState::Hidden;
+
+	UPROPERTY()
+	float QuestionMarkTimer = 0.0f;
+	
 };
 
 UCLASS()
@@ -94,44 +114,79 @@ public:
 	//             CYT             ♣
 	//ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ
 
-	// 에이전트의 현재 미니맵 가시성 상태
-	UPROPERTY(Replicated, BlueprintReadWrite, Category="Minimap")
-	EAgentVisibility MinimapVisibility;
+	// 캐릭터별 미니맵 아이콘을 설정하는 함수
+	UFUNCTION(BlueprintCallable, Category = "Minimap")
+	// 캐릭터의 미니맵 아이콘을 설정하는 함수 선언
+	void SetMinimapIcon(UTexture2D* NewIcon);
 
-	// 에이전트가 마지막으로 보인 시간 (네트워크 복제)
-	UPROPERTY(Replicated)
-	float LastVisibleTime;
+    // 다른 에이전트에게 보여질 상태 확인 함수
+	UFUNCTION(BlueprintCallable, Category = "Minimap")
+	// 특정 관찰자에게 현재 에이전트가 어떻게 보이는지 상태를 반환
+	EVisibilityState  GetVisibilityStateForAgent(ABaseAgent* Observer);
 
-	// 물음표 상태로 표시되는 시간 (에디터에서 변경 가능)
-	UPROPERTY(EditAnywhere, Category="Minimap")
-	float QuestionMarkDuration = 5.0f;
+	// 서버에서 시야 상태 업데이트 함수
+	UFUNCTION(Server, Reliable, WithValidation)
+	// 서버에서 실행되어 시야 상태를 업데이트
+	void Server_UpdateVisibilityState(ABaseAgent* Observer, EVisibilityState NewState);
 
-	// 팀 ID (적팀과 같은팀은 같은 아이디 사용하게 하자) - (네트워크 복제)
-	UPROPERTY(Replicated, BlueprintReadWrite)
-	int32 TeamID;
+	// 모든 클라이언트에 시야 상태 전파 함수
+	UFUNCTION(NetMulticast, Reliable) 
+	// 모든 클라이언트에 시야 상태 변경을 알림
+	void Multicast_OnVisibilityStateChanged(ABaseAgent* Observer, EVisibilityState NewState);
 
-	// // 에이전트 아이콘 (에디터에서 변경 가능)
-	UPROPERTY(EditAnywhere, Category="Minimap")
-	UTexture2D* AgentIcon;
+	// 미니맵 아이콘 가져오기 함수
+	UFUNCTION(BlueprintPure, Category = "Minimap")
+	// 현재 설정된 미니맵 아이콘을 반환
+	UTexture2D* GetMinimapIcon() const { return MinimapIcon; }
 
-	// // 물음표 아이콘 (에디터에서 변경 가능)
-	UPROPERTY(EditAnywhere, Category="Minimap")
+	// 물음표 아이콘 가져오기 함수
+	UFUNCTION(BlueprintPure, Category = "Minimap")
+	// 물음표 아이콘을 반환
+	UTexture2D* GetQuestionMarkIcon() const { return QuestionMarkIcon; }
+
+	// 라인 트레이스로 시야 검사 수행하는 함수 (시야 검사를 수행하여 다른 에이전트의 가시성을 판단하는 함수)
+	void PerformVisibilityChecks();
+
+	// 상태 업데이트 헬퍼 함수 
+	void UpdateVisibilityState(ABaseAgent* Observer, EVisibilityState NewState);
+    
+	// 가시성 정보 찾기 헬퍼 함수 
+	bool FindVisibilityInfo(ABaseAgent* Observer, FAgentVisibilityInfo& OutInfo, int32& OutIndex); 
+
+	// TMap 대신 OnRep 사용하는 TArray로 변경 
+	UPROPERTY(ReplicatedUsing = OnRep_VisibilityStateArray) 
+	TArray<FAgentVisibilityInfo> VisibilityStateArray; 
+
+	// OnRep 함수 선언 
+	UFUNCTION() 
+	void OnRep_VisibilityStateArray(); 
+
+	// 마지막 시야 확인 시간 (최적화용)
+	UPROPERTY()
+	// 마지막으로 시야 체크를 수행한 시간을 저장
+	float LastVisibilityCheckTime;
+
+	// 시야 체크 주기 (초)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Minimap")
+	// 시야 체크를 얼마나 자주 수행할지 결정하는 간격 (초 단위)
+	float VisibilityCheckInterval;
+
+	// 물음표 표시 지속 시간 (초)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Minimap") 
+	// 물음표 상태가 유지되는 시간 (초 단위)
+	float QuestionMarkDuration;
+
+	// 캐릭터의 미니맵 아이콘
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Minimap") 
+	// 미니맵에 표시될 캐릭터의 아이콘 텍스처
+	UTexture2D* MinimapIcon;
+
+	// 물음표 아이콘
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Minimap")
+	// 시야에서 사라진 적을 표시할 물음표 아이콘 텍스처
 	UTexture2D* QuestionMarkIcon;
-
-	// 다른 팀 플레이어에게 보이는지 체크
-	bool IsVisibleToTeam(int32 ViewerTeamID) const;
-
-	// 미니맵 시각화 상태를 업데이트
-	void UpdateMinimapVisibility();
-
-	// // 미니맵에 표시할 아이콘 가져오기 - (BP 호출)
-	UFUNCTION(BlueprintCallable, Category="Minimap")
-	UTexture2D* GetAgentIcon(int32 ViewerTeamID) const;
-
-	// 적 플레이어 시야에 보이는지 체크하는 함수 - (BP 호출)
-	UFUNCTION(BlueprintCallable, Category="Vision")
-	bool IsVisibleToOpponents() const;
-
+	
+	
 	// 네트워크 복제 속성 설정 - (언리얼 네트워크 이용)
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
