@@ -59,7 +59,7 @@ void ABaseWeapon::BeginPlay()
 	{
 		InteractorType = EInteractorType::SubWeapon;
 	}
-	else
+	else 
 	{
 		InteractorType = EInteractorType::MainWeapon;
 	}
@@ -369,15 +369,15 @@ bool ABaseWeapon::ServerOnly_CanDrop() const
 	return Super::ServerOnly_CanDrop();
 }
 
-void ABaseWeapon::ServerRPC_PickUp(ABaseAgent* Agent)
+void ABaseWeapon::ServerRPC_PickUp_Implementation(ABaseAgent* Agent)
 {
-	Super::ServerRPC_PickUp(Agent);
+	Super::ServerRPC_PickUp_Implementation(Agent);
 	ServerOnly_AttachWeapon(Agent);
 }
 
-void ABaseWeapon::ServerRPC_Drop()
+void ABaseWeapon::ServerRPC_Drop_Implementation()
 {
-	Super::ServerRPC_Drop();
+	Super::ServerRPC_Drop_Implementation();
 
 	//TODO: 이미 Super에서 Onwer가 Null로 처리됨. 필요시 수정
 	if (nullptr == OwnerAgent)
@@ -395,9 +395,9 @@ void ABaseWeapon::ServerRPC_Drop()
 	}
 }
 
-void ABaseWeapon::ServerRPC_Interact(ABaseAgent* InteractAgent)
+void ABaseWeapon::ServerRPC_Interact_Implementation(ABaseAgent* InteractAgent)
 {
-	Super::ServerRPC_Interact(InteractAgent);
+	Super::ServerRPC_Interact_Implementation(InteractAgent);
 	if (ServerOnly_CanInteract())
 	{
 		ServerRPC_PickUp(InteractAgent);

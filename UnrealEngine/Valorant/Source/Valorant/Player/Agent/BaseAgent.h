@@ -243,6 +243,10 @@ public:
 
 	ABaseWeapon* GetMainWeapon() const;
 	ABaseWeapon* GetSubWeapon() const;
+	void ResetMainWeapon() {MainWeapon = nullptr;};
+	void ResetSubWeapon() {SubWeapon = nullptr;};
+	
+	
 	ABaseWeapon* GetMeleeWeapon() const;
 
 	void SetMeleeWeapon(ABaseWeapon* knife) { MeleeKnife = knife; }

@@ -142,9 +142,9 @@ public:
 public:
 	virtual bool ServerOnly_CanAutoPickUp(ABaseAgent* Agent) const override;
 	virtual bool ServerOnly_CanDrop() const override;
-	virtual void ServerRPC_PickUp(ABaseAgent* Agent) override;
-	virtual void ServerRPC_Drop() override;
-	virtual void ServerRPC_Interact(ABaseAgent* InteractAgent) override;
+	virtual void ServerRPC_PickUp_Implementation(ABaseAgent* Agent) override;
+	virtual void ServerRPC_Drop_Implementation() override;
+	virtual void ServerRPC_Interact_Implementation(ABaseAgent* InteractAgent) override;
 	void ServerOnly_AttachWeapon(ABaseAgent* Agent);
 
 	// 무기 사용 여부 리셋 (라운드 시작 시)

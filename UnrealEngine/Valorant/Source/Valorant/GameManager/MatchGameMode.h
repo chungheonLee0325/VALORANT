@@ -196,4 +196,7 @@ public:
 
 	UFUNCTION()
 	void DestroySpikeInWorld();
+
+	UPROPERTY(EditAnywhere)
+	TSubclassOf<ASpike> SpikeClass;
 };

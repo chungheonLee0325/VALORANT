@@ -570,7 +570,7 @@ void UShopComponent::SpawnWeaponForPlayer(int32 WeaponID)
 			// 무기 ID 설정
 			//NewWeapon->SetWeaponID(WeaponID);
 			// 무기 카테고리에 따라 장착 방식 결정
-			
+
 			if (CurrentWeapon)
 			{
 				// 기존 무기가 사용된 경우 드롭, 아닌 경우 제거
@@ -582,10 +582,22 @@ void UShopComponent::SpawnWeaponForPlayer(int32 WeaponID)
 				{
 					// 사용되지 않은 무기 제거
 					// 환불은 이미 PurchaseWeapon에서 처리되었음
+					switch (CurrentWeapon->GetWeaponCategory())
+					{
+					case EWeaponCategory::None:
+						break;
+					case EWeaponCategory::Melee:
+						break;
+					case EWeaponCategory::Sidearm:
+						Agent->ResetSubWeapon();
+					default:
+						Agent->ResetMainWeapon();
+					}
+					
 					CurrentWeapon->Destroy();
 				}
 			}
-			
+
 			Agent->ServerRPC_Interact(NewWeapon);
 			// // 무기가 장착된 후 이벤트 발생
 			// OnEquippedWeaponsChanged.Broadcast();
