@@ -764,7 +764,7 @@ void ABaseAgent::OnFindInteraction(UPrimitiveComponent* OverlappedComponent, AAc
 			return;
 		}
 		// 주인이 없고, 스파이크가 아닐때만 리턴 -> 스파이크는 주인이 있더라도 감지해야함
-		if (Interactor->HasOwnerAgent())
+		if (Interactor->HasOwnerAgent() && !Cast<ASpike>(Interactor))
 		{
 			NET_LOG(LogTemp, Warning, TEXT("%hs, 3"), __FUNCTION__);
 			return;
