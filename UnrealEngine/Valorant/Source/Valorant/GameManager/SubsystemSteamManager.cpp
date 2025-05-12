@@ -77,7 +77,7 @@ void USubsystemSteamManager::CreateSession()
 	LastSessionSettings->bIsLANMatch = IOnlineSubsystem::Get()->GetSubsystemName() == TEXT("NULL");
 
 	// 게임에 존재할 수 있는 최대 플레이어의 수
-	LastSessionSettings->NumPublicConnections = 2;	// TODO : Parameterize
+	LastSessionSettings->NumPublicConnections = 8;	// TODO : Parameterize
 
 	// 세션이 작동중일 때 다른 플레이어가 참가할 수 있는지 여부
 	LastSessionSettings->bAllowJoinInProgress = false;
