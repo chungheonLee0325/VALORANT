@@ -555,37 +555,44 @@ bool ASpike::IsGameStateInRound() const
 void ASpike::MulticastRPC_OnPlantingStarted_Implementation()
 {
 	// 설치 시작 효과 (사운드, 애니메이션 등)
+	HandlePlantingStarted();
 }
 
 void ASpike::MulticastRPC_OnPlantingCancelled_Implementation()
 {
 	// 설치 취소 효과
+	HandlePlantingCancelled();
 }
 
 void ASpike::MulticastRPC_OnPlantingFinished_Implementation()
 {
 	// 설치 완료 효과
+	HandlePlantingFinished();
 }
 
 void ASpike::MulticastRPC_OnDefusingStarted_Implementation(bool bHalfDefuse)
 {
 	// 해제 시작 효과
+	HandleDefusingStarted();
 	// bHalfDefuse가 true인 경우 반 해제 상태임을 표시
 }
 
 void ASpike::MulticastRPC_OnDefusingCancelled_Implementation()
 {
 	// 해제 취소 효과
+	HandleDefusingCancelled();
 }
 
 void ASpike::MulticastRPC_OnDefusingFinished_Implementation()
 {
 	// 해제 완료 효과
+	HandleDefusingFinished();
 }
 
 void ASpike::MulticastRPC_OnDetonated_Implementation()
 {
 	// 폭발 효과 (사운드, 파티클 등)
+	HandleDetonated();
 }
 
 void ASpike::Destroyed()

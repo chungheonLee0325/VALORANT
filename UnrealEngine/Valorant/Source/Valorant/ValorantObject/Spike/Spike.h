@@ -156,24 +156,45 @@ protected:
 	// 효과음 재생 등을 위한 이벤트 함수
 	UFUNCTION(NetMulticast, Reliable)
 	void MulticastRPC_OnPlantingStarted();
+
+	UFUNCTION(BlueprintImplementableEvent)
+	void HandlePlantingStarted();
 	
 	UFUNCTION(NetMulticast, Reliable)
 	void MulticastRPC_OnPlantingCancelled();
+
+	UFUNCTION(BlueprintImplementableEvent)
+	void HandlePlantingCancelled();
 	
 	UFUNCTION(NetMulticast, Reliable)
 	void MulticastRPC_OnPlantingFinished();
+
+	UFUNCTION(BlueprintImplementableEvent)
+	void HandlePlantingFinished();
 	
 	UFUNCTION(NetMulticast, Reliable)
 	void MulticastRPC_OnDefusingStarted(bool bHalfDefuse);
+
+	UFUNCTION(BlueprintImplementableEvent)
+	void HandleDefusingStarted();
 	
 	UFUNCTION(NetMulticast, Reliable)
 	void MulticastRPC_OnDefusingCancelled();
 	
+	UFUNCTION(BlueprintImplementableEvent)
+	void HandleDefusingCancelled();
+	
 	UFUNCTION(NetMulticast, Reliable)
 	void MulticastRPC_OnDefusingFinished();
+
+	UFUNCTION(BlueprintImplementableEvent)
+	void HandleDefusingFinished();
 	
 	UFUNCTION(NetMulticast, Reliable)
 	void MulticastRPC_OnDetonated();
+
+	UFUNCTION(BlueprintImplementableEvent)
+	void HandleDetonated();
 	
 	// 해제 진행도 체크하여 반 해제 여부 설정
 	void CheckHalfDefuse();
