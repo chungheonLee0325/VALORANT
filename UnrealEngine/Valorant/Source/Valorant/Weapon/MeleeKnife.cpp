@@ -13,6 +13,7 @@ AMeleeKnife::AMeleeKnife()
 void AMeleeKnife::BeginPlay()
 {
 	Super::BeginPlay();
+	InteractorType = EInteractorType::Melee;
 }
 
 void AMeleeKnife::Tick(float DeltaTime)
