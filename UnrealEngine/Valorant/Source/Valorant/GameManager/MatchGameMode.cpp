@@ -549,6 +549,19 @@ void AMatchGameMode::RespawnPlayer(AAgentPlayerState* ps, AAgentPlayerController
 		Agent = Cast<ABaseAgent>(ps->GetPawn());
 		Agent->SetActorTransform(spawnTransform);
 	}
+
+	//TODO: 임시 코드, 슬롯 교체 로직 수정 후 바꿔야 함
+	if (Agent->GetSubWeapon() == nullptr) { 
+		{
+			Agent->SwitchInteractor(EInteractorType::SubWeapon);
+			if (ClassicAsset)
+			{
+				ABaseWeapon* gun = GetWorld()->SpawnActor<ABaseWeapon>(ClassicAsset);
+				Agent->ServerRPC_Interact(gun);
+			}
+		}
+	}
+	Agent->SwitchInteractor(EInteractorType::Melee);
 }
 
 // 체력 등 정상화
