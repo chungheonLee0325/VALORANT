@@ -157,43 +157,43 @@ protected:
 	UFUNCTION(NetMulticast, Reliable)
 	void MulticastRPC_OnPlantingStarted();
 
-	UFUNCTION(BlueprintImplementableEvent)
+	UFUNCTION(BlueprintImplementableEvent,BlueprintCallable)
 	void HandlePlantingStarted();
 	
 	UFUNCTION(NetMulticast, Reliable)
 	void MulticastRPC_OnPlantingCancelled();
 
-	UFUNCTION(BlueprintImplementableEvent)
+	UFUNCTION(BlueprintImplementableEvent,BlueprintCallable)
 	void HandlePlantingCancelled();
 	
 	UFUNCTION(NetMulticast, Reliable)
 	void MulticastRPC_OnPlantingFinished();
 
-	UFUNCTION(BlueprintImplementableEvent)
+	UFUNCTION(BlueprintImplementableEvent,BlueprintCallable)
 	void HandlePlantingFinished();
 	
 	UFUNCTION(NetMulticast, Reliable)
 	void MulticastRPC_OnDefusingStarted(bool bHalfDefuse);
 
-	UFUNCTION(BlueprintImplementableEvent)
+	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable)
 	void HandleDefusingStarted();
 	
 	UFUNCTION(NetMulticast, Reliable)
 	void MulticastRPC_OnDefusingCancelled();
 	
-	UFUNCTION(BlueprintImplementableEvent)
+	UFUNCTION(BlueprintImplementableEvent,BlueprintCallable)
 	void HandleDefusingCancelled();
 	
 	UFUNCTION(NetMulticast, Reliable)
 	void MulticastRPC_OnDefusingFinished();
 
-	UFUNCTION(BlueprintImplementableEvent)
+	UFUNCTION(BlueprintImplementableEvent,BlueprintCallable)
 	void HandleDefusingFinished();
 	
 	UFUNCTION(NetMulticast, Reliable)
 	void MulticastRPC_OnDetonated();
 
-	UFUNCTION(BlueprintImplementableEvent)
+	UFUNCTION(BlueprintImplementableEvent,BlueprintCallable)
 	void HandleDetonated();
 	
 	// 해제 진행도 체크하여 반 해제 여부 설정
