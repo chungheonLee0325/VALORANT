@@ -121,16 +121,52 @@ void UMatchMapHUD::OnRoundSubStateChanged(const ERoundSubState RoundSubState, co
 void UMatchMapHUD::OnRoundEnd(bool bBlueWin, const ERoundEndReason RoundEndReason, const float TransitionTime)
 {
 	auto* PlayerState = GetOwningPlayer()->GetPlayerState<AMatchPlayerState>();
-	if (PlayerState->bIsBlueTeam)
+	if (nullptr == PlayerState)
 	{
-		DisplayAnnouncement(EMatchAnnouncement::EMA_Won, TransitionTime);
-		PlayRoundEndVFX(true);
+		return;
 	}
-	else
+
+	bool bIsPlayerWin = (PlayerState->bIsBlueTeam == bBlueWin);
+	
+	// 라운드 종료 이유에 따라 적절한 UI 표시
+	switch (RoundEndReason)
 	{
-		DisplayAnnouncement(EMatchAnnouncement::EMA_Lost, TransitionTime);
-		PlayRoundEndVFX(false);
+	case ERoundEndReason::ERER_SpikeActive:
+		// 스파이크 폭발로 인한 종료
+		if (bIsPlayerWin)
+		{
+			DisplayAnnouncement(EMatchAnnouncement::EMA_SpikeActivated_Won, TransitionTime);
+		}
+		else
+		{
+			DisplayAnnouncement(EMatchAnnouncement::EMA_SpikeActivated_Lost, TransitionTime);
+		}
+		break;
+	case ERoundEndReason::ERER_SpikeDefuse:
+		// 스파이크 해제로 인한 종료
+		if (bIsPlayerWin)
+		{
+			DisplayAnnouncement(EMatchAnnouncement::EMA_SpikeDefused_Won, TransitionTime);
+		}
+		else
+		{
+			DisplayAnnouncement(EMatchAnnouncement::EMA_SpikeDefused_Lost, TransitionTime);
+		}
+		break;
+	default:
+		// 일반적인 승리/패배
+		if (bIsPlayerWin)
+		{
+			DisplayAnnouncement(EMatchAnnouncement::EMA_Won, TransitionTime);
+		}
+		else
+		{
+			DisplayAnnouncement(EMatchAnnouncement::EMA_Lost, TransitionTime);
+		}
+		break;
 	}
+	
+	PlayRoundEndVFX(bIsPlayerWin);
 }
 
 void UMatchMapHUD::DisplayAnnouncement(EMatchAnnouncement MatchAnnouncement, float DisplayTime)

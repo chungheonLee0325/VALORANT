@@ -191,6 +191,7 @@ void ABaseAgent::BeginPlay()
 
 	if (HasAuthority() == false && IsLocallyControlled())
 	{
+		NET_LOG(LogTemp, Error, TEXT("%hs, HasAuthority() == false && IsLocallyControlled()"), __FUNCTION__);
 		InteractionCapsule->OnComponentBeginOverlap.AddDynamic(this, &ABaseAgent::OnFindInteraction);
 		InteractionCapsule->OnComponentEndOverlap.AddDynamic(this, &ABaseAgent::OnInteractionCapsuleEndOverlap);
 	}
@@ -372,7 +373,6 @@ void ABaseAgent::StartFire()
 	// TODO: 무기를 발사하다가 교체하였을 때, EndFire() 호출?
 	if (auto* weapon = Cast<ABaseWeapon>(CurrentInteractor))
 	{
-		NET_LOG(LogTemp, Warning, TEXT("스타트 파이어"));
 		weapon->StartFire();
 	}
 }
@@ -415,7 +415,8 @@ void ABaseAgent::Interact()
 		if (ABaseInteractor* Interactor = Cast<ABaseInteractor>(FindInteractActor))
 		{
 			ServerRPC_Interact(Interactor);
-			FindInteractActor->OnDetect(false);
+			
+			Interactor->OnDetect(false);
 			FindInteractActor = nullptr;
 		}
 	}
@@ -425,7 +426,8 @@ void ABaseAgent::ServerRPC_Interact_Implementation(ABaseInteractor* Interactor)
 {
 	if (nullptr == Interactor)
 	{
-		NET_LOG(LogTemp, Warning, TEXT("%hs Called, Interactor is nullptr"), __FUNCTION__);
+		NET_LOG(LogTemp, Error, TEXT("%hs Called, Interactor is nullptr"), __FUNCTION__);
+		return;
 	}
 	Interactor->ServerRPC_Interact(this);
 }
@@ -506,7 +508,11 @@ void ABaseAgent::AcquireInteractor(ABaseInteractor* Interactor)
 		}
 		SubWeapon = weapon;
 	}
-	else if (weapon->GetWeaponCategory() != EWeaponCategory::None)
+	else if (weapon->GetWeaponCategory() == EWeaponCategory::Melee)
+	{
+		MeleeKnife = weapon;
+	}
+	else
 	{
 		if (MainWeapon)
 		{
@@ -712,7 +718,6 @@ void ABaseAgent::EquipInteractor(ABaseInteractor* interactor)
 
 	if (ABP_1P)
 	{
-		NET_LOG(LogTemp, Warning, TEXT("스테이트 변경"));
 		ABP_1P->InteractorState = CurrentInteractorState;
 	}
 	if (ABP_3P)
@@ -746,6 +751,7 @@ void ABaseAgent::OnFindInteraction(UPrimitiveComponent* OverlappedComponent, AAc
 	{
 		if (auto* Interactor = Cast<ABaseInteractor>(FindInteractActor))
 		{
+			NET_LOG(LogTemp, Warning, TEXT("%hs, 1"), __FUNCTION__);
 			return;
 		}
 	}
@@ -754,11 +760,13 @@ void ABaseAgent::OnFindInteraction(UPrimitiveComponent* OverlappedComponent, AAc
 	{
 		if (CurrentInteractor == Interactor)
 		{
+			NET_LOG(LogTemp, Warning, TEXT("%hs, 2"), __FUNCTION__);
 			return;
 		}
 		// 주인이 없고, 스파이크가 아닐때만 리턴 -> 스파이크는 주인이 있더라도 감지해야함
-		if (Interactor->HasOwnerAgent() && !Cast<ASpike>(Interactor))
+		if (Interactor->HasOwnerAgent())
 		{
+			NET_LOG(LogTemp, Warning, TEXT("%hs, 3"), __FUNCTION__);
 			return;
 		}
 		NET_LOG(LogTemp, Warning, TEXT("FindInteraction: %s"), *Interactor->GetName());
@@ -1291,6 +1299,7 @@ void ABaseAgent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifeti
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 	DOREPLIFETIME(ABaseAgent, VisibilityStateArray);
 	DOREPLIFETIME(ABaseAgent, bIsRun);
+	DOREPLIFETIME(ABaseAgent, MeleeKnife);
 	DOREPLIFETIME(ABaseAgent, MainWeapon);
 	DOREPLIFETIME(ABaseAgent, SubWeapon);
 	DOREPLIFETIME(ABaseAgent, Spike);
