@@ -17,7 +17,11 @@ enum class EMatchAnnouncement : uint8
 {
 	EMA_Won,
 	EMA_Lost,
-	EMA_BuyPhase
+	EMA_BuyPhase,
+	EMA_SpikeActivated_Won,   // 스파이크 폭발로 인한 승리
+	EMA_SpikeActivated_Lost,  // 스파이크 폭발로 인한 패배
+	EMA_SpikeDefused_Won,     // 스파이크 해제로 인한 승리
+	EMA_SpikeDefused_Lost     // 스파이크 해제로 인한 패배
 };
 
 /**
