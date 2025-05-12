@@ -206,6 +206,8 @@ public:
 	UAgentAnimInstance* GetABP_1P() const { return ABP_1P; }
 	UAgentAnimInstance* GetABP_3P() const { return ABP_3P; }
 
+	USkeletalMeshComponent* GetMesh3P() const { return ThirdPersonMesh; }
+
 	UFUNCTION(Server, Reliable)
 	void ServerApplyGE(TSubclassOf<UGameplayEffect> geClass);
 	UFUNCTION(Server, Reliable)
