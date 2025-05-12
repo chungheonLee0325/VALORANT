@@ -562,13 +562,13 @@ void UShopComponent::SpawnWeaponForPlayer(int32 WeaponID)
 		SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 		SpawnParams.Owner = Agent;
 
-		ABaseWeapon* NewWeapon = GetWorld()->SpawnActor<ABaseWeapon>(ABaseWeapon::StaticClass(), SpawnLocation,
+		ABaseWeapon* NewWeapon = GetWorld()->SpawnActor<ABaseWeapon>((*WeaponInfo)->WeaponClass, SpawnLocation,
 		                                                             SpawnRotation, SpawnParams);
 
 		if (NewWeapon)
 		{
 			// 무기 ID 설정
-			NewWeapon->SetWeaponID(WeaponID);
+			//NewWeapon->SetWeaponID(WeaponID);
 			// 무기 카테고리에 따라 장착 방식 결정
 			
 			if (CurrentWeapon)

@@ -8,6 +8,7 @@
 #include "GameplayTagContainer.h"
 #include "ValorantGameType.generated.h"
 
+class ABaseWeapon;
 class ABaseAgent;
 struct FGameplayTag;
 class UGameplayEffect;
@@ -302,6 +303,9 @@ struct FWeaponData : public FTableRowBase
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Data")
 	FString LocalName = "";
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Data")
+	TSubclassOf<ABaseWeapon> WeaponClass = nullptr;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Data")
 	int32 BaseDamage = 1;
