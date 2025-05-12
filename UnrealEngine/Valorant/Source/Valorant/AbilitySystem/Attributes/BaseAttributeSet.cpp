@@ -14,7 +14,7 @@ UBaseAttributeSet::UBaseAttributeSet()
 
 void UBaseAttributeSet::ResetAttributeData()
 {
-	UE_LOG(LogTemp, Warning, TEXT("UBaseAttributeSet::ResetAttributeData"));
+	// UE_LOG(LogTemp, Warning, TEXT("UBaseAttributeSet::ResetAttributeData"));
 	SetHealth(GetMaxHealth());
 }
 

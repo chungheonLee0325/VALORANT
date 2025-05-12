@@ -70,6 +70,8 @@ enum class EWeaponCategory : uint8
 {
 	None UMETA(DisplayName = "None"),
 	
+	// Melee 
+	Melee UMETA(DisplayName = "Melee"),
 	// SubWeapon 
 	Sidearm UMETA(DisplayName = "Sidearm"),
 	// MainWeapon

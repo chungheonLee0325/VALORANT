@@ -30,7 +30,8 @@ public class Valorant : ModuleRules
 			"Json",
 			"MoviePlayer",
 			"Slate", 
-			"SlateCore"
+			"SlateCore",
+			"Niagara"
 		});
 	}
 }

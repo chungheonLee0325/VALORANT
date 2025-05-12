@@ -538,10 +538,8 @@ void AMatchGameMode::RespawnPlayer(AAgentPlayerState* ps, AAgentPlayerController
 			{
 				if (MeleeAsset)
 				{
-					NET_LOG(LogTemp,Warning,TEXT("MeleeAsset"));
 					ABaseWeapon* knife = GetWorld()->SpawnActor<ABaseWeapon>(MeleeAsset);
-					Agent->SetMeleeWeapon(knife);
-					knife->ServerRPC_PickUp(Agent);
+					Agent->ServerRPC_Interact(knife);
 				}
 			}
 		}
