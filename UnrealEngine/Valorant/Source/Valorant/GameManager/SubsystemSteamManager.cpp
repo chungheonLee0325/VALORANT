@@ -80,7 +80,7 @@ void USubsystemSteamManager::CreateSession()
 	LastSessionSettings->NumPublicConnections = 8;	// TODO : Parameterize
 
 	// 세션이 작동중일 때 다른 플레이어가 참가할 수 있는지 여부
-	LastSessionSettings->bAllowJoinInProgress = false;
+	LastSessionSettings->bAllowJoinInProgress = true;
 	
 	// 스팀이 세션을 광고하여 다른 플레이어가 세션을 찾아서 참가할 수 있는지 여부
 	LastSessionSettings->bShouldAdvertise = true;
