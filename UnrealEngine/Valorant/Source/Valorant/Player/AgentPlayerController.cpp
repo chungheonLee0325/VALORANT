@@ -116,7 +116,7 @@ void AAgentPlayerController::InitGAS()
 		return;
 	}
 
-	NET_LOG(LogTemp, Warning, TEXT("이닛 가스"));
+	// NET_LOG(LogTemp, Warning, TEXT("이닛 가스"));
 
 	if (AAgentPlayerState* ps = GetPlayerState<AAgentPlayerState>())
 	{
