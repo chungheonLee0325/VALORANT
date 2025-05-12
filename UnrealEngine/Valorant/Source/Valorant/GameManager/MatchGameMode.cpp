@@ -883,7 +883,7 @@ void AMatchGameMode::SpawnSpikeForAttackers()
 				FVector SpawnLocation = Agent->GetActorLocation() + Agent->GetActorForwardVector() * 100.0f;
 				SpawnLocation.Z -= 80.0f; // 바닥에 가깝게
 
-				Spike = GetWorld()->SpawnActor<ASpike>(ASpike::StaticClass(), SpawnLocation,
+				Spike = GetWorld()->SpawnActor<ASpike>(SpikeClass, SpawnLocation,
 				                                               FRotator::ZeroRotator, SpawnParams);
 				// 공격팀 중 한 명에게만 스파이크 스폰
 
