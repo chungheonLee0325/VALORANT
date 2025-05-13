@@ -15,7 +15,6 @@
 #include "GameManager/SubsystemSteamManager.h"
 #include "GameManager/ValorantGameInstance.h"
 #include "Player/AgentPlayerController.h"
-#include "Player/MatchPlayerState.h"
 
 void UMatchMapSelectAgentUI::NativeConstruct()
 {
@@ -55,6 +54,10 @@ void UMatchMapSelectAgentUI::OnClickedAgentSelectButton(int AgentId)
 {
 	NET_LOG(LogTemp, Warning, TEXT("%hs Called, AgentId: %d"), __FUNCTION__, AgentId);
 	CurrentSelectedAgentID = AgentId;
+	auto NewStyle = ButtonLockIn->GetStyle();
+	NewStyle.Normal.TintColor = FSlateColor(FLinearColor(0.556863f, 0.050980f, 0.090196f, 1.0f));
+	ButtonLockIn->SetStyle(NewStyle);
+	ButtonLockIn->SetIsEnabled(true);
 	OnClickAgentSelectButtonDelegate.Broadcast(AgentId);
 }
 
@@ -186,6 +189,11 @@ void UMatchMapSelectAgentUI::OnLockIn(const FString& DisplayName, const int Agen
 	if (false == TeamSelectAgentBoxMap.Contains(DisplayName))
 	{
 		NET_LOG(LogTemp, Warning, TEXT("%hs Called, WhoAreYou?? DisplayName: %s"), __FUNCTION__, *DisplayName);
+		return;
+	}
+	if (0 == AgentId)
+	{
+		NET_LOG(LogTemp, Warning, TEXT("%hs Called, Agent is not selected"), __FUNCTION__);
 		return;
 	}
 	TeamSelectAgentBoxMap[DisplayName]->LockIn(AgentId);
