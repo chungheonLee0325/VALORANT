@@ -9,6 +9,7 @@
 #include "Components/GridSlot.h"
 #include "Components/Image.h"
 #include "Components/TextBlock.h"
+#include "Components/VerticalBox.h"
 #include "CustomWidget/AgentSelectButton.h"
 #include "CustomWidget/TeamSelectAgentBox.h"
 #include "GameManager/MatchGameState.h"
@@ -58,6 +59,7 @@ void UMatchMapSelectAgentUI::OnClickedAgentSelectButton(int AgentId)
 	NewStyle.Normal.TintColor = FSlateColor(FLinearColor(0.556863f, 0.050980f, 0.090196f, 1.0f));
 	ButtonLockIn->SetStyle(NewStyle);
 	ButtonLockIn->SetIsEnabled(true);
+	VerticalBoxRight->SetVisibility(ESlateVisibility::Visible);
 	OnClickAgentSelectButtonDelegate.Broadcast(AgentId);
 }
 
