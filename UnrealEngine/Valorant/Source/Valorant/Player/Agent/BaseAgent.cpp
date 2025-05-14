@@ -195,9 +195,7 @@ void ABaseAgent::BeginPlay()
 		InteractionCapsule->OnComponentBeginOverlap.AddDynamic(this, &ABaseAgent::OnFindInteraction);
 		InteractionCapsule->OnComponentEndOverlap.AddDynamic(this, &ABaseAgent::OnInteractionCapsuleEndOverlap);
 	}
-
-	//TODO: 기본 총, 칼 스폰해서 붙여주기
-
+	
 
 	//ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ
 	//             CYT             ♣
@@ -208,6 +206,12 @@ void ABaseAgent::BeginPlay()
     {
         // 자동 시야 체크 설정 (시야 체크 함수 호출하여 초기 상태 설정)
         PerformVisibilityChecks();
+    	
+    	AMatchGameMode* gm = GetWorld()->GetAuthGameMode<AMatchGameMode>();
+    	if (gm)
+    	{
+    		gm->SpawnDefaultWeapon(this);
+		}
     }
 }
 
@@ -366,7 +370,7 @@ void ABaseAgent::StartFire()
 {
 	if (CurrentInteractor == nullptr)
 	{
-		// NET_LOG(LogTemp, Warning, TEXT("현재 인터랙터 없음"));
+		NET_LOG(LogTemp, Warning, TEXT("현재 인터랙터 없음"));
 		return;
 	}
 

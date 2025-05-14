@@ -183,6 +183,9 @@ public:
 	
 	// 공격팀에게 스파이크 스폰
 	void SpawnSpikeForAttackers();
+	
+	void SpawnDefaultWeapon();
+	void SpawnDefaultWeapon(ABaseAgent* agent);
 
 	UFUNCTION()
 	void DestroySpikeInWorld();
