@@ -500,15 +500,13 @@ void AMatchGameMode::RespawnAll()
 		MatchPlayer.bIsDead = false;
 
 		FTransform SpawnTransform = FTransform::Identity;
-		if (MatchPlayer.bIsBlueTeam)
+		if (IsAttacker(MatchPlayer.bIsBlueTeam))
 		{
-			if (IsShifted()) { SpawnTransform = AttackersStartPoint->GetTransform(); }
-			else { SpawnTransform = DefendersStartPoint->GetTransform(); }
+			SpawnTransform = AttackersStartPoint->GetTransform();
 		}
 		else
 		{
-			if (IsShifted()) { SpawnTransform = DefendersStartPoint->GetTransform(); }
-			else { SpawnTransform = AttackersStartPoint->GetTransform(); }
+			SpawnTransform = DefendersStartPoint->GetTransform();
 		}
 
 		auto* agentPS = MatchPlayer.Controller->GetPlayerState<AAgentPlayerState>();
