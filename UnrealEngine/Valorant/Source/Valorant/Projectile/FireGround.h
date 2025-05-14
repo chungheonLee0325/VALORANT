@@ -14,6 +14,12 @@ class VALORANT_API AFireGround : public AActor
 public:
 	// Sets default values for this actor's properties
 	AFireGround();
+
+private:
+	const float Duration = 4;
+	const float DamageRate = 0.0167f;
+	
+public:
 	UPROPERTY(BlueprintReadWrite, EditAnywhere)
 	TObjectPtr<UStaticMeshComponent> GroundMesh = nullptr;
 

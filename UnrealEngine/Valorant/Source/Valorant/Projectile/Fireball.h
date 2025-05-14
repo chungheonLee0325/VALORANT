@@ -15,6 +15,19 @@ class VALORANT_API AFireball : public ABaseProjectile
 
 public:
 	AFireball();
+
+private:
+	// Ref: https://valorant.fandom.com/wiki/Deployment_types#Projectile
+	const float Speed = 1800;
+	const float Gravity = 0.3f;
+	const float Bounciness = 0.2f;
+	const float Friction = 0.8f;
+	const float EquipTime = 0.8f;
+	const float UnequipTime = 0.7f;
+	const float MaximumAirTime = 1.5f;
+	FTimerHandle AirTimeHandle;
+	
+public:
 	
 	UPROPERTY(EditAnywhere)
 	TSubclassOf<AFireGround> FireGroundClass = nullptr;
@@ -23,4 +36,5 @@ protected:
 	virtual void BeginPlay() override;
 	virtual void Tick(float DeltaTime) override;
 	virtual void OnProjectileBounced(const FHitResult& ImpactResult, const FVector& ImpactVelocity) override;
+	void VerticalFall();
 };
