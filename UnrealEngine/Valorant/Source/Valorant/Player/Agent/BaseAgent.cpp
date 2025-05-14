@@ -415,6 +415,8 @@ void ABaseAgent::Interact()
 		if (ABaseInteractor* Interactor = Cast<ABaseInteractor>(FindInteractActor))
 		{
 			ServerRPC_Interact(Interactor);
+			
+			Interactor->OnDetect(false);
 			FindInteractActor = nullptr;
 		}
 	}
@@ -702,7 +704,7 @@ void ABaseAgent::EquipInteractor(ABaseInteractor* interactor)
 		ABP_1P->InteractorState = EInteractorType::None;
 		ABP_3P->InteractorState = EInteractorType::None;
 
-		// NET_LOG(LogTemp, Warning, TEXT("빈손이네요"));
+		NET_LOG(LogTemp, Warning, TEXT("빈손이네요"));
 		return;
 	}
 	CurrentInteractorState = CurrentInteractor->GetInteractorType();
@@ -738,18 +740,16 @@ void ABaseAgent::OnFindInteraction(UPrimitiveComponent* OverlappedComponent, AAc
                                    UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep,
                                    const FHitResult& SweepResult)
 {
-	const ECollisionChannel ObjType = OtherComp->GetCollisionObjectType();
-	if (ObjType != ECC_GameTraceChannel1)
-	{
-		return;
-	}
-
 	// 이미 바라보고 있는 총이 있으면 리턴
 	if (FindInteractActor)
 	{
-		if (auto* Interactor = Cast<ABaseInteractor>(FindInteractActor))
+		if (FindInteractActor->HasOwnerAgent())
 		{
-			NET_LOG(LogTemp, Warning, TEXT("%hs, 1"), __FUNCTION__);
+			FindInteractActor = nullptr;
+		}
+		else
+		{
+			NET_LOG(LogTemp, Warning, TEXT("%hs Called, 이미 감지된 Interactor가 있음"), __FUNCTION__);
 			return;
 		}
 	}
@@ -758,16 +758,38 @@ void ABaseAgent::OnFindInteraction(UPrimitiveComponent* OverlappedComponent, AAc
 	{
 		if (CurrentInteractor == Interactor)
 		{
-			NET_LOG(LogTemp, Warning, TEXT("%hs, 2"), __FUNCTION__);
+			NET_LOG(LogTemp, Error, TEXT("%hs Called, 현재 들고 있는 Interactor와 동일함"), __FUNCTION__);
 			return;
 		}
-		// 주인이 없고, 스파이크가 아닐때만 리턴 -> 스파이크는 주인이 있더라도 감지해야함
-		if (Interactor->HasOwnerAgent() && !Cast<ASpike>(Interactor))
+		if (Interactor->HasOwnerAgent())
 		{
-			NET_LOG(LogTemp, Warning, TEXT("%hs, 3"), __FUNCTION__);
+			NET_LOG(LogTemp, Warning, TEXT("%hs Called, 이미 주인이 있는 Interactor"), __FUNCTION__);
 			return;
+		}
+		if (const auto* DetectedSpike = Cast<ASpike>(Interactor))
+		{
+			if (const auto* PS = GetPlayerState<AMatchPlayerState>())
+			{
+				if (PS->bIsAttacker)
+				{
+					// 공격팀인데 스파이크가 이미 설치된 상태라면 감지 X
+					if (DetectedSpike->GetSpikeState() == ESpikeState::Planted)
+					{
+						return;
+					}
+				}
+				else
+				{
+					// 수비팀인데 스파이크가 설치된 상태가 아니라면 감지 X
+					if (DetectedSpike->GetSpikeState() != ESpikeState::Planted)
+					{
+						return;
+					}
+				}
+			}
 		}
 		
+		NET_LOG(LogTemp, Warning, TEXT("%hs Called, Interactor Name is %s"), __FUNCTION__, *Interactor->GetName());
 		FindInteractActor = Interactor;
 		FindInteractActor->OnDetect(true);
 	}
@@ -1292,7 +1314,6 @@ void ABaseAgent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifeti
 	DOREPLIFETIME(ABaseAgent, MainWeapon);
 	DOREPLIFETIME(ABaseAgent, SubWeapon);
 	DOREPLIFETIME(ABaseAgent, Spike);
-	DOREPLIFETIME(ABaseAgent, FindInteractActor);
 	DOREPLIFETIME(ABaseAgent, CurrentInteractor);
 	DOREPLIFETIME(ABaseAgent, CurrentInteractorState);
 	DOREPLIFETIME(ABaseAgent, PoseIdx);

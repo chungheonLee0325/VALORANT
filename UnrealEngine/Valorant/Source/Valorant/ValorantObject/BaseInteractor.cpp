@@ -87,7 +87,7 @@ void ABaseInteractor::ServerOnly_OnSphereBeginOverlap(UPrimitiveComponent* Overl
 	}
 
 	TArray<USceneComponent*> ChildrenArray;
-	UE_LOG(LogTemp, Warning, TEXT("%hs Called"), __FUNCTION__);
+	// UE_LOG(LogTemp, Warning, TEXT("%hs Called"), __FUNCTION__);
 	Agent->GetMesh()->GetChildrenComponents(true, ChildrenArray);
 		
 	// 자동으로 주워지는지 여부는 각자 CanAutoPickUp을 Override 해서 판단하도록 한다
@@ -101,7 +101,7 @@ void ABaseInteractor::ServerOnly_OnSphereBeginOverlap(UPrimitiveComponent* Overl
 
 void ABaseInteractor::OnDetect(bool bIsDetect)
 {
-	UE_LOG(LogTemp, Warning, TEXT("%hs Called"), __FUNCTION__);
+	// UE_LOG(LogTemp, Warning, TEXT("%hs Called"), __FUNCTION__);
 	DetectWidgetComponent->SetVisibility(bIsDetect);
 	if (bIsDetect)
 	{
@@ -156,6 +156,7 @@ void ABaseInteractor::ServerRPC_PickUp_Implementation(ABaseAgent* Agent)
 	
 	OwnerAgent = Agent;
 	SetOwner(OwnerAgent);
+	Sphere->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	Multicast_PickUp(OwnerAgent);
 }
 
@@ -200,6 +201,7 @@ void ABaseInteractor::ServerRPC_Drop_Implementation()
 	
 	OwnerAgent = nullptr;
 	SetOwner(nullptr);
+	Sphere->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
 }
 
 void ABaseInteractor::ServerRPC_Interact_Implementation(ABaseAgent* InteractAgent)

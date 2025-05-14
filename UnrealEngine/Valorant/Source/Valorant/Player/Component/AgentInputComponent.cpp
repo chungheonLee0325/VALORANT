@@ -50,7 +50,7 @@ void UAgentInputComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 
 void UAgentInputComponent::BindInput(UInputComponent* InputComponent)
 {
-	NET_LOG(LogTemp, Warning, TEXT("%hs Called"), __FUNCTION__);
+	// NET_LOG(LogTemp, Warning, TEXT("%hs Called"), __FUNCTION__);
 	if (auto* eic = Cast<UEnhancedInputComponent>(InputComponent))
 	{
 		if (LeftMouseStartAction && LeftMouseEndAction)
