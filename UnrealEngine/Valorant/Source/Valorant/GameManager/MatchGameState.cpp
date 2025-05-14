@@ -200,3 +200,9 @@ void AMatchGameState::MulticastRPC_OnSpikeDefused_Implementation(AMatchPlayerCon
 	// 모든 클라이언트에게 스파이크 해제 이벤트 브로드캐스트
 	OnSpikeDefused.Broadcast(Defuser);
 }
+
+void AMatchGameState::MulticastRPC_OnShift_Implementation()
+{
+	NET_LOG(LogTemp, Warning, TEXT("%hs Called"), __FUNCTION__);
+	OnShift.Broadcast();
+}

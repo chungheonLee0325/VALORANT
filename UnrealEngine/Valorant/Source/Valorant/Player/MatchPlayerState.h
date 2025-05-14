@@ -19,7 +19,13 @@ public:
 	FString DisplayName = "None";
 	UPROPERTY(Replicated)
 	bool bIsBlueTeam = true;
+	UPROPERTY(Replicated)
+	bool bIsAttacker = false;
 
 protected:
 	virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;
+	virtual void BeginPlay() override;
+
+	UFUNCTION()
+	void OnShift();
 };

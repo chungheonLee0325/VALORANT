@@ -766,8 +766,29 @@ void ABaseAgent::OnFindInteraction(UPrimitiveComponent* OverlappedComponent, AAc
 			NET_LOG(LogTemp, Warning, TEXT("%hs Called, 이미 주인이 있는 Interactor"), __FUNCTION__);
 			return;
 		}
-		// TODO: 수비팀인데 스파이크가 설치된 상태가 아니라면 감지 X
-		// TODO: 공격팀인데 스파이크가 이미 설치된 상태라면 감지 X
+		if (const auto* DetectedSpike = Cast<ASpike>(Interactor))
+		{
+			if (const auto* PS = GetPlayerState<AMatchPlayerState>())
+			{
+				if (PS->bIsAttacker)
+				{
+					// 공격팀인데 스파이크가 이미 설치된 상태라면 감지 X
+					if (DetectedSpike->GetSpikeState() == ESpikeState::Planted)
+					{
+						return;
+					}
+				}
+				else
+				{
+					// 수비팀인데 스파이크가 설치된 상태가 아니라면 감지 X
+					if (DetectedSpike->GetSpikeState() != ESpikeState::Planted)
+					{
+						return;
+					}
+				}
+			}
+		}
+		
 		NET_LOG(LogTemp, Warning, TEXT("%hs Called, Interactor Name is %s"), __FUNCTION__, *Interactor->GetName());
 		FindInteractActor = Interactor;
 		FindInteractActor->OnDetect(true);
