@@ -190,6 +190,11 @@ void AAgentPlayerController::HandleEffectSpeedChanged(float NewSpeed)
 	OnEffectSpeedChanged_PC.Broadcast(NewSpeed);
 }
 
+void AAgentPlayerController::NotifyChangedAmmo(const bool bDisplayWidget, const int MagazineAmmo, const int SpareAmmo) const
+{
+	OnChangedAmmo.Broadcast(bDisplayWidget, MagazineAmmo, SpareAmmo);
+}
+
 void AAgentPlayerController::RequestPurchaseAbility(int AbilityID)
 {
 	if (AbilityID != 0)

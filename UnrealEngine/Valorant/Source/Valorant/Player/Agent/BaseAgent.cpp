@@ -399,7 +399,7 @@ void ABaseAgent::Reload()
 
 	if (ABaseWeapon* weapon = Cast<ABaseWeapon>(CurrentInteractor))
 	{
-		weapon->StartReload();
+		weapon->ServerRPC_StartReload();
 		ABP_3P->Montage_Stop(0.1f);
 		if (AM_Reload)
 		{

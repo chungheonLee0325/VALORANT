@@ -46,6 +46,8 @@ class VALORANT_API ABaseWeapon : public ABaseInteractor
 	UInputAction* DropAction = nullptr;
 
 	bool bIsFiring = false;
+	UPROPERTY(Replicated)
+	bool bIsReloading = false;
 	int RecoilLevel = 0;
 	float TotalRecoilOffsetPitch = 0.0f;
 	float TotalRecoilOffsetYaw = 0.0f;
@@ -60,10 +62,10 @@ class VALORANT_API ABaseWeapon : public ABaseInteractor
 
 public:
 	// 탄창 내 남은 탄약
-	UPROPERTY(BlueprintReadOnly)
+	UPROPERTY(ReplicatedUsing=OnRep_Ammo, BlueprintReadOnly)
 	int MagazineAmmo = 0;
 	// 여분 탄약 (장전되어있는 탄창 내 탄약은 제외)
-	UPROPERTY(BlueprintReadOnly)
+	UPROPERTY(ReplicatedUsing=OnRep_Ammo, BlueprintReadOnly)
 	int SpareAmmo = 0;
 	
 	// 무기가 이전에 사용된 적이 있는지 (발사, 라운드 경험 등)
@@ -122,6 +124,9 @@ protected:
 
 	UFUNCTION(BlueprintCallable, Category="Weapon")
 	void StopReload();
+
+	UFUNCTION()
+	void OnRep_Ammo() const;
 	
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
@@ -134,8 +139,8 @@ public:
 
 	void RecoverRecoilLevel();
 	
-	UFUNCTION(BlueprintCallable, Category="Weapon")
-	void StartReload();
+	UFUNCTION(Server, Reliable, BlueprintCallable, Category="Weapon")
+	void ServerRPC_StartReload();
 	
 	UFUNCTION(BlueprintCallable)
 	EWeaponCategory GetWeaponCategory() const { return WeaponData->WeaponCategory; }
