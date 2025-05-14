@@ -114,13 +114,6 @@ void ABaseWeapon::StartFire()
 	NET_LOG(LogTemp, Warning, TEXT("%hs Called, RecoilLevel: %d"), __FUNCTION__, RecoilLevel);
 
 	GetWorld()->GetTimerManager().SetTimer(AutoFireHandle, this, &ABaseWeapon::Fire, 0.01f, true, 0);
-
-	if (AM_Fire)
-	{
-		OwnerAgent->GetABP_1P()->Montage_Play(AM_Fire);
-		OwnerAgent->GetABP_3P()->Montage_Play(AM_Fire);
-	}
-	
 }
 
 void ABaseWeapon::Fire()
@@ -270,7 +263,9 @@ void ABaseWeapon::ServerRPC_Fire_Implementation(const FVector& Location, const F
 		}
 		DrawDebugPoint(WorldContext, OutHit.ImpactPoint, 5, FColor::Green, false, 30);
 	}
+	
 	MulticastRPC_PlayFireSound();
+	MulticastRPC_PlayFireAnimation();
 }
 
 void ABaseWeapon::EndFire()
@@ -294,19 +289,39 @@ void ABaseWeapon::StartReload()
 			UE_LOG(LogTemp, Warning, TEXT("StartReload %p"), this);
 			bIsFiring = false;
 			World->GetTimerManager().SetTimer(ReloadHandle, this, &ABaseWeapon::Reload, 3, false, WeaponData->ReloadTime);
-
-			if (AM_Reload)
-			{
-				OwnerAgent->GetABP_1P()->Montage_Play(AM_Reload);
-				OwnerAgent->GetABP_3P()->Montage_Play(AM_Reload);
-			}
 		}
 	}
+	ServerRPC_PlayReloadAnim();
 }
 
 void ABaseWeapon::MulticastRPC_PlayFireSound_Implementation()
 {
 	PlayFireSound();
+}
+
+void ABaseWeapon::MulticastRPC_PlayFireAnimation_Implementation()
+{
+	if (AM_Fire == nullptr)
+	{
+		UE_LOG(LogTemp, Error, TEXT("총기에 격발 애니메이션이 없어요."));
+		return;
+	}
+	if (OwnerAgent->IsLocallyControlled())
+	{
+		if (OwnerAgent->GetABP_1P()->Montage_IsPlaying(AM_Fire))
+		{
+			OwnerAgent->GetABP_1P()->Montage_Stop(0.05f, AM_Fire);
+		}
+		OwnerAgent->GetABP_1P()->Montage_Play(AM_Fire, 1.0f);
+	}
+	else
+	{
+		if (OwnerAgent->GetABP_3P()->Montage_IsPlaying(AM_Fire))
+		{
+			OwnerAgent->GetABP_3P()->Montage_Stop(0.05f, AM_Fire);
+		}
+		OwnerAgent->GetABP_3P()->Montage_Play(AM_Fire, 1.0f);
+	}
 }
 
 void ABaseWeapon::Reload()
@@ -338,6 +353,36 @@ void ABaseWeapon::StopReload()
 	if (const auto* World = GetWorld())
 	{
 		World->GetTimerManager().ClearTimer(ReloadHandle);
+	}
+}
+
+void ABaseWeapon::ServerRPC_PlayReloadAnim_Implementation()
+{
+	MulticastRPC_PlayReloadAnim();
+}
+
+void ABaseWeapon::MulticastRPC_PlayReloadAnim_Implementation()
+{
+	if (AM_Reload == nullptr)
+	{
+		UE_LOG(LogTemp, Error, TEXT("총기에 장전 애니메이션이 없어요."));
+		return;
+	}
+	if (OwnerAgent->IsLocallyControlled())
+	{
+		if (OwnerAgent->GetABP_1P()->Montage_IsPlaying(AM_Reload))
+		{
+			OwnerAgent->GetABP_1P()->Montage_Stop(0.05f, AM_Reload);
+		}
+		OwnerAgent->GetABP_1P()->Montage_Play(AM_Reload, 1.0f);
+	}
+	else
+	{
+		if (OwnerAgent->GetABP_3P()->Montage_IsPlaying(AM_Reload))
+		{
+			OwnerAgent->GetABP_3P()->Montage_Stop(0.05f, AM_Reload);
+		}
+		OwnerAgent->GetABP_3P()->Montage_Play(AM_Reload, 1.0f);
 	}
 }
 
