@@ -46,11 +46,14 @@ class VALORANT_API ABaseWeapon : public ABaseInteractor
 	UInputAction* DropAction = nullptr;
 
 	bool bIsFiring = false;
+	UPROPERTY(Replicated)
+	bool bIsReloading = false;
 	int RecoilLevel = 0;
 	float TotalRecoilOffsetPitch = 0.0f;
 	float TotalRecoilOffsetYaw = 0.0f;
 	FTimerHandle AutoFireHandle;
 	FTimerHandle ReloadHandle;
+	FTimerHandle RecoverRecoilLevelHandle;
 
 	UPROPERTY()
 	UAnimMontage* AM_Fire;
@@ -59,10 +62,10 @@ class VALORANT_API ABaseWeapon : public ABaseInteractor
 
 public:
 	// 탄창 내 남은 탄약
-	UPROPERTY(BlueprintReadOnly)
+	UPROPERTY(ReplicatedUsing=OnRep_Ammo, BlueprintReadOnly)
 	int MagazineAmmo = 0;
 	// 여분 탄약 (장전되어있는 탄창 내 탄약은 제외)
-	UPROPERTY(BlueprintReadOnly)
+	UPROPERTY(ReplicatedUsing=OnRep_Ammo, BlueprintReadOnly)
 	int SpareAmmo = 0;
 	
 	// 무기가 이전에 사용된 적이 있는지 (발사, 라운드 경험 등)
@@ -101,31 +104,43 @@ protected:
 	
 	UFUNCTION(BlueprintCallable, Category="Weapon")
 	void Fire();
-
+	FVector GetSpreadDirection(const FVector& Direction);
 	UFUNCTION(Server, Reliable)
 	void ServerRPC_Fire(const FVector& Location, const FVector& Direction);
 	UFUNCTION(NetMulticast, Reliable)
 	void MulticastRPC_PlayFireSound();
+	UFUNCTION(NetMulticast, Reliable)
+	void MulticastRPC_PlayFireAnimation();
 	UFUNCTION(BlueprintImplementableEvent)
 	void PlayFireSound();
 	
 	UFUNCTION(BlueprintCallable, Category="Weapon")
 	void Reload();
+	
+	UFUNCTION(Server, Reliable)
+	void ServerRPC_PlayReloadAnim();
+	UFUNCTION(NetMulticast, Reliable)
+	void MulticastRPC_PlayReloadAnim();
 
 	UFUNCTION(BlueprintCallable, Category="Weapon")
 	void StopReload();
+
+	UFUNCTION()
+	void OnRep_Ammo() const;
 	
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 public:
 	UFUNCTION(BlueprintCallable, Category="Weapon")
 	void StartFire();
-
-	UFUNCTION(BlueprintCallable, Category="Weapon")
-	void EndFire();
 	
 	UFUNCTION(BlueprintCallable, Category="Weapon")
-	void StartReload();
+	void EndFire();
+
+	void RecoverRecoilLevel();
+	
+	UFUNCTION(Server, Reliable, BlueprintCallable, Category="Weapon")
+	void ServerRPC_StartReload();
 	
 	UFUNCTION(BlueprintCallable)
 	EWeaponCategory GetWeaponCategory() const { return WeaponData->WeaponCategory; }

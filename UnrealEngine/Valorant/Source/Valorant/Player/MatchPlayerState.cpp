@@ -3,6 +3,7 @@
 
 #include "MatchPlayerState.h"
 
+#include "GameManager/MatchGameState.h"
 #include "Net/UnrealNetwork.h"
 
 void AMatchPlayerState::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const
@@ -10,4 +11,19 @@ void AMatchPlayerState::GetLifetimeReplicatedProps(TArray<class FLifetimePropert
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 	DOREPLIFETIME(AMatchPlayerState, DisplayName);
 	DOREPLIFETIME(AMatchPlayerState, bIsBlueTeam);
+	DOREPLIFETIME(AMatchPlayerState, bIsAttacker);
+}
+
+void AMatchPlayerState::BeginPlay()
+{
+	Super::BeginPlay();
+	if (auto* GameState = GetWorld()->GetGameState<AMatchGameState>())
+	{
+		GameState->OnShift.AddDynamic(this, &AMatchPlayerState::OnShift);
+	}
+}
+
+void AMatchPlayerState::OnShift()
+{
+	bIsAttacker = !bIsAttacker;
 }

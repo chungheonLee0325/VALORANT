@@ -16,6 +16,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnRoundEnd, bool, bBlueWin, cons
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnShopClosed);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnSpikePlanted, AMatchPlayerController*, Planter);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnSpikeDefused, AMatchPlayerController*, Defuser);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnShift);
 
 /**
  * 
@@ -50,6 +51,7 @@ public:
 	FOnSpikePlanted OnSpikePlanted;
 	UPROPERTY(BlueprintAssignable, Category="Spike")
 	FOnSpikeDefused OnSpikeDefused;
+	FOnShift OnShift;
 	
 protected:
 	virtual void BeginPlay() override;
@@ -107,4 +109,7 @@ public:
 	// 스파이크 해제 이벤트 브로드캐스트
 	UFUNCTION(NetMulticast, Reliable, Category="Spike")
 	void MulticastRPC_OnSpikeDefused(AMatchPlayerController* Defuser);
+
+	UFUNCTION(NetMultiCast, Reliable)
+	void MulticastRPC_OnShift();
 };

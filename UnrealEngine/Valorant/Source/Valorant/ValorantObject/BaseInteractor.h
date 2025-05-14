@@ -56,8 +56,12 @@ public:
 	virtual bool ServerOnly_CanDrop() const;
 	// Agent가 가까이 가서 바라보았을 때 상호작용 가능한지 여부
 	virtual bool ServerOnly_CanInteract() const;
+	
 	UFUNCTION(Server, Reliable)
 	virtual void ServerRPC_PickUp(ABaseAgent* Agent);
+	UFUNCTION(NetMulticast, Reliable)
+	virtual void Multicast_PickUp(ABaseAgent* Agent);
+	
 	UFUNCTION(Server, Reliable)
 	virtual void ServerRPC_Drop();
 	UFUNCTION(Server, Reliable)
@@ -69,5 +73,5 @@ public:
 	UFUNCTION(Server, Reliable)
 	void ServerRPC_SetActive(bool bActive);
 	UFUNCTION(NetMulticast, Reliable)
-	void Net_SetActive(bool bActive);
+	void Multicast_SetActive(bool bActive);
 };

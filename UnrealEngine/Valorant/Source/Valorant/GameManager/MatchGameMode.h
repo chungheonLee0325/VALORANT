@@ -172,6 +172,7 @@ public:
 	int TeamBlueRemainingAgentNum = 0;
 	int TeamRedRemainingAgentNum = 0;
 	virtual AActor* ChoosePlayerStart_Implementation(AController* Player) override;
+	void ClearObjects();
 	void RespawnAll();
 	void RespawnPlayer(AAgentPlayerState* ps, AAgentPlayerController* pc, FTransform spawnTransform);
 	void ResetAgentAtrributeData(AAgentPlayerState* AgentPS);
