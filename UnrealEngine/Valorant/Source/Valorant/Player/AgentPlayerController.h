@@ -45,14 +45,6 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "Shop")
 	FOnServerPurchaseResult OnServerPurchaseResult;
 
-	// 클라이언트에서 호출 -> 서버로 스킬 구매 요청
-	UFUNCTION(BlueprintCallable, Category = "Shop")
-	void RequestPurchaseAbility(int AbilityID);
-
-	// 서버에서 실행될 실제 구매 요청 함수 (위 함수 내부에서 호출)
-	UFUNCTION(Server, Reliable, WithValidation)
-	void Server_RequestPurchaseAbility(int AbilityID);
-
 	UFUNCTION(BlueprintCallable, Category = "UI")
 	void RequestShopUI();
 
@@ -71,6 +63,14 @@ public:
 	// 서버에서 실행될 무기 구매 함수
 	UFUNCTION(Server, Reliable, WithValidation)
 	void Server_RequestPurchaseWeapon(int32 WeaponID);
+
+	// 클라이언트에서 호출 -> 서버로 스킬 구매 요청
+	UFUNCTION(BlueprintCallable, Category = "Shop")
+	void RequestPurchaseAbility(int AbilityID);
+
+	// 서버에서 실행될 실제 구매 요청 함수 (위 함수 내부에서 호출)
+	UFUNCTION(Server, Reliable, WithValidation)
+	void Server_RequestPurchaseAbility(int AbilityID);
 
 	// 방어구 구매 요청
 	UFUNCTION(BlueprintCallable, Category = "Shop")
@@ -106,10 +106,6 @@ public:
 	// 상점 가용성 변경 이벤트 핸들러
 	UFUNCTION()
 	void OnShopAvailabilityChanged();
-
-	// 서버에 무기 구매 요청
-	UFUNCTION(Server, Reliable)
-	void ServerRequestWeaponPurchase(int32 WeaponID);
 
 	UFUNCTION(Client, Reliable)
 	void Client_ReceivePurchaseResult(bool bSuccess, int32 ItemID, EShopItemType ItemType, const FString& FailureReason);

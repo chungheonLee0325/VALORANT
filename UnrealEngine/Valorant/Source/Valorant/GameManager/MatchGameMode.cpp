@@ -186,6 +186,7 @@ void AMatchGameMode::OnLockIn(AMatchPlayerController* Player, int AgentId)
 	if (auto* agentPS = Player->GetPlayerState<AAgentPlayerState>())
 	{
 		agentPS->SetAgentID(AgentId);
+		agentPS->SyncsAgentID(AgentId);
 	}
 
 	if (++LockedInPlayerNum >= RequiredPlayerCount)

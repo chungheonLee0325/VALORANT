@@ -49,7 +49,120 @@ int32 AAgentPlayerState::ReduceAbilityStack(int32 AbilityID)
 	{
 		return 0;
 	}
-	return AbilityStacks[AbilityID]--;
+
+	--(*Stack);
+	OnAbilityStackChanged.Broadcast(AbilityID, *Stack);
+
+	// 스택 변경 시 클라이언트들에게 동기화
+	if (HasAuthority())
+	{
+		SyncAbilityStackToClients(AbilityID, *Stack);
+	}
+
+	return *Stack;
+}
+
+int32 AAgentPlayerState::AddAbilityStack(int32 AbilityID, int32 StacksToAdd)
+{
+	// 어빌리티 ID가 유효한지 확인
+	if (AbilityID <= 0)
+	{
+		UE_LOG(LogTemp, Error, TEXT("유효하지 않은 어빌리티 ID: %d"), AbilityID);
+		return 0;
+	}
+
+	// 최대 스택 제한 가져오기
+	int32 MaxStack = GetMaxAbilityStack(AbilityID);
+
+	// 스택 초기화 또는 증가
+	int32* CurrentStack = AbilityStacks.Find(AbilityID);
+	if (CurrentStack == nullptr)
+	{
+		// 새 항목 추가
+		int32 NewStack = FMath::Min(StacksToAdd, MaxStack);
+		AbilityStacks.Add(AbilityID, NewStack);
+		OnAbilityStackChanged.Broadcast(AbilityID, NewStack);
+
+		// 스택 변경 시 클라이언트들에게 동기화
+		if (HasAuthority())
+		{
+			SyncAbilityStackToClients(AbilityID, NewStack);
+		}
+
+		return NewStack;
+	}
+	else
+	{
+		// 기존 항목 업데이트
+		*CurrentStack = FMath::Min(*CurrentStack + StacksToAdd, MaxStack);
+		OnAbilityStackChanged.Broadcast(AbilityID, *CurrentStack);
+
+		// 스택 변경 시 클라이언트들에게 동기화
+		if (HasAuthority())
+		{
+			SyncAbilityStackToClients(AbilityID, *CurrentStack);
+		}
+
+		return *CurrentStack;
+	}
+}
+
+int32 AAgentPlayerState::SetAbilityStack(int32 AbilityID, int32 NewStack)
+{
+	// 어빌리티 ID가 유효한지 확인
+	if (AbilityID <= 0)
+	{
+		UE_LOG(LogTemp, Error, TEXT("유효하지 않은 어빌리티 ID: %d"), AbilityID);
+		return 0;
+	}
+
+	// 최대 스택 제한 가져오기
+	int32 MaxStack = GetMaxAbilityStack(AbilityID);
+
+	// 유효한 범위로 값 제한
+	int32 ClampedStack = FMath::Clamp(NewStack, 0, MaxStack);
+
+	// 스택 설정
+	AbilityStacks.Add(AbilityID, ClampedStack);
+	OnAbilityStackChanged.Broadcast(AbilityID, ClampedStack);
+
+	// 스택 변경 시 클라이언트들에게 동기화
+	if (HasAuthority())
+	{
+		SyncAbilityStackToClients(AbilityID, ClampedStack);
+	}
+
+	return ClampedStack;
+}
+
+bool AAgentPlayerState::HasAbilityStacks(int32 AbilityID) const
+{
+	return GetAbilityStack(AbilityID) > 0;
+}
+
+int32 AAgentPlayerState::GetMaxAbilityStack(int32 AbilityID) const
+{
+	// 기본 최대값 설정
+	const int32 DefaultMaxStack = 2;
+
+	// 게임 인스턴스가 없으면 기본값 반환
+	if (!m_GameInstance)
+	{
+		return DefaultMaxStack;
+	}
+
+	// 어빌리티 데이터 가져오기
+	FAbilityData* AbilityData = m_GameInstance->GetAbilityData(AbilityID);
+	if (!AbilityData)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("어빌리티 ID %d에 대한 데이터를 찾을 수 없습니다."), AbilityID);
+		return DefaultMaxStack;
+	}
+
+	// 데이터에 MaxStack 필드가 있다고 가정하고 값을 가져옴
+	// 만약 필드가 없거나 0이하면 기본값 사용
+	int32 MaxStack = AbilityData->MaxCharges;
+	return (MaxStack > 0) ? MaxStack : DefaultMaxStack;
 }
 
 void AAgentPlayerState::BeginPlay()
@@ -84,6 +197,21 @@ UBaseAttributeSet* AAgentPlayerState::GetBaseAttributeSet() const
 	return BaseAttributeSet;
 }
 
+void AAgentPlayerState::SetAgentID(int32 NewAgentID)
+{
+	m_AgentID = NewAgentID;
+}
+
+int32 AAgentPlayerState::GetAgentID() const
+{
+	return m_AgentID;
+}
+
+void AAgentPlayerState::SyncsAgentID_Implementation(int AgentID)
+{
+	m_AgentID = AgentID;
+}
+
 float AAgentPlayerState::GetHealth() const
 {
 	return BaseAttributeSet->GetHealth();
@@ -102,54 +230,6 @@ float AAgentPlayerState::GetArmor() const
 float AAgentPlayerState::GetEffectSpeed() const
 {
 	return BaseAttributeSet->GetEffectSpeedMultiplier();
-}
-
-void AAgentPlayerState::Server_PurchaseAbility_Implementation(int32 AbilityID)
-{
-	if (!GetAbilitySystemComponent() || !GetBaseAttributeSet() || !CreditComponent) return;
-
-	FAbilityData* AbilityData = m_GameInstance->GetAbilityData(AbilityID);
-	if (!AbilityData) return;
-	
-	// 1. 비용 확인
-	int32 Cost = AbilityData->ChargeCost;
-
-	// 크레딧 컴포넌트를 통한 구매 시도
-	if (CreditComponent->CanUseCredits(Cost) && CreditComponent->UseCredits(Cost))
-	{
-		// 2. 어빌리티 스택 증가
-		int32* Stack = AbilityStacks.Find(AbilityID);
-		if (Stack == nullptr)
-		{
-			AbilityStacks.Add(AbilityID, 0);
-		}
-		AbilityStacks[AbilityID]++;
-
-		// 클라이언트에 구매 성공/실패 피드백 
-		UE_LOG(LogTemp, Log, TEXT("Player %s purchased skill %s"), *GetName(), *AbilityData->AbilityName);
-		AAgentPlayerController* PC = GetOwner<AAgentPlayerController>();
-		if (PC)
-		{
-			PC->Client_ReceivePurchaseResult(true, AbilityID, EShopItemType::Ability, TEXT(""));
-		}
-	}
-	else
-	{
-		// 클라이언트에 구매 실패 피드백 (크레딧 부족)
-		UE_LOG(LogTemp, Log, TEXT("Player %s failed to purchase skill %s: Insufficient credits"), *GetName(),
-		       *AbilityData->AbilityName);
-		AAgentPlayerController* PC = GetOwner<AAgentPlayerController>();
-		if (PC)
-		{
-			PC->Client_ReceivePurchaseResult(false, AbilityID, EShopItemType::Ability,
-			                                 TEXT("Insufficient credits for ability."));
-		}
-	}
-}
-
-bool AAgentPlayerState::Server_PurchaseAbility_Validate(int32 SkillID)
-{
-	return SkillID != 0;
 }
 
 int32 AAgentPlayerState::GetCurrentCredit() const
@@ -187,4 +267,66 @@ void AAgentPlayerState::Client_SyncCredit_Implementation(int32 SyncedCredit) // 
 	// 	// 서버에서도 UI 업데이트를 위해 델리게이트 호출
 	// 	OnCreditChanged(SyncedCredit);
 	// }
+}
+
+// 스택 변경 시 클라이언트에 동기화하는 헬퍼 함수
+void AAgentPlayerState::SyncAbilityStackToClients(int32 AbilityID, int32 NewStack)
+{
+	if (HasAuthority())
+	{
+		// 자신의 클라이언트에게 동기화
+		Client_SyncAbilityStack(AbilityID, NewStack);
+	}
+}
+
+// 서버에서 클라이언트로 스택 변경 동기화
+void AAgentPlayerState::Client_SyncAbilityStack_Implementation(int32 AbilityID, int32 NewStack)
+{
+	if (!HasAuthority())
+	{
+		// 클라이언트에서만 실행
+		AbilityStacks.Add(AbilityID, NewStack);
+		OnAbilityStackChanged.Broadcast(AbilityID, NewStack);
+	}
+}
+
+// 서버에 스택 정보 요청
+void AAgentPlayerState::Server_RequestAbilityStackSync_Implementation()
+{
+	if (HasAuthority())
+	{
+		// 서버에서 모든 스택 정보를 클라이언트로 전송
+		TArray<int32> AbilityIDs;
+		TArray<int32> Stacks;
+
+		for (const TPair<int32, int32>& Pair : AbilityStacks)
+		{
+			AbilityIDs.Add(Pair.Key);
+			Stacks.Add(Pair.Value);
+		}
+
+		Client_SyncAllAbilityStacks(AbilityIDs, Stacks);
+	}
+}
+
+// 서버에서 모든 스택 정보 전송
+void AAgentPlayerState::Client_SyncAllAbilityStacks_Implementation(const TArray<int32>& AbilityIDs,
+                                                                   const TArray<int32>& Stacks)
+{
+	if (!HasAuthority())
+	{
+		// 클라이언트에서만 실행
+		if (AbilityIDs.Num() == Stacks.Num())
+		{
+			// 로컬 스택 맵 초기화
+			AbilityStacks.Empty();
+
+			// 새 데이터로 채우기
+			for (int32 i = 0; i < AbilityIDs.Num(); ++i)
+			{
+				AbilityStacks.Add(AbilityIDs[i], Stacks[i]);
+				OnAbilityStackChanged.Broadcast(AbilityIDs[i], Stacks[i]);
+			}
+		}
+	}
 }

@@ -11,6 +11,7 @@
 #include "GameManager/SubsystemSteamManager.h"
 #include "Player/AgentPlayerController.h"
 #include "Player/AgentPlayerState.h"
+#include "GameManager/ValorantGameInstance.h"
 
 void UMatchMapHUD::SetTrueVo()
 {
@@ -29,6 +30,9 @@ void UMatchMapHUD::SetFalseVo()
 void UMatchMapHUD::NativeConstruct()
 {
 	Super::NativeConstruct();
+	
+	// 게임 인스턴스 가져오기
+	GameInstance = UValorantGameInstance::Get(GetWorld());
 
 	auto* GameState = Cast<AMatchGameState>(GetWorld()->GetGameState());
 	GameState->OnRemainRoundStateTimeChanged.AddDynamic(this, &UMatchMapHUD::UpdateTime);
@@ -50,6 +54,15 @@ void UMatchMapHUD::NativeConstruct()
 	if (AAgentPlayerState* ps = pc->GetPlayerState<AAgentPlayerState>())
 	{
 		InitUI(ps);
+		
+		// 어빌리티 스택 변경 델리게이트 바인딩
+		ps->OnAbilityStackChanged.AddDynamic(this, &UMatchMapHUD::HandleAbilityStackChanged);
+		
+		// 서버에 스택 정보 요청
+		ps->Server_RequestAbilityStackSync();
+		
+		// 어빌리티 스택 초기화
+		InitializeAbilityStacks();
 	}
 	else
 	{
@@ -214,4 +227,213 @@ void UMatchMapHUD::InitUI(AAgentPlayerState* ps)
 void UMatchMapHUD::DebugRoundSubState(const FString& RoundSubStateStr)
 {
 	TextBlockRoundSubStateDbg->SetText(FText::FromString(TEXT("RoundSubState: ") + RoundSubStateStr));
+}
+
+// 어빌리티 스택 처리 함수 구현
+void UMatchMapHUD::HandleAbilityStackChanged(int32 AbilityID, int32 NewStack)
+{
+	// 스택 정보 캐시 업데이트
+	AbilityStacksCache.Add(AbilityID, NewStack);
+	
+	// 해당 어빌리티가 어떤 슬롯에 해당하는지 확인하고 업데이트
+	if (AbilityID == SkillCID)
+	{
+		UpdateSlotStackInfo(EAbilitySlotType::Slot_C, AbilityID);
+	}
+	else if (AbilityID == SkillQID)
+	{
+		UpdateSlotStackInfo(EAbilitySlotType::Slot_Q, AbilityID);
+	}
+	else if (AbilityID == SkillEID)
+	{
+		UpdateSlotStackInfo(EAbilitySlotType::Slot_E, AbilityID);
+	}
+	
+	// // 블루프린트에서 처리할 수 있게 이벤트 호출 (이전 방식)
+	// OnAbilityStackChanged(AbilityID, NewStack);
+}
+
+void UMatchMapHUD::InitializeAbilityStacks()
+{
+	// 플레이어 스테이트와 게임 인스턴스가 유효한지 확인
+	AAgentPlayerController* PC = Cast<AAgentPlayerController>(GetOwningPlayer());
+	if (!PC)
+	{
+		return;
+	}
+	
+	AAgentPlayerState* PS = PC->GetPlayerState<AAgentPlayerState>();
+	if (!PS)
+	{
+		return;
+	}
+	
+	if (!GameInstance)
+	{
+		GameInstance = UValorantGameInstance::Get(GetWorld());
+		if (!GameInstance)
+		{
+			return;
+		}
+	}
+	
+	// 현재 캐릭터의 능력 ID 가져오기
+	int32 AgentID = PS->GetAgentID();
+
+	if (AgentID == 0)
+	{
+		return;
+	}
+	
+	FAgentData* AgentData = GameInstance->GetAgentData(AgentID);
+	if (!AgentData)
+	{
+		return;
+	}
+	
+	// 능력 ID 저장
+	if (AgentData->AbilityID_C > 0)
+	{
+		SkillCID = AgentData->AbilityID_C;
+	}
+	
+	if (AgentData->AbilityID_Q > 0)
+	{
+		SkillQID = AgentData->AbilityID_Q;
+	}
+	
+	if (AgentData->AbilityID_E > 0)
+	{
+		SkillEID = AgentData->AbilityID_E;
+	}
+	
+	// 각 능력의 스택 정보 초기화
+	AbilityStacksCache.Empty();
+	SlotStackInfoMap.Empty();
+	
+	// C 능력 스택 로드
+	if (SkillCID > 0)
+	{
+		int32 StackC = PS->GetAbilityStack(SkillCID);
+		int32 MaxStackC = PS->GetMaxAbilityStack(SkillCID);
+		AbilityStacksCache.Add(SkillCID, StackC);
+
+		// 어빌리티 슬롯 max 갯수를 위한 초기화
+		InitializeAbilityMaxStacks(EAbilitySlotType::Slot_C, MaxStackC);
+		
+		// 슬롯 스택 정보 초기화 및 업데이트
+		UpdateSlotStackInfo(EAbilitySlotType::Slot_C, SkillCID);
+	}
+	
+	// Q 능력 스택 로드
+	if (SkillQID > 0)
+	{
+		int32 StackQ = PS->GetAbilityStack(SkillQID);
+		int32 MaxStackQ = PS->GetMaxAbilityStack(SkillQID);
+		AbilityStacksCache.Add(SkillQID, StackQ);
+		
+		// 어빌리티 슬롯 max 갯수를 위한 초기화
+		InitializeAbilityMaxStacks(EAbilitySlotType::Slot_Q, MaxStackQ);
+		
+		// 슬롯 스택 정보 초기화 및 업데이트
+		UpdateSlotStackInfo(EAbilitySlotType::Slot_Q, SkillQID);
+	}
+	
+	// E 능력 스택 로드
+	if (SkillEID > 0)
+	{
+		int32 StackE = PS->GetAbilityStack(SkillEID);
+		int32 MaxStackE = PS->GetMaxAbilityStack(SkillEID);
+		AbilityStacksCache.Add(SkillEID, StackE);
+		
+		// 어빌리티 슬롯 max 갯수를 위한 초기화
+		InitializeAbilityMaxStacks(EAbilitySlotType::Slot_E, MaxStackE);
+
+		// 슬롯 스택 정보 초기화 및 업데이트
+		UpdateSlotStackInfo(EAbilitySlotType::Slot_E, SkillEID);
+	}
+}
+
+void UMatchMapHUD::UpdateSlotStackInfo(EAbilitySlotType AbilitySlot, int32 AbilityID)
+{
+	// 플레이어 스테이트 가져오기
+	AAgentPlayerController* PC = Cast<AAgentPlayerController>(GetOwningPlayer());
+	if (!PC)
+	{
+		return;
+	}
+	
+	AAgentPlayerState* PS = PC->GetPlayerState<AAgentPlayerState>();
+	if (!PS)
+	{
+		return;
+	}
+	
+	// 현재 스택 및 최대 스택 가져오기
+	int32 CurrentStack = PS->GetAbilityStack(AbilityID);
+	int32 MaxStack = PS->GetMaxAbilityStack(AbilityID);
+	
+	// 슬롯 스택 정보 업데이트
+	FAbilitySlotStackInfo StackInfo;
+	StackInfo.Initialize(AbilityID, CurrentStack, MaxStack);
+	SlotStackInfoMap.Add(AbilitySlot, StackInfo);
+	
+	// 블루프린트 이벤트 호출
+	OnSlotStackInfoUpdated(AbilitySlot, StackInfo);
+}
+
+FAbilitySlotStackInfo UMatchMapHUD::GetSlotStackInfo(EAbilitySlotType AbilitySlot) const
+{
+	// 캐시된 슬롯 스택 정보 반환
+	const FAbilitySlotStackInfo* StackInfoPtr = SlotStackInfoMap.Find(AbilitySlot);
+	if (StackInfoPtr)
+	{
+		return *StackInfoPtr;
+	}
+	
+	// 정보가 없으면 기본값 반환
+	return FAbilitySlotStackInfo();
+}
+
+int32 UMatchMapHUD::GetAbilityStack(int32 AbilityID) const
+{
+	// 캐시에서 스택 값 가져오기
+	const int32* StackPtr = AbilityStacksCache.Find(AbilityID);
+	if (StackPtr)
+	{
+		return *StackPtr;
+	}
+	
+	// 캐시에 없으면 플레이어 스테이트에서 직접 가져오기
+	AAgentPlayerController* PC = Cast<AAgentPlayerController>(GetOwningPlayer());
+	if (!PC)
+	{
+		return 0;
+	}
+	
+	AAgentPlayerState* PS = PC->GetPlayerState<AAgentPlayerState>();
+	if (!PS)
+	{
+		return 0;
+	}
+	
+	return PS->GetAbilityStack(AbilityID);
+}
+
+int32 UMatchMapHUD::GetMaxAbilityStack(int32 AbilityID) const
+{
+	// 플레이어 스테이트에서 최대 스택 값 가져오기
+	AAgentPlayerController* PC = Cast<AAgentPlayerController>(GetOwningPlayer());
+	if (!PC)
+	{
+		return 0;
+	}
+	
+	AAgentPlayerState* PS = PC->GetPlayerState<AAgentPlayerState>();
+	if (!PS)
+	{
+		return 0;
+	}
+	
+	return PS->GetMaxAbilityStack(AbilityID);
 }
