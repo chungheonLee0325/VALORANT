@@ -158,13 +158,25 @@ void ABaseInteractor::ServerRPC_PickUp_Implementation(ABaseAgent* Agent)
 	SetOwner(OwnerAgent);
 	
 	Sphere->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-	
-	Multicast_PickUp(OwnerAgent);
+
+	FTimerHandle TimerHandle;
+	GetWorld()->GetTimerManager().SetTimer(
+		TimerHandle,
+		FTimerDelegate::CreateUObject(this, &ABaseInteractor::Multicast_PickUp, Agent),
+		1.0f,
+		false
+	);
 }
 
 void ABaseInteractor::Multicast_PickUp_Implementation(ABaseAgent* Agent)
 {
 	OnDetect(false);
+	
+	if (Agent == nullptr)
+	{
+		NET_LOG(LogTemp,Error,TEXT("%hs Called, Agent is nullptr"), __FUNCTION__);
+		return;
+	}
 	if (Agent->GetFindInteractorActor() == this)
 	{
 		Agent->ResetFindInteractorActor();

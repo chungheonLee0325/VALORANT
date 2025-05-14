@@ -206,8 +206,7 @@ void ABaseAgent::BeginPlay()
     {
         // 자동 시야 체크 설정 (시야 체크 함수 호출하여 초기 상태 설정)
         PerformVisibilityChecks();
-
-    	//TODO: 기본 총, 칼 스폰해서 붙여주기
+    	
     	AMatchGameMode* gm = GetWorld()->GetAuthGameMode<AMatchGameMode>();
     	if (gm)
     	{

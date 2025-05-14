@@ -947,19 +947,18 @@ void AMatchGameMode::SpawnDefaultWeapon(ABaseAgent* agent)
 		return;
 	}
 	
-	if (agent->GetMeleeWeapon() == nullptr) { 
-		{
-			ABaseWeapon* knife = GetWorld()->SpawnActor<ABaseWeapon>(MeleeAsset);
-			agent->ServerRPC_Interact(knife);
-		}
+	if (agent->GetMeleeWeapon() == nullptr)
+	{
+		ABaseWeapon* knife = GetWorld()->SpawnActor<ABaseWeapon>(MeleeAsset);
+		agent->ServerRPC_Interact(knife);
 	}
-	if (agent->GetSubWeapon() == nullptr) { 
-		{
-		
-			ABaseWeapon* gun = GetWorld()->SpawnActor<ABaseWeapon>(ClassicAsset);
-			agent->ServerRPC_Interact(gun);
-		}
+	
+	if (agent->GetSubWeapon() == nullptr) 
+	{
+		ABaseWeapon* gun = GetWorld()->SpawnActor<ABaseWeapon>(ClassicAsset);
+		agent->ServerRPC_Interact(gun);
 	}
+	
 }
 
 void AMatchGameMode::DestroySpikeInWorld()
