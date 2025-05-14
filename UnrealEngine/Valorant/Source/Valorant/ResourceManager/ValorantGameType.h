@@ -349,9 +349,9 @@ struct FWeaponData : public FTableRowBase
 
 	// 무기 관련 애니
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Data")
-	UAnimMontage* FireAnim;
+	UAnimMontage* FireAnim = nullptr;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Data")
-	UAnimMontage* ReloadAnim;
+	UAnimMontage* ReloadAnim = nullptr;
 };
 
 // GameplayEffectData
