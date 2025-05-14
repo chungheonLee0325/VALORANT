@@ -336,6 +336,7 @@ void AMatchGameMode::HandleRoundSubState_SelectAgent()
 
 void AMatchGameMode::HandleRoundSubState_PreRound()
 {
+	ClearObjects();
 	RespawnAll();
 	TeamBlueRemainingAgentNum = TeamRedRemainingAgentNum = MatchPlayers.Num();
 
@@ -350,6 +351,7 @@ void AMatchGameMode::HandleRoundSubState_PreRound()
 
 void AMatchGameMode::HandleRoundSubState_BuyPhase()
 {
+	ClearObjects();
 	RespawnAll();
 	TeamBlueRemainingAgentNum = TeamRedRemainingAgentNum = MatchPlayers.Num();
 
@@ -475,6 +477,20 @@ AActor* AMatchGameMode::ChoosePlayerStart_Implementation(AController* Player)
 {
 	// TODO: 블루팀이냐 레드팀이냐, 누가 공격인지 수비냐에 따라 스폰 위치 다르게
 	return Super::ChoosePlayerStart_Implementation(Player);
+}
+
+void AMatchGameMode::ClearObjects()
+{
+	TArray<AActor*> Interactors;
+	UGameplayStatics::GetAllActorsOfClass(GetWorld(), ABaseInteractor::StaticClass(), Interactors);
+	for (auto* Actor : Interactors)
+	{
+		auto* Interactor = Cast<ABaseInteractor>(Actor);
+		if (Interactor && Interactor->HasOwnerAgent() == false)
+		{
+			Interactor->Destroy();
+		}
+	}
 }
 
 void AMatchGameMode::RespawnAll()

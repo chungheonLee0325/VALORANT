@@ -70,7 +70,7 @@ void ABaseInteractor::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>
 void ABaseInteractor::ServerOnly_OnSphereBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
                                                       UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
-	if (nullptr != OwnerAgent)
+	if (nullptr != OwnerAgent || IsActorBeingDestroyed())
 	{
 		return;
 	}
