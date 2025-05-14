@@ -6,6 +6,8 @@
 #include "Blueprint/UserWidget.h"
 #include "MatchMapSelectAgentUI.generated.h"
 
+class UVerticalBox;
+class UButton;
 class UTeamSelectAgentBox;
 class UGridPanel;
 class UTextBlock;
@@ -42,7 +44,11 @@ protected:
 	TObjectPtr<UGridPanel> GridPanelAgentList = nullptr;
 	UPROPERTY(meta=(BindWidget))
 	TObjectPtr<UTextBlock> TextBlockRemTime = nullptr;
-	
+	UPROPERTY(BlueprintReadOnly, meta=(BindWidget))
+	TObjectPtr<UButton> ButtonLockIn = nullptr;
+
+	UPROPERTY(meta=(BindWidget))
+	TObjectPtr<UVerticalBox> VerticalBoxRight = nullptr;
 	UPROPERTY(meta=(BindWidget))
 	TObjectPtr<UTextBlock> TextBlockPosition1 = nullptr;
 	UPROPERTY(meta=(BindWidget))
