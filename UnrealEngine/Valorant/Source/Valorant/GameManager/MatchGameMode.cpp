@@ -24,6 +24,18 @@ static int ShiftRound = 4;
 
 AMatchGameMode::AMatchGameMode()
 {
+#ifdef DEBUGTEST
+	MaxTime = 0.0f;
+	RemainRoundStateTime = 0.0f;
+	SelectAgentTime = 60.0f;
+	PreRoundTime = 15.0f; // org: 45.0f
+	BuyPhaseTime = 10.0f; // org: 30.0f
+	InRoundTime = 20.0f; // org: 100.0f
+	EndPhaseTime = 10.0f; // org: 10.0f
+	SpikeActiveTime = 15.0f; // org: 45.0f
+	bReadyToEndMatch = false;
+	LeavingMatchTime = 10.0f;
+#endif
 }
 
 /* static */
@@ -517,7 +529,7 @@ void AMatchGameMode::RespawnPlayer(AAgentPlayerState* ps, AAgentPlayerController
 	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 
 	ABaseAgent* Agent = nullptr;
-	
+
 	if (ps->IsSpectator() || ps->GetPawn() == nullptr)
 	{
 		FAgentData* agentData = Cast<UValorantGameInstance>(GetGameInstance())->GetAgentData(ps->GetAgentID());
@@ -534,7 +546,8 @@ void AMatchGameMode::RespawnPlayer(AAgentPlayerState* ps, AAgentPlayerController
 		{
 			oldPawn->Destroy();
 		}
-		if (Agent->GetMeleeWeapon() == nullptr) { 
+		if (Agent->GetMeleeWeapon() == nullptr)
+		{
 			{
 				if (MeleeAsset)
 				{
@@ -551,7 +564,8 @@ void AMatchGameMode::RespawnPlayer(AAgentPlayerState* ps, AAgentPlayerController
 	}
 
 	//TODO: 임시 코드, 슬롯 교체 로직 수정 후 바꿔야 함
-	if (Agent->GetSubWeapon() == nullptr) { 
+	if (Agent->GetSubWeapon() == nullptr)
+	{
 		{
 			Agent->SwitchInteractor(EInteractorType::SubWeapon);
 			if (ClassicAsset)
@@ -884,7 +898,7 @@ void AMatchGameMode::SpawnSpikeForAttackers()
 				SpawnLocation.Z -= 80.0f; // 바닥에 가깝게
 
 				Spike = GetWorld()->SpawnActor<ASpike>(SpikeClass, SpawnLocation,
-				                                               FRotator::ZeroRotator, SpawnParams);
+				                                       FRotator::ZeroRotator, SpawnParams);
 				// 공격팀 중 한 명에게만 스파이크 스폰
 
 				break;

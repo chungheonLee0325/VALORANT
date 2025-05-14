@@ -2,6 +2,8 @@
 
 #pragma once
 
+#define DEBUGTEST
+
 #include "CoreMinimal.h"
 #include "Engine/GameInstance.h"
 #include "ResourceManager/ValorantGameType.h"
