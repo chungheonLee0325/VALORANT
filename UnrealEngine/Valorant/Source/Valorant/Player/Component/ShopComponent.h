@@ -94,7 +94,7 @@ public:
 
 	// 구매 가능 여부 확인
 	UFUNCTION(BlueprintCallable, Category = "Shop")
-	bool CanPurchaseItem(int32 ItemID, EShopItemType ItemType) const;
+	bool CanPurchaseItem(int32 ItemID, EShopItemType ItemType, int32& OutRefundAmount) const;
 
 	// 구매 이벤트 
 	UPROPERTY(BlueprintAssignable, Category = "Shop")

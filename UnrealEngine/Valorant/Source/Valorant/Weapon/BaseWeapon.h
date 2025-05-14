@@ -41,7 +41,7 @@ class VALORANT_API ABaseWeapon : public ABaseInteractor
 	/** StartReload Input Action */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category=Input, meta=(AllowPrivateAccess = "true"))
 	UInputAction* StartReloadAction = nullptr;
-	
+
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category=Input, meta=(AllowPrivateAccess = "true"))
 	UInputAction* DropAction = nullptr;
 
@@ -67,27 +67,27 @@ public:
 	// 여분 탄약 (장전되어있는 탄창 내 탄약은 제외)
 	UPROPERTY(ReplicatedUsing=OnRep_Ammo, BlueprintReadOnly)
 	int SpareAmmo = 0;
-	
+
 	// 무기가 이전에 사용된 적이 있는지 (발사, 라운드 경험 등)
 	// true인 경우 판매 불가, 땅에 드롭함
 	UPROPERTY(Replicated, BlueprintReadOnly, Category="Weapon")
 	bool bWasUsed = false;
-	
+
 	// Sets default values for this component's properties
 	ABaseWeapon();
 
 	// WeaponID 설정
-	UFUNCTION(BlueprintCallable, Category="Weapon")
-	void SetWeaponID(int32 NewWeaponID);
-	
+	UFUNCTION(BlueprintCallable, Category="Weapon", NetMulticast, Reliable)
+	void NetMulti_ReloadWeaponData(int32 NewWeaponID);
+
 	// WeaponID 반환
 	UFUNCTION(BlueprintCallable, Category="Weapon")
 	int32 GetWeaponID() const { return WeaponID; }
-	
+
 	// 무기 사용 여부 설정
 	UFUNCTION(BlueprintCallable, Category="Weapon")
 	void SetWasUsed(bool bNewWasUsed);
-	
+
 	// 무기 사용 여부 반환
 	UFUNCTION(BlueprintCallable, Category="Weapon")
 	bool GetWasUsed() const { return bWasUsed; }
@@ -101,7 +101,7 @@ protected:
 	virtual void BeginPlay() override;
 
 	virtual void Tick(float DeltaSeconds) override;
-	
+
 	UFUNCTION(BlueprintCallable, Category="Weapon")
 	void Fire();
 	FVector GetSpreadDirection(const FVector& Direction);
@@ -113,10 +113,10 @@ protected:
 	void MulticastRPC_PlayFireAnimation();
 	UFUNCTION(BlueprintImplementableEvent)
 	void PlayFireSound();
-	
+
 	UFUNCTION(BlueprintCallable, Category="Weapon")
 	void Reload();
-	
+
 	UFUNCTION(Server, Reliable)
 	void ServerRPC_PlayReloadAnim();
 	UFUNCTION(NetMulticast, Reliable)
@@ -127,21 +127,21 @@ protected:
 
 	UFUNCTION()
 	void OnRep_Ammo() const;
-	
+
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 public:
 	UFUNCTION(BlueprintCallable, Category="Weapon")
 	void StartFire();
-	
+
 	UFUNCTION(BlueprintCallable, Category="Weapon")
 	void EndFire();
 
 	void RecoverRecoilLevel();
-	
+
 	UFUNCTION(Server, Reliable, BlueprintCallable, Category="Weapon")
 	void ServerRPC_StartReload();
-	
+
 	UFUNCTION(BlueprintCallable)
 	EWeaponCategory GetWeaponCategory() const { return WeaponData->WeaponCategory; }
 
