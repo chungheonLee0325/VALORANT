@@ -808,11 +808,9 @@ void ABaseAgent::HandleDieCameraPitch(float newPitch)
 	//UE_LOG(LogTemp,Warning,TEXT("pitch %f"),newPitch);
 }
 
+/** 서버에서만 호출됨*/
 void ABaseAgent::Die()
 {
-	// NET_LOG(LogTemp,Warning,TEXT("죽음"));
-
-	//TODO: 복제 어떻게 진행할지
 	if (MainWeapon)
 	{
 		MainWeapon->ServerRPC_Drop();
@@ -821,79 +819,62 @@ void ABaseAgent::Die()
 	{
 		SubWeapon->ServerRPC_Drop();
 	}
+	MeleeKnife->Destroy();
+	
+	Net_Die();
+	// 킬러 플레이어 컨트롤러 찾기
+	AMatchPlayerController* KillerPC = nullptr;
 
-	if (IsLocallyControlled())
+	// Instigator 로그 추가
+	AActor* InstigatorActor = GetInstigator();
+	if (InstigatorActor)
 	{
-		DisableInput(Cast<APlayerController>(GetController()));
-
-		ThirdPersonMesh->SetOwnerNoSee(false);
-		GetMesh()->SetVisibility(false);
-
-		TL_DieCamera->PlayFromStart();
+		NET_LOG(LogTemp, Warning, TEXT("Die() - Instigator 정보: %s"), *InstigatorActor->GetName());
+	}
+	else
+	{
+		NET_LOG(LogTemp, Warning, TEXT("Die() - Instigator가 없습니다. 데미지 적용 시 Instigator가 제대로 설정되지 않았습니다."));
 	}
 
-	if (HasAuthority())
+	if (GetInstigator() && GetInstigator() != this)
 	{
-		// 킬러 플레이어 컨트롤러 찾기
-		AMatchPlayerController* KillerPC = nullptr;
+		KillerPC = Cast<AMatchPlayerController>(GetInstigator()->GetController());
+		// 키의 유효성 검사
+		NET_LOG(LogTemp, Warning, TEXT("죽음 처리: 킬러 컨트롤러 - %s"), KillerPC ? *KillerPC->GetName() : TEXT("없음"));
 
-		// Instigator 로그 추가
-		AActor* InstigatorActor = GetInstigator();
-		if (InstigatorActor)
+		if (KillerPC)
 		{
-			NET_LOG(LogTemp, Warning, TEXT("Die() - Instigator 정보: %s"), *InstigatorActor->GetName());
+			GetWorld()->GetAuthGameMode<AMatchGameMode>()->OnKill(KillerPC, PC);
+			// AAgentPlayerState* KillerPS = KillerPC->GetPlayerState<AAgentPlayerState>();
+			// if (KillerPS)
+			// {
+			// 	UCreditComponent* CreditComp = KillerPS->FindComponentByClass<UCreditComponent>();
+			// 	if (CreditComp)
+			// 	{
+			// 		// 헤드샷 여부 체크 (데미지 시스템에서 구현 필요)
+			// 		bool bIsHeadshot = false; // 임시로 false 설정
+			// 		CreditComp->AwardKillCredits(bIsHeadshot);
+			// 		
+			// 		NET_LOG(LogTemp, Warning, TEXT("%s가 %s를 처치하여 크레딧 보상을 받았습니다."), 
+			// 			*KillerPC->GetPlayerState<APlayerState>()->GetPlayerName(), 
+			// 			*GetPlayerState<APlayerState>()->GetPlayerName());
+			// 		
+			// 	}
+			// }
 		}
-		else
-		{
-			NET_LOG(LogTemp, Warning, TEXT("Die() - Instigator가 없습니다. 데미지 적용 시 Instigator가 제대로 설정되지 않았습니다."));
-		}
-
-		if (GetInstigator() && GetInstigator() != this)
-		{
-			KillerPC = Cast<AMatchPlayerController>(GetInstigator()->GetController());
-			// 키의 유효성 검사
-			NET_LOG(LogTemp, Warning, TEXT("죽음 처리: 킬러 컨트롤러 - %s"), KillerPC ? *KillerPC->GetName() : TEXT("없음"));
-
-			if (KillerPC)
-			{
-				GetWorld()->GetAuthGameMode<AMatchGameMode>()->OnKill(KillerPC, PC);
-				// AAgentPlayerState* KillerPS = KillerPC->GetPlayerState<AAgentPlayerState>();
-				// if (KillerPS)
-				// {
-				// 	UCreditComponent* CreditComp = KillerPS->FindComponentByClass<UCreditComponent>();
-				// 	if (CreditComp)
-				// 	{
-				// 		// 헤드샷 여부 체크 (데미지 시스템에서 구현 필요)
-				// 		bool bIsHeadshot = false; // 임시로 false 설정
-				// 		CreditComp->AwardKillCredits(bIsHeadshot);
-				// 		
-				// 		NET_LOG(LogTemp, Warning, TEXT("%s가 %s를 처치하여 크레딧 보상을 받았습니다."), 
-				// 			*KillerPC->GetPlayerState<APlayerState>()->GetPlayerName(), 
-				// 			*GetPlayerState<APlayerState>()->GetPlayerName());
-				// 		
-				// 	}
-				// }
-			}
-		}
-
-		// NET_LOG(LogTemp,Warning,TEXT("다이 캠 피니쉬 타이머 설정"));
-
-		FTimerHandle deadTimerHandle;
-		GetWorldTimerManager().SetTimer(deadTimerHandle, FTimerDelegate::CreateLambda([this]()
-		{
-			OnDieCameraFinished();
-		}), DieCameraTimeRange, false);
-
-		ThirdPersonMesh->SetOwnerNoSee(false);
-		Net_Die();
 	}
+	
+	FTimerHandle deadTimerHandle;
+	GetWorldTimerManager().SetTimer(deadTimerHandle, FTimerDelegate::CreateLambda([this]()
+	{
+		OnDieCameraFinished();
+	}), DieCameraTimeRange, false);
+
+	ThirdPersonMesh->SetOwnerNoSee(false);
 }
 
-/** 서버에서만 호출됨*/
 void ABaseAgent::OnDieCameraFinished()
 {
-	// NET_LOG(LogTemp,Warning,TEXT("다이 캠 피니쉬 콜백"));
-
 	AAgentPlayerController* pc = Cast<AAgentPlayerController>(GetController());
 	if (pc)
 	{
@@ -904,12 +885,22 @@ void ABaseAgent::OnDieCameraFinished()
 	}
 	else
 	{
-		// NET_LOG(LogTemp, Error, TEXT("OnDieCameraFinished: Controller가 없습니다!"));
+		NET_LOG(LogTemp, Error, TEXT("OnDieCameraFinished: Controller가 없습니다!"));
 	}
 }
 
 void ABaseAgent::Net_Die_Implementation()
 {
+	if (IsLocallyControlled())
+	{
+		DisableInput(Cast<APlayerController>(GetController()));
+
+		ThirdPersonMesh->SetOwnerNoSee(false);
+		GetMesh()->SetVisibility(false);
+
+		TL_DieCamera->PlayFromStart();
+	}
+	
 	bIsDead = true;
 
 	ABP_3P->Montage_Stop(0.1f);
