@@ -156,7 +156,9 @@ void ABaseInteractor::ServerRPC_PickUp_Implementation(ABaseAgent* Agent)
 	
 	OwnerAgent = Agent;
 	SetOwner(OwnerAgent);
+	
 	Sphere->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	
 	Multicast_PickUp(OwnerAgent);
 }
 

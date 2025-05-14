@@ -415,8 +415,6 @@ void ABaseAgent::Interact()
 		if (ABaseInteractor* Interactor = Cast<ABaseInteractor>(FindInteractActor))
 		{
 			ServerRPC_Interact(Interactor);
-			
-			Interactor->OnDetect(false);
 			FindInteractActor = nullptr;
 		}
 	}
