@@ -415,8 +415,6 @@ void ABaseAgent::Interact()
 		if (ABaseInteractor* Interactor = Cast<ABaseInteractor>(FindInteractActor))
 		{
 			ServerRPC_Interact(Interactor);
-			
-			Interactor->OnDetect(false);
 			FindInteractActor = nullptr;
 		}
 	}
@@ -704,7 +702,7 @@ void ABaseAgent::EquipInteractor(ABaseInteractor* interactor)
 		ABP_1P->InteractorState = EInteractorType::None;
 		ABP_3P->InteractorState = EInteractorType::None;
 
-		NET_LOG(LogTemp, Warning, TEXT("빈손이네요"));
+		// NET_LOG(LogTemp, Warning, TEXT("빈손이네요"));
 		return;
 	}
 	CurrentInteractorState = CurrentInteractor->GetInteractorType();
@@ -769,7 +767,7 @@ void ABaseAgent::OnFindInteraction(UPrimitiveComponent* OverlappedComponent, AAc
 			NET_LOG(LogTemp, Warning, TEXT("%hs, 3"), __FUNCTION__);
 			return;
 		}
-		NET_LOG(LogTemp, Warning, TEXT("FindInteraction: %s"), *Interactor->GetName());
+		
 		FindInteractActor = Interactor;
 		FindInteractActor->OnDetect(true);
 	}
@@ -1294,6 +1292,7 @@ void ABaseAgent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifeti
 	DOREPLIFETIME(ABaseAgent, MainWeapon);
 	DOREPLIFETIME(ABaseAgent, SubWeapon);
 	DOREPLIFETIME(ABaseAgent, Spike);
+	DOREPLIFETIME(ABaseAgent, FindInteractActor);
 	DOREPLIFETIME(ABaseAgent, CurrentInteractor);
 	DOREPLIFETIME(ABaseAgent, CurrentInteractorState);
 	DOREPLIFETIME(ABaseAgent, PoseIdx);
