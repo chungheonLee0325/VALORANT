@@ -113,6 +113,7 @@ void ABaseWeapon::StartFire()
 	}
 	NET_LOG(LogTemp, Warning, TEXT("%hs Called, RecoilLevel: %d"), __FUNCTION__, RecoilLevel);
 
+	GetWorld()->GetTimerManager().ClearTimer(RecoverRecoilLevelHandle);
 	GetWorld()->GetTimerManager().SetTimer(AutoFireHandle, this, &ABaseWeapon::Fire, 0.01f, true, 0);
 }
 
@@ -273,6 +274,16 @@ void ABaseWeapon::EndFire()
 	bIsFiring = false;
 
 	GetWorld()->GetTimerManager().ClearTimer(AutoFireHandle);
+	GetWorld()->GetTimerManager().SetTimer(RecoverRecoilLevelHandle, this, &ABaseWeapon::RecoverRecoilLevel, FireInterval / 2, true);
+}
+
+void ABaseWeapon::RecoverRecoilLevel()
+{
+	RecoilLevel = FMath::Clamp(--RecoilLevel, 0, RecoilData.Num() - 1);
+	if (RecoilLevel == 0)
+	{
+		GetWorld()->GetTimerManager().ClearTimer(RecoverRecoilLevelHandle);
+	}
 }
 
 void ABaseWeapon::StartReload()

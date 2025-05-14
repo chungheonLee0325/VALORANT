@@ -51,6 +51,7 @@ class VALORANT_API ABaseWeapon : public ABaseInteractor
 	float TotalRecoilOffsetYaw = 0.0f;
 	FTimerHandle AutoFireHandle;
 	FTimerHandle ReloadHandle;
+	FTimerHandle RecoverRecoilLevelHandle;
 
 	UPROPERTY()
 	UAnimMontage* AM_Fire;
@@ -127,9 +128,11 @@ protected:
 public:
 	UFUNCTION(BlueprintCallable, Category="Weapon")
 	void StartFire();
-
+	
 	UFUNCTION(BlueprintCallable, Category="Weapon")
 	void EndFire();
+
+	void RecoverRecoilLevel();
 	
 	UFUNCTION(BlueprintCallable, Category="Weapon")
 	void StartReload();
