@@ -60,6 +60,8 @@ public:
 	FGameplayEffectData* GetGEffectData(int GEffectID);
 	FAbilityData* GetAbilityData(int AbilityID);
 	
+	static UValorantGameInstance* Get(class UWorld* World);
+
 private:
 	UPROPERTY()
 	TMap<int32, FAgentData> dt_Agent;
