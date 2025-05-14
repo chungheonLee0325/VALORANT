@@ -465,5 +465,8 @@ struct FAbilityData : public FTableRowBase
 	// 네트워크 관련
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Network")
 	bool ReplicateAbility = true;
+
+	// UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	// int32 MaxStack = 2;   // 최대 스택 수 (기본값 2)
 };
 
