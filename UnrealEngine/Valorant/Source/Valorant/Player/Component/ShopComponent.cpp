@@ -554,7 +554,7 @@ void UShopComponent::SpawnWeaponForPlayer(int32 WeaponID)
 		}
 
 		// 이제 새 무기 생성 및 할당
-		FVector SpawnLocation = Agent->GetActorLocation();
+		FVector SpawnLocation = Agent->GetActorLocation() - FVector(0, 0, -1000);
 		FRotator SpawnRotation = Agent->GetActorRotation();
 
 		// 무기 생성
