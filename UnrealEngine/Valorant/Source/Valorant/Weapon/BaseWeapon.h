@@ -102,7 +102,7 @@ protected:
 	
 	UFUNCTION(BlueprintCallable, Category="Weapon")
 	void Fire();
-
+	FVector GetSpreadDirection(const FVector& Direction);
 	UFUNCTION(Server, Reliable)
 	void ServerRPC_Fire(const FVector& Location, const FVector& Direction);
 	UFUNCTION(NetMulticast, Reliable)

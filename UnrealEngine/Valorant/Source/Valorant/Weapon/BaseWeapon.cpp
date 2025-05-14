@@ -7,6 +7,7 @@
 #include "EnhancedInputSubsystems.h"
 #include "Valorant.h"
 #include "Components/WidgetComponent.h"
+#include "GameFramework/PawnMovementComponent.h"
 #include "GameManager/SubsystemSteamManager.h"
 #include "GameManager/ValorantGameInstance.h"
 #include "Kismet/GameplayStatics.h"
@@ -159,7 +160,6 @@ void ABaseWeapon::Fire()
 		TotalRecoilOffsetYaw += YawValue;
 		
 		RecoilLevel = FMath::Clamp(RecoilLevel + 1, 0, RecoilData.Num() - 1);
-		
 		// UE_LOG(LogTemp, Warning, TEXT("Ammo : %d, Total : (%f, %f), Add : (%f, %f)"), MagazineAmmo, TotalRecoilOffsetPitch, TotalRecoilOffsetYaw, PitchValue, YawValue);
 	}
 
@@ -176,23 +176,34 @@ void ABaseWeapon::Fire()
 	FVector Start, Dir;
 	PlayerController->DeprojectScreenPositionToWorld(ScreenWidth * 0.5f, ScreenHeight * 0.5f, Start, Dir);
 	ServerRPC_Fire(Start, Dir);
+}
+
+FVector ABaseWeapon::GetSpreadDirection(const FVector& Direction)
+{
+	float MaxAngleDeg = 0;
+	// 일정 속도 이상으로 이동 또는 점프 중일 때 MaxAngleRad = 5
+	if (OwnerAgent)
+	{
+		if (const auto* MovementComponent = OwnerAgent->GetMovementComponent())
+		{
+			if (MovementComponent->Velocity.Size() >= 100.f || false == MovementComponent->IsMovingOnGround())
+			{
+				MaxAngleDeg = 5.f;
+			}
+		}
+	}
+
+	// TODO: 무기 종류에 따라 탄퍼짐 계수 다르게
+	// if (WeaponData->WeaponCategory == EWeaponCategory::SMG)
 	
-	// // Try and play the sound if specified
-	// if (FireSound != nullptr)
-	// {
-	// 	UGameplayStatics::PlaySoundAtLocation(this, FireSound, Character->GetActorLocation());
-	// }
-	//
-	// // Try and play a firing animation if specified
-	// if (FireAnimation != nullptr)
-	// {
-	// 	// Get the animation object for the arms mesh
-	// 	UAnimInstance* AnimInstance = Character->GetMesh1P()->GetAnimInstance();
-	// 	if (AnimInstance != nullptr)
-	// 	{
-	// 		AnimInstance->Montage_Play(FireAnimation, 1.f);
-	// 	}
-	// }
+	const float MaxAngleRad = FMath::DegreesToRadians(MaxAngleDeg);
+	
+	const float Yaw = FMath::RandRange(-MaxAngleRad, MaxAngleRad);
+	const float Pitch = FMath::RandRange(-MaxAngleRad, MaxAngleRad);
+	FRotator SpreadRot = Direction.Rotation();
+	SpreadRot.Yaw += FMath::RadiansToDegrees(Yaw);
+	SpreadRot.Pitch += FMath::RadiansToDegrees(Pitch);
+	return SpreadRot.Vector();
 }
 
 void ABaseWeapon::ServerRPC_Fire_Implementation(const FVector& Location, const FVector& Direction)
@@ -204,8 +215,9 @@ void ABaseWeapon::ServerRPC_Fire_Implementation(const FVector& Location, const F
 		return;
 	}
 	
+	const FVector& Dir = GetSpreadDirection(Direction);
 	const FVector& Start = Location;
-	const FVector End = Start + Direction * 99999;
+	const FVector End = Start + Dir * 99999;
 	// NET_LOG(LogTemp, Warning, TEXT("ServerRPC_Fire_Implementation, Start : %s, End : %s"), *Start.ToString(), *End.ToString());
 	
 	// 궤적, 탄착군 디버깅
