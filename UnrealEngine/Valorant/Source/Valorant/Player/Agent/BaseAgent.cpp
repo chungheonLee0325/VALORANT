@@ -191,7 +191,7 @@ void ABaseAgent::BeginPlay()
 
 	if (HasAuthority() == false && IsLocallyControlled())
 	{
-		NET_LOG(LogTemp, Error, TEXT("%hs, HasAuthority() == false && IsLocallyControlled()"), __FUNCTION__);
+		// NET_LOG(LogTemp, Error, TEXT("%hs, HasAuthority() == false && IsLocallyControlled()"), __FUNCTION__);
 		InteractionCapsule->OnComponentBeginOverlap.AddDynamic(this, &ABaseAgent::OnFindInteraction);
 		InteractionCapsule->OnComponentEndOverlap.AddDynamic(this, &ABaseAgent::OnInteractionCapsuleEndOverlap);
 	}
@@ -366,7 +366,7 @@ void ABaseAgent::StartFire()
 {
 	if (CurrentInteractor == nullptr)
 	{
-		NET_LOG(LogTemp, Warning, TEXT("현재 인터랙터 없음"));
+		// NET_LOG(LogTemp, Warning, TEXT("현재 인터랙터 없음"));
 		return;
 	}
 
@@ -415,8 +415,6 @@ void ABaseAgent::Interact()
 		if (ABaseInteractor* Interactor = Cast<ABaseInteractor>(FindInteractActor))
 		{
 			ServerRPC_Interact(Interactor);
-			
-			Interactor->OnDetect(false);
 			FindInteractActor = nullptr;
 		}
 	}
@@ -478,7 +476,7 @@ void ABaseAgent::ResetOwnSpike()
 
 void ABaseAgent::AcquireInteractor(ABaseInteractor* Interactor)
 {
-	NET_LOG(LogTemp, Warning, TEXT("%hs Called"), __FUNCTION__);
+	// NET_LOG(LogTemp, Warning, TEXT("%hs Called"), __FUNCTION__);
 	if (!HasAuthority())
 	{
 		Server_AcquireInteractor(Interactor);
@@ -704,7 +702,7 @@ void ABaseAgent::EquipInteractor(ABaseInteractor* interactor)
 		ABP_1P->InteractorState = EInteractorType::None;
 		ABP_3P->InteractorState = EInteractorType::None;
 
-		NET_LOG(LogTemp, Warning, TEXT("빈손이네요"));
+		// NET_LOG(LogTemp, Warning, TEXT("빈손이네요"));
 		return;
 	}
 	CurrentInteractorState = CurrentInteractor->GetInteractorType();
@@ -733,7 +731,7 @@ void ABaseAgent::EquipInteractor(ABaseInteractor* interactor)
 		ABP_3P->InteractorPoseIdx = PoseIdx;
 	}
 
-	NET_LOG(LogTemp, Warning, TEXT("현재 들고 있는 인터랙터: %s"), *CurrentInteractor->GetActorNameOrLabel());
+	// NET_LOG(LogTemp, Warning, TEXT("현재 들고 있는 인터랙터: %s"), *CurrentInteractor->GetActorNameOrLabel());
 }
 
 void ABaseAgent::OnFindInteraction(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
@@ -749,7 +747,7 @@ void ABaseAgent::OnFindInteraction(UPrimitiveComponent* OverlappedComponent, AAc
 		}
 		else
 		{
-			NET_LOG(LogTemp, Warning, TEXT("%hs Called, 이미 감지된 Interactor가 있음"), __FUNCTION__);
+			// NET_LOG(LogTemp, Warning, TEXT("%hs Called, 이미 감지된 Interactor가 있음"), __FUNCTION__);
 			return;
 		}
 	}
@@ -758,12 +756,12 @@ void ABaseAgent::OnFindInteraction(UPrimitiveComponent* OverlappedComponent, AAc
 	{
 		if (CurrentInteractor == Interactor)
 		{
-			NET_LOG(LogTemp, Error, TEXT("%hs Called, 현재 들고 있는 Interactor와 동일함"), __FUNCTION__);
+			// NET_LOG(LogTemp, Error, TEXT("%hs Called, 현재 들고 있는 Interactor와 동일함"), __FUNCTION__);
 			return;
 		}
 		if (Interactor->HasOwnerAgent())
 		{
-			NET_LOG(LogTemp, Warning, TEXT("%hs Called, 이미 주인이 있는 Interactor"), __FUNCTION__);
+			// NET_LOG(LogTemp, Warning, TEXT("%hs Called, 이미 주인이 있는 Interactor"), __FUNCTION__);
 			return;
 		}
 		if (const auto* DetectedSpike = Cast<ASpike>(Interactor))
