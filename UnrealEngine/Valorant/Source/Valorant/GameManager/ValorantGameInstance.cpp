@@ -185,3 +185,8 @@ FAbilityData* UValorantGameInstance::GetAbilityData(int AbilityID)
 	UE_LOG(LogTemp, Error, TEXT("해당 ID의 데이터를 로드할 수 없습니다. AbilityID:%d"),AbilityID);
 	return nullptr;
 }
+
+UValorantGameInstance* UValorantGameInstance::Get(class UWorld* World)
+{
+	return Cast<UValorantGameInstance>(World->GetGameInstance());
+}

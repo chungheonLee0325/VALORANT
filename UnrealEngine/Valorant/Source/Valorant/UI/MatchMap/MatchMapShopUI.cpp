@@ -7,6 +7,7 @@
 #include "Valorant/Player/Component/CreditComponent.h"
 #include "Valorant/Player/AgentPlayerState.h"
 #include "Components/TextBlock.h"
+#include "Valorant/GameManager/ValorantGameInstance.h"
 
 void UMatchMapShopUI::NativeConstruct()
 {
@@ -25,6 +26,8 @@ void UMatchMapShopUI::NativeConstruct()
 		//RequestLatestCreditValue();
 		//UpdateCreditDisplay(0);
 	}
+
+	GameInstance = UValorantGameInstance::Get(GetWorld());
 }
 
 void UMatchMapShopUI::InitializeShopUI(AAgentPlayerController* Controller)
@@ -44,6 +47,9 @@ void UMatchMapShopUI::InitializeShopUI(AAgentPlayerController* Controller)
 		// PlayerState의 크레딧 델리게이트에 바인딩
 		PS->OnCreditChangedDelegate.AddDynamic(this, &UMatchMapShopUI::UpdateCreditDisplay);
 		
+		// 어빌리티 스택 변경 델리게이트에 바인딩
+		PS->OnAbilityStackChanged.AddDynamic(this, &UMatchMapShopUI::HandleAbilityStackChanged);
+		
 		// 크레딧 컴포넌트의 델리게이트에도 바인딩 (이중 안전장치)
 		UCreditComponent* CreditComp = PS->GetCreditComponent();
 		if (CreditComp)
@@ -54,6 +60,9 @@ void UMatchMapShopUI::InitializeShopUI(AAgentPlayerController* Controller)
 			// 크레딧 변경 이벤트에 바인딩
 			CreditComp->OnCreditChanged.AddDynamic(this, &UMatchMapShopUI::UpdateCreditDisplay);
 		}
+		
+		// 서버에 스택 정보 요청
+		PS->Server_RequestAbilityStackSync();
 	}
 	
 	// 상점 아이템 목록 업데이트
@@ -73,6 +82,9 @@ void UMatchMapShopUI::InitializeShopUI(AAgentPlayerController* Controller)
 	{
 		OwnerController->OnServerPurchaseResult.AddDynamic(this, &UMatchMapShopUI::HandleServerPurchaseResult);
 	}
+	
+	// 어빌리티 UI 초기화
+	InitializeAbilityUI();
 }
 
 void UMatchMapShopUI::UpdateCreditDisplay(int32 CurrentCredit)
@@ -165,17 +177,59 @@ void UMatchMapShopUI::OnClickedBuySkillButton(const int SkillId)
 		return;
 	}
 
-	// ShopComponent를 통해 스킬 구매 요청
-	UShopComponent* ShopComp = OwnerController->ShopComponent;
-	if (ShopComp)
+	// 현재 스택 및 최대 스택 확인
+	int32 CurrentStack = GetAbilityStack(SkillId);
+	int32 MaxStack = GetMaxAbilityStack(SkillId);
+	
+	// 이미 최대 스택인 경우 구매 불가 메시지 표시
+	if (CurrentStack >= MaxStack)
 	{
-		ShopComp->PurchaseAbility(SkillId);
-		// 구매 결과 처리 -> 서버 응답으로 대체
+		// 구매 실패 피드백 - 이미 최대 스택
+		HandleServerPurchaseResult(false, SkillId, EShopItemType::Ability, TEXT("최대 스택에 도달했습니다."));
+		return;
 	}
-	else
+	
+	// 구매 전 크레딧 충분한지 확인
+	AAgentPlayerState* PS = OwnerController->GetPlayerState<AAgentPlayerState>();
+	if (PS)
 	{
-		// HandlePurchaseResult(false, SkillId, EShopItemType::Ability);
+		UCreditComponent* CreditComp = PS->FindComponentByClass<UCreditComponent>();
+		UShopComponent* ShopComp = OwnerController->ShopComponent;
+		
+		if (CreditComp && ShopComp)
+		{
+			// 아이템 가격 확인
+			FAbilityData* AbilityData = GameInstance->GetAbilityData(SkillId);
+			if (AbilityData && !CreditComp->CanUseCredits(AbilityData->ChargeCost))
+			{
+				// 크레딧 부족 시 UI 피드백
+				if (CreditText)
+				{
+					// 기존 색상 저장
+					FSlateColor OriginalColor = CreditText->GetColorAndOpacity();
+					
+					// 빨간색으로 변경
+					CreditText->SetColorAndOpacity(FSlateColor(FLinearColor::Red));
+					
+					// 타이머로 원래 색상으로 되돌리기
+					FTimerHandle TimerHandle;
+					GetWorld()->GetTimerManager().SetTimer(TimerHandle, [this, OriginalColor]() {
+						if (CreditText)
+						{
+							CreditText->SetColorAndOpacity(OriginalColor);
+						}
+					}, 0.5f, false);
+				}
+				
+				// 구매 실패 처리
+				HandleServerPurchaseResult(false, SkillId, EShopItemType::Ability, TEXT("크레딧이 부족합니다."));
+				return;
+			}
+		}
 	}
+
+	// 컨트롤러를 통해 스킬 구매 요청 (ShopComponent를 직접 호출하지 않음)
+	OwnerController->RequestPurchaseAbility(SkillId);
 }
 
 void UMatchMapShopUI::OnClickedBuyShiledButton(const int ShieldId)
@@ -186,17 +240,46 @@ void UMatchMapShopUI::OnClickedBuyShiledButton(const int ShieldId)
 		return;
 	}
 
-	// ShopComponent를 통해 방어구 구매 요청
-	UShopComponent* ShopComp = OwnerController->ShopComponent;
-	if (ShopComp)
+	// 구매 전 크레딧 충분한지 확인
+	AAgentPlayerState* PS = OwnerController->GetPlayerState<AAgentPlayerState>();
+	if (PS)
 	{
-		ShopComp->PurchaseArmor(ShieldId);
-		// 구매 결과 처리 -> 서버 응답으로 대체
+		UCreditComponent* CreditComp = PS->FindComponentByClass<UCreditComponent>();
+		if (CreditComp)
+		{
+			// 아이템 가격 확인 (방어구는 ID 1이면 400, 2면 1000)
+			int32 Cost = (ShieldId == 1) ? 400 : 1000;
+			
+			if (!CreditComp->CanUseCredits(Cost))
+			{
+				// 크레딧 부족 시 UI 피드백
+				if (CreditText)
+				{
+					// 기존 색상 저장
+					FSlateColor OriginalColor = CreditText->GetColorAndOpacity();
+					
+					// 빨간색으로 변경
+					CreditText->SetColorAndOpacity(FSlateColor(FLinearColor::Red));
+					
+					// 타이머로 원래 색상으로 되돌리기
+					FTimerHandle TimerHandle;
+					GetWorld()->GetTimerManager().SetTimer(TimerHandle, [this, OriginalColor]() {
+						if (CreditText)
+						{
+							CreditText->SetColorAndOpacity(OriginalColor);
+						}
+					}, 0.5f, false);
+				}
+				
+				// 구매 실패 처리
+				HandleServerPurchaseResult(false, ShieldId, EShopItemType::Armor, TEXT("크레딧이 부족합니다."));
+				return;
+			}
+		}
 	}
-	else
-	{
-		// HandlePurchaseResult(false, ShieldId, EShopItemType::Armor);
-	}
+
+	// 컨트롤러를 통해 방어구 구매 요청
+	OwnerController->RequestPurchaseArmor(ShieldId);
 }
 
 void UMatchMapShopUI::UpdateShopItemList()
@@ -295,4 +378,138 @@ void UMatchMapShopUI::UpdateWeaponHighlights()
 bool UMatchMapShopUI::IsWeaponEquipped(int32 WeaponID) const
 {
 	return EquippedWeaponIDs.Contains(WeaponID);
+}
+
+// 어빌리티 스택 관련 함수 구현
+int32 UMatchMapShopUI::GetAbilityStack(int32 AbilityID) const
+{
+	if (!OwnerController)
+	{
+		return 0;
+	}
+	
+	AAgentPlayerState* PS = OwnerController->GetPlayerState<AAgentPlayerState>();
+	if (!PS)
+	{
+		return 0;
+	}
+	
+	return PS->GetAbilityStack(AbilityID);
+}
+
+int32 UMatchMapShopUI::GetMaxAbilityStack(int32 AbilityID) const
+{
+	if (!OwnerController)
+	{
+		return 0;
+	}
+	
+	AAgentPlayerState* PS = OwnerController->GetPlayerState<AAgentPlayerState>();
+	if (!PS)
+	{
+		return 0;
+	}
+	
+	return PS->GetMaxAbilityStack(AbilityID);
+}
+
+void UMatchMapShopUI::UpdateAbilityStacks()
+{
+	if (!OwnerController)
+	{
+		return;
+	}
+	
+	AAgentPlayerState* PS = OwnerController->GetPlayerState<AAgentPlayerState>();
+	if (!PS)
+	{
+		return;
+	}
+	
+	// 현재 캐릭터의 모든 어빌리티 ID 가져오기
+	TArray<int32> AbilityIDs;
+	UShopComponent* ShopComp = OwnerController->ShopComponent;
+	if (ShopComp)
+	{
+		// 스킬 슬롯별 어빌리티 ID 가져오기
+		int32 AgentID = PS->GetAgentID();
+		if (GameInstance)
+		{
+			FAgentData* AgentData = GameInstance->GetAgentData(AgentID);
+			if (AgentData)
+			{
+				// 각 스킬 슬롯의 어빌리티 ID 추가
+				if (AgentData->AbilityID_C > 0)
+				{
+					AbilityIDs.Add(AgentData->AbilityID_C);
+					SkillCID = AgentData->AbilityID_C;
+				}
+				if (AgentData->AbilityID_Q > 0)
+				{
+					AbilityIDs.Add(AgentData->AbilityID_Q);
+					SkillQID = AgentData->AbilityID_Q;
+				}
+				if (AgentData->AbilityID_E > 0)
+				{
+					AbilityIDs.Add(AgentData->AbilityID_E);
+					SkillEID = AgentData->AbilityID_E;
+				}
+				//if (AgentData->AbilityID_X > 0) AbilityIDs.Add(AgentData->AbilityID_X);
+			}
+		}
+	}
+	
+	// 각 어빌리티의 스택 정보 가져와서 캐시하고 UI 업데이트
+	AbilityStacksCache.Empty();
+	for (int32 AbilityID : AbilityIDs)
+	{
+		int32 Stack = PS->GetAbilityStack(AbilityID);
+		AbilityStacksCache.Add(AbilityID, Stack);
+		OnAbilityStackChanged(AbilityID, Stack);
+	}
+}
+
+void UMatchMapShopUI::HandleAbilityStackChanged(int32 AbilityID, int32 NewStack)
+{
+	// 캐시 업데이트
+	AbilityStacksCache.Add(AbilityID, NewStack);
+	
+	// 블루프린트 이벤트 호출
+	OnAbilityStackChanged(AbilityID, NewStack);
+}
+
+void UMatchMapShopUI::InitializeAbilityUI()
+{
+	if (!OwnerController)
+	{
+		return;
+	}
+	
+	AAgentPlayerState* PS = OwnerController->GetPlayerState<AAgentPlayerState>();
+	if (!PS)
+	{
+		return;
+	}
+	
+	// 현재 캐릭터의 어빌리티 정보 가져오기
+	int32 AgentID = PS->GetAgentID();
+
+	if (AgentID == 0)
+	{
+		return;
+	}
+
+	if (!GameInstance)
+	{
+		GameInstance = UValorantGameInstance::Get(GetWorld());
+	}
+	
+	FAgentData* AgentData = GameInstance->GetAgentData(AgentID);
+	if (!AgentData)
+	{
+		return;
+	}
+	
+	// 초기 스택 정보 업데이트
+	UpdateAbilityStacks();
 }

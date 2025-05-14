@@ -306,42 +306,126 @@ bool UShopComponent::PurchaseAbility(int32 AbilityID)
 {
 	if (!IsShopAvailable() || !m_Owner)
 	{
+		if (m_Owner)
+		{
+			m_Owner->Client_ReceivePurchaseResult(false, AbilityID, EShopItemType::Ability, 
+			                                       TEXT("상점이 현재 이용할 수 없습니다."));
+		}
 		return false;
 	}
 
 	// 플레이어 스테이트와 크레딧 컴포넌트 찾기
 	AAgentPlayerState* PS = m_Owner->GetPlayerState<AAgentPlayerState>();
-	if (!PS) return false;
-
-	UCreditComponent* CreditComp = PS->FindComponentByClass<UCreditComponent>();
-	if (!CreditComp) return false;
-
-	FAbilityData** AbilityInfo = AvailableAbilities.Find(AbilityID);
-	if (!AbilityInfo || !*AbilityInfo)
+	if (!PS) 
 	{
+		if (m_Owner)
+		{
+			m_Owner->Client_ReceivePurchaseResult(false, AbilityID, EShopItemType::Ability, 
+			                                       TEXT("플레이어 정보를 찾을 수 없습니다."));
+		}
 		return false;
 	}
 
-	int32 Cost = (*AbilityInfo)->ChargeCost;
+	UCreditComponent* CreditComp = PS->FindComponentByClass<UCreditComponent>();
+	if (!CreditComp) 
+	{
+		if (m_Owner)
+		{
+			m_Owner->Client_ReceivePurchaseResult(false, AbilityID, EShopItemType::Ability, 
+			                                       TEXT("크레딧 정보를 찾을 수 없습니다."));
+		}
+		return false;
+	}
+
+	FAbilityData* AbilityInfo = GameInstance->GetAbilityData(AbilityID);
+	if (!AbilityInfo)
+	{
+		if (m_Owner)
+		{
+			m_Owner->Client_ReceivePurchaseResult(false, AbilityID, EShopItemType::Ability, 
+			                                       TEXT("유효하지 않은 스킬입니다."));
+		}
+		return false;
+	}
+
+	int32 Cost = AbilityInfo->ChargeCost;
+
+	// 현재 스택 및 최대 스택 확인
+	int32 CurrentStack = PS->GetAbilityStack(AbilityID);
+	int32 MaxStack = PS->GetMaxAbilityStack(AbilityID);
+
+	// 이미 최대 스택인 경우
+	if (CurrentStack >= MaxStack)
+	{
+		if (m_Owner)
+		{
+			m_Owner->Client_ReceivePurchaseResult(false, AbilityID, EShopItemType::Ability, 
+			                                       TEXT("이미 최대 개수의 스킬을 보유하고 있습니다."));
+		}
+		return false;
+	}
 
 	// 크레딧 충분한지 확인
 	if (CreditComp->CanUseCredits(Cost))
 	{
-		// 서버에 구매 요청
-		m_Owner->RequestPurchaseAbility(AbilityID);
-
-		// 크레딧 차감은 실제 구매 성공 후 서버에서 처리됨
-		// 여기서는 UI 업데이트를 위한 이벤트만 발생시킴
-		FShopItem* Item = FindShopItem(AbilityID, EShopItemType::Ability);
-		if (Item)
+		// 크레딧 사용
+		bool bSuccess = CreditComp->UseCredits(Cost);
+		if (bSuccess)
 		{
-			OnShopItemPurchased.Broadcast(*Item);
+			if (PS->GetAbilityStack(AbilityID) != PS->GetMaxAbilityStack(AbilityID) )
+			{
+				// 스택 증가
+				PS->AddAbilityStack(AbilityID);
+				
+				// 구매 성공 이벤트 발생
+				FShopItem* Item = FindShopItem(AbilityID, EShopItemType::Ability);
+				if (Item)
+				{
+					OnShopItemPurchased.Broadcast(*Item);
+				}
+
+				// 클라이언트에 성공 결과 전송
+				if (m_Owner)
+				{
+					m_Owner->Client_ReceivePurchaseResult(true, AbilityID, EShopItemType::Ability, TEXT(""));
+				}
+
+				return true;
+			}
+			else
+			{
+				// 스택 증가 실패 시 크레딧 환불
+				CreditComp->AddCredits(Cost);
+				
+				if (m_Owner)
+				{
+					m_Owner->Client_ReceivePurchaseResult(false, AbilityID, EShopItemType::Ability, 
+					                                       TEXT("스킬 스택 증가에 실패했습니다."));
+				}
+				return false;
+			}
 		}
-
-		return true;
+		else
+		{
+			// 크레딧 사용 실패
+			if (m_Owner)
+			{
+				m_Owner->Client_ReceivePurchaseResult(false, AbilityID, EShopItemType::Ability, 
+				                                       TEXT("크레딧 사용에 실패했습니다."));
+			}
+			return false;
+		}
 	}
-
-	return false;
+	else
+	{
+		// 크레딧 부족
+		if (m_Owner)
+		{
+			m_Owner->Client_ReceivePurchaseResult(false, AbilityID, EShopItemType::Ability, 
+			                                       TEXT("크레딧이 부족합니다."));
+		}
+		return false;
+	}
 }
 
 bool UShopComponent::PurchaseArmor(int32 ArmorLevel)
@@ -495,11 +579,7 @@ bool UShopComponent::IsShopAvailable() const
 	}
 
 	// 현재 라운드 서브스테이트 확인 (구매 가능 단계인지)
-	// ToDo: GameState에서 라운드 서브스테이트 확인 로직 추가
-	// return GameState->GetRoundSubState() == ERoundSubState::RSS_BuyPhase;
-
-	// 현재는 임시로 항상 true 반환
-	return true;
+	return GameState->GetRoundSubState() == ERoundSubState::RSS_BuyPhase || GameState->GetRoundSubState() == ERoundSubState::RSS_PreRound;
 }
 
 TArray<FShopItem> UShopComponent::GetShopItemsByType(EShopItemType ItemType) const
@@ -568,7 +648,8 @@ void UShopComponent::SpawnWeaponForPlayer(int32 WeaponID)
 		if (NewWeapon)
 		{
 			// 무기 ID 설정
-			//NewWeapon->SetWeaponID(WeaponID);
+			// 현재 BP가 모두 ID와 나머지 설정되어있지않아서 override하는 방식으로 동작 -> ToDo : 만약 BP Driven으로 변경된다면 SetWeaponID 삭제
+			NewWeapon->SetWeaponID(WeaponID);
 			// 무기 카테고리에 따라 장착 방식 결정
 
 			if (CurrentWeapon)
@@ -602,11 +683,6 @@ void UShopComponent::SpawnWeaponForPlayer(int32 WeaponID)
 			// // 무기가 장착된 후 이벤트 발생
 			// OnEquippedWeaponsChanged.Broadcast();
 		}
-	}
-	else
-	{
-		// 클라이언트에서는 서버에 RPC 요청
-		m_Owner->ServerRequestWeaponPurchase(WeaponID);
 	}
 	// 무기가 장착된 후 이벤트 발생
 	OnEquippedWeaponsChanged.Broadcast();
@@ -672,4 +748,38 @@ bool UShopComponent::IsWeaponEquipped(int32 WeaponID) const
 	}
 
 	return false;
+}
+
+// 어빌리티 스택 정보 가져오기 구현
+int32 UShopComponent::GetAbilityStack(int32 AbilityID) const
+{
+	if (!m_Owner)
+	{
+		return 0;
+	}
+
+	AAgentPlayerState* PS = m_Owner->GetPlayerState<AAgentPlayerState>();
+	if (!PS)
+	{
+		return 0;
+	}
+
+	return PS->GetAbilityStack(AbilityID);
+}
+
+// 어빌리티의 최대 스택 수 가져오기 구현
+int32 UShopComponent::GetMaxAbilityStack(int32 AbilityID) const
+{
+	if (!m_Owner)
+	{
+		return 0;
+	}
+
+	AAgentPlayerState* PS = m_Owner->GetPlayerState<AAgentPlayerState>();
+	if (!PS)
+	{
+		return 0;
+	}
+
+	return PS->GetMaxAbilityStack(AbilityID);
 }

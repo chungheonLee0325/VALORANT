@@ -19,7 +19,19 @@ UCreditComponent::UCreditComponent()
 	RoundWinReward = 3000;
 	RoundLossReward = 1900;
 	ConsecutiveLossBonus = 500;
+
+#ifdef DEBUGTEST
+	// 기본값 설정
+	CurrentCredit += 3000; // 발로란트 첫 라운드 시작 크레딧
+	MaxCredit += 9000;
 	
+	// 보상 크레딧 기본값 설정
+	KillReward += 200;
+	SpikeReward += 300;
+	RoundWinReward += 3000;
+	RoundLossReward += 1900;
+	ConsecutiveLossBonus += 500;
+#endif
 	// 컴포넌트 리플리케이션 활성화
 	SetIsReplicatedByDefault(true);
 }

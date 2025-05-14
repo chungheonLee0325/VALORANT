@@ -70,6 +70,30 @@ public:
 	// 무기 하이라이트 색상 가져오기 (Blueprint용)
 	UFUNCTION(BlueprintPure, Category = "Shop")
 	FLinearColor GetEquippedWeaponHighlightColor() const { return EquippedWeaponHighlightColor; }
+
+	// 어빌리티 스택 관련 함수들
+	UFUNCTION(BlueprintPure, Category = "Shop|Ability")
+	int32 GetAbilityStack(int32 AbilityID) const;
+
+	UFUNCTION(BlueprintPure, Category = "Shop|Ability")
+	int32 GetMaxAbilityStack(int32 AbilityID) const;
+
+	// 어빌리티 목록 갱신 및 스택 표시 업데이트
+	UFUNCTION(BlueprintCallable, Category = "Shop|Ability")
+	void UpdateAbilityStacks();
+
+	// 어빌리티 스택 변경 이벤트 처리
+	UFUNCTION()
+	void HandleAbilityStackChanged(int32 AbilityID, int32 NewStack);
+
+	// 어빌리티 스택 변경 시 호출될 블루프린트 이벤트
+	UFUNCTION(BlueprintImplementableEvent, Category = "Shop|Ability")
+	void OnAbilityStackChanged(int32 AbilityID, int32 NewStack);
+
+	// 어빌리티 초기화 함수 (InitBySkillData 기반)
+	UFUNCTION(BlueprintCallable, Category = "Shop|Ability")
+	void InitializeAbilityUI();
+
 protected:
 	// 컨트롤러 참조
 	UPROPERTY(BlueprintReadOnly, Category = "Shop")
@@ -97,4 +121,18 @@ protected:
 	// 무기 하이라이트 스타일
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Shop|Style")
 	FLinearColor EquippedWeaponHighlightColor = FLinearColor(0.0f, 0.5f, 0.5f, 1.0f);
+
+	// 현재 보유 중인 어빌리티 스택 정보
+	UPROPERTY(BlueprintReadOnly, Category = "Shop|Ability")
+	TMap<int32, int32> AbilityStacksCache;
+
+	UPROPERTY(BlueprintReadWrite, Category = "Shop|Ability")
+	int SkillQID = 0;
+	UPROPERTY(BlueprintReadWrite, Category = "Shop|Ability")
+	int SkillEID = 0;
+	UPROPERTY(BlueprintReadWrite, Category = "Shop|Ability")
+	int SkillCID = 0;
+private:
+	UPROPERTY()
+	UValorantGameInstance* GameInstance;
 };

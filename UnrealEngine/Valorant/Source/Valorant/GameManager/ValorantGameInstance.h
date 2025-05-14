@@ -2,6 +2,8 @@
 
 #pragma once
 
+#define DEBUGTEST
+
 #include "CoreMinimal.h"
 #include "Engine/GameInstance.h"
 #include "ResourceManager/ValorantGameType.h"
@@ -60,6 +62,8 @@ public:
 	FGameplayEffectData* GetGEffectData(int GEffectID);
 	FAbilityData* GetAbilityData(int AbilityID);
 	
+	static UValorantGameInstance* Get(class UWorld* World);
+
 private:
 	UPROPERTY()
 	TMap<int32, FAgentData> dt_Agent;
