@@ -12,10 +12,10 @@ class VALORANT_API AFireGround : public AActor
 	GENERATED_BODY()
 
 public:
-	// Sets default values for this actor's properties
 	AFireGround();
 
 private:
+	const float Radius = 450;
 	const float Duration = 4;
 	const float DamageRate = 0.0167f;
 	
@@ -23,17 +23,22 @@ public:
 	UPROPERTY(BlueprintReadWrite, EditAnywhere)
 	TObjectPtr<UStaticMeshComponent> GroundMesh = nullptr;
 
-protected:
-	// Called when the game starts or when spawned
-	virtual void BeginPlay() override;
+	UPROPERTY(BlueprintReadOnly, VisibleAnywhere)
+	TSet<AActor*> OverlappedActors;
+	
+	FTimerHandle DamageTimerHandle;
+	FTimerHandle DurationTimerHandle;
 
+protected:
+	virtual void BeginPlay() override;
+	
 	UFUNCTION()
 	void OnBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
 
 	UFUNCTION()
 	void OnEndOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
-	
-public:
-	// Called every frame
-	virtual void Tick(float DeltaTime) override;
+
+	void ApplyDamage();
+
+	void OnElapsedDuration();
 };
