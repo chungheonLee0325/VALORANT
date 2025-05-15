@@ -39,6 +39,8 @@ public:
 	void Server_PlayAttackAnim(UAnimMontage* anim);
 	UFUNCTION(NetMulticast, Reliable)
 	void Multicast_PlayAttackAnim(UAnimMontage* anim);
+
+	// void MeleeAnimPlay(UAnimInstance* animInstance, UAnimMontage* anim);
 	
 	void OnMontageEnded(UAnimMontage* AnimMontage, bool bInterrupted);
 };

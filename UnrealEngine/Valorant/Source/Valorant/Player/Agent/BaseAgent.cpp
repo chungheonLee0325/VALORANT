@@ -535,6 +535,7 @@ void ABaseAgent::AcquireInteractor(ABaseInteractor* Interactor)
 
 void ABaseAgent::SwitchInteractor(EInteractorType InteractorType)
 {
+	//TODO: 장착 애니메이션과 함께 기존 재생되던 몽타주 종료하기
 	if (HasAuthority())
 	{
 		if (CurrentInteractor)

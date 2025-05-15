@@ -85,6 +85,7 @@ void AMeleeKnife::ResetCombo()
 	MagazineAmmo = MagazineSize;
 }
 
+
 void AMeleeKnife::OnMontageEnded(UAnimMontage* AnimMontage, bool bInterrupted)
 {
 	//콤보에 의해 애니메이션이 끊기면
@@ -124,19 +125,27 @@ void AMeleeKnife::Multicast_PlayAttackAnim_Implementation(UAnimMontage* anim)
 	if (OwnerAgent->IsLocallyControlled())
 	{
 		AnimInstance = OwnerAgent->GetABP_1P();
+		if (OwnerAgent->GetABP_3P() == nullptr)
+		{
+			NET_LOG(LogTemp, Warning, TEXT("%hs Called, ABP 3p is nullptr"), __FUNCTION__);
+		}
 	}
 	else
 	{
 		AnimInstance = OwnerAgent->GetABP_3P();
+		if (OwnerAgent->GetABP_1P() == nullptr)
+		{
+			NET_LOG(LogTemp, Warning, TEXT("%hs Called, ABP 1p is nullptr"), __FUNCTION__);
+		}
 	}
 	
 	if (!AnimInstance)
 	{
 		return;
 	}
-
+	
 	float Duration = AnimInstance->Montage_Play(anim, 1.0f);
-
+	
 	if (Duration > 0.f && OwnerAgent->IsLocallyControlled())
 	{
 		FOnMontageEnded EndDelegate;
