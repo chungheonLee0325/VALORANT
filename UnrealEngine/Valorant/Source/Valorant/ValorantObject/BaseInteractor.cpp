@@ -154,11 +154,9 @@ void ABaseInteractor::ServerRPC_PickUp_Implementation(ABaseAgent* Agent)
 {
 	if (nullptr == Agent)
 	{
-		NET_LOG(LogTemp, Warning, TEXT("%hs Called, InteractorName: %s, Agent is nullptr"), __FUNCTION__, *GetName());
+		NET_LOG(LogTemp, Error, TEXT("%hs Called, InteractorName: %s, Agent is nullptr"), __FUNCTION__, *GetName());
 		return;
 	}
-
-	NET_LOG(LogTemp, Warning, TEXT("%hs Called, InteractorName: %s"), __FUNCTION__, *GetName());
 	
 	OwnerAgent = Agent;
 	SetOwner(OwnerAgent);
@@ -175,7 +173,7 @@ void ABaseInteractor::ServerRPC_Drop_Implementation()
 		return;
 	}
 
-	NET_LOG(LogTemp, Warning, TEXT("%hs Called, InteractorName: %s"), __FUNCTION__, *GetName());
+	NET_LOG(LogTemp, Error, TEXT("%hs Called, InteractorName: %s"), __FUNCTION__, *GetName());
 	
 	if (OwnerAgent->GetCurrentInterator() == this)
 	{
@@ -205,6 +203,7 @@ void ABaseInteractor::ServerRPC_Drop_Implementation()
 void ABaseInteractor::ServerRPC_Interact_Implementation(ABaseAgent* InteractAgent)
 {
 	//
+	if (InteractAgent == nullptr) NET_LOG(LogTemp, Error, TEXT("%hs Called, InteractAgent is nullptr"), __FUNCTION__);
 }
 
 void ABaseInteractor::ServerRPC_SetActive_Implementation(bool bActive)
