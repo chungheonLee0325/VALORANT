@@ -7,6 +7,7 @@
 #include "Valorant/Player/Component/CreditComponent.h"
 #include "Valorant/Player/AgentPlayerState.h"
 #include "Components/TextBlock.h"
+#include "Components/Image.h"
 #include "Valorant/GameManager/ValorantGameInstance.h"
 
 void UMatchMapShopUI::NativeConstruct()
@@ -90,6 +91,10 @@ void UMatchMapShopUI::InitializeShopUI(AAgentPlayerController* Controller)
 
 	// 어빌리티 UI 초기화
 	InitializeAbilityUI();
+	
+	// 어빌리티 데이터 로드 및 UI 업데이트
+	LoadAllAbilityData();
+	UpdateAbilityUI();
 }
 
 void UMatchMapShopUI::UpdateCreditDisplay(int32 CurrentCredit)
@@ -292,7 +297,14 @@ void UMatchMapShopUI::HandleServerPurchaseResult(bool bSuccess, int32 ItemID, ES
 		// 크레딧 표시는 OnCreditChanged 델리게이트를 통해 자동으로 업데이트될 것이므로, 여기서 직접 호출할 필요는 없을 수 있음
 		// 필요하다면 RequestLatestCreditValue(); 호출 고려
 		UE_LOG(LogTemp, Log, TEXT("Purchase successful for Item %d (%s)"), ItemID, *UEnum::GetValueAsString(ItemType));
-		// 여기에 성공 시 UI 피드백 로직 추가 (예: 성공 메시지, 사운드)
+		// ToDo : 성공 시 UI 피드백 로직 추가 (예: 성공 메시지, 사운드)
+		
+		// 어빌리티 구매 성공 시 해당 어빌리티 정보 업데이트
+		if (ItemType == EShopItemType::Ability)
+		{
+			LoadAbilityData(ItemID);
+			UpdateAbilityUI();
+		}
 	}
 	else
 	{
@@ -427,7 +439,17 @@ void UMatchMapShopUI::UpdateAbilityStacks()
 		int32 Stack = PS->GetAbilityStack(AbilityID);
 		AbilityStacksCache.Add(AbilityID, Stack);
 		OnAbilityStackChanged(AbilityID, Stack);
+		
+		// 어빌리티 정보도 함께 업데이트
+		FUIAbilityInfo* AbilityInfo = AbilityInfoCache.Find(AbilityID);
+		if (AbilityInfo)
+		{
+			AbilityInfo->CurrentStack = Stack;
+		}
 	}
+	
+	// UI 업데이트
+	UpdateAbilityUI();
 }
 
 void UMatchMapShopUI::HandleAbilityStackChanged(int32 AbilityID, int32 NewStack)
@@ -437,6 +459,27 @@ void UMatchMapShopUI::HandleAbilityStackChanged(int32 AbilityID, int32 NewStack)
 
 	// 블루프린트 이벤트 호출
 	OnAbilityStackChanged(AbilityID, NewStack);
+	
+	// 어빌리티 정보 캐시 업데이트
+	FUIAbilityInfo* AbilityInfo = AbilityInfoCache.Find(AbilityID);
+	if (AbilityInfo)
+	{
+		AbilityInfo->CurrentStack = NewStack;
+		
+		// 슬롯 타입 확인 및 UI 업데이트
+		if (AbilityID == SkillCID)
+		{
+			OnAbilityInfoUpdated(EAbilitySlotType::Slot_C, *AbilityInfo);
+		}
+		else if (AbilityID == SkillQID)
+		{
+			OnAbilityInfoUpdated(EAbilitySlotType::Slot_Q, *AbilityInfo);
+		}
+		else if (AbilityID == SkillEID)
+		{
+			OnAbilityInfoUpdated(EAbilitySlotType::Slot_E, *AbilityInfo);
+		}
+	}
 }
 
 void UMatchMapShopUI::InitializeAbilityUI()
@@ -473,6 +516,203 @@ void UMatchMapShopUI::InitializeAbilityUI()
 
 	// 초기 스택 정보 업데이트
 	UpdateAbilityStacks();
+	
+	// 어빌리티 정보 로드
+	LoadAllAbilityData();
+	
+	// UI 업데이트
+	UpdateAbilityUI();
+}
+
+// 특정 어빌리티 데이터 로드
+void UMatchMapShopUI::LoadAbilityData(int32 AbilityID)
+{
+	if (!GameInstance)
+	{
+		return;
+	}
+	
+	FAbilityData* AbilityData = GameInstance->GetAbilityData(AbilityID);
+	if (!AbilityData)
+	{
+		return;
+	}
+	
+	// 현재 스택 정보 가져오기
+	int32 CurrentStack = GetAbilityStack(AbilityID);
+	int32 MaxStack = GetMaxAbilityStack(AbilityID);
+	
+	// 어빌리티 정보 구조체 생성 및 캐싱
+	FUIAbilityInfo AbilityInfo;
+	AbilityInfo.AbilityID = AbilityID;
+	AbilityInfo.AbilityName = AbilityData->AbilityName;
+	AbilityInfo.ChargeCost = AbilityData->ChargeCost;
+	AbilityInfo.AbilityIcon = AbilityData->AbilityIcon;
+	AbilityInfo.CurrentStack = CurrentStack;
+	AbilityInfo.MaxStack = MaxStack;
+	
+	// 캐시에 저장
+	AbilityInfoCache.Add(AbilityID, AbilityInfo);
+}
+
+// 모든 어빌리티 데이터 로드
+void UMatchMapShopUI::LoadAllAbilityData()
+{
+	if (!OwnerController)
+	{
+		return;
+	}
+	
+	AAgentPlayerState* PS = OwnerController->GetPlayerState<AAgentPlayerState>();
+	if (!PS)
+	{
+		return;
+	}
+	
+	// 캐릭터 ID 가져오기
+	int32 AgentID = PS->GetAgentID();
+	if (AgentID == 0 || !GameInstance)
+	{
+		return;
+	}
+	
+	FAgentData* AgentData = GameInstance->GetAgentData(AgentID);
+	if (!AgentData)
+	{
+		return;
+	}
+	
+	// 각 슬롯의 어빌리티 ID 로드
+	if (AgentData->AbilityID_C > 0)
+	{
+		SkillCID = AgentData->AbilityID_C;
+		LoadAbilityData(SkillCID);
+	}
+	
+	if (AgentData->AbilityID_Q > 0)
+	{
+		SkillQID = AgentData->AbilityID_Q;
+		LoadAbilityData(SkillQID);
+	}
+	
+	if (AgentData->AbilityID_E > 0)
+	{
+		SkillEID = AgentData->AbilityID_E;
+		LoadAbilityData(SkillEID);
+	}
+}
+
+// 어빌리티 UI 업데이트
+void UMatchMapShopUI::UpdateAbilityUI()
+{
+	// 각 슬롯 별 어빌리티 정보 업데이트
+	if (SkillCID > 0)
+	{
+		FUIAbilityInfo* AbilityInfo = AbilityInfoCache.Find(SkillCID);
+		if (AbilityInfo)
+		{
+			// 이미지 UI 업데이트
+			if (AbilityC_Image && AbilityInfo->AbilityIcon)
+			{
+				AbilityC_Image->SetBrushFromTexture(AbilityInfo->AbilityIcon);
+			}
+			
+			// 가격 UI 업데이트
+			if (AbilityC_Cost)
+			{
+				AbilityC_Cost->SetText(FText::FromString(FString::Printf(TEXT("%d"), AbilityInfo->ChargeCost)));
+			}
+			
+			// 블루프린트 이벤트 호출
+			OnAbilityInfoUpdated(EAbilitySlotType::Slot_C, *AbilityInfo);
+		}
+	}
+	
+	if (SkillQID > 0)
+	{
+		FUIAbilityInfo* AbilityInfo = AbilityInfoCache.Find(SkillQID);
+		if (AbilityInfo)
+		{
+			// 이미지 UI 업데이트
+			if (AbilityQ_Image && AbilityInfo->AbilityIcon)
+			{
+				AbilityQ_Image->SetBrushFromTexture(AbilityInfo->AbilityIcon);
+			}
+			
+			// 가격 UI 업데이트
+			if (AbilityQ_Cost)
+			{
+				AbilityQ_Cost->SetText(FText::FromString(FString::Printf(TEXT("%d"), AbilityInfo->ChargeCost)));
+			}
+			
+			// 블루프린트 이벤트 호출
+			OnAbilityInfoUpdated(EAbilitySlotType::Slot_Q, *AbilityInfo);
+		}
+	}
+	
+	if (SkillEID > 0)
+	{
+		FUIAbilityInfo* AbilityInfo = AbilityInfoCache.Find(SkillEID);
+		if (AbilityInfo)
+		{
+			// 이미지 UI 업데이트
+			if (AbilityE_Image && AbilityInfo->AbilityIcon)
+			{
+				AbilityE_Image->SetBrushFromTexture(AbilityInfo->AbilityIcon);
+			}
+			
+			// 가격 UI 업데이트
+			if (AbilityE_Cost)
+			{
+				AbilityE_Cost->SetText(FText::FromString(FString::Printf(TEXT("%d"), AbilityInfo->ChargeCost)));
+			}
+			
+			// 블루프린트 이벤트 호출
+			OnAbilityInfoUpdated(EAbilitySlotType::Slot_E, *AbilityInfo);
+		}
+	}
+}
+
+// 어빌리티 정보 가져오기
+FUIAbilityInfo UMatchMapShopUI::GetAbilityInfo(int32 AbilityID) const
+{
+	const FUIAbilityInfo* InfoPtr = AbilityInfoCache.Find(AbilityID);
+	if (InfoPtr)
+	{
+		return *InfoPtr;
+	}
+	
+	// 기본 빈 정보 반환
+	return FUIAbilityInfo();
+}
+
+// 슬롯별 어빌리티 정보 가져오기
+FUIAbilityInfo UMatchMapShopUI::GetAbilityInfoBySlot(EAbilitySlotType SlotType) const
+{
+	int32 AbilityID = 0;
+	
+	switch (SlotType)
+	{
+	case EAbilitySlotType::Slot_C:
+		AbilityID = SkillCID;
+		break;
+	case EAbilitySlotType::Slot_Q:
+		AbilityID = SkillQID;
+		break;
+	case EAbilitySlotType::Slot_E:
+		AbilityID = SkillEID;
+		break;
+	default:
+		break;
+	}
+	
+	if (AbilityID > 0)
+	{
+		return GetAbilityInfo(AbilityID);
+	}
+	
+	// 기본 빈 정보 반환
+	return FUIAbilityInfo();
 }
 
 // 색상 변경 로직을 통합한 함수 구현

@@ -181,14 +181,6 @@ void ABaseAgent::BeginPlay()
 	TL_DieCamera->SetTimelineLength(DieCameraTimeRange);
 	TL_DieCamera->SetTimelineLengthMode(ETimelineLengthMode::TL_TimelineLength);
 
-	// // 죽음 카메라 타임라인에 델리게이트 걸기
-	// if (IsLocallyControlled())
-	// {
-	// 	FOnTimelineEvent finishDieCamera;
-	// 	finishDieCamera.BindUFunction(this, FName("OnDieCameraFinished"));
-	// 	TL_DieCamera->SetTimelineFinishedFunc(finishDieCamera);
-	// }
-
 	if (HasAuthority() == false && IsLocallyControlled())
 	{
 		// NET_LOG(LogTemp, Error, TEXT("%hs, HasAuthority() == false && IsLocallyControlled()"), __FUNCTION__);
@@ -207,11 +199,20 @@ void ABaseAgent::BeginPlay()
         // 자동 시야 체크 설정 (시야 체크 함수 호출하여 초기 상태 설정)
         PerformVisibilityChecks();
     	
-    	AMatchGameMode* gm = GetWorld()->GetAuthGameMode<AMatchGameMode>();
-    	if (gm)
+    	FTimerHandle SpawnWeaponTimerHandle;
+    	if (UWorld* World = GetWorld())
     	{
-    		gm->SpawnDefaultWeapon(this);
-		}
+    		FTimerDelegate TimerDel;
+    		TimerDel.BindLambda([this, World]()
+			{
+				if (AMatchGameMode* gm = World->GetAuthGameMode<AMatchGameMode>())
+				{
+					gm->SpawnDefaultWeapon(this);
+				}
+			});
+    		
+    		World->GetTimerManager().SetTimer(SpawnWeaponTimerHandle,TimerDel,1.0f,false);
+    	}
     }
 }
 
@@ -431,6 +432,7 @@ void ABaseAgent::ServerRPC_Interact_Implementation(ABaseInteractor* Interactor)
 		NET_LOG(LogTemp, Error, TEXT("%hs Called, Interactor is nullptr"), __FUNCTION__);
 		return;
 	}
+		
 	Interactor->ServerRPC_Interact(this);
 }
 
@@ -480,7 +482,11 @@ void ABaseAgent::ResetOwnSpike()
 
 void ABaseAgent::AcquireInteractor(ABaseInteractor* Interactor)
 {
-	// NET_LOG(LogTemp, Warning, TEXT("%hs Called"), __FUNCTION__);
+	if (Interactor == nullptr)
+	{
+		NET_LOG(LogTemp, Error, TEXT("%hs Called, Interactor is nullptr"), __FUNCTION__);
+		return;
+	}
 	if (!HasAuthority())
 	{
 		Server_AcquireInteractor(Interactor);
@@ -505,7 +511,6 @@ void ABaseAgent::AcquireInteractor(ABaseInteractor* Interactor)
 	{
 		if (SubWeapon)
 		{
-			// ToDO : 기본 권총을 버려야할지
 			SubWeapon->ServerRPC_Drop();
 		}
 		SubWeapon = weapon;
@@ -530,6 +535,7 @@ void ABaseAgent::AcquireInteractor(ABaseInteractor* Interactor)
 
 void ABaseAgent::SwitchInteractor(EInteractorType InteractorType)
 {
+	//TODO: 장착 애니메이션과 함께 기존 재생되던 몽타주 종료하기
 	if (HasAuthority())
 	{
 		if (CurrentInteractor)
@@ -734,7 +740,7 @@ void ABaseAgent::EquipInteractor(ABaseInteractor* interactor)
 		ABP_1P->InteractorPoseIdx = PoseIdx;
 		ABP_3P->InteractorPoseIdx = PoseIdx;
 	}
-	NET_LOG(LogTemp, Warning, TEXT("%hs Called, 현재 장착 중인 Interactor: %s"), __FUNCTION__, *CurrentInteractor->GetActorNameOrLabel());
+	// NET_LOG(LogTemp, Warning, TEXT("%hs Called, 현재 장착 중인 Interactor: %s"), __FUNCTION__, *CurrentInteractor->GetActorNameOrLabel());
 }
 
 void ABaseAgent::OnFindInteraction(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
