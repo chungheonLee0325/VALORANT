@@ -21,6 +21,7 @@ void UAnimNotifyState_MeleeCombo::NotifyBegin(USkeletalMeshComponent* MeshComp, 
 		if (AMeleeKnife* knife = Cast<AMeleeKnife>(agent->GetMeleeWeapon()))
 		{
 			knife->bIsCombo = true;
+			// UE_LOG(LogTemp, Error, TEXT("애님노티파이, 콤보 true"));
 		}
 	}
 }
@@ -39,6 +40,7 @@ void UAnimNotifyState_MeleeCombo::NotifyEnd(USkeletalMeshComponent* MeshComp, UA
 		if (AMeleeKnife* knife = Cast<AMeleeKnife>(agent->GetMeleeWeapon()))
 		{
 			knife->bIsCombo = false;
+			// UE_LOG(LogTemp, Error, TEXT("애님노티파이, 콤보 false"));
 		}
 	}
 }
