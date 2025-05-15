@@ -233,6 +233,10 @@ public:
 	UFUNCTION(Server, Reliable, Category= "Input")
 	void ServerRPC_DropCurrentInteractor();
 
+	UFUNCTION()
+	ABaseInteractor* GetFindInteractorActor() const { return FindInteractActor; }
+	void ResetFindInteractorActor() { FindInteractActor = nullptr; }
+
 	UFUNCTION(BlueprintCallable)
 	EInteractorType GetInteractorState() const { return CurrentInteractorState; }
 
@@ -244,13 +248,12 @@ public:
 
 	ABaseWeapon* GetMainWeapon() const;
 	ABaseWeapon* GetSubWeapon() const;
-	void ResetMainWeapon() {MainWeapon = nullptr;};
-	void ResetSubWeapon() {SubWeapon = nullptr;};
-	
+	void ResetMainWeapon() { MainWeapon = nullptr; }
+	void ResetSubWeapon() { SubWeapon = nullptr; }
 	
 	ABaseWeapon* GetMeleeWeapon() const;
-
 	void SetMeleeWeapon(ABaseWeapon* knife) { MeleeKnife = knife; }
+	
 	void ResetOwnSpike();
 
 	/** 장착 X, 획득하는 개념 (땅에 떨어진 무기 줍기, 상점에서 무기 구매) */
@@ -334,7 +337,7 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	UAgentAnimInstance* ABP_3P = nullptr;
 
-	UPROPERTY()
+	UPROPERTY(Replicated)
 	ABaseInteractor* FindInteractActor = nullptr;
 
 	UPROPERTY(Replicated)

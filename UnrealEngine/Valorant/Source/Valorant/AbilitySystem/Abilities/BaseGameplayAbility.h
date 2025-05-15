@@ -27,6 +27,13 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void SetCurrentFollowUpInput(const FGameplayTag inputTag) { CurrentFollowUpInputTag = inputTag; }
 	
+	// 어빌리티 스택 감소 메서드
+	UFUNCTION(BlueprintCallable, Category = "Ability|Stack")
+	bool ConsumeAbilityStack();
+	
+	// 어빌리티 스택 확인 메서드 
+	UFUNCTION(BlueprintCallable, Category = "Ability|Stack")
+	int32 GetAbilityStack() const;
 
 protected:
 	UPROPERTY(EditAnywhere)

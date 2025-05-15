@@ -3,10 +3,10 @@
 
 #include "BaseWeapon.h"
 
-#include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "Valorant.h"
 #include "Components/WidgetComponent.h"
+#include "GameFramework/PawnMovementComponent.h"
 #include "GameManager/SubsystemSteamManager.h"
 #include "GameManager/ValorantGameInstance.h"
 #include "Kismet/GameplayStatics.h"
@@ -82,7 +82,7 @@ void ABaseWeapon::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
 
-	if (OwnerAgent && OwnerAgent->GetController() && false == bIsFiring && false == FMath::IsNearlyZero(FMath::Abs(TotalRecoilOffsetPitch) + FMath::Abs(TotalRecoilOffsetYaw), 0.05f))
+	if (OwnerAgent && OwnerAgent->GetController() && (false == bIsFiring || MagazineAmmo <= 0))
 	{
 		const float SubPitchValue = -FMath::Lerp(TotalRecoilOffsetPitch, 0.0f, 0.88f);
 		TotalRecoilOffsetPitch += SubPitchValue;
@@ -98,7 +98,7 @@ void ABaseWeapon::Tick(float DeltaSeconds)
 
 void ABaseWeapon::StartFire()
 {
-	if (nullptr == OwnerAgent || nullptr == OwnerAgent->GetController())
+	if (nullptr == OwnerAgent || nullptr == OwnerAgent->GetController() || true == bIsReloading)
 	{
 		NET_LOG(LogTemp, Warning, TEXT("%hs Called, OwnerAgent or Controller is nullptr"), __FUNCTION__);
 		return;
@@ -113,28 +113,23 @@ void ABaseWeapon::StartFire()
 	}
 	NET_LOG(LogTemp, Warning, TEXT("%hs Called, RecoilLevel: %d"), __FUNCTION__, RecoilLevel);
 
+	GetWorld()->GetTimerManager().ClearTimer(RecoverRecoilLevelHandle);
+	// InRate가 0.01인 이유는 단순히 체크하는 용도이지 FireInterval에 따른 실제 사격은 Fire에서 체크하기 때문
 	GetWorld()->GetTimerManager().SetTimer(AutoFireHandle, this, &ABaseWeapon::Fire, 0.01f, true, 0);
-
-	if (AM_Fire)
-	{
-		OwnerAgent->GetABP_1P()->Montage_Play(AM_Fire);
-		OwnerAgent->GetABP_3P()->Montage_Play(AM_Fire);
-	}
-	
 }
 
 void ABaseWeapon::Fire()
 {
-	if (nullptr == OwnerAgent || nullptr == OwnerAgent->GetController() || false == bIsFiring)
+	if (nullptr == OwnerAgent || nullptr == OwnerAgent->GetController() || false == bIsFiring || true == bIsReloading)
 	{
 		return;
 	}
-
+	
 	if (MagazineAmmo <= 0)
 	{
 		if (SpareAmmo > 0)
 		{
-			StartReload();
+			ServerRPC_StartReload();
 		}
 		return;
 	}
@@ -145,13 +140,6 @@ void ABaseWeapon::Fire()
 		return;
 	}
 	LastFireTime = CurrentTime;
-	MagazineAmmo--;
-	
-	// 무기를 사용한 것으로 표시
-	if (!bWasUsed && HasAuthority())
-	{
-		bWasUsed = true;
-	}
 	
 	// KBD: 발사 시 캐릭터에 반동값 적용
 	if (RecoilData.Num() > 0)
@@ -165,8 +153,7 @@ void ABaseWeapon::Fire()
 		TotalRecoilOffsetYaw += YawValue;
 		
 		RecoilLevel = FMath::Clamp(RecoilLevel + 1, 0, RecoilData.Num() - 1);
-		
-		// UE_LOG(LogTemp, Warning, TEXT("Ammo : %d, Total : (%f, %f), Add : (%f, %f)"), MagazineAmmo, TotalRecoilOffsetPitch, TotalRecoilOffsetYaw, PitchValue, YawValue);
+		// NET_LOG(LogTemp, Warning, TEXT("Ammo : %d, Total : (%f, %f), Add : (%f, %f)"), MagazineAmmo, TotalRecoilOffsetPitch, TotalRecoilOffsetYaw, PitchValue, YawValue);
 	}
 
 	// 서버 쪽에서 처리해야 하는 발사 로직 호출
@@ -182,23 +169,34 @@ void ABaseWeapon::Fire()
 	FVector Start, Dir;
 	PlayerController->DeprojectScreenPositionToWorld(ScreenWidth * 0.5f, ScreenHeight * 0.5f, Start, Dir);
 	ServerRPC_Fire(Start, Dir);
+}
+
+FVector ABaseWeapon::GetSpreadDirection(const FVector& Direction)
+{
+	float MaxAngleDeg = 0;
+	// 일정 속도 이상으로 이동 또는 점프 중일 때 MaxAngleRad = 5
+	if (OwnerAgent)
+	{
+		if (const auto* MovementComponent = OwnerAgent->GetMovementComponent())
+		{
+			if (MovementComponent->Velocity.Size() >= 100.f || false == MovementComponent->IsMovingOnGround())
+			{
+				MaxAngleDeg = 5.f;
+			}
+		}
+	}
+
+	// TODO: 무기 종류에 따라 탄퍼짐 계수 다르게
+	// if (WeaponData->WeaponCategory == EWeaponCategory::SMG)
 	
-	// // Try and play the sound if specified
-	// if (FireSound != nullptr)
-	// {
-	// 	UGameplayStatics::PlaySoundAtLocation(this, FireSound, Character->GetActorLocation());
-	// }
-	//
-	// // Try and play a firing animation if specified
-	// if (FireAnimation != nullptr)
-	// {
-	// 	// Get the animation object for the arms mesh
-	// 	UAnimInstance* AnimInstance = Character->GetMesh1P()->GetAnimInstance();
-	// 	if (AnimInstance != nullptr)
-	// 	{
-	// 		AnimInstance->Montage_Play(FireAnimation, 1.f);
-	// 	}
-	// }
+	const float MaxAngleRad = FMath::DegreesToRadians(MaxAngleDeg);
+	
+	const float Yaw = FMath::RandRange(-MaxAngleRad, MaxAngleRad);
+	const float Pitch = FMath::RandRange(-MaxAngleRad, MaxAngleRad);
+	FRotator SpreadRot = Direction.Rotation();
+	SpreadRot.Yaw += FMath::RadiansToDegrees(Yaw);
+	SpreadRot.Pitch += FMath::RadiansToDegrees(Pitch);
+	return SpreadRot.Vector();
 }
 
 void ABaseWeapon::ServerRPC_Fire_Implementation(const FVector& Location, const FVector& Direction)
@@ -210,8 +208,15 @@ void ABaseWeapon::ServerRPC_Fire_Implementation(const FVector& Location, const F
 		return;
 	}
 	
+	MagazineAmmo--;
+	NET_LOG(LogTemp, Warning, TEXT("%hs Called, MagazineAmmo: %d, SpareAmmo: %d"), __FUNCTION__, MagazineAmmo, SpareAmmo);
+
+	// 무기를 사용한 것으로 표시
+	bWasUsed = true;
+	
+	const FVector& Dir = GetSpreadDirection(Direction);
 	const FVector& Start = Location;
-	const FVector End = Start + Direction * 99999;
+	const FVector End = Start + Dir * 99999;
 	// NET_LOG(LogTemp, Warning, TEXT("ServerRPC_Fire_Implementation, Start : %s, End : %s"), *Start.ToString(), *End.ToString());
 	
 	// 궤적, 탄착군 디버깅
@@ -270,7 +275,9 @@ void ABaseWeapon::ServerRPC_Fire_Implementation(const FVector& Location, const F
 		}
 		DrawDebugPoint(WorldContext, OutHit.ImpactPoint, 5, FColor::Green, false, 30);
 	}
+	
 	MulticastRPC_PlayFireSound();
+	MulticastRPC_PlayFireAnimation();
 }
 
 void ABaseWeapon::EndFire()
@@ -278,35 +285,64 @@ void ABaseWeapon::EndFire()
 	bIsFiring = false;
 
 	GetWorld()->GetTimerManager().ClearTimer(AutoFireHandle);
+	GetWorld()->GetTimerManager().SetTimer(RecoverRecoilLevelHandle, this, &ABaseWeapon::RecoverRecoilLevel, FireInterval / 2, true);
 }
 
-void ABaseWeapon::StartReload()
+void ABaseWeapon::RecoverRecoilLevel()
+{
+	RecoilLevel = FMath::Clamp(RecoilLevel - 1, 0, RecoilData.Num() - 1);
+	if (RecoilLevel == 0)
+	{
+		GetWorld()->GetTimerManager().ClearTimer(RecoverRecoilLevelHandle);
+	}
+}
+
+void ABaseWeapon::ServerRPC_StartReload_Implementation()
 {
 	if (nullptr == WeaponData || MagazineAmmo == MagazineSize || SpareAmmo <= 0)
 	{
+		NET_LOG(LogTemp, Warning, TEXT("%hs Called, Can't Reload"), __FUNCTION__);
 		return;
 	}
 	
-	if (const auto* World = GetWorld())
+	if (false == GetWorld()->GetTimerManager().IsTimerActive(ReloadHandle))
 	{
-		if (false == World->GetTimerManager().IsTimerActive(ReloadHandle))
-		{
-			UE_LOG(LogTemp, Warning, TEXT("StartReload %p"), this);
-			bIsFiring = false;
-			World->GetTimerManager().SetTimer(ReloadHandle, this, &ABaseWeapon::Reload, 3, false, WeaponData->ReloadTime);
-
-			if (AM_Reload)
-			{
-				OwnerAgent->GetABP_1P()->Montage_Play(AM_Reload);
-				OwnerAgent->GetABP_3P()->Montage_Play(AM_Reload);
-			}
-		}
+		NET_LOG(LogTemp, Warning, TEXT("%hs Called, Reload Start"), __FUNCTION__);
+		bIsFiring = false;
+		bIsReloading = true;
+		ServerRPC_PlayReloadAnim();
+		GetWorld()->GetTimerManager().SetTimer(ReloadHandle, this, &ABaseWeapon::Reload, 3, false, WeaponData->ReloadTime);
 	}
 }
 
 void ABaseWeapon::MulticastRPC_PlayFireSound_Implementation()
 {
 	PlayFireSound();
+}
+
+void ABaseWeapon::MulticastRPC_PlayFireAnimation_Implementation()
+{
+	if (AM_Fire == nullptr)
+	{
+		UE_LOG(LogTemp, Error, TEXT("총기에 격발 애니메이션이 없어요."));
+		return;
+	}
+	if (OwnerAgent->IsLocallyControlled())
+	{
+		if (OwnerAgent->GetABP_1P()->Montage_IsPlaying(AM_Fire))
+		{
+			OwnerAgent->GetABP_1P()->Montage_Stop(0.05f, AM_Fire);
+		}
+		OwnerAgent->GetABP_1P()->Montage_Play(AM_Fire, 1.0f);
+	}
+	else
+	{
+		if (OwnerAgent->GetABP_3P()->Montage_IsPlaying(AM_Fire))
+		{
+			OwnerAgent->GetABP_3P()->Montage_Stop(0.05f, AM_Fire);
+		}
+		OwnerAgent->GetABP_3P()->Montage_Play(AM_Fire, 1.0f);
+	}
 }
 
 void ABaseWeapon::Reload()
@@ -318,10 +354,7 @@ void ABaseWeapon::Reload()
 	SpareAmmo -= D;
 	
 	// 무기를 사용한 것으로 표시
-	if (!bWasUsed && HasAuthority())
-	{
-		bWasUsed = true;
-	}
+	bWasUsed = true;
 	
 	if (const auto* World = GetWorld())
 	{
@@ -331,6 +364,8 @@ void ABaseWeapon::Reload()
 			RecoilLevel = 0;
 		}
 	}
+
+	bIsReloading = false;
 }
 
 void ABaseWeapon::StopReload()
@@ -338,6 +373,37 @@ void ABaseWeapon::StopReload()
 	if (const auto* World = GetWorld())
 	{
 		World->GetTimerManager().ClearTimer(ReloadHandle);
+	}
+}
+
+
+void ABaseWeapon::ServerRPC_PlayReloadAnim_Implementation()
+{
+	MulticastRPC_PlayReloadAnim();
+}
+
+void ABaseWeapon::MulticastRPC_PlayReloadAnim_Implementation()
+{
+	if (AM_Reload == nullptr)
+	{
+		UE_LOG(LogTemp, Error, TEXT("총기에 장전 애니메이션이 없어요."));
+		return;
+	}
+	if (OwnerAgent->IsLocallyControlled())
+	{
+		if (OwnerAgent->GetABP_1P()->Montage_IsPlaying(AM_Reload))
+		{
+			OwnerAgent->GetABP_1P()->Montage_Stop(0.05f, AM_Reload);
+		}
+		OwnerAgent->GetABP_1P()->Montage_Play(AM_Reload, 1.0f);
+	}
+	else
+	{
+		if (OwnerAgent->GetABP_3P()->Montage_IsPlaying(AM_Reload))
+		{
+			OwnerAgent->GetABP_3P()->Montage_Stop(0.05f, AM_Reload);
+		}
+		OwnerAgent->GetABP_3P()->Montage_Play(AM_Reload, 1.0f);
 	}
 }
 
@@ -440,7 +506,7 @@ void ABaseWeapon::ServerOnly_AttachWeapon(ABaseAgent* Agent)
 	Agent->AcquireInteractor(this);
 }
 
-void ABaseWeapon::SetWeaponID(int32 NewWeaponID)
+void ABaseWeapon::NetMulti_ReloadWeaponData_Implementation(int32 NewWeaponID)
 {
 	WeaponID = NewWeaponID;
 	
@@ -475,6 +541,24 @@ void ABaseWeapon::SetWeaponID(int32 NewWeaponID)
 	}
 }
 
+void ABaseWeapon::OnRep_Ammo() const
+{
+	if (OwnerAgent && OwnerAgent->IsLocallyControlled())
+	{
+		if (const auto* Controller = OwnerAgent->GetController<AAgentPlayerController>())
+		{
+			if (WeaponData && WeaponData->WeaponCategory != EWeaponCategory::Melee)
+			{
+				Controller->NotifyChangedAmmo(true, MagazineAmmo, SpareAmmo);
+			}
+			else
+			{
+				Controller->NotifyChangedAmmo(false, MagazineAmmo, SpareAmmo);
+			}
+		}
+	}
+}
+
 // 무기 사용 여부를 네트워크 복제되도록 처리
 void ABaseWeapon::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
@@ -482,6 +566,9 @@ void ABaseWeapon::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifet
 
 	// 무기 사용 여부 복제
 	DOREPLIFETIME(ABaseWeapon, bWasUsed);
+	DOREPLIFETIME(ABaseWeapon, MagazineAmmo);
+	DOREPLIFETIME(ABaseWeapon, SpareAmmo);
+	DOREPLIFETIME(ABaseWeapon, bIsReloading);
 }
 
 // 라운드 시작/종료 시 무기 사용 여부 리셋을 위한 함수 추가

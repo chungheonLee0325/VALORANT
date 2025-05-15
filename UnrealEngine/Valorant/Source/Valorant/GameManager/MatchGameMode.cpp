@@ -24,6 +24,18 @@ static int ShiftRound = 4;
 
 AMatchGameMode::AMatchGameMode()
 {
+#ifdef DEBUGTEST
+	MaxTime = 0.0f;
+	RemainRoundStateTime = 0.0f;
+	SelectAgentTime = 60.0f;
+	PreRoundTime = 15.0f; // org: 45.0f
+	BuyPhaseTime = 10.0f; // org: 30.0f
+	InRoundTime = 20.0f; // org: 100.0f
+	EndPhaseTime = 10.0f; // org: 10.0f
+	SpikeActiveTime = 15.0f; // org: 45.0f
+	bReadyToEndMatch = false;
+	LeavingMatchTime = 10.0f;
+#endif
 }
 
 /* static */
@@ -147,6 +159,7 @@ void AMatchGameMode::OnControllerBeginPlay(AMatchPlayerController* Controller, c
 	if (auto* PlayerState = Controller->GetPlayerState<AMatchPlayerState>())
 	{
 		PlayerState->bIsBlueTeam = PlayerInfo.bIsBlueTeam;
+		PlayerState->bIsAttacker = PlayerInfo.bIsBlueTeam;
 		PlayerState->DisplayName = Nickname;
 	}
 	MatchPlayers.Add(PlayerInfo);
@@ -174,6 +187,7 @@ void AMatchGameMode::OnLockIn(AMatchPlayerController* Player, int AgentId)
 	if (auto* agentPS = Player->GetPlayerState<AAgentPlayerState>())
 	{
 		agentPS->SetAgentID(AgentId);
+		agentPS->SyncsAgentID(AgentId);
 	}
 
 	if (++LockedInPlayerNum >= RequiredPlayerCount)
@@ -336,6 +350,15 @@ void AMatchGameMode::HandleRoundSubState_SelectAgent()
 
 void AMatchGameMode::HandleRoundSubState_PreRound()
 {
+	if (CurrentRound == ShiftRound)
+	{
+		auto* MatchGameState = GetGameState<AMatchGameState>();
+		if (MatchGameState)
+		{
+			MatchGameState->MulticastRPC_OnShift();
+		}
+	}
+	ClearObjects();
 	RespawnAll();
 	TeamBlueRemainingAgentNum = TeamRedRemainingAgentNum = MatchPlayers.Num();
 
@@ -350,6 +373,7 @@ void AMatchGameMode::HandleRoundSubState_PreRound()
 
 void AMatchGameMode::HandleRoundSubState_BuyPhase()
 {
+	ClearObjects();
 	RespawnAll();
 	TeamBlueRemainingAgentNum = TeamRedRemainingAgentNum = MatchPlayers.Num();
 
@@ -408,6 +432,7 @@ void AMatchGameMode::HandleRoundSubState_EndPhase()
 	GetWorld()->GetTimerManager().ClearTimer(RoundTimerHandle);
 	if (CurrentRound == TotalRound)
 	{
+		//
 	}
 	else if (CurrentRound == TotalRound - 1)
 	{
@@ -477,6 +502,20 @@ AActor* AMatchGameMode::ChoosePlayerStart_Implementation(AController* Player)
 	return Super::ChoosePlayerStart_Implementation(Player);
 }
 
+void AMatchGameMode::ClearObjects()
+{
+	TArray<AActor*> Interactors;
+	UGameplayStatics::GetAllActorsOfClass(GetWorld(), ABaseInteractor::StaticClass(), Interactors);
+	for (auto* Actor : Interactors)
+	{
+		auto* Interactor = Cast<ABaseInteractor>(Actor);
+		if (Interactor && Interactor->HasOwnerAgent() == false)
+		{
+			Interactor->Destroy();
+		}
+	}
+}
+
 void AMatchGameMode::RespawnAll()
 {
 	for (auto& MatchPlayer : MatchPlayers)
@@ -484,15 +523,13 @@ void AMatchGameMode::RespawnAll()
 		MatchPlayer.bIsDead = false;
 
 		FTransform SpawnTransform = FTransform::Identity;
-		if (MatchPlayer.bIsBlueTeam)
+		if (IsAttacker(MatchPlayer.bIsBlueTeam))
 		{
-			if (IsShifted()) { SpawnTransform = AttackersStartPoint->GetTransform(); }
-			else { SpawnTransform = DefendersStartPoint->GetTransform(); }
+			SpawnTransform = AttackersStartPoint->GetTransform();
 		}
 		else
 		{
-			if (IsShifted()) { SpawnTransform = DefendersStartPoint->GetTransform(); }
-			else { SpawnTransform = AttackersStartPoint->GetTransform(); }
+			SpawnTransform = DefendersStartPoint->GetTransform();
 		}
 
 		auto* agentPS = MatchPlayer.Controller->GetPlayerState<AAgentPlayerState>();
@@ -534,34 +571,12 @@ void AMatchGameMode::RespawnPlayer(AAgentPlayerState* ps, AAgentPlayerController
 		{
 			oldPawn->Destroy();
 		}
-		if (Agent->GetMeleeWeapon() == nullptr) { 
-			{
-				if (MeleeAsset)
-				{
-					ABaseWeapon* knife = GetWorld()->SpawnActor<ABaseWeapon>(MeleeAsset);
-					Agent->ServerRPC_Interact(knife);
-				}
-			}
-		}
 	}
 	else
 	{
 		Agent = Cast<ABaseAgent>(ps->GetPawn());
 		Agent->SetActorTransform(spawnTransform);
 	}
-
-	//TODO: 임시 코드, 슬롯 교체 로직 수정 후 바꿔야 함
-	if (Agent->GetSubWeapon() == nullptr) { 
-		{
-			Agent->SwitchInteractor(EInteractorType::SubWeapon);
-			if (ClassicAsset)
-			{
-				ABaseWeapon* gun = GetWorld()->SpawnActor<ABaseWeapon>(ClassicAsset);
-				Agent->ServerRPC_Interact(gun);
-			}
-		}
-	}
-	Agent->SwitchInteractor(EInteractorType::Melee);
 }
 
 // 체력 등 정상화
@@ -884,13 +899,66 @@ void AMatchGameMode::SpawnSpikeForAttackers()
 				SpawnLocation.Z -= 80.0f; // 바닥에 가깝게
 
 				Spike = GetWorld()->SpawnActor<ASpike>(SpikeClass, SpawnLocation,
-				                                               FRotator::ZeroRotator, SpawnParams);
+				                                       FRotator::ZeroRotator, SpawnParams);
 				// 공격팀 중 한 명에게만 스파이크 스폰
 
 				break;
 			}
 		}
 	}
+}
+
+void AMatchGameMode::SpawnDefaultWeapon()
+{
+	for (auto& MatchPlayer : MatchPlayers)
+	{
+		auto* agent = MatchPlayer.Controller->GetPawn<ABaseAgent>();
+		if (nullptr == agent)
+		{
+			NET_LOG(LogTemp, Error, TEXT("%hs Called, agent is nullptr"), __FUNCTION__);
+			return;
+		}
+
+		if (agent->GetMeleeWeapon() == nullptr) { 
+			{
+				if (MeleeAsset)
+				{
+					ABaseWeapon* knife = GetWorld()->SpawnActor<ABaseWeapon>(MeleeAsset);
+					agent->ServerRPC_Interact(knife);
+				}
+			}
+		}
+		if (agent->GetSubWeapon() == nullptr) { 
+			{
+				if (ClassicAsset)
+				{
+					ABaseWeapon* gun = GetWorld()->SpawnActor<ABaseWeapon>(ClassicAsset);
+					agent->ServerRPC_Interact(gun);
+				}
+			}
+		}
+	}
+}
+
+void AMatchGameMode::SpawnDefaultWeapon(ABaseAgent* agent)
+{
+	if (MeleeAsset == nullptr || ClassicAsset == nullptr)
+	{
+		return;
+	}
+	
+	if (agent->GetMeleeWeapon() == nullptr)
+	{
+		ABaseWeapon* knife = GetWorld()->SpawnActor<ABaseWeapon>(MeleeAsset);
+		agent->ServerRPC_Interact(knife);
+	}
+	
+	if (agent->GetSubWeapon() == nullptr) 
+	{
+		ABaseWeapon* gun = GetWorld()->SpawnActor<ABaseWeapon>(ClassicAsset);
+		agent->ServerRPC_Interact(gun);
+	}
+	
 }
 
 void AMatchGameMode::DestroySpikeInWorld()

@@ -94,7 +94,7 @@ public:
 
 	// 구매 가능 여부 확인
 	UFUNCTION(BlueprintCallable, Category = "Shop")
-	bool CanPurchaseItem(int32 ItemID, EShopItemType ItemType) const;
+	bool CanPurchaseItem(int32 ItemID, EShopItemType ItemType, int32& OutRefundAmount) const;
 
 	// 구매 이벤트 
 	UPROPERTY(BlueprintAssignable, Category = "Shop")
@@ -127,6 +127,14 @@ public:
 	// 특정 무기를 보유 중인지 확인
 	UFUNCTION(BlueprintCallable, Category = "Shop")
 	bool IsWeaponEquipped(int32 WeaponID) const;
+
+	// 어빌리티 스택 정보 가져오기
+	UFUNCTION(BlueprintCallable, Category = "Shop")
+	int32 GetAbilityStack(int32 AbilityID) const;
+
+	// 어빌리티의 최대 스택 수 가져오기
+	UFUNCTION(BlueprintCallable, Category = "Shop")
+	int32 GetMaxAbilityStack(int32 AbilityID) const;
 
 	// 무기 장착 상태 변경 이벤트
 	UPROPERTY(BlueprintAssignable, Category = "Shop")

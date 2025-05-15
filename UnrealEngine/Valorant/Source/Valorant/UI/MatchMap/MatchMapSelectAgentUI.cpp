@@ -9,13 +9,20 @@
 #include "Components/GridSlot.h"
 #include "Components/Image.h"
 #include "Components/TextBlock.h"
+#include "Components/VerticalBox.h"
 #include "CustomWidget/AgentSelectButton.h"
 #include "CustomWidget/TeamSelectAgentBox.h"
 #include "GameManager/MatchGameState.h"
 #include "GameManager/SubsystemSteamManager.h"
 #include "GameManager/ValorantGameInstance.h"
 #include "Player/AgentPlayerController.h"
-#include "Player/MatchPlayerState.h"
+
+TMap<FString, TPair<FString, FString>> AgentRoleDescriptionMap = {
+	{ TEXT("Duelist"), { TEXT("타격대"), TEXT("타격대는 자급자족이 가능하며 팀에서 공격을 담당합니다. 스킬과 실력을 통해 먼저 교전을 시작하고 적을 처치합니다.") } },
+	{ TEXT("Initiator"), { TEXT("척후대"), TEXT("척후대는 팀이 전투 지역에 침입할 수 있도록 다각도로 진입로를 확보하고 적 팀에 틈을 만들어냅니다.") } },
+	{ TEXT("Sentinel"), { TEXT("감시자"), TEXT("감시자들은 공격팀이나 수비팀에 상관없이 지역을 점유하고 팀 엄호를 담당하는 수비 전문가입니다.") } },
+	{ TEXT("Controller"), { TEXT("전략가"), TEXT("전략가들은 위험 지역을 분석하여 팀을 승리로 이끄는 데 탁월합니다.") } }
+};
 
 void UMatchMapSelectAgentUI::NativeConstruct()
 {
@@ -25,6 +32,11 @@ void UMatchMapSelectAgentUI::NativeConstruct()
 	GameState->OnRemainRoundStateTimeChanged.AddDynamic(this, &UMatchMapSelectAgentUI::UpdateTime);
 	GetOwningPlayer()->SetShowMouseCursor(true);
 	FillAgentList();
+
+#ifdef DEBUGTEST 
+	FTimerHandle TimerHandle;
+	GetWorld()->GetTimerManager().SetTimer(TimerHandle, [this](){auto* Controller = Cast<AAgentPlayerController>(GetOwningPlayer());Controller->ServerRPC_LockIn(1);},1.0f,false);
+#endif
 }
 
 void UMatchMapSelectAgentUI::NativeDestruct()
@@ -55,6 +67,11 @@ void UMatchMapSelectAgentUI::OnClickedAgentSelectButton(int AgentId)
 {
 	NET_LOG(LogTemp, Warning, TEXT("%hs Called, AgentId: %d"), __FUNCTION__, AgentId);
 	CurrentSelectedAgentID = AgentId;
+	auto NewStyle = ButtonLockIn->GetStyle();
+	NewStyle.Normal.TintColor = FSlateColor(FLinearColor(0.556863f, 0.050980f, 0.090196f, 1.0f));
+	ButtonLockIn->SetStyle(NewStyle);
+	ButtonLockIn->SetIsEnabled(true);
+	VerticalBoxRight->SetVisibility(ESlateVisibility::Visible);
 	OnClickAgentSelectButtonDelegate.Broadcast(AgentId);
 }
 
@@ -172,10 +189,12 @@ void UMatchMapSelectAgentUI::OnSelectedAgentChanged(const FString& DisplayName, 
 		const FString& RoleName = StaticEnum<EAgentRole>()->GetNameStringByValue(static_cast<int>(Data->AgentRole));
 		const FString& AgentName = Data->LocalName;
 		const FString& AgentDescription = Data->Description;
-		TextBlockPosition1->SetText(FText::FromString(RoleName));
+		const auto& RoleDescription = AgentRoleDescriptionMap.FindChecked(RoleName);
+		TextBlockPosition1->SetText(FText::FromString(RoleDescription.Key));
 		TextBlockAgentName->SetText(FText::FromString(AgentName));
 		TextBlockAgentDescription->SetText(FText::FromString(AgentDescription));
-		TextBlockPosition2->SetText(FText::FromString(RoleName));
+		TextBlockPosition2->SetText(FText::FromString(RoleDescription.Key));
+		TextBlockPositionDescription->SetText(FText::FromString(RoleDescription.Value));
 	}
 	TeamSelectAgentBoxMap[DisplayName]->ChangeAgentThumbImage(SelectedAgentID);
 }
@@ -186,6 +205,11 @@ void UMatchMapSelectAgentUI::OnLockIn(const FString& DisplayName, const int Agen
 	if (false == TeamSelectAgentBoxMap.Contains(DisplayName))
 	{
 		NET_LOG(LogTemp, Warning, TEXT("%hs Called, WhoAreYou?? DisplayName: %s"), __FUNCTION__, *DisplayName);
+		return;
+	}
+	if (0 == AgentId)
+	{
+		NET_LOG(LogTemp, Warning, TEXT("%hs Called, Agent is not selected"), __FUNCTION__);
 		return;
 	}
 	TeamSelectAgentBoxMap[DisplayName]->LockIn(AgentId);

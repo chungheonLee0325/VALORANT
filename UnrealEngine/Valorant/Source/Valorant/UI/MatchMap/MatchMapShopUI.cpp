@@ -7,11 +7,12 @@
 #include "Valorant/Player/Component/CreditComponent.h"
 #include "Valorant/Player/AgentPlayerState.h"
 #include "Components/TextBlock.h"
+#include "Valorant/GameManager/ValorantGameInstance.h"
 
 void UMatchMapShopUI::NativeConstruct()
 {
 	Super::NativeConstruct();
-	
+
 	// UI 초기화 설정
 	if (CreditText)
 	{
@@ -22,8 +23,15 @@ void UMatchMapShopUI::NativeConstruct()
 			int32 currentCredit = PS->GetCurrentCredit();
 			UpdateCreditDisplay(currentCredit);
 		}
-		//RequestLatestCreditValue();
-		//UpdateCreditDisplay(0);
+		OriginalCreditTextColor = CreditText->GetColorAndOpacity();
+	}
+
+	GameInstance = UValorantGameInstance::Get(GetWorld());
+
+	// 색상 관련 초기화
+	if (CreditText)
+	{
+		OriginalCreditTextColor = CreditText->GetColorAndOpacity();
 	}
 }
 
@@ -34,28 +42,34 @@ void UMatchMapShopUI::InitializeShopUI(AAgentPlayerController* Controller)
 		UE_LOG(LogTemp, Error, TEXT("ShopUI: 컨트롤러가 없습니다!"));
 		return;
 	}
-	
+
 	OwnerController = Controller;
-	
+
 	// 초기 크레딧 표시 업데이트
 	AAgentPlayerState* PS = OwnerController->GetPlayerState<AAgentPlayerState>();
 	if (PS)
 	{
 		// PlayerState의 크레딧 델리게이트에 바인딩
 		PS->OnCreditChangedDelegate.AddDynamic(this, &UMatchMapShopUI::UpdateCreditDisplay);
-		
+
+		// 어빌리티 스택 변경 델리게이트에 바인딩
+		PS->OnAbilityStackChanged.AddDynamic(this, &UMatchMapShopUI::HandleAbilityStackChanged);
+
 		// 크레딧 컴포넌트의 델리게이트에도 바인딩 (이중 안전장치)
 		UCreditComponent* CreditComp = PS->GetCreditComponent();
 		if (CreditComp)
 		{
 			// 서버에 최신 크레딧 값 요청 (명시적 동기화)
 			RequestLatestCreditValue();
-			
+
 			// 크레딧 변경 이벤트에 바인딩
 			CreditComp->OnCreditChanged.AddDynamic(this, &UMatchMapShopUI::UpdateCreditDisplay);
 		}
+
+		// 서버에 스택 정보 요청
+		PS->Server_RequestAbilityStackSync();
 	}
-	
+
 	// 상점 아이템 목록 업데이트
 	UpdateShopItemList();
 
@@ -63,7 +77,7 @@ void UMatchMapShopUI::InitializeShopUI(AAgentPlayerController* Controller)
 	if (Controller && Controller->ShopComponent)
 	{
 		Controller->ShopComponent->OnEquippedWeaponsChanged.AddDynamic(this, &UMatchMapShopUI::UpdateWeaponHighlights);
-        
+
 		// 초기 하이라이트 상태 업데이트
 		UpdateWeaponHighlights();
 	}
@@ -73,25 +87,28 @@ void UMatchMapShopUI::InitializeShopUI(AAgentPlayerController* Controller)
 	{
 		OwnerController->OnServerPurchaseResult.AddDynamic(this, &UMatchMapShopUI::HandleServerPurchaseResult);
 	}
+
+	// 어빌리티 UI 초기화
+	InitializeAbilityUI();
 }
 
 void UMatchMapShopUI::UpdateCreditDisplay(int32 CurrentCredit)
 {
 	// 현재 크레딧 저장
 	CurrentCredits = CurrentCredit;
-	
+
 	// 크레딧 텍스트 업데이트
 	if (CreditText)
 	{
 		// 크레딧 금액 포맷팅 (예: 1,000)
 		FString FormattedCredit = FString::Printf(TEXT("%d"), CurrentCredit);
-		
+
 		// 1000 단위로 콤마 추가
 		for (int32 i = FormattedCredit.Len() - 3; i > 0; i -= 3)
 		{
 			FormattedCredit.InsertAt(i, TEXT(","));
 		}
-		
+
 		CreditText->SetText(FText::FromString(FormattedCredit));
 	}
 }
@@ -103,14 +120,14 @@ void UMatchMapShopUI::OnClickedBuyWeaponButton(const int WeaponId)
 		UE_LOG(LogTemp, Error, TEXT("ShopUI: 컨트롤러가 없습니다!"));
 		return;
 	}
-	
+
 	// 구매 전 크레딧 충분한지 확인
 	AAgentPlayerState* PS = OwnerController->GetPlayerState<AAgentPlayerState>();
 	if (PS)
 	{
 		UCreditComponent* CreditComp = PS->FindComponentByClass<UCreditComponent>();
 		UShopComponent* ShopComp = OwnerController->ShopComponent;
-		
+
 		if (CreditComp && ShopComp)
 		{
 			// 아이템 가격 확인
@@ -123,36 +140,21 @@ void UMatchMapShopUI::OnClickedBuyWeaponButton(const int WeaponId)
 					break;
 				}
 			}
-			
-			// 가격 확인 및 크레딧 충분한지 검사
-			if (Item && !CreditComp->CanUseCredits(Item->Price))
+
+			// 크레딧 부족 시 UI 피드백
+			int refundAmount = 0;
+			if (!ShopComp->CanPurchaseItem(Item->ItemID, Item->ItemType, refundAmount))
 			{
-				// 크레딧 부족 시 UI 피드백 (빨간색으로 크레딧 텍스트 깜박임 등)
-				if (CreditText)
-				{
-					// 기존 색상 저장
-					FSlateColor OriginalColor = CreditText->GetColorAndOpacity();
-					
-					// 빨간색으로 변경
-					CreditText->SetColorAndOpacity(FSlateColor(FLinearColor::Red));
-					
-					// 타이머로 원래 색상으로 되돌리기
-					FTimerHandle TimerHandle;
-					GetWorld()->GetTimerManager().SetTimer(TimerHandle, [this, OriginalColor]() {
-						if (CreditText)
-						{
-							CreditText->SetColorAndOpacity(OriginalColor);
-						}
-					}, 0.5f, false);
-				}
-				
+				// 색깔 피드백
+				FlashCreditTextColor(FLinearColor::Red);
+
 				// 구매 실패 처리
-				HandleServerPurchaseResult(false, WeaponId, EShopItemType::Weapon, TEXT(""));
+				HandleServerPurchaseResult(false, WeaponId, EShopItemType::Weapon, TEXT("크레딧이 부족합니다."));
 				return;
 			}
 		}
 	}
-	
+
 	// 구매 요청
 	OwnerController->RequestPurchaseWeapon(WeaponId);
 }
@@ -165,17 +167,43 @@ void UMatchMapShopUI::OnClickedBuySkillButton(const int SkillId)
 		return;
 	}
 
-	// ShopComponent를 통해 스킬 구매 요청
-	UShopComponent* ShopComp = OwnerController->ShopComponent;
-	if (ShopComp)
+	// 현재 스택 및 최대 스택 확인
+	int32 CurrentStack = GetAbilityStack(SkillId);
+	int32 MaxStack = GetMaxAbilityStack(SkillId);
+
+	// 이미 최대 스택인 경우 구매 불가 메시지 표시
+	if (CurrentStack >= MaxStack)
 	{
-		ShopComp->PurchaseAbility(SkillId);
-		// 구매 결과 처리 -> 서버 응답으로 대체
+		// 구매 실패 피드백 - 이미 최대 스택
+		HandleServerPurchaseResult(false, SkillId, EShopItemType::Ability, TEXT("최대 스택에 도달했습니다."));
+		return;
 	}
-	else
+
+	// 구매 전 크레딧 충분한지 확인
+	AAgentPlayerState* PS = OwnerController->GetPlayerState<AAgentPlayerState>();
+	if (PS)
 	{
-		// HandlePurchaseResult(false, SkillId, EShopItemType::Ability);
+		UCreditComponent* CreditComp = PS->FindComponentByClass<UCreditComponent>();
+		UShopComponent* ShopComp = OwnerController->ShopComponent;
+
+		if (CreditComp && ShopComp)
+		{
+			// 아이템 가격 확인
+			FAbilityData* AbilityData = GameInstance->GetAbilityData(SkillId);
+			if (AbilityData && !CreditComp->CanUseCredits(AbilityData->ChargeCost))
+			{
+				// 색깔 피드백
+				FlashCreditTextColor(FLinearColor::Red);
+
+				// 구매 실패 처리
+				HandleServerPurchaseResult(false, SkillId, EShopItemType::Ability, TEXT("크레딧이 부족합니다."));
+				return;
+			}
+		}
 	}
+
+	// 컨트롤러를 통해 스킬 구매 요청 (ShopComponent를 직접 호출하지 않음)
+	OwnerController->RequestPurchaseAbility(SkillId);
 }
 
 void UMatchMapShopUI::OnClickedBuyShiledButton(const int ShieldId)
@@ -186,17 +214,30 @@ void UMatchMapShopUI::OnClickedBuyShiledButton(const int ShieldId)
 		return;
 	}
 
-	// ShopComponent를 통해 방어구 구매 요청
-	UShopComponent* ShopComp = OwnerController->ShopComponent;
-	if (ShopComp)
+	// 구매 전 크레딧 충분한지 확인
+	AAgentPlayerState* PS = OwnerController->GetPlayerState<AAgentPlayerState>();
+	if (PS)
 	{
-		ShopComp->PurchaseArmor(ShieldId);
-		// 구매 결과 처리 -> 서버 응답으로 대체
+		UCreditComponent* CreditComp = PS->FindComponentByClass<UCreditComponent>();
+		if (CreditComp)
+		{
+			// 아이템 가격 확인 (방어구는 ID 1이면 400, 2면 1000)
+			int32 Cost = (ShieldId == 1) ? 400 : 1000;
+
+			if (!CreditComp->CanUseCredits(Cost))
+			{
+				// 색깔 피드백
+				FlashCreditTextColor(FLinearColor::Red);
+
+				// 구매 실패 처리
+				HandleServerPurchaseResult(false, ShieldId, EShopItemType::Armor, TEXT("크레딧이 부족합니다."));
+				return;
+			}
+		}
 	}
-	else
-	{
-		// HandlePurchaseResult(false, ShieldId, EShopItemType::Armor);
-	}
+
+	// 컨트롤러를 통해 방어구 구매 요청
+	OwnerController->RequestPurchaseArmor(ShieldId);
 }
 
 void UMatchMapShopUI::UpdateShopItemList()
@@ -230,15 +271,17 @@ void UMatchMapShopUI::UpdateShopItemListByType(EShopItemType ItemType)
 	{
 		// 특정 타입의 아이템만 필터링
 		TArray<FShopItem> FilteredItems = ShopComp->GetShopItemsByType(ItemType);
-		
+
 		// Blueprint에서 구현할 아이템 목록 업데이트 로직
 		// 블루프린트 이벤트를 호출하는 방식으로 구현하는 것이 좋음
 	}
 }
 
-void UMatchMapShopUI::HandleServerPurchaseResult(bool bSuccess, int32 ItemID, EShopItemType ItemType, const FString& FailureReason)
+void UMatchMapShopUI::HandleServerPurchaseResult(bool bSuccess, int32 ItemID, EShopItemType ItemType,
+                                                 const FString& FailureReason)
 {
-	UE_LOG(LogTemp, Log, TEXT("HandleServerPurchaseResult: Success: %d, ItemID: %d, Type: %s, Reason: %s"), bSuccess, ItemID, *UEnum::GetValueAsString(ItemType), *FailureReason);
+	UE_LOG(LogTemp, Log, TEXT("HandleServerPurchaseResult: Success: %d, ItemID: %d, Type: %s, Reason: %s"), bSuccess,
+	       ItemID, *UEnum::GetValueAsString(ItemType), *FailureReason);
 
 	// 구매 결과 이벤트 발생 (Blueprint 등에서 사용 가능)
 	OnPurchaseResult.Broadcast(bSuccess, ItemID, ItemType);
@@ -253,7 +296,8 @@ void UMatchMapShopUI::HandleServerPurchaseResult(bool bSuccess, int32 ItemID, ES
 	}
 	else
 	{
-		UE_LOG(LogTemp, Warning, TEXT("Purchase failed for Item %d (%s). Reason: %s"), ItemID, *UEnum::GetValueAsString(ItemType), *FailureReason);
+		UE_LOG(LogTemp, Warning, TEXT("Purchase failed for Item %d (%s). Reason: %s"), ItemID,
+		       *UEnum::GetValueAsString(ItemType), *FailureReason);
 		// 여기에 실패 시 UI 피드백 로직 추가 (예: 실패 메시지 표시 - FailureReason 활용)
 		// 예를 들어, 특정 TextBlock에 FailureReason을 표시할 수 있습니다.
 	}
@@ -266,13 +310,13 @@ void UMatchMapShopUI::RequestLatestCreditValue()
 	{
 		return;
 	}
-	
+
 	AAgentPlayerState* PS = OwnerController->GetPlayerState<AAgentPlayerState>();
 	if (!PS)
 	{
 		return;
 	}
-	
+
 	// 서버에서 최신 크레딧 값을 강제로 불러오는 RPC 호출
 	// 이 함수는 AAgentPlayerState에 추가되어야 함
 	PS->Server_RequestCreditSync();
@@ -284,10 +328,10 @@ void UMatchMapShopUI::UpdateWeaponHighlights()
 	{
 		return;
 	}
-    
+
 	// 현재 장착 중인 무기 ID 가져오기
 	EquippedWeaponIDs = OwnerController->ShopComponent->GetEquippedWeaponIDs();
-    
+
 	// Blueprint에서 구현할 UI 업데이트 이벤트 호출
 	OnWeaponHighlightUpdated();
 }
@@ -295,4 +339,173 @@ void UMatchMapShopUI::UpdateWeaponHighlights()
 bool UMatchMapShopUI::IsWeaponEquipped(int32 WeaponID) const
 {
 	return EquippedWeaponIDs.Contains(WeaponID);
+}
+
+// 어빌리티 스택 관련 함수 구현
+int32 UMatchMapShopUI::GetAbilityStack(int32 AbilityID) const
+{
+	if (!OwnerController)
+	{
+		return 0;
+	}
+
+	AAgentPlayerState* PS = OwnerController->GetPlayerState<AAgentPlayerState>();
+	if (!PS)
+	{
+		return 0;
+	}
+
+	return PS->GetAbilityStack(AbilityID);
+}
+
+int32 UMatchMapShopUI::GetMaxAbilityStack(int32 AbilityID) const
+{
+	if (!OwnerController)
+	{
+		return 0;
+	}
+
+	AAgentPlayerState* PS = OwnerController->GetPlayerState<AAgentPlayerState>();
+	if (!PS)
+	{
+		return 0;
+	}
+
+	return PS->GetMaxAbilityStack(AbilityID);
+}
+
+void UMatchMapShopUI::UpdateAbilityStacks()
+{
+	if (!OwnerController)
+	{
+		return;
+	}
+
+	AAgentPlayerState* PS = OwnerController->GetPlayerState<AAgentPlayerState>();
+	if (!PS)
+	{
+		return;
+	}
+
+	// 현재 캐릭터의 모든 어빌리티 ID 가져오기
+	TArray<int32> AbilityIDs;
+	UShopComponent* ShopComp = OwnerController->ShopComponent;
+	if (ShopComp)
+	{
+		// 스킬 슬롯별 어빌리티 ID 가져오기
+		int32 AgentID = PS->GetAgentID();
+		if (GameInstance)
+		{
+			FAgentData* AgentData = GameInstance->GetAgentData(AgentID);
+			if (AgentData)
+			{
+				// 각 스킬 슬롯의 어빌리티 ID 추가
+				if (AgentData->AbilityID_C > 0)
+				{
+					AbilityIDs.Add(AgentData->AbilityID_C);
+					SkillCID = AgentData->AbilityID_C;
+				}
+				if (AgentData->AbilityID_Q > 0)
+				{
+					AbilityIDs.Add(AgentData->AbilityID_Q);
+					SkillQID = AgentData->AbilityID_Q;
+				}
+				if (AgentData->AbilityID_E > 0)
+				{
+					AbilityIDs.Add(AgentData->AbilityID_E);
+					SkillEID = AgentData->AbilityID_E;
+				}
+				//if (AgentData->AbilityID_X > 0) AbilityIDs.Add(AgentData->AbilityID_X);
+			}
+		}
+	}
+
+	// 각 어빌리티의 스택 정보 가져와서 캐시하고 UI 업데이트
+	AbilityStacksCache.Empty();
+	for (int32 AbilityID : AbilityIDs)
+	{
+		int32 Stack = PS->GetAbilityStack(AbilityID);
+		AbilityStacksCache.Add(AbilityID, Stack);
+		OnAbilityStackChanged(AbilityID, Stack);
+	}
+}
+
+void UMatchMapShopUI::HandleAbilityStackChanged(int32 AbilityID, int32 NewStack)
+{
+	// 캐시 업데이트
+	AbilityStacksCache.Add(AbilityID, NewStack);
+
+	// 블루프린트 이벤트 호출
+	OnAbilityStackChanged(AbilityID, NewStack);
+}
+
+void UMatchMapShopUI::InitializeAbilityUI()
+{
+	if (!OwnerController)
+	{
+		return;
+	}
+
+	AAgentPlayerState* PS = OwnerController->GetPlayerState<AAgentPlayerState>();
+	if (!PS)
+	{
+		return;
+	}
+
+	// 현재 캐릭터의 어빌리티 정보 가져오기
+	int32 AgentID = PS->GetAgentID();
+
+	if (AgentID == 0)
+	{
+		return;
+	}
+
+	if (!GameInstance)
+	{
+		GameInstance = UValorantGameInstance::Get(GetWorld());
+	}
+
+	FAgentData* AgentData = GameInstance->GetAgentData(AgentID);
+	if (!AgentData)
+	{
+		return;
+	}
+
+	// 초기 스택 정보 업데이트
+	UpdateAbilityStacks();
+}
+
+// 색상 변경 로직을 통합한 함수 구현
+void UMatchMapShopUI::FlashCreditTextColor(const FLinearColor& FlashColor, float Duration)
+{
+	if (!CreditText)
+	{
+		return;
+	}
+
+	// 이미 타이머가 작동 중이면 중지
+	if (GetWorld()->GetTimerManager().IsTimerActive(CreditTextColorTimerHandle))
+	{
+		GetWorld()->GetTimerManager().ClearTimer(CreditTextColorTimerHandle);
+	}
+
+	// 색상 변경
+	CreditText->SetColorAndOpacity(FSlateColor(FlashColor));
+
+	// 타이머 설정
+	GetWorld()->GetTimerManager().SetTimer(
+		CreditTextColorTimerHandle,
+		this,
+		&UMatchMapShopUI::ResetCreditTextColor,
+		Duration,
+		false);
+}
+
+// 원래 색상으로 복원하는 함수
+void UMatchMapShopUI::ResetCreditTextColor()
+{
+	if (CreditText)
+	{
+		CreditText->SetColorAndOpacity(OriginalCreditTextColor);
+	}
 }

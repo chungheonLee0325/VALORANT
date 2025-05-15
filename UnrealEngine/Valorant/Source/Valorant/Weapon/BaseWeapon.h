@@ -41,16 +41,19 @@ class VALORANT_API ABaseWeapon : public ABaseInteractor
 	/** StartReload Input Action */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category=Input, meta=(AllowPrivateAccess = "true"))
 	UInputAction* StartReloadAction = nullptr;
-	
+
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category=Input, meta=(AllowPrivateAccess = "true"))
 	UInputAction* DropAction = nullptr;
 
 	bool bIsFiring = false;
+	UPROPERTY(Replicated)
+	bool bIsReloading = false;
 	int RecoilLevel = 0;
 	float TotalRecoilOffsetPitch = 0.0f;
 	float TotalRecoilOffsetYaw = 0.0f;
 	FTimerHandle AutoFireHandle;
 	FTimerHandle ReloadHandle;
+	FTimerHandle RecoverRecoilLevelHandle;
 
 	UPROPERTY()
 	UAnimMontage* AM_Fire;
@@ -59,32 +62,32 @@ class VALORANT_API ABaseWeapon : public ABaseInteractor
 
 public:
 	// 탄창 내 남은 탄약
-	UPROPERTY(BlueprintReadOnly)
+	UPROPERTY(ReplicatedUsing=OnRep_Ammo, BlueprintReadOnly)
 	int MagazineAmmo = 0;
 	// 여분 탄약 (장전되어있는 탄창 내 탄약은 제외)
-	UPROPERTY(BlueprintReadOnly)
+	UPROPERTY(ReplicatedUsing=OnRep_Ammo, BlueprintReadOnly)
 	int SpareAmmo = 0;
-	
+
 	// 무기가 이전에 사용된 적이 있는지 (발사, 라운드 경험 등)
 	// true인 경우 판매 불가, 땅에 드롭함
 	UPROPERTY(Replicated, BlueprintReadOnly, Category="Weapon")
 	bool bWasUsed = false;
-	
+
 	// Sets default values for this component's properties
 	ABaseWeapon();
 
 	// WeaponID 설정
-	UFUNCTION(BlueprintCallable, Category="Weapon")
-	void SetWeaponID(int32 NewWeaponID);
-	
+	UFUNCTION(BlueprintCallable, Category="Weapon", NetMulticast, Reliable)
+	void NetMulti_ReloadWeaponData(int32 NewWeaponID);
+
 	// WeaponID 반환
 	UFUNCTION(BlueprintCallable, Category="Weapon")
 	int32 GetWeaponID() const { return WeaponID; }
-	
+
 	// 무기 사용 여부 설정
 	UFUNCTION(BlueprintCallable, Category="Weapon")
 	void SetWasUsed(bool bNewWasUsed);
-	
+
 	// 무기 사용 여부 반환
 	UFUNCTION(BlueprintCallable, Category="Weapon")
 	bool GetWasUsed() const { return bWasUsed; }
@@ -98,23 +101,33 @@ protected:
 	virtual void BeginPlay() override;
 
 	virtual void Tick(float DeltaSeconds) override;
-	
+
 	UFUNCTION(BlueprintCallable, Category="Weapon")
 	void Fire();
-
+	FVector GetSpreadDirection(const FVector& Direction);
 	UFUNCTION(Server, Reliable)
 	void ServerRPC_Fire(const FVector& Location, const FVector& Direction);
 	UFUNCTION(NetMulticast, Reliable)
 	void MulticastRPC_PlayFireSound();
+	UFUNCTION(NetMulticast, Reliable)
+	void MulticastRPC_PlayFireAnimation();
 	UFUNCTION(BlueprintImplementableEvent)
 	void PlayFireSound();
-	
+
 	UFUNCTION(BlueprintCallable, Category="Weapon")
 	void Reload();
 
+	UFUNCTION(Server, Reliable)
+	void ServerRPC_PlayReloadAnim();
+	UFUNCTION(NetMulticast, Reliable)
+	void MulticastRPC_PlayReloadAnim();
+
 	UFUNCTION(BlueprintCallable, Category="Weapon")
 	void StopReload();
-	
+
+	UFUNCTION()
+	void OnRep_Ammo() const;
+
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 public:
@@ -123,10 +136,12 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category="Weapon")
 	void EndFire();
-	
-	UFUNCTION(BlueprintCallable, Category="Weapon")
-	void StartReload();
-	
+
+	void RecoverRecoilLevel();
+
+	UFUNCTION(Server, Reliable, BlueprintCallable, Category="Weapon")
+	void ServerRPC_StartReload();
+
 	UFUNCTION(BlueprintCallable)
 	EWeaponCategory GetWeaponCategory() const { return WeaponData->WeaponCategory; }
 

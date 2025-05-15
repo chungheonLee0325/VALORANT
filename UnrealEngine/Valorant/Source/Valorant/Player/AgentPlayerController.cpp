@@ -206,6 +206,11 @@ void AAgentPlayerController::HandleEffectSpeedChanged(float NewSpeed)
 	OnEffectSpeedChanged_PC.Broadcast(NewSpeed);
 }
 
+void AAgentPlayerController::NotifyChangedAmmo(const bool bDisplayWidget, const int MagazineAmmo, const int SpareAmmo) const
+{
+	OnChangedAmmo.Broadcast(bDisplayWidget, MagazineAmmo, SpareAmmo);
+}
+
 void AAgentPlayerController::RequestPurchaseAbility(int AbilityID)
 {
 	if (AbilityID != 0)
@@ -219,7 +224,11 @@ void AAgentPlayerController::Server_RequestPurchaseAbility_Implementation(int Ab
 	AAgentPlayerState* PS = GetPlayerState<AAgentPlayerState>();
 	if (PS)
 	{
-		PS->Server_PurchaseAbility(AbilityID);
+		if (ShopComponent)
+		{
+			// ShopComponent를 통해 어빌리티 구매 시도
+			ShopComponent->PurchaseAbility(AbilityID);
+		}
 	}
 }
 
@@ -436,18 +445,6 @@ void AAgentPlayerController::BindCreditWidgetDelegate()
 
 	// 이 함수는 더 이상 크레딧 바인딩에 사용되지 않음
 	// 필요한 경우 다른 UI 요소 바인딩에 활용
-}
-
-
-void AAgentPlayerController::ServerRequestWeaponPurchase_Implementation(int32 WeaponID)
-{
-	// 플레이어의 ShopComponent 찾기
-	UShopComponent* ShopComp = FindComponentByClass<UShopComponent>();
-	if (ShopComp)
-	{
-		// 무기 구매 로직 실행
-		ShopComp->PurchaseWeapon(WeaponID);
-	}
 }
 
 void AAgentPlayerController::Client_ReceivePurchaseResult_Implementation(

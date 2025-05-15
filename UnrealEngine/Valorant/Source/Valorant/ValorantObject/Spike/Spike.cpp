@@ -3,6 +3,7 @@
 
 #include "Spike.h"
 
+#include "Components/SphereComponent.h"
 #include "Components/WidgetComponent.h"
 #include "GameFramework/PawnMovementComponent.h"
 #include "GameManager/MatchGameMode.h"
@@ -149,30 +150,19 @@ void ASpike::OnRep_SpikeState()
 
 void ASpike::ServerRPC_PickUp_Implementation(ABaseAgent* Agent)
 {
-	if (!Agent || SpikeState != ESpikeState::Dropped)
+	if (false == ServerOnly_CanAutoPickUp(Agent))
 	{
 		return;
 	}
-
-	// 공격팀만 스파이크를 주울 수 있음
-	auto* PS = Agent->GetPlayerState<AAgentPlayerState>();
-	if (!PS || !AMatchGameMode::IsAttacker(PS->bIsBlueTeam))
-	{
-		return;
-	}
-
-	// Agent에게 spike 수여
+	Super::ServerRPC_PickUp_Implementation(Agent);
+	
 	Agent->AcquireInteractor(this);
-	OwnerAgent = Agent;
 
 	// 스파이크 Mesh 숨기기
 	SetActive(false);
 
 	// 스파이크 상태 업데이트
 	SpikeState = ESpikeState::Carried;
-
-	// 위젯 숨기기
-	DetectWidgetComponent->SetVisibility(false);
 }
 
 void ASpike::ServerRPC_Drop_Implementation()
@@ -181,19 +171,14 @@ void ASpike::ServerRPC_Drop_Implementation()
 	{
 		return;
 	}
-
+	OwnerAgent->ResetOwnSpike();
 	Super::ServerRPC_Drop_Implementation();
 
 	// 스파이크 Mesh 보이기
 	SetActive(true);
-	// OwnerAgent = nullptr;
-	OwnerAgent->ResetOwnSpike();
 
 	// 스파이크 상태 업데이트
 	SpikeState = ESpikeState::Dropped;
-
-	// 위젯 표시
-	DetectWidgetComponent->SetVisibility(true);
 }
 
 void ASpike::ServerRPC_Interact_Implementation(ABaseAgent* InteractAgent)
@@ -347,10 +332,18 @@ void ASpike::ServerRPC_FinishPlanting_Implementation()
 	PlantingLocation = GetActorLocation();
 	SetActorLocation(PlantingLocation); // 바닥에서 약간 띄움
 
-	// 상호작용 메시 설정
-	Mesh->SetSimulatePhysics(false);
-	Mesh->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
-
+	// BaseInteractor::Drop에서 하던 일들을 직접 한다
+	FDetachmentTransformRules DetachmentRule(
+		EDetachmentRule::KeepWorld,
+		EDetachmentRule::KeepWorld,
+		EDetachmentRule::KeepRelative,
+		true
+	);
+	DetachFromActor(DetachmentRule);
+	SetOwner(nullptr);
+	OwnerAgent = nullptr;
+	Sphere->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+	
 	// 게임 모드에 설치 완료 알림
 	AMatchGameMode* GameMode = Cast<AMatchGameMode>(UGameplayStatics::GetGameMode(GetWorld()));
 	if (GameMode)

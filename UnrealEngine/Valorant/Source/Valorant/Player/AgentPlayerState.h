@@ -15,6 +15,9 @@ class UCreditComponent;
 // 크레딧 변경 델리게이트 선언
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnCreditChangedDelegate, int32, NewCredit);
 
+// 어빌리티 스택 변경 델리게이트 선언
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnAbilityStackChangedDelegate, int32, AbilityID, int32, NewStack);
+
 /**
  * 
  */
@@ -33,8 +36,14 @@ public:
 	UBaseAttributeSet* GetBaseAttributeSet() const;
 
 	UFUNCTION(BlueprintCallable)
-	void SetAgentID(int32 NewAgentID) { m_AgentID = NewAgentID; }
-	int32 GetAgentID() const { return m_AgentID; }
+	void SetAgentID(int32 NewAgentID);
+	
+	UFUNCTION(BlueprintCallable)
+	int32 GetAgentID() const;
+
+	// 동기화 타이밍 안맞을경우 메뉴얼 동기화 -> 현재 MatchMapHUD 동기화 타이밍 어긋나서 추가
+	UFUNCTION(Reliable, NetMulticast)
+	void SyncsAgentID(int AgentID);
 
 	UFUNCTION(BlueprintCallable, Category = "Agent|BaseAttributes")
 	float GetHealth() const;
@@ -47,10 +56,6 @@ public:
 	
 	UFUNCTION(BlueprintCallable, Category = "Agent|BaseAttributes")
 	float GetEffectSpeed() const;
-
-	// 서버에서 스킬 구매 로직 (PlayerController로부터 RPC 호출됨)
-	UFUNCTION(Server, Reliable, WithValidation)
-	void Server_PurchaseAbility(int32 AbilityID);
 
 	// 크레딧 시스템 관련 함수
 	UFUNCTION(BlueprintCallable, Category = "Agent|Credits")
@@ -76,10 +81,42 @@ public:
 	UFUNCTION(Server, Reliable)
 	void Server_RequestCreditSync();
 
-	// 능력 스택 관련 함수
+	// 어빌리티 스택 관련 함수들
+	UFUNCTION(BlueprintCallable, Category = "Agent|Ability")
 	int32 GetAbilityStack(int32 AbilityID) const;
+
+	UFUNCTION(BlueprintCallable, Category = "Agent|Ability")
 	int32 ReduceAbilityStack(int32 AbilityID);
-	
+
+	UFUNCTION(BlueprintCallable, Category = "Agent|Ability")
+	int32 AddAbilityStack(int32 AbilityID, int32 StacksToAdd = 1);
+
+	UFUNCTION(BlueprintCallable, Category = "Agent|Ability")
+	int32 SetAbilityStack(int32 AbilityID, int32 NewStack);
+
+	UFUNCTION(BlueprintCallable, Category = "Agent|Ability")
+	bool HasAbilityStacks(int32 AbilityID) const;
+
+	// 최대 스택 제한 가져오기
+	UFUNCTION(BlueprintCallable, Category = "Agent|Ability")
+	int32 GetMaxAbilityStack(int32 AbilityID) const;
+
+	// 어빌리티 스택 변경 델리게이트
+	UPROPERTY(BlueprintAssignable, Category = "Agent|Ability")
+	FOnAbilityStackChangedDelegate OnAbilityStackChanged;
+
+	// 서버에서 클라이언트로 스택 변경 동기화
+	UFUNCTION(Client, Reliable)
+	void Client_SyncAbilityStack(int32 AbilityID, int32 NewStack);
+
+	// 서버에 스택 정보 요청
+	UFUNCTION(Server, Reliable)
+	void Server_RequestAbilityStackSync();
+
+	// 서버에서 모든 스택 정보 전송
+	UFUNCTION(Client, Reliable)
+	void Client_SyncAllAbilityStacks(const TArray<int32>& AbilityIDs, const TArray<int32>& Stacks);
+
 protected:
 	virtual void BeginPlay() override;
 	
@@ -102,4 +139,7 @@ private:
 	// AbilityID, Stack
 	UPROPERTY(EditDefaultsOnly)
 	TMap<int32, int32> AbilityStacks; 
+
+	// 스택 변경 시 클라이언트에 동기화
+	void SyncAbilityStackToClients(int32 AbilityID, int32 NewStack);
 };
