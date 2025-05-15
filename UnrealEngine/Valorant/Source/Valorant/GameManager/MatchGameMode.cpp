@@ -554,7 +554,7 @@ void AMatchGameMode::RespawnPlayer(AAgentPlayerState* ps, AAgentPlayerController
 	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 
 	ABaseAgent* Agent = nullptr;
-
+	
 	if (ps->IsSpectator() || ps->GetPawn() == nullptr)
 	{
 		FAgentData* agentData = Cast<UValorantGameInstance>(GetGameInstance())->GetAgentData(ps->GetAgentID());
@@ -571,36 +571,12 @@ void AMatchGameMode::RespawnPlayer(AAgentPlayerState* ps, AAgentPlayerController
 		{
 			oldPawn->Destroy();
 		}
-		if (Agent->GetMeleeWeapon() == nullptr)
-		{
-			{
-				if (MeleeAsset)
-				{
-					ABaseWeapon* knife = GetWorld()->SpawnActor<ABaseWeapon>(MeleeAsset);
-					Agent->ServerRPC_Interact(knife);
-				}
-			}
-		}
 	}
 	else
 	{
 		Agent = Cast<ABaseAgent>(ps->GetPawn());
 		Agent->SetActorTransform(spawnTransform);
 	}
-
-	//TODO: 임시 코드, 슬롯 교체 로직 수정 후 바꿔야 함
-	if (Agent->GetSubWeapon() == nullptr)
-	{
-		{
-			Agent->SwitchInteractor(EInteractorType::SubWeapon);
-			if (ClassicAsset)
-			{
-				ABaseWeapon* gun = GetWorld()->SpawnActor<ABaseWeapon>(ClassicAsset);
-				Agent->ServerRPC_Interact(gun);
-			}
-		}
-	}
-	Agent->SwitchInteractor(EInteractorType::Melee);
 }
 
 // 체력 등 정상화
@@ -930,6 +906,59 @@ void AMatchGameMode::SpawnSpikeForAttackers()
 			}
 		}
 	}
+}
+
+void AMatchGameMode::SpawnDefaultWeapon()
+{
+	for (auto& MatchPlayer : MatchPlayers)
+	{
+		auto* agent = MatchPlayer.Controller->GetPawn<ABaseAgent>();
+		if (nullptr == agent)
+		{
+			NET_LOG(LogTemp, Error, TEXT("%hs Called, agent is nullptr"), __FUNCTION__);
+			return;
+		}
+
+		if (agent->GetMeleeWeapon() == nullptr) { 
+			{
+				if (MeleeAsset)
+				{
+					ABaseWeapon* knife = GetWorld()->SpawnActor<ABaseWeapon>(MeleeAsset);
+					agent->ServerRPC_Interact(knife);
+				}
+			}
+		}
+		if (agent->GetSubWeapon() == nullptr) { 
+			{
+				if (ClassicAsset)
+				{
+					ABaseWeapon* gun = GetWorld()->SpawnActor<ABaseWeapon>(ClassicAsset);
+					agent->ServerRPC_Interact(gun);
+				}
+			}
+		}
+	}
+}
+
+void AMatchGameMode::SpawnDefaultWeapon(ABaseAgent* agent)
+{
+	if (MeleeAsset == nullptr || ClassicAsset == nullptr)
+	{
+		return;
+	}
+	
+	if (agent->GetMeleeWeapon() == nullptr)
+	{
+		ABaseWeapon* knife = GetWorld()->SpawnActor<ABaseWeapon>(MeleeAsset);
+		agent->ServerRPC_Interact(knife);
+	}
+	
+	if (agent->GetSubWeapon() == nullptr) 
+	{
+		ABaseWeapon* gun = GetWorld()->SpawnActor<ABaseWeapon>(ClassicAsset);
+		agent->ServerRPC_Interact(gun);
+	}
+	
 }
 
 void AMatchGameMode::DestroySpikeInWorld()

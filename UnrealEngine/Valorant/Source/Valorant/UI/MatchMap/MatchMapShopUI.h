@@ -132,7 +132,20 @@ protected:
 	int SkillEID = 0;
 	UPROPERTY(BlueprintReadWrite, Category = "Shop|Ability")
 	int SkillCID = 0;
+
 private:
 	UPROPERTY()
 	UValorantGameInstance* GameInstance;
+
+	// 텍스트 색상 변경을 위한 타이머 핸들
+	FTimerHandle CreditTextColorTimerHandle;
+	
+	// 텍스트 원래 색상 캐싱
+	FSlateColor OriginalCreditTextColor;
+	
+	// 색상 변경 함수
+	void FlashCreditTextColor(const FLinearColor& FlashColor, float Duration = 0.5f);
+	
+	// 원래 색상으로 복원하는 함수
+	void ResetCreditTextColor();
 };

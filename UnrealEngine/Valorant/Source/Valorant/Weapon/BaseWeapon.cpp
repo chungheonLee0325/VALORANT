@@ -506,7 +506,7 @@ void ABaseWeapon::ServerOnly_AttachWeapon(ABaseAgent* Agent)
 	Agent->AcquireInteractor(this);
 }
 
-void ABaseWeapon::SetWeaponID(int32 NewWeaponID)
+void ABaseWeapon::NetMulti_ReloadWeaponData_Implementation(int32 NewWeaponID)
 {
 	WeaponID = NewWeaponID;
 	

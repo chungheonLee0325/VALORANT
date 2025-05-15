@@ -4,6 +4,7 @@
 #include "ShopComponent.h"
 
 #include "CreditComponent.h"
+#include "AbilitySystem/Attributes/BaseAttributeSet.h"
 #include "Player/Agent/BaseAgent.h"
 #include "Player/AgentPlayerController.h"
 #include "Player/AgentPlayerState.h"
@@ -140,122 +141,75 @@ void UShopComponent::InitBySkillData(TArray<int32> SkillIDs)
 
 bool UShopComponent::PurchaseWeapon(int32 WeaponID)
 {
-	// if (!IsShopAvailable() || !m_Owner)
-	// {
-	// 	return false;
-	// }
+	if (!IsShopAvailable() || !m_Owner)
+	{
+		if (m_Owner)
+		{
+			m_Owner->Client_ReceivePurchaseResult(false, WeaponID, EShopItemType::Weapon,
+			                                      TEXT("상점이 현재 이용할 수 없습니다."));
+		}
+		return false;
+	}
 
 	// 플레이어 스테이트와 크레딧 컴포넌트 찾기
 	AAgentPlayerState* PS = m_Owner->GetPlayerState<AAgentPlayerState>();
-	if (!PS) return false;
+	if (!PS)
+	{
+		if (m_Owner)
+		{
+			m_Owner->Client_ReceivePurchaseResult(false, WeaponID, EShopItemType::Weapon,
+			                                      TEXT("플레이어 정보를 찾을 수 없습니다."));
+		}
+		return false;
+	}
 
 	UCreditComponent* CreditComp = PS->FindComponentByClass<UCreditComponent>();
-	if (!CreditComp) return false;
+	if (!CreditComp)
+	{
+		if (m_Owner)
+		{
+			m_Owner->Client_ReceivePurchaseResult(false, WeaponID, EShopItemType::Weapon,
+			                                      TEXT("크레딧 정보를 찾을 수 없습니다."));
+		}
+		return false;
+	}
 
 	FWeaponData** WeaponInfo = AvailableWeapons.Find(WeaponID);
 	if (!WeaponInfo || !*WeaponInfo)
 	{
+		if (m_Owner)
+		{
+			m_Owner->Client_ReceivePurchaseResult(false, WeaponID, EShopItemType::Weapon,
+			                                      TEXT("유효하지 않은 무기입니다."));
+		}
+		return false;
+	}
+
+	//구매 가능 여부 및 환불 금액 확인
+	int32 RefundAmount = 0;
+	if (!CanPurchaseItem(WeaponID, EShopItemType::Weapon, RefundAmount))
+	{
+		if (m_Owner)
+		{
+			m_Owner->Client_ReceivePurchaseResult(false, WeaponID, EShopItemType::Weapon,
+			                                      TEXT("구매할 수 없는 무기입니다. 크레딧이 부족하거나 이미 보유 중입니다."));
+		}
 		return false;
 	}
 
 	int32 Cost = (*WeaponInfo)->Cost;
-	EWeaponCategory NewWeaponCategory = (*WeaponInfo)->WeaponCategory;
-
-	// 플레이어 캐릭터 가져오기
-	ABaseAgent* Agent = m_Owner->GetPawn<ABaseAgent>();
-	if (!Agent) return false;
-
-	// 무기 정보 확인
-	ABaseWeapon* CurrentWeapon = nullptr;
-	bool bHasSameIDWeapon = false;
-	bool bHasSameCategoryWeapon = false;
-	int32 RefundAmount = 0;
-
-	// 새 무기가 Sidearm(보조무기)인 경우
-	if (NewWeaponCategory == EWeaponCategory::Sidearm)
-	{
-		CurrentWeapon = Agent->GetSubWeapon();
-		if (CurrentWeapon)
-		{
-			// 정확히 같은 무기인지 확인
-			if (CurrentWeapon->GetWeaponID() == WeaponID)
-			{
-				bHasSameIDWeapon = true;
-				// 같은 무기 ID는 이미 가지고 있으므로 구매 불가
-				return false;
-			}
-			else
-			{
-				// 다른 무기지만 같은 카테고리(보조무기)인 경우
-				bHasSameCategoryWeapon = true;
-
-				// 무기 환불 금액 계산
-				FWeaponData* CurrentWeaponData = GameInstance
-					                                 ? GameInstance->GetWeaponData(CurrentWeapon->GetWeaponID())
-					                                 : nullptr;
-
-				if (CurrentWeaponData && !CurrentWeapon->GetWasUsed())
-				{
-					// 사용하지 않은 무기는 100% 환불
-					RefundAmount = CurrentWeaponData->Cost;
-				}
-			}
-		}
-	}
-	// 새 무기가 주무기인 경우(Sidearm이 아닌 모든 무기)
-	else
-	{
-		CurrentWeapon = Agent->GetMainWeapon();
-		if (CurrentWeapon)
-		{
-			// 정확히 같은 무기인지 확인
-			if (CurrentWeapon->GetWeaponID() == WeaponID)
-			{
-				bHasSameIDWeapon = true;
-				// 같은 무기 ID는 이미 가지고 있으므로 구매 불가
-				return false;
-			}
-			else
-			{
-				// 다른 무기지만 같은 카테고리(주무기)인 경우
-				bHasSameCategoryWeapon = true;
-
-				// 무기 환불 금액 계산
-				FWeaponData* CurrentWeaponData = GameInstance
-					                                 ? GameInstance->GetWeaponData(CurrentWeapon->GetWeaponID())
-					                                 : nullptr;
-
-				if (CurrentWeaponData && !CurrentWeapon->GetWasUsed())
-				{
-					// 사용하지 않은 무기는 100% 환불
-					RefundAmount = CurrentWeaponData->Cost;
-				}
-			}
-		}
-	}
-
-	// 현재 보유 크레딧 + 환불 금액으로 구매 가능 여부 확인
-	int32 CurrentCredits = CreditComp->GetCurrentCredit();
-	bool bCanAffordAfterRefund = (CurrentCredits + RefundAmount) >= Cost;
-
-	if (!bCanAffordAfterRefund)
-	{
-		// 환불액을 고려해도 구매 불가능한 경우
-		return false;
-	}
 
 	// 여기서부터는 구매 가능한 케이스
-
-	// 환불 금액을 크레딧에 추가
-	if (bHasSameCategoryWeapon && RefundAmount > 0)
+	// 환불 금액이 있으면 크레딧에 추가
+	if (RefundAmount > 0)
 	{
 		CreditComp->AddCredits(RefundAmount);
 	}
 
-	// 실제 지불해야 할 비용
+	// 비용 지불
 	if (CreditComp->CanUseCredits(Cost))
 	{
-		// 크레딧 차감 (서버에서 처리되어야 함)
+		// 크레딧 차감
 		bool bSuccess = CreditComp->UseCredits(Cost);
 
 		if (bSuccess)
@@ -264,17 +218,19 @@ bool UShopComponent::PurchaseWeapon(int32 WeaponID)
 			FShopItem* Item = FindShopItem(WeaponID, EShopItemType::Weapon);
 			if (Item)
 			{
-				// OnShopItemPurchased.Broadcast(*Item); // 성공 여부를 서버에서 판단 후 Client_ReceivePurchaseResult를 통해 전달하므로 여기서는 제거하거나, 서버 전용 로깅/이벤트로 남길 수 있음
+				OnShopItemPurchased.Broadcast(*Item);
 			}
 
 			// 무기 생성 및 플레이어에게 할당
 			SpawnWeaponForPlayer(WeaponID);
 
 			// 클라이언트에 성공 결과 전송
-			if (m_Owner) // m_Owner는 AAgentPlayerController
+			if (m_Owner)
 			{
 				m_Owner->Client_ReceivePurchaseResult(true, WeaponID, EShopItemType::Weapon, TEXT(""));
 			}
+
+			return true;
 		}
 		else
 		{
@@ -282,20 +238,17 @@ bool UShopComponent::PurchaseWeapon(int32 WeaponID)
 			if (m_Owner)
 			{
 				m_Owner->Client_ReceivePurchaseResult(false, WeaponID, EShopItemType::Weapon,
-				                                      TEXT("Failed to use credits."));
+				                                      TEXT("크레딧 사용에 실패했습니다."));
 			}
 		}
-
-		return bSuccess; // 이 반환 값은 서버 내부 로직용
 	}
-	// CanUseCredits(Cost) 실패 또는 이미 환불로도 구매 불가 처리됨
 	else
 	{
 		// 클라이언트에 실패 결과 전송
 		if (m_Owner)
 		{
 			m_Owner->Client_ReceivePurchaseResult(false, WeaponID, EShopItemType::Weapon,
-			                                      TEXT("Not enough credits even after refund."));
+			                                      TEXT("환불액을 고려해도 크레딧이 부족합니다."));
 		}
 	}
 
@@ -308,31 +261,31 @@ bool UShopComponent::PurchaseAbility(int32 AbilityID)
 	{
 		if (m_Owner)
 		{
-			m_Owner->Client_ReceivePurchaseResult(false, AbilityID, EShopItemType::Ability, 
-			                                       TEXT("상점이 현재 이용할 수 없습니다."));
+			m_Owner->Client_ReceivePurchaseResult(false, AbilityID, EShopItemType::Ability,
+			                                      TEXT("상점이 현재 이용할 수 없습니다."));
 		}
 		return false;
 	}
 
 	// 플레이어 스테이트와 크레딧 컴포넌트 찾기
 	AAgentPlayerState* PS = m_Owner->GetPlayerState<AAgentPlayerState>();
-	if (!PS) 
+	if (!PS)
 	{
 		if (m_Owner)
 		{
-			m_Owner->Client_ReceivePurchaseResult(false, AbilityID, EShopItemType::Ability, 
-			                                       TEXT("플레이어 정보를 찾을 수 없습니다."));
+			m_Owner->Client_ReceivePurchaseResult(false, AbilityID, EShopItemType::Ability,
+			                                      TEXT("플레이어 정보를 찾을 수 없습니다."));
 		}
 		return false;
 	}
 
 	UCreditComponent* CreditComp = PS->FindComponentByClass<UCreditComponent>();
-	if (!CreditComp) 
+	if (!CreditComp)
 	{
 		if (m_Owner)
 		{
-			m_Owner->Client_ReceivePurchaseResult(false, AbilityID, EShopItemType::Ability, 
-			                                       TEXT("크레딧 정보를 찾을 수 없습니다."));
+			m_Owner->Client_ReceivePurchaseResult(false, AbilityID, EShopItemType::Ability,
+			                                      TEXT("크레딧 정보를 찾을 수 없습니다."));
 		}
 		return false;
 	}
@@ -342,87 +295,66 @@ bool UShopComponent::PurchaseAbility(int32 AbilityID)
 	{
 		if (m_Owner)
 		{
-			m_Owner->Client_ReceivePurchaseResult(false, AbilityID, EShopItemType::Ability, 
-			                                       TEXT("유효하지 않은 스킬입니다."));
+			m_Owner->Client_ReceivePurchaseResult(false, AbilityID, EShopItemType::Ability,
+			                                      TEXT("유효하지 않은 스킬입니다."));
+		}
+		return false;
+	}
+
+	// 현재 스택이 최대치인지 확인
+	if (PS->GetAbilityStack(AbilityID) >= PS->GetMaxAbilityStack(AbilityID))
+	{
+		if (m_Owner)
+		{
+			m_Owner->Client_ReceivePurchaseResult(false, AbilityID, EShopItemType::Ability,
+			                                      TEXT("이미 최대 개수의 스킬을 보유하고 있습니다."));
+		}
+		return false;
+	}
+
+	// 개선된 CanPurchaseItem 사용
+	int32 RefundAmount = 0; // 어빌리티는 환불 없음
+	if (!CanPurchaseItem(AbilityID, EShopItemType::Ability, RefundAmount))
+	{
+		if (m_Owner)
+		{
+			m_Owner->Client_ReceivePurchaseResult(false, AbilityID, EShopItemType::Ability,
+			                                      TEXT("크레딧이 부족합니다."));
 		}
 		return false;
 	}
 
 	int32 Cost = AbilityInfo->ChargeCost;
 
-	// 현재 스택 및 최대 스택 확인
-	int32 CurrentStack = PS->GetAbilityStack(AbilityID);
-	int32 MaxStack = PS->GetMaxAbilityStack(AbilityID);
-
-	// 이미 최대 스택인 경우
-	if (CurrentStack >= MaxStack)
+	// 크레딧 사용
+	bool bSuccess = CreditComp->UseCredits(Cost);
+	if (bSuccess)
 	{
+		// 스택 증가 - 사용자 변경 유지
+		PS->AddAbilityStack(AbilityID);
+
+		// 구매 성공 이벤트 발생
+		FShopItem* Item = FindShopItem(AbilityID, EShopItemType::Ability);
+		if (Item)
+		{
+			OnShopItemPurchased.Broadcast(*Item);
+		}
+
+		// 클라이언트에 성공 결과 전송
 		if (m_Owner)
 		{
-			m_Owner->Client_ReceivePurchaseResult(false, AbilityID, EShopItemType::Ability, 
-			                                       TEXT("이미 최대 개수의 스킬을 보유하고 있습니다."));
+			m_Owner->Client_ReceivePurchaseResult(true, AbilityID, EShopItemType::Ability, TEXT(""));
 		}
-		return false;
-	}
 
-	// 크레딧 충분한지 확인
-	if (CreditComp->CanUseCredits(Cost))
-	{
-		// 크레딧 사용
-		bool bSuccess = CreditComp->UseCredits(Cost);
-		if (bSuccess)
-		{
-			if (PS->GetAbilityStack(AbilityID) != PS->GetMaxAbilityStack(AbilityID) )
-			{
-				// 스택 증가
-				PS->AddAbilityStack(AbilityID);
-				
-				// 구매 성공 이벤트 발생
-				FShopItem* Item = FindShopItem(AbilityID, EShopItemType::Ability);
-				if (Item)
-				{
-					OnShopItemPurchased.Broadcast(*Item);
-				}
-
-				// 클라이언트에 성공 결과 전송
-				if (m_Owner)
-				{
-					m_Owner->Client_ReceivePurchaseResult(true, AbilityID, EShopItemType::Ability, TEXT(""));
-				}
-
-				return true;
-			}
-			else
-			{
-				// 스택 증가 실패 시 크레딧 환불
-				CreditComp->AddCredits(Cost);
-				
-				if (m_Owner)
-				{
-					m_Owner->Client_ReceivePurchaseResult(false, AbilityID, EShopItemType::Ability, 
-					                                       TEXT("스킬 스택 증가에 실패했습니다."));
-				}
-				return false;
-			}
-		}
-		else
-		{
-			// 크레딧 사용 실패
-			if (m_Owner)
-			{
-				m_Owner->Client_ReceivePurchaseResult(false, AbilityID, EShopItemType::Ability, 
-				                                       TEXT("크레딧 사용에 실패했습니다."));
-			}
-			return false;
-		}
+		return true;
 	}
 	else
 	{
-		// 크레딧 부족
+		// 크레딧 사용 실패
 		if (m_Owner)
 		{
-			m_Owner->Client_ReceivePurchaseResult(false, AbilityID, EShopItemType::Ability, 
-			                                       TEXT("크레딧이 부족합니다."));
+			m_Owner->Client_ReceivePurchaseResult(false, AbilityID, EShopItemType::Ability,
+			                                      TEXT("크레딧 사용에 실패했습니다."));
 		}
 		return false;
 	}
@@ -432,79 +364,106 @@ bool UShopComponent::PurchaseArmor(int32 ArmorLevel)
 {
 	if (!IsShopAvailable() || !m_Owner)
 	{
+		if (m_Owner)
+		{
+			m_Owner->Client_ReceivePurchaseResult(false, ArmorLevel, EShopItemType::Armor,
+			                                      TEXT("상점이 현재 이용할 수 없습니다."));
+		}
 		return false;
 	}
 
 	// 플레이어 스테이트와 크레딧 컴포넌트 찾기
 	AAgentPlayerState* PS = m_Owner->GetPlayerState<AAgentPlayerState>();
-	if (!PS) return false;
-
-	UCreditComponent* CreditComp = PS->FindComponentByClass<UCreditComponent>();
-	if (!CreditComp) return false;
-
-	// 방어구 가격 설정 (레벨에 따라 다름)
-	int32 Cost = 0;
-	switch (ArmorLevel)
-	{
-	case 1: // 경장갑
-		Cost = 400;
-		break;
-	case 2: // 중장갑
-		Cost = 1000;
-		break;
-	// ToDo : 재생형 장갑
-	default:
-		return false;
-	}
-
-	// 크레딧 충분한지 확인
-	if (CreditComp->CanUseCredits(Cost))
-	{
-		// 서버에 구매 요청
-		if (m_Owner)
-		{
-			// ToDo: AAgentPlayerController에 방어구 구매 RPC 추가
-			// m_Owner->RequestPurchaseArmor(ArmorLevel);
-
-			// 크레딧 차감 (서버에서 처리되어야 함)
-			bool bSuccess = CreditComp->UseCredits(Cost);
-
-			if (bSuccess)
-			{
-				// 구매 이벤트 발생
-				// 방어구는 동적으로 아이템 생성
-				FShopItem ArmorItem;
-				ArmorItem.ItemID = ArmorLevel;
-				ArmorItem.ItemName = ArmorLevel == 1 ? "Light Armor" : "Heavy Armor";
-				ArmorItem.ItemType = EShopItemType::Armor;
-				ArmorItem.Price = Cost;
-
-				// OnShopItemPurchased.Broadcast(ArmorItem); // 성공 여부를 서버에서 판단 후 Client_ReceivePurchaseResult를 통해 전달
-			}
-
-			// 클라이언트에 성공 결과 전송
-			if (m_Owner)
-			{
-				m_Owner->Client_ReceivePurchaseResult(true, ArmorLevel, EShopItemType::Armor, TEXT(""));
-			}
-
-			return bSuccess;
-		}
-	}
-	else // 크레딧 사용 실패
+	if (!PS)
 	{
 		if (m_Owner)
 		{
 			m_Owner->Client_ReceivePurchaseResult(false, ArmorLevel, EShopItemType::Armor,
-			                                      TEXT("Failed to use credits for armor."));
+			                                      TEXT("플레이어 정보를 찾을 수 없습니다."));
 		}
+		return false;
 	}
 
-	return false;
+	UCreditComponent* CreditComp = PS->FindComponentByClass<UCreditComponent>();
+	if (!CreditComp)
+	{
+		if (m_Owner)
+		{
+			m_Owner->Client_ReceivePurchaseResult(false, ArmorLevel, EShopItemType::Armor,
+			                                      TEXT("크레딧 정보를 찾을 수 없습니다."));
+		}
+		return false;
+	}
+
+	// 방어구 레벨 확인
+	if (ArmorLevel != 1 && ArmorLevel != 2)
+	{
+		if (m_Owner)
+		{
+			m_Owner->Client_ReceivePurchaseResult(false, ArmorLevel, EShopItemType::Armor,
+			                                      TEXT("유효하지 않은 방어구 레벨입니다."));
+		}
+		return false;
+	}
+
+	// 개선된 CanPurchaseItem 사용
+	int32 RefundAmount = 0; // 방어구는 환불 없음
+	if (!CanPurchaseItem(ArmorLevel, EShopItemType::Armor, RefundAmount))
+	{
+		if (m_Owner)
+		{
+			m_Owner->Client_ReceivePurchaseResult(false, ArmorLevel, EShopItemType::Armor,
+			                                      TEXT("크레딧이 부족합니다."));
+		}
+		return false;
+	}
+
+	int32 Cost = (ArmorLevel == 1) ? 400 : 1000;
+
+	// 크레딧 사용
+	bool bSuccess = CreditComp->UseCredits(Cost);
+	if (bSuccess)
+	{
+		// 방어구 적용 로직
+		UBaseAttributeSet* AttributeSet = PS->GetBaseAttributeSet();
+		if (AttributeSet)
+		{
+			float ArmorValue = (ArmorLevel == 1) ? 25.0f : 50.0f;
+			AttributeSet->SetArmor(ArmorValue);
+		}
+
+		// 구매 성공 이벤트 발생
+		FShopItem ArmorItem;
+		ArmorItem.ItemID = ArmorLevel;
+		ArmorItem.ItemName = ArmorLevel == 1 ? "Light Armor" : "Heavy Armor";
+		ArmorItem.ItemType = EShopItemType::Armor;
+		ArmorItem.Price = Cost;
+		OnShopItemPurchased.Broadcast(ArmorItem);
+
+		// 클라이언트에 성공 결과 전송
+		if (m_Owner)
+		{
+			m_Owner->Client_ReceivePurchaseResult(true, ArmorLevel, EShopItemType::Armor, TEXT(""));
+		}
+
+		return true;
+	}
+	else
+	{
+		// 크레딧 사용 실패
+		if (m_Owner)
+		{
+			m_Owner->Client_ReceivePurchaseResult(false, ArmorLevel, EShopItemType::Armor,
+			                                      TEXT("크레딧 사용에 실패했습니다."));
+		}
+		return false;
+	}
 }
 
-bool UShopComponent::CanPurchaseItem(int32 ItemID, EShopItemType ItemType) const
+bool UShopComponent::CanPurchaseItem(int32 ItemID, EShopItemType ItemType, int32& OutRefundAmount) const
 {
+	OutRefundAmount = 0; // 기본값으로 초기화
+
 	if (!m_Owner)
 	{
 		return false;
@@ -518,6 +477,7 @@ bool UShopComponent::CanPurchaseItem(int32 ItemID, EShopItemType ItemType) const
 	if (!CreditComp) return false;
 
 	int32 Cost = 0;
+	bool bCanPurchase = true;
 
 	switch (ItemType)
 	{
@@ -527,6 +487,51 @@ bool UShopComponent::CanPurchaseItem(int32 ItemID, EShopItemType ItemType) const
 			if (WeaponInfo && *WeaponInfo)
 			{
 				Cost = (*WeaponInfo)->Cost;
+
+				// 무기에만 환불 로직 적용
+				ABaseAgent* Agent = m_Owner->GetPawn<ABaseAgent>();
+				if (Agent)
+				{
+					EWeaponCategory NewWeaponCategory = (*WeaponInfo)->WeaponCategory;
+					ABaseWeapon* CurrentWeapon = nullptr;
+
+					// 무기 카테고리에 따라 처리
+					if (NewWeaponCategory == EWeaponCategory::Melee)
+					{
+						if (Agent->GetMeleeWeapon() != nullptr) return false;
+					}
+					else if (NewWeaponCategory == EWeaponCategory::Sidearm)
+					{
+						CurrentWeapon = Agent->GetSubWeapon();
+					}
+					else
+					{
+						CurrentWeapon = Agent->GetMainWeapon();
+					}
+
+					// 같은 무기를 이미 소유한 경우 구매 불가
+					if (CurrentWeapon && CurrentWeapon->GetWeaponID() == ItemID)
+					{
+						return false;
+					}
+
+					// 같은 카테고리의 다른 무기 환불 계산
+					if (CurrentWeapon && CurrentWeapon->GetWeaponID() != ItemID)
+					{
+						FWeaponData* CurrentWeaponData = GameInstance
+							                                 ? GameInstance->GetWeaponData(CurrentWeapon->GetWeaponID())
+							                                 : nullptr;
+
+						if (CurrentWeaponData && !CurrentWeapon->GetWasUsed())
+						{
+							OutRefundAmount = CurrentWeaponData->Cost;
+						}
+					}
+				}
+			}
+			else
+			{
+				bCanPurchase = false;
 			}
 		}
 		break;
@@ -537,19 +542,58 @@ bool UShopComponent::CanPurchaseItem(int32 ItemID, EShopItemType ItemType) const
 			if (AbilityInfo && *AbilityInfo)
 			{
 				Cost = (*AbilityInfo)->ChargeCost;
+
+				// 어빌리티는 현재 스택과 최대 스택 확인 - 사용자 변경 로직 유지
+				int32 CurrentStack = PS->GetAbilityStack(ItemID);
+				int32 MaxStack = PS->GetMaxAbilityStack(ItemID);
+
+				// 스택이 이미 최대이면 구매 불가
+				if (CurrentStack >= MaxStack)
+				{
+					return false;
+				}
+			}
+			else
+			{
+				bCanPurchase = false;
 			}
 		}
 		break;
 
 	case EShopItemType::Armor:
-		Cost = (ItemID == 1) ? 400 : 1000;
+		{
+			// 방어구는 간단한 가격 확인만 수행
+			if (ItemID == 1) // 경장갑
+			{
+				Cost = 400;
+			}
+			else if (ItemID == 2) // 중장갑
+			{
+				Cost = 1000;
+			}
+			else
+			{
+				bCanPurchase = false;
+			}
+
+			// 미래 확장: 현재 방어구 상태 확인 로직 추가 가능
+		}
 		break;
 
 	default:
+		bCanPurchase = false;
+		break;
+	}
+
+	// 구매 불가 조건
+	if (!bCanPurchase)
+	{
 		return false;
 	}
 
-	return CreditComp->CanUseCredits(Cost);
+	// 할인된 가격으로 구매 가능 여부 확인
+	int32 FinalCost = Cost - OutRefundAmount;
+	return CreditComp->CanUseCredits(FinalCost);
 }
 
 FShopItem* UShopComponent::FindShopItem(int32 ItemID, EShopItemType ItemType)
@@ -579,7 +623,8 @@ bool UShopComponent::IsShopAvailable() const
 	}
 
 	// 현재 라운드 서브스테이트 확인 (구매 가능 단계인지)
-	return GameState->GetRoundSubState() == ERoundSubState::RSS_BuyPhase || GameState->GetRoundSubState() == ERoundSubState::RSS_PreRound;
+	return GameState->GetRoundSubState() == ERoundSubState::RSS_BuyPhase || GameState->GetRoundSubState() ==
+		ERoundSubState::RSS_PreRound;
 }
 
 TArray<FShopItem> UShopComponent::GetShopItemsByType(EShopItemType ItemType) const
@@ -624,7 +669,11 @@ void UShopComponent::SpawnWeaponForPlayer(int32 WeaponID)
 
 		// 무기 카테고리에 따라 처리 방식 결정
 		ABaseWeapon* CurrentWeapon = nullptr;
-		if (WeaponCategory == EWeaponCategory::Sidearm)
+		if (WeaponCategory == EWeaponCategory::Melee)
+		{
+			if (Agent->GetMeleeWeapon() != nullptr) return;;
+		}
+		else if (WeaponCategory == EWeaponCategory::Sidearm)
 		{
 			CurrentWeapon = Agent->GetSubWeapon();
 		}
@@ -649,7 +698,7 @@ void UShopComponent::SpawnWeaponForPlayer(int32 WeaponID)
 		{
 			// 무기 ID 설정
 			// 현재 BP가 모두 ID와 나머지 설정되어있지않아서 override하는 방식으로 동작 -> ToDo : 만약 BP Driven으로 변경된다면 SetWeaponID 삭제
-			NewWeapon->SetWeaponID(WeaponID);
+			NewWeapon->NetMulti_ReloadWeaponData(WeaponID);
 			// 무기 카테고리에 따라 장착 방식 결정
 
 			if (CurrentWeapon)
@@ -674,7 +723,7 @@ void UShopComponent::SpawnWeaponForPlayer(int32 WeaponID)
 					default:
 						Agent->ResetMainWeapon();
 					}
-					
+
 					CurrentWeapon->Destroy();
 				}
 			}
