@@ -94,12 +94,9 @@ void UShopComponent::InitializeShopItems()
 
 			FShopItem NewItem;
 			NewItem.ItemID = Weapon->WeaponID;
-			//NewItem.ItemName = Weapon->WeaponName;
 			NewItem.ItemType = EShopItemType::Weapon;
 			NewItem.Price = Weapon->Cost;
-			// ToDo: 아이콘 설정
 			NewItem.bIsAvailable = true;
-
 			ShopItems.Add(NewItem);
 		}
 	}
@@ -114,17 +111,12 @@ void UShopComponent::InitBySkillData(TArray<int32> SkillIDs)
 		return;
 	}
 
-	// 기존 능력 초기화
-	AvailableAbilities.Empty();
-
 	// 지정된 스킬 ID로 능력 데이터 로드
 	for (int32 SkillID : SkillIDs)
 	{
 		FAbilityData* AbilityData = GameInstance->GetAbilityData(SkillID);
 		if (AbilityData)
 		{
-			AvailableAbilities.Add(SkillID, AbilityData);
-
 			FShopItem NewItem;
 			NewItem.ItemID = AbilityData->AbilityID;
 			NewItem.ItemName = AbilityData->AbilityName;
@@ -538,10 +530,10 @@ bool UShopComponent::CanPurchaseItem(int32 ItemID, EShopItemType ItemType, int32
 
 	case EShopItemType::Ability:
 		{
-			const FAbilityData* const* AbilityInfo = AvailableAbilities.Find(ItemID);
-			if (AbilityInfo && *AbilityInfo)
+			const FAbilityData* const AbilityInfo = GameInstance->GetAbilityData(ItemID);
+			if (AbilityInfo)
 			{
-				Cost = (*AbilityInfo)->ChargeCost;
+				Cost = AbilityInfo->ChargeCost;
 
 				// 어빌리티는 현재 스택과 최대 스택 확인 - 사용자 변경 로직 유지
 				int32 CurrentStack = PS->GetAbilityStack(ItemID);
