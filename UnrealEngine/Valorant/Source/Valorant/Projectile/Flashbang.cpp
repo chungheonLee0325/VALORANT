@@ -14,10 +14,10 @@ AFlashbang::AFlashbang()
 	Mesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("Mesh"));
 	Mesh->SetupAttachment(GetRootComponent());
 
-	static ConstructorHelpers::FObjectFinder<USkeletalMesh> MeshAsset(TEXT("/Script/Engine.SkeletalMesh'/Game/Resource/Props/KAYO_Ability_Flashbang/AB_Grenadier_S0_4_Skelmesh.AB_Grenadier_S0_4_Skelmesh'"));
+	static ConstructorHelpers::FObjectFinder<USkeletalMesh> MeshAsset(TEXT("/Script/Engine.SkeletalMesh'/Game/Resource/Props/Projectiles/KAYO_Ability_Flashbang/AB_Grenadier_S0_4_Skelmesh.AB_Grenadier_S0_4_Skelmesh'"));
 	if (MeshAsset.Succeeded())
 	{
-		Mesh->SetSkeletalMesh(MeshAsset.Object);
+		Mesh->SetSkeletalMeshAsset(MeshAsset.Object);
 	}
 	
 	Sphere->SetSphereRadius(20.0f);
