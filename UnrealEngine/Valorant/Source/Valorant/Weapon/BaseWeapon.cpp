@@ -324,9 +324,16 @@ void ABaseWeapon::MulticastRPC_PlayFireAnimation_Implementation()
 {
 	if (AM_Fire == nullptr)
 	{
-		UE_LOG(LogTemp, Error, TEXT("총기에 격발 애니메이션이 없어요."));
+		NET_LOG(LogTemp, Error, TEXT("%hs Called, AM_Fire is nullptr"), __FUNCTION__);
 		return;
 	}
+
+	if (nullptr == OwnerAgent)
+	{
+		NET_LOG(LogTemp, Error, TEXT("%hs Called, OwnerAgent is nullptr"), __FUNCTION__);
+		return;
+	}
+	
 	if (OwnerAgent->IsLocallyControlled())
 	{
 		if (OwnerAgent->GetABP_1P()->Montage_IsPlaying(AM_Fire))
