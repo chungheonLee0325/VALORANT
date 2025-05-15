@@ -39,11 +39,17 @@ void ABaseInteractor::OnRep_OwnerAgent()
 {
 	if (OwnerAgent)
 	{
-		NET_LOG(LogTemp, Warning, TEXT("%hs Called, AgentName: %s"), __FUNCTION__, *OwnerAgent->GetName());
+		NET_LOG(LogTemp, Warning, TEXT("%hs Called, InteractorName: %s, AgentName: %s"), __FUNCTION__, *GetName(), *OwnerAgent->GetName());
+		OnDetect(false);
+		auto* Agent = Cast<ABaseAgent>(GetWorld()->GetFirstPlayerController()->GetCharacter());
+		if (Agent && Agent->GetFindInteractorActor() == this)
+		{
+			Agent->ResetFindInteractorActor();
+		}
 	}
 	else
 	{
-		NET_LOG(LogTemp, Warning, TEXT("%hs Called, OwnerAgent is nullptr"), __FUNCTION__);
+		// NET_LOG(LogTemp, Warning, TEXT("%hs Called, OwnerAgent is nullptr"), __FUNCTION__);
 	}
 }
 
@@ -156,31 +162,9 @@ void ABaseInteractor::ServerRPC_PickUp_Implementation(ABaseAgent* Agent)
 	
 	OwnerAgent = Agent;
 	SetOwner(OwnerAgent);
-	
-	Sphere->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-
-	FTimerHandle TimerHandle;
-	GetWorld()->GetTimerManager().SetTimer(
-		TimerHandle,
-		FTimerDelegate::CreateUObject(this, &ABaseInteractor::Multicast_PickUp, Agent),
-		1.0f,
-		false
-	);
-}
-
-void ABaseInteractor::Multicast_PickUp_Implementation(ABaseAgent* Agent)
-{
 	OnDetect(false);
 	
-	if (Agent == nullptr)
-	{
-		NET_LOG(LogTemp,Error,TEXT("%hs Called, Agent is nullptr"), __FUNCTION__);
-		return;
-	}
-	if (Agent->GetFindInteractorActor() == this)
-	{
-		Agent->ResetFindInteractorActor();
-	}
+	Sphere->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 }
 
 void ABaseInteractor::ServerRPC_Drop_Implementation()

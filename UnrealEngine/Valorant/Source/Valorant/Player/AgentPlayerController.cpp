@@ -11,10 +11,12 @@
 #include "AbilitySystem/Attributes/BaseAttributeSet.h"
 #include "Agent/BaseAgent.h"
 #include "UI/MatchMap/MatchMapHUD.h"
-#include "Component/CreditComponent.h"
-#include "Component/ShopComponent.h"
-#include "Valorant/GameManager/ValorantGameInstance.h"
 #include "Widget/AgentBaseWidget.h"
+#include "Component/CreditComponent.h"
+#include "Valorant/Player/Widget/MiniMapWidget.h"
+#include "Component/ShopComponent.h"
+#include "Kismet/GameplayStatics.h"
+#include "Valorant/GameManager/ValorantGameInstance.h"
 #include "Valorant/UI/MatchMap/MatchMapShopUI.h"
 
 
@@ -45,6 +47,20 @@ void AAgentPlayerController::BeginPlay()
 	if (AMatchGameState* GameState = GetWorld()->GetGameState<AMatchGameState>())
 	{
 		GameState->OnShopClosed.AddDynamic(this, &AAgentPlayerController::CloseShopUI);
+	}
+
+	
+
+	//ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ
+	//             CYT             ♣
+	//ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ
+	
+	// 로컬 플레이어만 미니맵 생성 (멀티플레이어 최적화)
+	// 현재 컨트롤러가 로컬 플레이어의 것인지 확인
+	if (IsLocalPlayerController())
+	{
+		// 미니맵 초기화 함수 호출
+		InitializeMinimap();
 	}
 }
 
@@ -435,4 +451,47 @@ void AAgentPlayerController::Client_ReceivePurchaseResult_Implementation(
 	bool bSuccess, int32 ItemID, EShopItemType ItemType, const FString& FailureReason)
 {
 	OnServerPurchaseResult.Broadcast(bSuccess, ItemID, ItemType, FailureReason);
+}
+
+
+
+//ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ
+//             CYT             ♣
+//ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ
+
+// 미니맵 초기화 함수
+void AAgentPlayerController::InitializeMinimap()
+{
+	if (MinimapWidgetClass) // 미니맵 위젯 클래스가 설정되어 있는 경우
+	{
+		// 미니맵 위젯 생성
+		// 지정된 클래스로 위젯 인스턴스 생성
+		MinimapWidget = CreateWidget<UMiniMapWidget>(this, MinimapWidgetClass);
+		// 위젯이 성공적으로 생성된 경우
+		if (MinimapWidget)
+		{
+			// 화면에 추가
+			// 화면에 위젯 표시
+			MinimapWidget->AddToViewport();
+            
+			// 게임의 모든 에이전트를 미니맵에 등록
+			// 모든 에이전트 배열
+			TArray<AActor*> AllAgents;
+			// BaseAgent 클래스의 모든 인스턴스 가져오기
+			UGameplayStatics::GetAllActorsOfClass(GetWorld(), ABaseAgent::StaticClass(), AllAgents);
+            
+			// 모든 에이전트에 대해 반복
+			for (AActor* ActorAgent : AllAgents)
+			{
+				// Actor를 BaseAgent로 형변환
+				ABaseAgent* Agent = Cast<ABaseAgent>(ActorAgent);
+				// 에이전트가 유효한 경우
+				if (IsValid(Agent))
+				{
+					// 미니맵에 에이전트 등록
+					MinimapWidget->AddAgentToMinimap(Agent);
+				}
+			}
+		}
+	}
 }

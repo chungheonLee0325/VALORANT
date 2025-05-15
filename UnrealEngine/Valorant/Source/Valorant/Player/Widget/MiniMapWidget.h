@@ -4,9 +4,10 @@
 
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
-#include "Player/Agent/BaseAgent.h"
 #include "MiniMapWidget.generated.h"
 
+
+class ABaseAgent;
 /**
  * 
  */

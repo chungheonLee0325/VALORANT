@@ -3,7 +3,7 @@
 
 #include "BaseAgent.h"
 #include "AbilitySystemComponent.h"
-#include "MapTestAgent.h"
+#include "Engine/World.h"
 #include "Valorant.h"
 #include "AbilitySystem/Context/HitScanGameplayEffectContext.h"
 #include "Camera/CameraComponent.h"
@@ -370,7 +370,7 @@ void ABaseAgent::StartFire()
 {
 	if (CurrentInteractor == nullptr)
 	{
-		NET_LOG(LogTemp, Warning, TEXT("현재 인터랙터 없음"));
+		NET_LOG(LogTemp, Warning, TEXT("%hs Called, CurrentInteractor is nullptr"), __FUNCTION__);
 		return;
 	}
 
@@ -706,7 +706,7 @@ void ABaseAgent::EquipInteractor(ABaseInteractor* interactor)
 		ABP_1P->InteractorState = EInteractorType::None;
 		ABP_3P->InteractorState = EInteractorType::None;
 
-		// NET_LOG(LogTemp, Warning, TEXT("빈손이네요"));
+		NET_LOG(LogTemp, Error, TEXT("%hs Called, Interactor를 장착하려 하는데 nullptr임"), __FUNCTION__);
 		return;
 	}
 	CurrentInteractorState = CurrentInteractor->GetInteractorType();
@@ -734,8 +734,7 @@ void ABaseAgent::EquipInteractor(ABaseInteractor* interactor)
 		ABP_1P->InteractorPoseIdx = PoseIdx;
 		ABP_3P->InteractorPoseIdx = PoseIdx;
 	}
-
-	// NET_LOG(LogTemp, Warning, TEXT("현재 들고 있는 인터랙터: %s"), *CurrentInteractor->GetActorNameOrLabel());
+	NET_LOG(LogTemp, Warning, TEXT("%hs Called, 현재 장착 중인 Interactor: %s"), __FUNCTION__, *CurrentInteractor->GetActorNameOrLabel());
 }
 
 void ABaseAgent::OnFindInteraction(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
