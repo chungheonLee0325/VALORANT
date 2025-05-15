@@ -568,7 +568,6 @@ void ABaseAgent::SwitchInteractor(EInteractorType InteractorType)
 	}
 	else
 	{
-		NET_LOG(LogTemp,Warning, TEXT("클라 %hs Called"), __FUNCTION__);
 		ServerRPC_SwitchInteractor(InteractorType);
 	}
 }
@@ -740,7 +739,7 @@ void ABaseAgent::EquipInteractor(ABaseInteractor* interactor)
 		ABP_1P->InteractorPoseIdx = PoseIdx;
 		ABP_3P->InteractorPoseIdx = PoseIdx;
 	}
-	NET_LOG(LogTemp, Warning, TEXT("%hs Called, 현재 장착 중인 Interactor: %s"), __FUNCTION__, *CurrentInteractor->GetActorNameOrLabel());
+	// NET_LOG(LogTemp, Warning, TEXT("%hs Called, 현재 장착 중인 Interactor: %s"), __FUNCTION__, *CurrentInteractor->GetActorNameOrLabel());
 }
 
 void ABaseAgent::OnFindInteraction(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
