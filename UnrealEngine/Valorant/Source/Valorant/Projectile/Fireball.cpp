@@ -4,33 +4,35 @@
 #include "Fireball.h"
 
 #include "FireGround.h"
+#include "Components/SphereComponent.h"
 #include "GameFramework/ProjectileMovementComponent.h"
 
 
-// Sets default values
 AFireball::AFireball()
 {
-	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
-	PrimaryActorTick.bCanEverTick = true;
+	PrimaryActorTick.bCanEverTick = false;
+
+	Sphere->SetSphereRadius(15.0f);
+	Mesh->SetRelativeScale3D(FVector(.3f));
+	
+	static ConstructorHelpers::FObjectFinder<UMaterial> FireballMaterial(TEXT("/Script/Engine.Material'/Engine/VREditor/LaserPointer/LaserPointerMaterial.LaserPointerMaterial'"));
+	if (FireballMaterial.Succeeded())
+	{
+		Mesh->SetMaterial(0, FireballMaterial.Object);
+	}
 	
 	ProjectileMovement->InitialSpeed = Speed;
 	ProjectileMovement->MaxSpeed = Speed;
 	ProjectileMovement->ProjectileGravityScale = Gravity;
+	ProjectileMovement->bShouldBounce = bShouldBounce;
 	ProjectileMovement->Bounciness = Bounciness;
 	ProjectileMovement->Friction = Friction;
 }
 
-// Called when the game starts or when spawned
 void AFireball::BeginPlay()
 {
 	Super::BeginPlay();
-	GetWorld()->GetTimerManager().SetTimer(AirTimeHandle, this, &AFireball::VerticalFall, MaximumAirTime, false);
-}
-
-// Called every frame
-void AFireball::Tick(float DeltaTime)
-{
-	Super::Tick(DeltaTime);
+	GetWorld()->GetTimerManager().SetTimer(AirTimeHandle, this, &AFireball::OnElapsedMaxAirTime, MaximumAirTime, false);
 }
 
 void AFireball::OnProjectileBounced(const FHitResult& ImpactResult, const FVector& ImpactVelocity)
@@ -46,7 +48,7 @@ void AFireball::OnProjectileBounced(const FHitResult& ImpactResult, const FVecto
 	}
 }
 
-void AFireball::VerticalFall()
+void AFireball::OnElapsedMaxAirTime()
 {
 	ProjectileMovement->Velocity = FVector(0, 0, -Speed);
 }
