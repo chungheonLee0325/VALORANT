@@ -12,6 +12,7 @@ class UAgentAbilitySystemComponent;
 class AAgentPlayerState;
 class UWidgetSwitcher;
 class UTextBlock;
+class UImage;
 class UValorantGameInstance;
 
 UENUM(BlueprintType)
@@ -51,6 +52,41 @@ struct FAbilitySlotStackInfo
 		CurrentStack = InCurrentStack;
 		MaxStack = InMaxStack;
 	}
+};
+
+// 어빌리티 상세 정보 구조체 (HUD용)
+USTRUCT(BlueprintType)
+struct FHUDAbilityInfo
+{
+	GENERATED_BODY()
+	
+	// 어빌리티 ID
+	UPROPERTY(BlueprintReadOnly)
+	int32 AbilityID = 0;
+	
+	// 어빌리티 이름
+	UPROPERTY(BlueprintReadOnly)
+	FString AbilityName = "";
+	
+	// 어빌리티 설명
+	UPROPERTY(BlueprintReadOnly)
+	FText AbilityDescription;
+	
+	// 어빌리티 아이콘
+	UPROPERTY(BlueprintReadOnly)
+	UTexture2D* AbilityIcon = nullptr;
+	
+	// 현재 스택 수
+	UPROPERTY(BlueprintReadOnly)
+	int32 CurrentStack = 0;
+	
+	// 최대 스택 수
+	UPROPERTY(BlueprintReadOnly)
+	int32 MaxStack = 0;
+	
+	// 충전 비용
+	UPROPERTY(BlueprintReadOnly)
+	int32 ChargeCost = 0;
 };
 
 /**
@@ -116,6 +152,15 @@ protected:
 	UFUNCTION(BlueprintCallable, Category = "Ability|Stack")
 	void UpdateSlotStackInfo(EAbilitySlotType AbilitySlot, int32 AbilityID);
 	FAbilitySlotStackInfo GetSlotStackInfo(EAbilitySlotType AbilitySlot) const;
+	
+	// 어빌리티 데이터 로드
+	void LoadAbilityData(int32 AbilityID);
+	
+	// 모든 어빌리티 데이터 로드
+	void LoadAllAbilityData();
+	
+	// 어빌리티 UI 업데이트
+	void UpdateAbilityUI();
 
 public:
 	UFUNCTION(BlueprintCallable)
@@ -141,6 +186,18 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Ability|Stack")
 	int32 GetSkillEID() const { return SkillEID; }
 	
+	// 어빌리티 상세 정보 가져오기
+	UFUNCTION(BlueprintPure, Category = "Ability|Info")
+	FHUDAbilityInfo GetAbilityInfo(int32 AbilityID) const;
+	
+	// 슬롯별 어빌리티 상세 정보 가져오기
+	UFUNCTION(BlueprintPure, Category = "Ability|Info")
+	FHUDAbilityInfo GetAbilityInfoBySlot(EAbilitySlotType SlotType) const;
+	
+	// 어빌리티 정보 업데이트 이벤트 (블루프린트에서 구현)
+	UFUNCTION(BlueprintImplementableEvent, Category = "Ability|Info")
+	void OnAbilityInfoUpdated(EAbilitySlotType SlotType, const FHUDAbilityInfo& AbilityInfo);
+	
 public:
 	UPROPERTY(meta=(BindWidget))
 	TObjectPtr<UTextBlock> TextBlockTime = nullptr;
@@ -156,6 +213,19 @@ public:
 
 	UPROPERTY(meta=(BindWidget))
 	UTextBlock* txt_HP;
+	
+	// 어빌리티 이미지
+	UPROPERTY(meta=(BindWidget), BlueprintReadOnly, Category = "Ability|UI")
+	UImage* AbilityC_Image;
+	
+	UPROPERTY(meta=(BindWidget), BlueprintReadOnly, Category = "Ability|UI")
+	UImage* AbilityQ_Image;
+	
+	UPROPERTY(meta=(BindWidget), BlueprintReadOnly, Category = "Ability|UI")
+	UImage* AbilityE_Image;
+	
+	UPROPERTY(meta=(BindWidget), BlueprintReadOnly, Category = "Ability|UI")
+	UImage* AbilityX_Image;
 
 private:
 	UPROPERTY()
@@ -164,6 +234,10 @@ private:
 	// 어빌리티 스택 정보 캐시
 	UPROPERTY()
 	TMap<int32, int32> AbilityStacksCache;
+	
+	// 어빌리티 상세 정보 캐시
+	UPROPERTY()
+	TMap<int32, FHUDAbilityInfo> AbilityInfoCache;
 
 	// 현재 에이전트 스킬 ID
 	UPROPERTY(BlueprintReadOnly, Category = "Ability", meta = (AllowPrivateAccess = "true"))
@@ -174,6 +248,9 @@ private:
 	
 	UPROPERTY(BlueprintReadOnly, Category = "Ability", meta = (AllowPrivateAccess = "true"))
 	int32 SkillEID = 0;
+	
+	UPROPERTY(BlueprintReadOnly, Category = "Ability", meta = (AllowPrivateAccess = "true"))
+	int32 SkillXID = 0;
 
 	// 게임 인스턴스 참조
 	UPROPERTY()
