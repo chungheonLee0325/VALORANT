@@ -2,10 +2,10 @@
 
 
 #include "MiniMapWidget.h"
-
+#include "Valorant/Player/Agent/BaseAgent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Kismet/GameplayStatics.h"
-#include "Player/Agent/MapTestAgent.h"
+
 
 // MinimapWidget 클래스 생성자 정의
 UMiniMapWidget::UMiniMapWidget(const FObjectInitializer& ObjectInitializer)
