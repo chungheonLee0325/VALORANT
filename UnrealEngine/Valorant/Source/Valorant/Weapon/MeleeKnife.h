@@ -12,16 +12,33 @@ class VALORANT_API AMeleeKnife : public ABaseWeapon
 	GENERATED_BODY()
 
 public:
-	// Sets default values for this actor's properties
 	AMeleeKnife();
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
+	UAnimMontage* AM_Fire2;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
+	UAnimMontage* AM_Fire3;
+
+	bool bIsAttacking = false;
+	bool bIsCombo = false;
+	bool bIsComboTransition = false;
 
 protected:
-	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 
 public:
-	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 	virtual bool ServerOnly_CanAutoPickUp(ABaseAgent* Agent) const override;
 	virtual bool ServerOnly_CanDrop() const override;
+
+	virtual void StartFire() override;
+	virtual void Fire() override;
+
+	void ResetCombo();
+
+	UFUNCTION(Server, Reliable)
+	void Server_PlayAttackAnim(UAnimMontage* anim);
+	UFUNCTION(NetMulticast, Reliable)
+	void Multicast_PlayAttackAnim(UAnimMontage* anim);
+	
+	void OnMontageEnded(UAnimMontage* AnimMontage, bool bInterrupted);
 };
