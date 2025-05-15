@@ -19,8 +19,6 @@ public:
 	UPROPERTY(BlueprintReadWrite, VisibleAnywhere)
 	TObjectPtr<USphereComponent> Sphere = nullptr;
 	UPROPERTY(BlueprintReadWrite, VisibleAnywhere)
-	TObjectPtr<UStaticMeshComponent> Mesh = nullptr;
-	UPROPERTY(BlueprintReadWrite, VisibleAnywhere)
 	TObjectPtr<UProjectileMovementComponent> ProjectileMovement = nullptr;
 
 protected:

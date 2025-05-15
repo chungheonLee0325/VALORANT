@@ -29,6 +29,8 @@ private:
 	FTimerHandle AirTimeHandle;
 	
 public:
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere)
+	TObjectPtr<UStaticMeshComponent> Mesh = nullptr;
 	UPROPERTY(EditAnywhere)
 	TSubclassOf<AFireGround> FireGroundClass = nullptr;
 

@@ -12,6 +12,9 @@ AFireball::AFireball()
 {
 	PrimaryActorTick.bCanEverTick = false;
 
+	Mesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Mesh"));
+	Mesh->SetupAttachment(GetRootComponent());
+	
 	Sphere->SetSphereRadius(15.0f);
 	Mesh->SetRelativeScale3D(FVector(.3f));
 	
