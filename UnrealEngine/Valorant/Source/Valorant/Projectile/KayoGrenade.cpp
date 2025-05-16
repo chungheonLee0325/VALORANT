@@ -17,13 +17,13 @@ AKayoGrenade::AKayoGrenade()
 	Sphere->SetSphereRadius(12.0f);
 	Mesh->SetRelativeScale3D(FVector(.1f));
 
-	static ConstructorHelpers::FObjectFinder<UStaticMesh> GrenadeMeshAsset(TEXT("/Script/Engine.StaticMesh'/Game/BluePrint/Projectile/KayoGrenade.KayoGrenade'"));
+	static ConstructorHelpers::FObjectFinder<UStaticMesh> GrenadeMeshAsset(TEXT("/Script/Engine.StaticMesh'/Game/Resource/Props/Projectiles/KAYO_Ability_Grenade/KayoGrenade.KayoGrenade'"));
 	if (GrenadeMeshAsset.Succeeded())
 	{
 		Mesh->SetStaticMesh(GrenadeMeshAsset.Object);
 	}
 	
-	static ConstructorHelpers::FObjectFinder<UMaterial> GrenadeMaterial(TEXT("/Script/Engine.Material'/Game/BluePrint/Projectile/M_KayoGrenade.M_KayoGrenade'"));
+	static ConstructorHelpers::FObjectFinder<UMaterial> GrenadeMaterial(TEXT("/Script/Engine.Material'/Game/Resource/Props/Projectiles/KAYO_Ability_Grenade/M_KayoGrenade.M_KayoGrenade'"));
 	if (GrenadeMaterial.Succeeded())
 	{
 		Mesh->SetMaterial(0, GrenadeMaterial.Object);

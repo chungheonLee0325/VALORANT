@@ -27,17 +27,21 @@ private:
 	const float UnequipTime = 0.25f;
 	const float MaximumAirTime = 2.0f;
 	FTimerHandle AirTimeHandle;
+	const float Radius = 335;
+	const float Duration = 2.5f;
+	FTimerHandle DurationTimerHandle;
 
 public:
 	UPROPERTY(BlueprintReadWrite, VisibleAnywhere)
-	TObjectPtr<UStaticMeshComponent> Mesh = nullptr;
-	UPROPERTY(EditAnywhere)
-	TSubclassOf<ACloudArea> CloudAreaClass = nullptr;
+	TObjectPtr<UStaticMeshComponent> InnerMesh = nullptr;
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere)
+	TObjectPtr<UStaticMeshComponent> OuterMesh = nullptr;
 	
 protected:
 	virtual void BeginPlay() override;
 	virtual void OnProjectileBounced(const FHitResult& ImpactResult, const FVector& ImpactVelocity) override;
 
 	void OnElapsedMaxAirTime();
-	void SpawnCloudArea(const FVector& SpawnPoint) const;
+	void ActiveCloudArea(const FVector& SpawnPoint);
+	void OnElapsedDuration();
 };
