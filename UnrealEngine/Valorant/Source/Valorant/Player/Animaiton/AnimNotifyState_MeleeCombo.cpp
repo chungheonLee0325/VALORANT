@@ -4,7 +4,7 @@
 #include "AnimNotifyState_MeleeCombo.h"
 
 #include "Player/Agent/BaseAgent.h"
-#include "Weapon/MeleeKnife.h"
+#include "Weapon/Melee/MeleeKnife.h"
 
 void UAnimNotifyState_MeleeCombo::NotifyBegin(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation,
                                               float TotalDuration, const FAnimNotifyEventReference& EventReference)

@@ -4,7 +4,7 @@
 #include "AnimNotify_MeleeReset.h"
 
 #include "Player/Agent/BaseAgent.h"
-#include "Weapon/MeleeKnife.h"
+#include "Weapon/Melee/MeleeKnife.h"
 
 class AMeleeKnife;
 
