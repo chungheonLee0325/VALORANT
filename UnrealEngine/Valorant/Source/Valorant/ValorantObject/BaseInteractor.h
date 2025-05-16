@@ -59,8 +59,6 @@ public:
 	
 	UFUNCTION(Server, Reliable)
 	virtual void ServerRPC_PickUp(ABaseAgent* Agent);
-	UFUNCTION(NetMulticast, Reliable)
-	virtual void Multicast_PickUp(ABaseAgent* Agent);
 	
 	UFUNCTION(Server, Reliable)
 	virtual void ServerRPC_Drop();

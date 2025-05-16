@@ -162,9 +162,6 @@ private:
 	// 구매 가능한 무기 목록
 	TMap<int32, FWeaponData*> AvailableWeapons;
 
-	// 구매 가능한 능력 목록
-	TMap<int32, FAbilityData*> AvailableAbilities;
-
 	// 무기 생성 및 플레이어 할당
 	// Sidearm은 SecondWeapon, 다른 무기는 PrimaryWeapon에 할당
 	void SpawnWeaponForPlayer(int32 WeaponID);

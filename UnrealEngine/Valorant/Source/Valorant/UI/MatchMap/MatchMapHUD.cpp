@@ -7,6 +7,7 @@
 #include "Valorant.h"
 #include "Components/TextBlock.h"
 #include "Components/WidgetSwitcher.h"
+#include "Components/Image.h"
 #include "GameManager/MatchGameState.h"
 #include "GameManager/SubsystemSteamManager.h"
 #include "Player/AgentPlayerController.h"
@@ -63,6 +64,10 @@ void UMatchMapHUD::NativeConstruct()
 		
 		// 어빌리티 스택 초기화
 		InitializeAbilityStacks();
+		
+		// 어빌리티 데이터 로드 및 UI 업데이트
+		LoadAllAbilityData();
+		UpdateAbilityUI();
 	}
 	else
 	{
@@ -248,9 +253,35 @@ void UMatchMapHUD::HandleAbilityStackChanged(int32 AbilityID, int32 NewStack)
 	{
 		UpdateSlotStackInfo(EAbilitySlotType::Slot_E, AbilityID);
 	}
+	else if (AbilityID == SkillXID)
+	{
+		UpdateSlotStackInfo(EAbilitySlotType::Slot_X, AbilityID);
+	}
 	
-	// // 블루프린트에서 처리할 수 있게 이벤트 호출 (이전 방식)
-	// OnAbilityStackChanged(AbilityID, NewStack);
+	// 어빌리티 정보 캐시 업데이트
+	FHUDAbilityInfo* AbilityInfo = AbilityInfoCache.Find(AbilityID);
+	if (AbilityInfo)
+	{
+		AbilityInfo->CurrentStack = NewStack;
+		
+		// 슬롯 타입 확인 및 UI 업데이트
+		if (AbilityID == SkillCID)
+		{
+			OnAbilityInfoUpdated(EAbilitySlotType::Slot_C, *AbilityInfo);
+		}
+		else if (AbilityID == SkillQID)
+		{
+			OnAbilityInfoUpdated(EAbilitySlotType::Slot_Q, *AbilityInfo);
+		}
+		else if (AbilityID == SkillEID)
+		{
+			OnAbilityInfoUpdated(EAbilitySlotType::Slot_E, *AbilityInfo);
+		}
+		else if (AbilityID == SkillXID)
+		{
+			OnAbilityInfoUpdated(EAbilitySlotType::Slot_X, *AbilityInfo);
+		}
+	}
 }
 
 void UMatchMapHUD::InitializeAbilityStacks()
@@ -307,6 +338,11 @@ void UMatchMapHUD::InitializeAbilityStacks()
 		SkillEID = AgentData->AbilityID_E;
 	}
 	
+	if (AgentData->AbilityID_X > 0)
+	{
+		SkillXID = AgentData->AbilityID_X;
+	}
+	
 	// 각 능력의 스택 정보 초기화
 	AbilityStacksCache.Empty();
 	SlotStackInfoMap.Empty();
@@ -352,6 +388,20 @@ void UMatchMapHUD::InitializeAbilityStacks()
 		// 슬롯 스택 정보 초기화 및 업데이트
 		UpdateSlotStackInfo(EAbilitySlotType::Slot_E, SkillEID);
 	}
+	
+	// X 능력 스택 로드
+	if (SkillXID > 0)
+	{
+		int32 StackX = PS->GetAbilityStack(SkillXID);
+		int32 MaxStackX = PS->GetMaxAbilityStack(SkillXID);
+		AbilityStacksCache.Add(SkillXID, StackX);
+		
+		// 어빌리티 슬롯 max 갯수를 위한 초기화
+		InitializeAbilityMaxStacks(EAbilitySlotType::Slot_X, MaxStackX);
+
+		// 슬롯 스택 정보 초기화 및 업데이트
+		UpdateSlotStackInfo(EAbilitySlotType::Slot_X, SkillXID);
+	}
 }
 
 void UMatchMapHUD::UpdateSlotStackInfo(EAbilitySlotType AbilitySlot, int32 AbilityID)
@@ -393,6 +443,218 @@ FAbilitySlotStackInfo UMatchMapHUD::GetSlotStackInfo(EAbilitySlotType AbilitySlo
 	
 	// 정보가 없으면 기본값 반환
 	return FAbilitySlotStackInfo();
+}
+
+// 특정 어빌리티 데이터 로드
+void UMatchMapHUD::LoadAbilityData(int32 AbilityID)
+{
+	if (!GameInstance)
+	{
+		return;
+	}
+	
+	FAbilityData* AbilityData = GameInstance->GetAbilityData(AbilityID);
+	if (!AbilityData)
+	{
+		return;
+	}
+	
+	// 현재 스택 정보 가져오기
+	AAgentPlayerController* PC = Cast<AAgentPlayerController>(GetOwningPlayer());
+	if (!PC)
+	{
+		return;
+	}
+	
+	AAgentPlayerState* PS = PC->GetPlayerState<AAgentPlayerState>();
+	if (!PS)
+	{
+		return;
+	}
+	
+	int32 CurrentStack = PS->GetAbilityStack(AbilityID);
+	int32 MaxStack = PS->GetMaxAbilityStack(AbilityID);
+	
+	// 어빌리티 정보 구조체 생성 및 캐싱
+	FHUDAbilityInfo AbilityInfo;
+	AbilityInfo.AbilityID = AbilityID;
+	AbilityInfo.AbilityName = AbilityData->AbilityName;
+	AbilityInfo.AbilityDescription = AbilityData->AbilityDescription;
+	AbilityInfo.AbilityIcon = AbilityData->AbilityIcon;
+	AbilityInfo.ChargeCost = AbilityData->ChargeCost;
+	AbilityInfo.CurrentStack = CurrentStack;
+	AbilityInfo.MaxStack = MaxStack;
+	
+	// 캐시에 저장
+	AbilityInfoCache.Add(AbilityID, AbilityInfo);
+}
+
+// 모든 어빌리티 데이터 로드
+void UMatchMapHUD::LoadAllAbilityData()
+{
+	AAgentPlayerController* PC = Cast<AAgentPlayerController>(GetOwningPlayer());
+	if (!PC)
+	{
+		return;
+	}
+	
+	AAgentPlayerState* PS = PC->GetPlayerState<AAgentPlayerState>();
+	if (!PS)
+	{
+		return;
+	}
+	
+	// 캐릭터 ID 가져오기
+	int32 AgentID = PS->GetAgentID();
+	if (AgentID == 0 || !GameInstance)
+	{
+		return;
+	}
+	
+	FAgentData* AgentData = GameInstance->GetAgentData(AgentID);
+	if (!AgentData)
+	{
+		return;
+	}
+	
+	// 각 슬롯의 어빌리티 ID 로드
+	if (AgentData->AbilityID_C > 0)
+	{
+		SkillCID = AgentData->AbilityID_C;
+		LoadAbilityData(SkillCID);
+	}
+	
+	if (AgentData->AbilityID_Q > 0)
+	{
+		SkillQID = AgentData->AbilityID_Q;
+		LoadAbilityData(SkillQID);
+	}
+	
+	if (AgentData->AbilityID_E > 0)
+	{
+		SkillEID = AgentData->AbilityID_E;
+		LoadAbilityData(SkillEID);
+	}
+	
+	if (AgentData->AbilityID_X > 0)
+	{
+		SkillXID = AgentData->AbilityID_X;
+		LoadAbilityData(SkillXID);
+	}
+}
+
+// 어빌리티 UI 업데이트
+void UMatchMapHUD::UpdateAbilityUI()
+{
+	// 각 슬롯 별 어빌리티 정보 업데이트
+	if (SkillCID > 0)
+	{
+		FHUDAbilityInfo* AbilityInfo = AbilityInfoCache.Find(SkillCID);
+		if (AbilityInfo)
+		{
+			// 이미지 UI 업데이트
+			if (AbilityC_Image && AbilityInfo->AbilityIcon)
+			{
+				AbilityC_Image->SetBrushFromTexture(AbilityInfo->AbilityIcon);
+			}
+			
+			// 블루프린트 이벤트 호출
+			OnAbilityInfoUpdated(EAbilitySlotType::Slot_C, *AbilityInfo);
+		}
+	}
+	
+	if (SkillQID > 0)
+	{
+		FHUDAbilityInfo* AbilityInfo = AbilityInfoCache.Find(SkillQID);
+		if (AbilityInfo)
+		{
+			// 이미지 UI 업데이트
+			if (AbilityQ_Image && AbilityInfo->AbilityIcon)
+			{
+				AbilityQ_Image->SetBrushFromTexture(AbilityInfo->AbilityIcon);
+			}
+			
+			// 블루프린트 이벤트 호출
+			OnAbilityInfoUpdated(EAbilitySlotType::Slot_Q, *AbilityInfo);
+		}
+	}
+	
+	if (SkillEID > 0)
+	{
+		FHUDAbilityInfo* AbilityInfo = AbilityInfoCache.Find(SkillEID);
+		if (AbilityInfo)
+		{
+			// 이미지 UI 업데이트
+			if (AbilityE_Image && AbilityInfo->AbilityIcon)
+			{
+				AbilityE_Image->SetBrushFromTexture(AbilityInfo->AbilityIcon);
+			}
+			
+			// 블루프린트 이벤트 호출
+			OnAbilityInfoUpdated(EAbilitySlotType::Slot_E, *AbilityInfo);
+		}
+	}
+	
+	if (SkillXID > 0)
+	{
+		FHUDAbilityInfo* AbilityInfo = AbilityInfoCache.Find(SkillXID);
+		if (AbilityInfo)
+		{
+			// 이미지 UI 업데이트
+			if (AbilityX_Image && AbilityInfo->AbilityIcon)
+			{
+				AbilityX_Image->SetBrushFromTexture(AbilityInfo->AbilityIcon);
+			}
+			
+			// 블루프린트 이벤트 호출
+			OnAbilityInfoUpdated(EAbilitySlotType::Slot_X, *AbilityInfo);
+		}
+	}
+}
+
+// 어빌리티 정보 가져오기
+FHUDAbilityInfo UMatchMapHUD::GetAbilityInfo(int32 AbilityID) const
+{
+	const FHUDAbilityInfo* InfoPtr = AbilityInfoCache.Find(AbilityID);
+	if (InfoPtr)
+	{
+		return *InfoPtr;
+	}
+	
+	// 기본 빈 정보 반환
+	return FHUDAbilityInfo();
+}
+
+// 슬롯별 어빌리티 정보 가져오기
+FHUDAbilityInfo UMatchMapHUD::GetAbilityInfoBySlot(EAbilitySlotType SlotType) const
+{
+	int32 AbilityID = 0;
+	
+	switch (SlotType)
+	{
+	case EAbilitySlotType::Slot_C:
+		AbilityID = SkillCID;
+		break;
+	case EAbilitySlotType::Slot_Q:
+		AbilityID = SkillQID;
+		break;
+	case EAbilitySlotType::Slot_E:
+		AbilityID = SkillEID;
+		break;
+	case EAbilitySlotType::Slot_X:
+		AbilityID = SkillXID;
+		break;
+	default:
+		break;
+	}
+	
+	if (AbilityID > 0)
+	{
+		return GetAbilityInfo(AbilityID);
+	}
+	
+	// 기본 빈 정보 반환
+	return FHUDAbilityInfo();
 }
 
 int32 UMatchMapHUD::GetAbilityStack(int32 AbilityID) const

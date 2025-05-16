@@ -324,9 +324,16 @@ void ABaseWeapon::MulticastRPC_PlayFireAnimation_Implementation()
 {
 	if (AM_Fire == nullptr)
 	{
-		UE_LOG(LogTemp, Error, TEXT("총기에 격발 애니메이션이 없어요."));
+		NET_LOG(LogTemp, Error, TEXT("%hs Called, AM_Fire is nullptr"), __FUNCTION__);
 		return;
 	}
+
+	if (nullptr == OwnerAgent)
+	{
+		NET_LOG(LogTemp, Error, TEXT("%hs Called, OwnerAgent is nullptr"), __FUNCTION__);
+		return;
+	}
+	
 	if (OwnerAgent->IsLocallyControlled())
 	{
 		if (OwnerAgent->GetABP_1P()->Montage_IsPlaying(AM_Fire))
@@ -438,6 +445,11 @@ bool ABaseWeapon::ServerOnly_CanDrop() const
 void ABaseWeapon::ServerRPC_PickUp_Implementation(ABaseAgent* Agent)
 {
 	Super::ServerRPC_PickUp_Implementation(Agent);
+	if (Agent == nullptr)
+	{
+		NET_LOG(LogTemp, Error, TEXT("%hs Called, InteractAgent is nullptr"), __FUNCTION__);
+		return;
+	}
 	ServerOnly_AttachWeapon(Agent);
 }
 
@@ -464,6 +476,12 @@ void ABaseWeapon::ServerRPC_Drop_Implementation()
 void ABaseWeapon::ServerRPC_Interact_Implementation(ABaseAgent* InteractAgent)
 {
 	Super::ServerRPC_Interact_Implementation(InteractAgent);
+
+	if (InteractAgent == nullptr)
+	{
+		NET_LOG(LogTemp, Error, TEXT("%hs Called, InteractAgent is nullptr"), __FUNCTION__);
+		return;
+	}
 	if (ServerOnly_CanInteract())
 	{
 		ServerRPC_PickUp(InteractAgent);
@@ -474,6 +492,7 @@ void ABaseWeapon::ServerOnly_AttachWeapon(ABaseAgent* Agent)
 {
 	if (nullptr == Agent)
 	{
+		NET_LOG(LogTemp, Error, TEXT("%hs Called, InteractAgent is nullptr"), __FUNCTION__);
 		return;
 	}
 	

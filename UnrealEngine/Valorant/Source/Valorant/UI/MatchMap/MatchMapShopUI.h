@@ -9,9 +9,35 @@
 
 class AAgentPlayerController;
 class UTextBlock;
+class UImage;
 
 // 구매 결과 이벤트 선언
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnPurchaseResult, bool, bSuccess, int32, ItemID, EShopItemType, ItemType);
+
+// 어빌리티 정보를 담는 구조체
+USTRUCT(BlueprintType)
+struct FUIAbilityInfo
+{
+	GENERATED_BODY()
+	
+	UPROPERTY(BlueprintReadOnly)
+	int32 AbilityID = 0;
+	
+	UPROPERTY(BlueprintReadOnly)
+	FString AbilityName = "";
+	
+	UPROPERTY(BlueprintReadOnly)
+	int32 ChargeCost = 0;
+	
+	UPROPERTY(BlueprintReadOnly)
+	UTexture2D* AbilityIcon = nullptr;
+	
+	UPROPERTY(BlueprintReadOnly)
+	int32 CurrentStack = 0;
+	
+	UPROPERTY(BlueprintReadOnly)
+	int32 MaxStack = 0;
+};
 
 /**
  * 
@@ -93,6 +119,18 @@ public:
 	// 어빌리티 초기화 함수 (InitBySkillData 기반)
 	UFUNCTION(BlueprintCallable, Category = "Shop|Ability")
 	void InitializeAbilityUI();
+	
+	// 어빌리티 정보 가져오기 (BlueprintPure로 블루프린트에서 접근 가능)
+	UFUNCTION(BlueprintPure, Category = "Shop|Ability")
+	FUIAbilityInfo GetAbilityInfo(int32 AbilityID) const;
+	
+	// 슬롯별 어빌리티 정보 가져오기
+	UFUNCTION(BlueprintPure, Category = "Shop|Ability")
+	FUIAbilityInfo GetAbilityInfoBySlot(EAbilitySlotType SlotType) const;
+
+	// 어빌리티 정보 업데이트 시 호출될 블루프린트 이벤트
+	UFUNCTION(BlueprintImplementableEvent, Category = "Shop|Ability")
+	void OnAbilityInfoUpdated(EAbilitySlotType SlotType, const FUIAbilityInfo& AbilityInfo);
 
 protected:
 	// 컨트롤러 참조
@@ -102,6 +140,26 @@ protected:
 	// 크레딧 텍스트 UI
 	UPROPERTY(BlueprintReadWrite, meta = (BindWidget), Category = "Shop|UI")
 	UTextBlock* CreditText;
+	
+	// 어빌리티 이미지 UI 
+	UPROPERTY(BlueprintReadWrite, meta = (BindWidget), Category = "Shop|UI")
+	UImage* AbilityC_Image;
+	
+	UPROPERTY(BlueprintReadWrite, meta = (BindWidget), Category = "Shop|UI")
+	UImage* AbilityQ_Image;
+	
+	UPROPERTY(BlueprintReadWrite, meta = (BindWidget), Category = "Shop|UI")
+	UImage* AbilityE_Image;
+	
+	// 어빌리티 가격 UI 
+	UPROPERTY(BlueprintReadWrite, meta = (BindWidget), Category = "Shop|UI")
+	UTextBlock* AbilityC_Cost;
+	
+	UPROPERTY(BlueprintReadWrite, meta = (BindWidget), Category = "Shop|UI")
+	UTextBlock* AbilityQ_Cost;
+	
+	UPROPERTY(BlueprintReadWrite, meta = (BindWidget), Category = "Shop|UI")
+	UTextBlock* AbilityE_Cost;
 
 	// 현재 크레딧 값
 	UPROPERTY(BlueprintReadOnly, Category = "Shop")
@@ -125,6 +183,10 @@ protected:
 	// 현재 보유 중인 어빌리티 스택 정보
 	UPROPERTY(BlueprintReadOnly, Category = "Shop|Ability")
 	TMap<int32, int32> AbilityStacksCache;
+	
+	// 어빌리티 정보 캐시
+	UPROPERTY(BlueprintReadOnly, Category = "Shop|Ability")
+	TMap<int32, FUIAbilityInfo> AbilityInfoCache;
 
 	UPROPERTY(BlueprintReadWrite, Category = "Shop|Ability")
 	int SkillQID = 0;
@@ -132,6 +194,15 @@ protected:
 	int SkillEID = 0;
 	UPROPERTY(BlueprintReadWrite, Category = "Shop|Ability")
 	int SkillCID = 0;
+	
+	// 어빌리티 데이터 로드
+	void LoadAbilityData(int32 AbilityID);
+	
+	// 모든 어빌리티 데이터 로드
+	void LoadAllAbilityData();
+	
+	// 어빌리티 UI 업데이트
+	void UpdateAbilityUI();
 
 private:
 	UPROPERTY()

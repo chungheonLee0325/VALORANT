@@ -24,8 +24,6 @@ class VALORANT_API ABaseWeapon : public ABaseInteractor
 	float LastFireTime = -9999.0f;
 	// 발사/사용 주기 (1 / FireRate)
 	float FireInterval = 0.08f;
-	// 탄창 크기
-	int MagazineSize = 0;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category=Input, meta=(AllowPrivateAccess = "true"))
 	UInputMappingContext* FireMappingContext = nullptr;
@@ -45,6 +43,10 @@ class VALORANT_API ABaseWeapon : public ABaseInteractor
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category=Input, meta=(AllowPrivateAccess = "true"))
 	UInputAction* DropAction = nullptr;
 
+protected:
+	// 탄창 크기
+	int MagazineSize = 0;
+	
 	bool bIsFiring = false;
 	UPROPERTY(Replicated)
 	bool bIsReloading = false;
@@ -103,7 +105,7 @@ protected:
 	virtual void Tick(float DeltaSeconds) override;
 
 	UFUNCTION(BlueprintCallable, Category="Weapon")
-	void Fire();
+	virtual void Fire();
 	FVector GetSpreadDirection(const FVector& Direction);
 	UFUNCTION(Server, Reliable)
 	void ServerRPC_Fire(const FVector& Location, const FVector& Direction);
@@ -132,7 +134,7 @@ protected:
 
 public:
 	UFUNCTION(BlueprintCallable, Category="Weapon")
-	void StartFire();
+	virtual void StartFire();
 
 	UFUNCTION(BlueprintCallable, Category="Weapon")
 	void EndFire();

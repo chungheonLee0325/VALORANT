@@ -2,7 +2,7 @@
 
 #pragma once
 
-#define DEBUGTEST
+//#define DEBUGTEST
 
 #include "CoreMinimal.h"
 #include "Engine/GameInstance.h"
