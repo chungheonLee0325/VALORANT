@@ -15,7 +15,9 @@ class VALORANT_API UBaseWeaponAnim : public UAnimInstance
 	GENERATED_BODY()
 
 public:
-	UPROPERTY(BlueprintReadWrite, VisibleAnywhere)
+	UPROPERTY(BlueprintReadWrite, EditAnywhere)
+	TObjectPtr<USkeletalMeshComponent> Mesh = nullptr;
+	UPROPERTY(BlueprintReadWrite, EditAnywhere)
 	bool bThirdPerson = false;
 	
 	UFUNCTION(BlueprintImplementableEvent)
