@@ -3,40 +3,40 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "BaseProjectile.h"
-#include "KayoGrenade.generated.h"
+#include "AgentAbility/BaseProjectile.h"
+#include "Fireball.generated.h"
+
+class AFireGround;
 
 UCLASS()
-class VALORANT_API AKayoGrenade : public ABaseProjectile
+class VALORANT_API AFireball : public ABaseProjectile
 {
 	GENERATED_BODY()
 
 public:
-	AKayoGrenade();
+	AFireball();
 
 private:
+	// Ref: https://valorant.fandom.com/wiki/Deployment_types#Projectile
 	const float Speed = 1800;
 	const float Gravity = 0.3f;
 	const bool bShouldBounce = true;
 	const float Bounciness = 0.2f;
 	const float Friction = 0.8f;
-	const float EquipTime = 0.7f;
-	const float UnequipTime = 0.6f;
-	const float ActiveTime = 0.5f;
-	const float InnerRadius = 1000;
-	const float OuterRadius = 4000;
-	int DeterrentCount = 4;
-	const float DeterrentInterval = 1.0f;
-	const float MinDamage = 25;
-	const float MaxDamage = 60;
-	FTimerHandle DeterrentTimerHandle;
-
+	const float EquipTime = 0.8f;
+	const float UnequipTime = 0.7f;
+	const float MaximumAirTime = 1.5f;
+	FTimerHandle AirTimeHandle;
+	
 public:
 	UPROPERTY(BlueprintReadWrite, VisibleAnywhere)
 	TObjectPtr<UStaticMeshComponent> Mesh = nullptr;
+	UPROPERTY(EditAnywhere)
+	TSubclassOf<AFireGround> FireGroundClass = nullptr;
 
 protected:
 	virtual void BeginPlay() override;
 	virtual void OnProjectileBounced(const FHitResult& ImpactResult, const FVector& ImpactVelocity) override;
-	void ActiveDeterrent();
+	
+	void OnElapsedMaxAirTime();
 };

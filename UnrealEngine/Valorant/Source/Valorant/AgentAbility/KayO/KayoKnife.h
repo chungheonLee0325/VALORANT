@@ -3,7 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "BaseProjectile.h"
+#include "AgentAbility/BaseProjectile.h"
 #include "KayoKnife.generated.h"
 
 UCLASS()
