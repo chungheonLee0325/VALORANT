@@ -49,18 +49,13 @@ void AKayoKnife::Tick(float DeltaSeconds)
 void AKayoKnife::OnProjectileBounced(const FHitResult& ImpactResult, const FVector& ImpactVelocity)
 {
 	Super::OnProjectileBounced(ImpactResult, ImpactVelocity);
-
-	// 벽에 박히는 방향 계산: 벽의 Normal 반대 방향
+	
 	const FVector HitNormal = ImpactResult.ImpactNormal;
 	const FVector KnifeForward = -HitNormal;
-
-	// 회전 계산: 벡터 → Rotator
+	
 	const FRotator KnifeRotation = KnifeForward.Rotation();
 	SetActorRotation(KnifeRotation);
 	Mesh->SetRelativeRotation(FRotator(-90, 0, 0));
-
-	// 벽 표면에 살짝 붙이기
-	// SetActorLocation(ImpactResult.ImpactPoint); // 살짝 튀어나오게
 
 	ProjectileMovement->StopMovementImmediately();
 	ProjectileMovement->SetActive(false);
