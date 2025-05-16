@@ -20,8 +20,8 @@ AKayoKnife::AKayoKnife()
 		Mesh->SetSkeletalMesh(MeshAsset.Object);
 	}
 	
-	Mesh->SetRelativeScale3D(FVector(1.0f));
-	Mesh->SetRelativeLocation(FVector(-60, 0, 0));
+	Mesh->SetRelativeScale3D(FVector(0.34f));
+	Mesh->SetRelativeLocation(FVector(-20, 0, 0));
 	Mesh->SetRelativeRotation(FRotator(-90, 0, 0));
 
 	ProjectileMovement->InitialSpeed = Speed;

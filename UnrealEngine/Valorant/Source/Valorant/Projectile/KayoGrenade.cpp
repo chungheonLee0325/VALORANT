@@ -14,8 +14,8 @@ AKayoGrenade::AKayoGrenade()
 	Mesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Mesh"));
 	Mesh->SetupAttachment(GetRootComponent());
 	
-	Sphere->SetSphereRadius(12.0f);
-	Mesh->SetRelativeScale3D(FVector(.1f));
+	Sphere->SetSphereRadius(34.0f);
+	Mesh->SetRelativeScale3D(FVector(0.34f));
 
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> GrenadeMeshAsset(TEXT("/Script/Engine.StaticMesh'/Game/Resource/Props/Projectiles/KAYO_Ability_Grenade/KayoGrenade.KayoGrenade'"));
 	if (GrenadeMeshAsset.Succeeded())
