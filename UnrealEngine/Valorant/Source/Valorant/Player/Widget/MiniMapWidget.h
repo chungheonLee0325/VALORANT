@@ -69,7 +69,7 @@ protected:
     void UpdateAgentIcons(); 
     
     // 미니맵에 아이콘 생성 함수 (블루프린트에서 구현)
-    UFUNCTION(BlueprintImplementableEvent, Category = "Minimap") 
+    UFUNCTION(BlueprintImplementableEvent, BlueprintCallable, Category = "Minimap") 
     void CreateAgentIcon(ABaseAgent* Agent, FVector2D Position, UTexture2D* IconTexture, EVisibilityState VisState); 
     
     // 미니맵 아이콘 업데이트 함수 (블루프린트에서 구현)
