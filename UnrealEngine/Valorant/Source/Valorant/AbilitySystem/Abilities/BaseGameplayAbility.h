@@ -24,8 +24,8 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void ClearFollowUpInputTag() { FollowUpInputTags.Empty(); }
 	
-	UFUNCTION(BlueprintCallable)
-	void SetCurrentFollowUpInput(const FGameplayTag inputTag) { CurrentFollowUpInputTag = inputTag; }
+	// UFUNCTION(BlueprintCallable)
+	// void SetCurrentFollowUpInput(const FGameplayTag inputTag) { CurrentFollowUpInputTag = inputTag; }
 	
 	// 어빌리티 스택 감소 메서드
 	UFUNCTION(BlueprintCallable, Category = "Ability|Stack")
@@ -42,8 +42,10 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Input")
 	TSet<FGameplayTag> FollowUpInputTags;
 	
-	UPROPERTY()
-	FGameplayTag CurrentFollowUpInputTag;
+	// UPROPERTY()
+	// FGameplayTag CurrentFollowUpInputTag;
+
+	bool bIsReady = false;
 
 protected:
 	virtual bool CanActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayTagContainer* SourceTags = nullptr, const FGameplayTagContainer* TargetTags = nullptr, FGameplayTagContainer* OptionalRelevantTags = nullptr) const override;
@@ -56,10 +58,9 @@ protected:
 	virtual void CancelAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateCancelAbility) override;
 	
 	virtual void Active_General();
-	virtual void Active_Left_Click();
-	virtual void Active_Right_Click();
-	virtual void Active_C_Click();
-	virtual void Active_E_Click();
-	virtual void Active_Q_Click();
-	virtual void Active_X_Click();
+	
+	UFUNCTION()
+	virtual void Active_Left_Click(FGameplayEventData data);
+	UFUNCTION()
+	virtual void Active_Right_Click(FGameplayEventData data);
 };

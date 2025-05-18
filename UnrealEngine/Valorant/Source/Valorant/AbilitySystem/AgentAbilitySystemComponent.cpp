@@ -52,6 +52,12 @@ void UAgentAbilitySystemComponent::GetLifetimeReplicatedProps(TArray<class FLife
 	DOREPLIFETIME(UAgentAbilitySystemComponent, CurrentAbilityHandle);
 }
 
+int32 UAgentAbilitySystemComponent::HandleGameplayEvent(FGameplayTag EventTag, const FGameplayEventData* Payload)
+{
+	UE_LOG(LogTemp, Warning, TEXT("핸들 게임플레이 이벤트"));
+	return Super::HandleGameplayEvent(EventTag, Payload);
+}
+
 /**서버에서만 호출됩니다.*/
 void UAgentAbilitySystemComponent::InitializeByAgentData(int32 agentID)
 {
@@ -173,34 +179,45 @@ void UAgentAbilitySystemComponent::ResisterFollowUpInput(const TSet<FGameplayTag
 	OnAbilityWaitingStateChanged.Broadcast(true);
 }
 
+void UAgentAbilitySystemComponent::ResetFollowUpInput()
+{
+	FollowUpInputBySkill.Empty();
+}
+
 bool UAgentAbilitySystemComponent::TrySkillInput(const FGameplayTag& inputTag)
 {
 	if (FollowUpInputBySkill.IsEmpty())
 	{
+		UE_LOG(LogTemp,Warning,TEXT("스킬 일반 입력 성공"));
 		FGameplayTagContainer tagCon(inputTag);
-		TryActivateAbilitiesByTag(tagCon);
+		if (TryActivateAbilitiesByTag(tagCon))
+		{
+			return true;
+		}
 	}
 	else
-	{
+	{ 
+		UE_LOG(LogTemp,Warning,TEXT("스킬 후속 입력 시도: [%s]"), *inputTag.ToString()); 
+		
 		if (IsFollowUpInput(inputTag))
 		{
 			if (TrySkillFollowupInput(inputTag))
 			{
-				// UE_LOG(LogTemp,Warning,TEXT("스킬 후속 입력 성공"));
+				UE_LOG(LogTemp,Warning,TEXT("스킬 후속 입력 성공"));
 				FollowUpInputBySkill.Empty();
 				OnAbilityWaitingStateChanged.Broadcast(false);
 				return true;
 			}
 			else
 			{
-				// NET_LOG(LogTemp,Warning,TEXT("스킬 후속 입력 실패"));
+				NET_LOG(LogTemp,Warning,TEXT("스킬 후속 입력 실패"));
 				return false;
 			}
 		}
 		else
 		{
 			NET_LOG(LogTemp, Warning, TEXT("후속 입력 대기 중이라 일반 입력 [%s] 무시됨"), *inputTag.ToString());
-			return false;
+			return true;
 		}
 	}
 	
@@ -260,12 +277,11 @@ bool UAgentAbilitySystemComponent::TrySkillFollowupInput(const FGameplayTag& inp
 	FGameplayAbilitySpec* spec = FindAbilitySpecFromHandle(CurrentAbilityHandle);
 	if (spec && spec->IsActive())
 	{
-		if (UBaseGameplayAbility* ga = Cast<UBaseGameplayAbility>(spec->Ability))
-		{
-			ga->SetCurrentFollowUpInput(inputTag);
-		}
+		FGameplayEventData data;
+		data.EventTag = inputTag;
 		
-		AbilitySpecInputPressed(*spec);
+		HandleGameplayEvent(inputTag, &data);
+		
 		return true;
 	}
 	

@@ -52,6 +52,9 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	void ResisterFollowUpInput(const TSet<FGameplayTag>& tags);
+	
+	UFUNCTION(BlueprintCallable)
+	void ResetFollowUpInput();
 
 	UFUNCTION(BlueprintCallable)
 	bool TrySkillInput(const FGameplayTag& inputTag);
@@ -98,6 +101,8 @@ protected:
 							   FActorComponentTickFunction* ThisTickFunction) override;
 
 	virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;
+
+	virtual int32 HandleGameplayEvent(FGameplayTag EventTag, const FGameplayEventData* Payload) override;
 	
 	//AttributeSet
 	void InitializeAttribute(const FAgentData* agentData);
