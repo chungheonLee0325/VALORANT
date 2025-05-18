@@ -299,23 +299,23 @@ void ABaseAgent::InitAgentAbility()
 		// 스킬 등록 및 값 초기화는 서버에서만 진행
 		ASC->InitializeByAgentData(ps->GetAgentID());
 
-		// UE_LOG(LogTemp, Warning, TEXT("=== ASC 등록된 GA 목록 ==="));
-		// for (const FGameplayAbilitySpec& spec : ASC->GetActivatableAbilities())
-		// {
-		// 	if (spec.Ability)
-		// 	{
-		// 		UE_LOG(LogTemp, Warning, TEXT("GA: %s"), *spec.Ability->GetName());
-		//
-		// 		FString TagString;
-		// 		TArray<FGameplayTag> tags = spec.GetDynamicSpecSourceTags().GetGameplayTagArray();
-		// 		for (const FGameplayTag& Tag : tags)
-		// 		{
-		// 			TagString += Tag.ToString() + TEXT(" ");
-		// 		}
-		//
-		// 		UE_LOG(LogTemp, Warning, TEXT("태그 목록: %s"), *TagString);
-		// 	}
-		// }
+		UE_LOG(LogTemp, Warning, TEXT("=== ASC 등록된 GA 목록 ==="));
+		for (const FGameplayAbilitySpec& spec : ASC->GetActivatableAbilities())
+		{
+			if (spec.Ability)
+			{
+				UE_LOG(LogTemp, Warning, TEXT("GA: %s"), *spec.Ability->GetName());
+		
+				FString TagString;
+				TArray<FGameplayTag> tags = spec.GetDynamicSpecSourceTags().GetGameplayTagArray();
+				for (const FGameplayTag& Tag : tags)
+				{
+					TagString += Tag.ToString() + TEXT(" ");
+				}
+		
+				UE_LOG(LogTemp, Warning, TEXT("태그 목록: %s"), *TagString);
+			}
+		}
 	}
 }
 
