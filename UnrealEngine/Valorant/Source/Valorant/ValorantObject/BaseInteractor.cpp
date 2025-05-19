@@ -11,6 +11,7 @@
 #include "GameManager/SubsystemSteamManager.h"
 #include "Net/UnrealNetwork.h"
 #include "Player/Agent/BaseAgent.h"
+#include "Weapon/ThirdPersonInteractor.h"
 
 
 ABaseInteractor::ABaseInteractor()
@@ -21,6 +22,7 @@ ABaseInteractor::ABaseInteractor()
 	SetReplicatingMovement(true);
 
 	Mesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("WeaponMesh"));
+	Mesh->SetOnlyOwnerSee(true);
 	SetRootComponent(Mesh);
 	
 	DetectWidgetComponent = CreateDefaultSubobject<UWidgetComponent>("DetectWidget");
@@ -65,6 +67,15 @@ void ABaseInteractor::BeginPlay()
 void ABaseInteractor::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+}
+
+void ABaseInteractor::BeginDestroy()
+{
+	Super::BeginDestroy();
+	if (ThirdPersonInteractor)
+	{
+		ThirdPersonInteractor->Destroy();
+	}
 }
 
 void ABaseInteractor::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const
@@ -163,7 +174,6 @@ void ABaseInteractor::ServerRPC_PickUp_Implementation(ABaseAgent* Agent)
 	OnDetect(false);
 	
 	Sphere->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-	
 }
 
 void ABaseInteractor::ServerRPC_Drop_Implementation()
@@ -190,7 +200,7 @@ void ABaseInteractor::ServerRPC_Drop_Implementation()
 		EDetachmentRule::KeepRelative,
 		true
 	);
-	DetachFromActor(DetachmentRule);
+	Mesh->DetachFromComponent(DetachmentRule);
 	const FVector& ForwardVector = OwnerAgent->GetActorForwardVector();
 	const FVector& FeetLocation = OwnerAgent->GetMovementComponent()->GetActorFeetLocation();
 	const FVector Offset = FVector(0, 0, 32);
@@ -214,5 +224,9 @@ void ABaseInteractor::ServerRPC_SetActive_Implementation(bool bActive)
 
 void ABaseInteractor::Multicast_SetActive_Implementation(bool bActive)
 {
+	if (ThirdPersonInteractor)
+	{
+		ThirdPersonInteractor->Mesh->SetVisibility(bActive);
+	}
 	Mesh->SetVisibility(bActive);
 }

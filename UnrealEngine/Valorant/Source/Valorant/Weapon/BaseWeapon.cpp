@@ -4,6 +4,7 @@
 #include "BaseWeapon.h"
 
 #include "EnhancedInputSubsystems.h"
+#include "ThirdPersonInteractor.h"
 #include "Valorant.h"
 #include "Components/WidgetComponent.h"
 #include "GameFramework/PawnMovementComponent.h"
@@ -495,40 +496,27 @@ void ABaseWeapon::ServerOnly_AttachWeapon(ABaseAgent* Agent)
 		NET_LOG(LogTemp, Error, TEXT("%hs Called, InteractAgent is nullptr"), __FUNCTION__);
 		return;
 	}
-
-	NET_LOG(LogTemp,Warning, TEXT("칼 부착 서버"));
-	MulticastRPC_AttachWeapon(Agent);
-
-	Agent->AcquireInteractor(this);
-}
-
-void ABaseWeapon::MulticastRPC_AttachWeapon_Implementation(ABaseAgent* Agent)
-{
+	
 	FAttachmentTransformRules AttachmentRules(
 		EAttachmentRule::SnapToTarget,
 		EAttachmentRule::SnapToTarget,
 		EAttachmentRule::KeepRelative,
 		true
 		);
+	Mesh->AttachToComponent(Agent->GetMesh1P(), AttachmentRules, FName(TEXT("R_WeaponPointSocket")));
+	if (nullptr != ThirdPersonInteractor)
+	{
+		ThirdPersonInteractor->Destroy();
+		ThirdPersonInteractor = nullptr;
+	}
+	if ((ThirdPersonInteractor = GetWorld()->SpawnActor<AThirdPersonInteractor>()))
+	{
+		ThirdPersonInteractor->SetOwner(Agent);
+		ThirdPersonInteractor->MulticastRPC_InitWeapon(WeaponID);
+		ThirdPersonInteractor->AttachToComponent(Agent->GetMesh(), AttachmentRules, FName(TEXT("R_WeaponPointSocket")));
+	}
 	
-	if (Agent->GetLocalRole()==ROLE_Authority)
-	{
-		NET_LOG(LogTemp,Warning, TEXT("%s 로컬 롤: Authority"), *Agent->GetActorNameOrLabel());
-		//AttachToComponent(Agent->GetMesh1P(), AttachmentRules, FName(TEXT("R_WeaponPointSocket")));
-	}
-	if (Agent->GetLocalRole() == ROLE_SimulatedProxy)
-	{
-		NET_LOG(LogTemp,Warning, TEXT("%s 로컬 롤: SimulatedProxy"), *Agent->GetActorNameOrLabel());
-		//AttachToComponent(Agent->GetMesh(), AttachmentRules, FName(TEXT("R_WeaponPointSocket")));
-	}
-	if (Agent->GetRemoteRole() == ROLE_Authority)
-	{
-		NET_LOG(LogTemp,Warning, TEXT("%s 리모트 롤: Authority"), *Agent->GetActorNameOrLabel());
-	}
-	if (Agent->GetRemoteRole() == ROLE_SimulatedProxy)
-	{
-		NET_LOG(LogTemp,Warning, TEXT("%s 리모트 롤: SimulatedProxy"), *Agent->GetActorNameOrLabel());
-	}
+	Agent->AcquireInteractor(this);
 }
 
 void ABaseWeapon::NetMulti_ReloadWeaponData_Implementation(int32 NewWeaponID)
