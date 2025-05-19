@@ -27,7 +27,7 @@ public:
 	bool bIsThirdPerson = false;
 
 	UFUNCTION(BlueprintImplementableEvent)
-	void OnEquip();
+	void OnKnifeEquip();
 
 protected:
 	virtual void NativeBeginPlay() override;

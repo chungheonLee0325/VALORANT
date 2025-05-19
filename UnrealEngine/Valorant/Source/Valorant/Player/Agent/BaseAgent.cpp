@@ -736,7 +736,7 @@ void ABaseAgent::EquipInteractor(ABaseInteractor* interactor)
 		ABP_3P->InteractorPoseIdx = PoseIdx;
 	}
 	// UE_LOG(LogTemp,Warning,TEXT("PoseIdx: %d"), PoseIdx);
-	// NET_LOG(LogTemp, Warning, TEXT("%hs Called, 현재 장착 중인 Interactor: %s"), __FUNCTION__, *CurrentInteractor->GetActorNameOrLabel());
+	NET_LOG(LogTemp, Warning, TEXT("%hs Called, 현재 장착 중인 Interactor: %s"), __FUNCTION__, *CurrentInteractor->GetActorNameOrLabel());
 }
 
 void ABaseAgent::OnFindInteraction(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
@@ -1377,4 +1377,19 @@ void ABaseAgent::RewardSpikeInstall()
 			}
 		}
 	}
+}
+
+void ABaseAgent::OnEquip()
+{
+	OnAgentEquip.Broadcast();
+}
+
+void ABaseAgent::OnFire()
+{
+	OnAgentFire.Broadcast();
+}
+
+void ABaseAgent::OnReload()
+{
+	OnAgentReload.Broadcast();
 }

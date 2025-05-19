@@ -20,8 +20,8 @@ class VALORANT_API ABaseWeapon : public ABaseInteractor
 {
 	GENERATED_BODY()
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Weapon", meta = (AllowPrivateAccess = "true"))
-	int WeaponID = 13;
+	UPROPERTY(Replicated, EditAnywhere, BlueprintReadOnly, Category="Weapon", meta = (AllowPrivateAccess = "true"))
+	int WeaponID = 0;
 
 	FWeaponData* WeaponData = nullptr;
 	TArray<FGunRecoilData> RecoilData;
@@ -129,8 +129,8 @@ protected:
 
 	UFUNCTION(Server, Reliable)
 	void ServerRPC_PlayReloadAnim();
-	UFUNCTION(NetMulticast, Reliable)
-	void MulticastRPC_PlayReloadAnim();
+	// UFUNCTION(NetMulticast, Reliable)
+	// void MulticastRPC_PlayReloadAnim();
 
 	UFUNCTION(BlueprintCallable, Category="Weapon")
 	void StopReload();
@@ -175,7 +175,7 @@ public:
 	// 무기 사용 여부 리셋 (라운드 시작 시)
 	UFUNCTION(BlueprintCallable, Category="Weapon")
 	void ResetUsedStatus();
-
+	void SetWeaponID(const int NewWeaponID);
 	UPROPERTY(BlueprintAssignable)
 	FOnEquip OnEquip;
 	UPROPERTY(BlueprintAssignable)

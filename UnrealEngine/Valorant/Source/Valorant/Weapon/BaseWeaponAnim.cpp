@@ -9,7 +9,6 @@
 void UBaseWeaponAnim::NativeInitializeAnimation()
 {
 	Super::NativeInitializeAnimation();
-	
 	Owner = GetOwningActor();
 	if (auto* Weapon = Cast<ABaseWeapon>(Owner))
 	{

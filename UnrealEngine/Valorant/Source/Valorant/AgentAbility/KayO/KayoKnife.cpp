@@ -94,7 +94,7 @@ void AKayoKnife::OnEquip() const
 {
 	if (AnimInstance)
 	{
-		AnimInstance->OnEquip();
+		AnimInstance->OnKnifeEquip();
 	}
 }
 

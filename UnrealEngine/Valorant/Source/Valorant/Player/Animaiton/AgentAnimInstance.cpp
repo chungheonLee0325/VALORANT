@@ -17,6 +17,10 @@ void UAgentAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 	auto player = Cast<ABaseAgent>(ownerPawn);
 	if (player)
 	{
+		player->OnAgentEquip.AddDynamic(this, &UAgentAnimInstance::OnEquip);
+		player->OnAgentFire.AddDynamic(this, &UAgentAnimInstance::OnFire);
+		player->OnAgentReload.AddDynamic(this, &UAgentAnimInstance::OnReload);
+		
 		FVector velocity = player->GetVelocity();
 
 		FVector forward = player->GetActorForwardVector();
