@@ -28,6 +28,7 @@ public class Valorant : ModuleRules
 			"OnlineSubsystemUtils",
 			"HTTP",
 			"Json",
+			"JsonUtilities",
 			"MoviePlayer",
 			"Slate", 
 			"SlateCore",
