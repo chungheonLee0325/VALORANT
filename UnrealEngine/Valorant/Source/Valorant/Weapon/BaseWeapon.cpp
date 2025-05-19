@@ -503,7 +503,7 @@ void ABaseWeapon::ServerOnly_AttachWeapon(ABaseAgent* Agent)
 		EAttachmentRule::KeepRelative,
 		true
 		);
-	Mesh->AttachToComponent(Agent->GetMesh1P(), AttachmentRules, FName(TEXT("R_WeaponPointSocket")));
+	Mesh->AttachToComponent(Agent->GetMesh1P(), AttachmentRules, FName(TEXT("R_WeaponSocket")));
 	if (nullptr != ThirdPersonInteractor)
 	{
 		ThirdPersonInteractor->Destroy();
@@ -513,7 +513,7 @@ void ABaseWeapon::ServerOnly_AttachWeapon(ABaseAgent* Agent)
 	{
 		ThirdPersonInteractor->SetOwner(Agent);
 		ThirdPersonInteractor->MulticastRPC_InitWeapon(WeaponID);
-		ThirdPersonInteractor->AttachToComponent(Agent->GetMesh(), AttachmentRules, FName(TEXT("R_WeaponPointSocket")));
+		ThirdPersonInteractor->AttachToComponent(Agent->GetMesh(), AttachmentRules, FName(TEXT("R_WeaponSocket")));
 	}
 	
 	Agent->AcquireInteractor(this);
