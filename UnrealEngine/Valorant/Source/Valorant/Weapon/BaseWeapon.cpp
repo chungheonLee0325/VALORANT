@@ -504,6 +504,11 @@ void ABaseWeapon::ServerOnly_AttachWeapon(ABaseAgent* Agent)
 
 void ABaseWeapon::MulticastRPC_AttachWeapon_Implementation(ABaseAgent* Agent)
 {
+	if (Agent == nullptr)
+	{
+		return;
+	}
+	
 	FAttachmentTransformRules AttachmentRules(
 		EAttachmentRule::SnapToTarget,
 		EAttachmentRule::SnapToTarget,
@@ -511,24 +516,7 @@ void ABaseWeapon::MulticastRPC_AttachWeapon_Implementation(ABaseAgent* Agent)
 		true
 		);
 	
-	if (Agent->GetLocalRole()==ROLE_Authority)
-	{
-		NET_LOG(LogTemp,Warning, TEXT("%s 로컬 롤: Authority"), *Agent->GetActorNameOrLabel());
-		//AttachToComponent(Agent->GetMesh1P(), AttachmentRules, FName(TEXT("R_WeaponPointSocket")));
-	}
-	if (Agent->GetLocalRole() == ROLE_SimulatedProxy)
-	{
-		NET_LOG(LogTemp,Warning, TEXT("%s 로컬 롤: SimulatedProxy"), *Agent->GetActorNameOrLabel());
-		//AttachToComponent(Agent->GetMesh(), AttachmentRules, FName(TEXT("R_WeaponPointSocket")));
-	}
-	if (Agent->GetRemoteRole() == ROLE_Authority)
-	{
-		NET_LOG(LogTemp,Warning, TEXT("%s 리모트 롤: Authority"), *Agent->GetActorNameOrLabel());
-	}
-	if (Agent->GetRemoteRole() == ROLE_SimulatedProxy)
-	{
-		NET_LOG(LogTemp,Warning, TEXT("%s 리모트 롤: SimulatedProxy"), *Agent->GetActorNameOrLabel());
-	}
+	AttachToComponent(Agent->GetMesh1P(), AttachmentRules, FName(TEXT("R_WeaponPointSocket")));
 }
 
 void ABaseWeapon::NetMulti_ReloadWeaponData_Implementation(int32 NewWeaponID)
