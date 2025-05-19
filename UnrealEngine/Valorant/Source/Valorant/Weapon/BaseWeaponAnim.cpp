@@ -9,10 +9,11 @@
 void UBaseWeaponAnim::NativeInitializeAnimation()
 {
 	Super::NativeInitializeAnimation();
-
+	
 	Owner = GetOwningActor();
 	if (auto* Weapon = Cast<ABaseWeapon>(Owner))
 	{
+		Mesh = Weapon->GetMesh();
 		Weapon->OnEquip.AddDynamic(this, &UBaseWeaponAnim::OnEquip);
 		Weapon->OnFire.AddDynamic(this, &UBaseWeaponAnim::OnFire);
 		Weapon->OnReload.AddDynamic(this, &UBaseWeaponAnim::OnReload);

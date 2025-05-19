@@ -57,9 +57,9 @@ void ABaseWeapon::BeginPlay()
 	Mesh->SetSkeletalMeshAsset(WeaponMeshAsset);
 	Mesh->SetRelativeScale3D(FVector(0.34f));
 
-	if (auto WeaponABPClass = WeaponData->GunABPClass)
+	if (WeaponData->GunABPClass)
 	{
-		Mesh->SetAnimInstanceClass(WeaponABPClass->GetClass());
+		Mesh->SetAnimInstanceClass(WeaponData->GunABPClass);
 	}
 
 	if (WeaponData->WeaponCategory == EWeaponCategory::Sidearm)
