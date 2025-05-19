@@ -16,6 +16,8 @@ class VALORANT_API UBaseWeaponAnim : public UAnimInstance
 
 public:
 	UPROPERTY(BlueprintReadWrite, EditAnywhere)
+	TObjectPtr<AActor> Owner = nullptr;
+	UPROPERTY(BlueprintReadWrite, EditAnywhere)
 	TObjectPtr<USkeletalMeshComponent> Mesh = nullptr;
 	UPROPERTY(BlueprintReadWrite, EditAnywhere)
 	bool bThirdPerson = false;
@@ -26,4 +28,7 @@ public:
 	void OnFire();
 	UFUNCTION(BlueprintImplementableEvent)
 	void OnReload();
+
+protected:
+	virtual void NativeInitializeAnimation() override;
 };

@@ -3,6 +3,7 @@
 
 #include "BaseWeapon.h"
 
+#include "BaseWeaponAnim.h"
 #include "EnhancedInputSubsystems.h"
 #include "ThirdPersonInteractor.h"
 #include "Valorant.h"
@@ -55,6 +56,11 @@ void ABaseWeapon::BeginPlay()
 	
 	Mesh->SetSkeletalMeshAsset(WeaponMeshAsset);
 	Mesh->SetRelativeScale3D(FVector(0.34f));
+
+	if (auto WeaponABPClass = WeaponData->GunABPClass)
+	{
+		Mesh->SetAnimInstanceClass(WeaponABPClass->GetClass());
+	}
 
 	if (WeaponData->WeaponCategory == EWeaponCategory::Sidearm)
 	{
@@ -351,6 +357,18 @@ void ABaseWeapon::MulticastRPC_PlayFireAnimation_Implementation()
 		}
 		OwnerAgent->GetABP_3P()->Montage_Play(AM_Fire, 1.0f);
 	}
+
+	OnFire.Broadcast();
+}
+
+void ABaseWeapon::MulticastRPC_PlayReloadAnimation_Implementation()
+{
+	OnReload.Broadcast();
+}
+
+void ABaseWeapon::MulticastRPC_PlayEquipAnimation_Implementation()
+{
+	OnEquip.Broadcast();
 }
 
 void ABaseWeapon::Reload()
@@ -503,7 +521,7 @@ void ABaseWeapon::ServerOnly_AttachWeapon(ABaseAgent* Agent)
 		EAttachmentRule::KeepRelative,
 		true
 		);
-	Mesh->AttachToComponent(Agent->GetMesh1P(), AttachmentRules, FName(TEXT("R_WeaponPointSocket")));
+	Mesh->AttachToComponent(Agent->GetMesh1P(), AttachmentRules, FName(TEXT("R_WeaponSocket")));
 	if (nullptr != ThirdPersonInteractor)
 	{
 		ThirdPersonInteractor->Destroy();
@@ -513,7 +531,7 @@ void ABaseWeapon::ServerOnly_AttachWeapon(ABaseAgent* Agent)
 	{
 		ThirdPersonInteractor->SetOwner(Agent);
 		ThirdPersonInteractor->MulticastRPC_InitWeapon(WeaponID);
-		ThirdPersonInteractor->AttachToComponent(Agent->GetMesh(), AttachmentRules, FName(TEXT("R_WeaponPointSocket")));
+		ThirdPersonInteractor->AttachToComponent(Agent->GetMesh(), AttachmentRules, FName(TEXT("R_WeaponSocket")));
 	}
 	
 	Agent->AcquireInteractor(this);

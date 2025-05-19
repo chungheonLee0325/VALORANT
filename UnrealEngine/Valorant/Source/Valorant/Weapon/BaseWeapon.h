@@ -11,6 +11,10 @@
 class UInputMappingContext;
 class UInputAction;
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnEquip);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnFire);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnReload);
+
 UCLASS(config=Game)
 class VALORANT_API ABaseWeapon : public ABaseInteractor
 {
@@ -115,6 +119,10 @@ protected:
 	void MulticastRPC_PlayFireAnimation();
 	UFUNCTION(BlueprintImplementableEvent)
 	void PlayFireSound();
+	UFUNCTION(NetMulticast, Reliable)
+	void MulticastRPC_PlayReloadAnimation();
+	UFUNCTION(NetMulticast, Reliable)
+	void MulticastRPC_PlayEquipAnimation();
 
 	UFUNCTION(BlueprintCallable, Category="Weapon")
 	void Reload();
@@ -167,4 +175,11 @@ public:
 	// 무기 사용 여부 리셋 (라운드 시작 시)
 	UFUNCTION(BlueprintCallable, Category="Weapon")
 	void ResetUsedStatus();
+
+	UPROPERTY(BlueprintAssignable)
+	FOnEquip OnEquip;
+	UPROPERTY(BlueprintAssignable)
+	FOnFire OnFire;
+	UPROPERTY(BlueprintAssignable)
+	FOnReload OnReload;
 };
