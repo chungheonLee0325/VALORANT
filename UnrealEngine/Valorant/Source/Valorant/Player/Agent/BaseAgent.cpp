@@ -60,25 +60,25 @@ ABaseAgent::ABaseAgent()
 	Camera = CreateDefaultSubobject<UCameraComponent>("Camera");
 	Camera->SetupAttachment(SpringArm);
 
-	GetMesh()->SetupAttachment(SpringArm);
+	GetMesh()->SetupAttachment(GetRootComponent());
 	GetMesh()->SetRelativeScale3D(FVector(.34f));
-	GetMesh()->SetRelativeLocation(FVector(10, 0, -155));
+	GetMesh()->SetRelativeLocation(FVector(.0f, .0f, -90.f));
+	
+	FirstPersonMesh = CreateDefaultSubobject<USkeletalMeshComponent>("FirstPersonMesh");
+	FirstPersonMesh->SetupAttachment(SpringArm);
+	FirstPersonMesh->SetRelativeScale3D(FVector(.34f));
+	FirstPersonMesh->SetRelativeLocation(FVector(10, 0, -155));
 
-	ThirdPersonMesh = CreateDefaultSubobject<USkeletalMeshComponent>("ThirdPersonMesh");
-	ThirdPersonMesh->SetupAttachment(GetRootComponent());
-	ThirdPersonMesh->SetRelativeScale3D(FVector(.34f));
-	ThirdPersonMesh->SetRelativeLocation(FVector(.0f, .0f, -90.f));
-
-	ThirdPersonMesh->AlwaysLoadOnClient = true;
-	ThirdPersonMesh->AlwaysLoadOnServer = true;
-	ThirdPersonMesh->bOwnerNoSee = false;
-	ThirdPersonMesh->VisibilityBasedAnimTickOption = EVisibilityBasedAnimTickOption::AlwaysTickPose;
-	ThirdPersonMesh->bCastDynamicShadow = true;
-	ThirdPersonMesh->bAffectDynamicIndirectLighting = true;
-	ThirdPersonMesh->PrimaryComponentTick.TickGroup = TG_PrePhysics;
-	ThirdPersonMesh->SetGenerateOverlapEvents(true);
-	ThirdPersonMesh->SetCollisionProfileName(TEXT("Agent"));
-	ThirdPersonMesh->SetCanEverAffectNavigation(false);
+	FirstPersonMesh->AlwaysLoadOnClient = true;
+	FirstPersonMesh->AlwaysLoadOnServer = true;
+	FirstPersonMesh->bOwnerNoSee = false;
+	FirstPersonMesh->VisibilityBasedAnimTickOption = EVisibilityBasedAnimTickOption::AlwaysTickPose;
+	FirstPersonMesh->bCastDynamicShadow = true;
+	FirstPersonMesh->bAffectDynamicIndirectLighting = true;
+	FirstPersonMesh->PrimaryComponentTick.TickGroup = TG_PrePhysics;
+	FirstPersonMesh->SetGenerateOverlapEvents(true);
+	FirstPersonMesh->SetCollisionProfileName(TEXT("Agent"));
+	FirstPersonMesh->SetCanEverAffectNavigation(false);
 
 	GetCapsuleComponent()->SetCapsuleHalfHeight(72.0f);
 	BaseCapsuleHalfHeight = GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight();
@@ -87,8 +87,8 @@ ABaseAgent::ABaseAgent()
 	GetCharacterMovement()->MaxWalkSpeedCrouched = 330.0f;
 	GetCharacterMovement()->SetCrouchedHalfHeight(BaseCapsuleHalfHeight);
 
-	ThirdPersonMesh->SetOwnerNoSee(true);
-	GetMesh()->SetOnlyOwnerSee(true);
+	GetMesh()->SetOwnerNoSee(true);
+	FirstPersonMesh->SetOnlyOwnerSee(true);
 
 	AgentInputComponent = CreateDefaultSubobject<UAgentInputComponent>("InputComponent");
 
@@ -156,8 +156,8 @@ void ABaseAgent::BeginPlay()
 {
 	Super::BeginPlay();
 
-	ABP_1P = Cast<UAgentAnimInstance>(GetMesh()->GetAnimInstance());
-	ABP_3P = Cast<UAgentAnimInstance>(ThirdPersonMesh->GetAnimInstance());
+	ABP_1P = Cast<UAgentAnimInstance>(FirstPersonMesh->GetAnimInstance());
+	ABP_3P = Cast<UAgentAnimInstance>(GetMesh()->GetAnimInstance());
 
 	if (CrouchCurve)
 	{
@@ -299,23 +299,23 @@ void ABaseAgent::InitAgentAbility()
 		// 스킬 등록 및 값 초기화는 서버에서만 진행
 		ASC->InitializeByAgentData(ps->GetAgentID());
 
-		// UE_LOG(LogTemp, Warning, TEXT("=== ASC 등록된 GA 목록 ==="));
-		// for (const FGameplayAbilitySpec& spec : ASC->GetActivatableAbilities())
-		// {
-		// 	if (spec.Ability)
-		// 	{
-		// 		UE_LOG(LogTemp, Warning, TEXT("GA: %s"), *spec.Ability->GetName());
-		//
-		// 		FString TagString;
-		// 		TArray<FGameplayTag> tags = spec.GetDynamicSpecSourceTags().GetGameplayTagArray();
-		// 		for (const FGameplayTag& Tag : tags)
-		// 		{
-		// 			TagString += Tag.ToString() + TEXT(" ");
-		// 		}
-		//
-		// 		UE_LOG(LogTemp, Warning, TEXT("태그 목록: %s"), *TagString);
-		// 	}
-		// }
+		UE_LOG(LogTemp, Warning, TEXT("=== ASC 등록된 GA 목록 ==="));
+		for (const FGameplayAbilitySpec& spec : ASC->GetActivatableAbilities())
+		{
+			if (spec.Ability)
+			{
+				UE_LOG(LogTemp, Warning, TEXT("GA: %s"), *spec.Ability->GetName());
+		
+				FString TagString;
+				TArray<FGameplayTag> tags = spec.GetDynamicSpecSourceTags().GetGameplayTagArray();
+				for (const FGameplayTag& Tag : tags)
+				{
+					TagString += Tag.ToString() + TEXT(" ");
+				}
+		
+				UE_LOG(LogTemp, Warning, TEXT("태그 목록: %s"), *TagString);
+			}
+		}
 	}
 }
 
@@ -371,7 +371,7 @@ void ABaseAgent::StartFire()
 {
 	if (CurrentInteractor == nullptr)
 	{
-		NET_LOG(LogTemp, Warning, TEXT("%hs Called, CurrentInteractor is nullptr"), __FUNCTION__);
+		// NET_LOG(LogTemp, Warning, TEXT("%hs Called, CurrentInteractor is nullptr"), __FUNCTION__);
 		return;
 	}
 
@@ -405,11 +405,6 @@ void ABaseAgent::Reload()
 	if (ABaseWeapon* weapon = Cast<ABaseWeapon>(CurrentInteractor))
 	{
 		weapon->ServerRPC_StartReload();
-		ABP_3P->Montage_Stop(0.1f);
-		if (AM_Reload)
-		{
-			ABP_3P->Montage_Play(AM_Reload, 1.0f);
-		}
 	}
 }
 
@@ -535,6 +530,7 @@ void ABaseAgent::AcquireInteractor(ABaseInteractor* Interactor)
 
 void ABaseAgent::SwitchInteractor(EInteractorType InteractorType)
 {
+	//TODO: 장착 애니메이션과 함께 기존 재생되던 몽타주 종료하기
 	if (HasAuthority())
 	{
 		if (CurrentInteractor)
@@ -544,7 +540,7 @@ void ABaseAgent::SwitchInteractor(EInteractorType InteractorType)
 
 		if (InteractorType == EInteractorType::MainWeapon)
 		{
-			PoseIdxOffset = -11;
+			PoseIdxOffset = -7;
 			EquipInteractor(MainWeapon);
 			UpdateEquipSpeedMultiplier();
 		}
@@ -739,6 +735,7 @@ void ABaseAgent::EquipInteractor(ABaseInteractor* interactor)
 		ABP_1P->InteractorPoseIdx = PoseIdx;
 		ABP_3P->InteractorPoseIdx = PoseIdx;
 	}
+	// UE_LOG(LogTemp,Warning,TEXT("PoseIdx: %d"), PoseIdx);
 	// NET_LOG(LogTemp, Warning, TEXT("%hs Called, 현재 장착 중인 Interactor: %s"), __FUNCTION__, *CurrentInteractor->GetActorNameOrLabel());
 }
 
@@ -896,7 +893,7 @@ void ABaseAgent::Die()
 		OnDieCameraFinished();
 	}), DieCameraTimeRange, false);
 
-	ThirdPersonMesh->SetOwnerNoSee(false);
+	FirstPersonMesh->SetOwnerNoSee(false);
 }
 
 void ABaseAgent::OnDieCameraFinished()
@@ -921,8 +918,8 @@ void ABaseAgent::Net_Die_Implementation()
 	{
 		DisableInput(Cast<APlayerController>(GetController()));
 
-		ThirdPersonMesh->SetOwnerNoSee(false);
-		GetMesh()->SetVisibility(false);
+		FirstPersonMesh->SetOwnerNoSee(false);
+		FirstPersonMesh->SetVisibility(false);
 
 		TL_DieCamera->PlayFromStart();
 	}

@@ -85,10 +85,36 @@ void AValorantGameMode::RespawnPlayer(AAgentPlayerState* ps)
 	}
 }
 
+void AValorantGameMode::GiveMeleeKnife()
+{
+	auto gs = GetGameState<AGameStateBase>();
+	
+	if (MeleeAsset == nullptr)
+	{
+		UE_LOG(LogTemp,Error,TEXT("AValorantGameMode::GiveMeleeKnife, MeleeAsset NULL"));
+		return;
+	}
+
+	for (APlayerState* ps : gs->PlayerArray) {
+		{
+			if (auto* agent = Cast<ABaseAgent>(ps->GetPawn()))
+			{
+				ABaseWeapon* knife = GetWorld()->SpawnActor<ABaseWeapon>(MeleeAsset);
+				agent->ServerRPC_Interact(knife);
+			}
+		}
+	}
+}
+
 void AValorantGameMode::BeginPlay()
 {
 	Super::BeginPlay();
 	m_GameInstance = Cast<UValorantGameInstance>(GetGameInstance());
+}
+
+void AValorantGameMode::PostLogin(APlayerController* NewPlayer)
+{
+	Super::PostLogin(NewPlayer);
 }
 
 void AValorantGameMode::ResetAgentAtrributeData(AAgentPlayerState* ps)

@@ -43,23 +43,23 @@ public:
 	UFUNCTION(BlueprintCallable)
 	FAbilityData GetAbility_X() { return m_Ability_X; }
 
-	
-	UFUNCTION(BlueprintCallable)
-	void SetCurrentAbilityHandle(const FGameplayAbilitySpecHandle handle);
-	
-	UFUNCTION(BlueprintCallable)
-	void ClearCurrentAbilityHandle(const FGameplayAbilitySpecHandle handle);
-
 	UFUNCTION(BlueprintCallable)
 	void ResisterFollowUpInput(const TSet<FGameplayTag>& tags);
+	
+	UFUNCTION(BlueprintCallable)
+	void ResetFollowUpInput();
 
 	UFUNCTION(BlueprintCallable)
 	bool TrySkillInput(const FGameplayTag& inputTag);
 
+	UFUNCTION(BlueprintCallable)
+	void SetSkillClear(const bool isClear) { bIsSkillClear = isClear; }
+	UFUNCTION(BlueprintCallable)
+	void SetSkillReady(const bool isReady) { bIsSkillReady = isReady; }
+	
 	UPROPERTY(BlueprintAssignable)
 	FOnAbilityWaitingStateChanged OnAbilityWaitingStateChanged;
 
-	
 private:
 	UPROPERTY()
 	UValorantGameInstance* m_GameInstance = nullptr;
@@ -70,12 +70,6 @@ private:
 		FValorantGameplayTags::Get().InputTag_Ability_Q,
 		FValorantGameplayTags::Get().InputTag_Ability_X
 	};
-	
-	// UPROPERTY(VisibleAnywhere)
-	// TMap<FGameplayTag, FGameplayAbilitySpecHandle> ReservedSkillHandleMap;
-	
-	UPROPERTY(VisibleAnywhere, Replicated)
-	FGameplayAbilitySpecHandle CurrentAbilityHandle;
 	
 	UPROPERTY(VisibleAnywhere)
 	TSet<FGameplayTag> FollowUpInputBySkill;
@@ -92,25 +86,26 @@ private:
 	UPROPERTY(Replicated)
 	FAbilityData m_Ability_X;
 
+	bool bIsSkillClear = true;
+	UPROPERTY(Replicated)
+	bool bIsSkillReady = false;
+	
 protected:
 	virtual void BeginPlay() override;
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType,
 							   FActorComponentTickFunction* ThisTickFunction) override;
 
 	virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;
+
+	virtual int32 HandleGameplayEvent(FGameplayTag EventTag, const FGameplayEventData* Payload) override;
 	
 	//AttributeSet
 	void InitializeAttribute(const FAgentData* agentData);
 
-	//Skill
-	UFUNCTION(NetMulticast, Reliable)
-	void Net_ReserveSkill(const FGameplayTag& skillTag, const FGameplayAbilitySpecHandle& handle);
-	UFUNCTION(NetMulticast, Reliable)
-	void Net_ResetSkill(const TArray<FGameplayTag>& tagsToRemove);
-
 	//Skill Input
 	bool IsFollowUpInput(const FGameplayTag& inputTag);
 
-	bool TrySkillFollowupInput(const FGameplayTag& inputTag);
+	UFUNCTION(Server, Reliable)
+	void ServerRPC_HandleGameplayEvent(const FGameplayTag& inputTag);
 };
 

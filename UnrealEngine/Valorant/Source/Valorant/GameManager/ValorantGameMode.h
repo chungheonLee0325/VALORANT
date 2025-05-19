@@ -6,6 +6,7 @@
 #include "GameFramework/GameModeBase.h"
 #include "ValorantGameMode.generated.h"
 
+class ABaseWeapon;
 class UValorantGameInstance;
 class AAgentPlayerState;
 
@@ -21,6 +22,8 @@ public:
 	void RespawnAllPlayers();
 	UFUNCTION(BlueprintCallable)
 	void RespawnPlayer(AAgentPlayerState* ps);
+	UFUNCTION(BlueprintCallable)
+	void GiveMeleeKnife();
 
 	UFUNCTION(BlueprintCallable)
 	void ResetAgentAtrributeData(AAgentPlayerState* ps);
@@ -29,6 +32,11 @@ public:
 	void SetRespawnLoc(FVector const newLoc) { RespawnLocation = newLoc; }
 	UFUNCTION(BlueprintCallable)
 	void SetRespawnRot(FRotator const newRot) { RespawnRotation = newRot; }
+
+	UPROPERTY(EditDefaultsOnly, Category="Gameflow", meta=(AllowPrivateAccess))
+	TSubclassOf<ABaseWeapon> MeleeAsset;
+	UPROPERTY(EditDefaultsOnly, Category="Gameflow", meta=(AllowPrivateAccess))
+	TSubclassOf<ABaseWeapon> ClassicAsset;
 	
 private:
 	UPROPERTY()
@@ -39,6 +47,7 @@ private:
 	
 protected:
 	virtual void BeginPlay() override;
+	virtual void PostLogin(APlayerController* NewPlayer) override;
 
 };
 

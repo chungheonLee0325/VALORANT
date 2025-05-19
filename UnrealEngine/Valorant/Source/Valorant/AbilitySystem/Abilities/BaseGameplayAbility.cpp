@@ -20,26 +20,26 @@ bool UBaseGameplayAbility::CanActivateAbility(const FGameplayAbilitySpecHandle H
 	}
 
 	// 어빌리티 ID가 유효하고 스택 소비가 필요한 경우
-	if (m_AbilityID > 0)
-	{
-		// 플레이어 스테이트 가져오기
-		AAgentPlayerState* PS = Cast<AAgentPlayerState>(ActorInfo->OwnerActor->GetInstigatorController()->PlayerState);
-		if (PS == nullptr)
-		{
-			UE_LOG(LogTemp, Error, TEXT("어빌리티 활성화 확인 실패: PlayerState가 NULL입니다."));
-			return false;
-		}
-
-		// 현재 스택 확인
-		int32 CurrentStack = PS->GetAbilityStack(m_AbilityID);
-		
-		// 스택이 없으면 활성화 불가
-		if (CurrentStack <= 0)
-		{
-			UE_LOG(LogTemp, Warning, TEXT("어빌리티 ID %d의 스택이 없어 활성화할 수 없습니다."), m_AbilityID);
-			return false;
-		}
-	}
+	// if (m_AbilityID > 0)
+	// {
+	// 	// 플레이어 스테이트 가져오기
+	// 	AAgentPlayerState* PS = Cast<AAgentPlayerState>(ActorInfo->OwnerActor->GetInstigatorController()->PlayerState);
+	// 	if (PS == nullptr)
+	// 	{
+	// 		UE_LOG(LogTemp, Error, TEXT("어빌리티 활성화 확인 실패: PlayerState가 NULL입니다."));
+	// 		return false;
+	// 	}
+	//
+	// 	// 현재 스택 확인
+	// 	int32 CurrentStack = PS->GetAbilityStack(m_AbilityID);
+	// 	
+	// 	// 스택이 없으면 활성화 불가
+	// 	if (CurrentStack <= 0)
+	// 	{
+	// 		UE_LOG(LogTemp, Warning, TEXT("어빌리티 ID %d의 스택이 없어 활성화할 수 없습니다."), m_AbilityID);
+	// 		return false;
+	// 	}
+	// }
 	
 	return true;
 }
@@ -56,20 +56,21 @@ void UBaseGameplayAbility::ActivateAbility(const FGameplayAbilitySpecHandle Hand
 	}
 	
 	Super::ActivateAbility(Handle, ActorInfo, ActivationInfo, TriggerEventData);
+
+	// NET_LOG(LogTemp,Warning,TEXT("액티배이트 어빌리티"));
 	
 	UAgentAbilitySystemComponent* asc = Cast<UAgentAbilitySystemComponent>(GetAbilitySystemComponentFromActorInfo());
 	if (asc)
 	{
-		asc->SetCurrentAbilityHandle(Handle);
-		
 		if (FollowUpInputTags.IsEmpty() == false)
 		{
+			asc->SetSkillReady(false);
+			asc->SetSkillClear(false);
 			asc->ResisterFollowUpInput(FollowUpInputTags);
 		}
 		else
 		{
 			Active_General();
-			// EndAbility(Handle,ActorInfo,ActivationInfo,true,false);
 		}
 	}
 	else
@@ -83,37 +84,6 @@ void UBaseGameplayAbility::InputPressed(const FGameplayAbilitySpecHandle Handle,
 {
 	Super::InputPressed(Handle, ActorInfo, ActivationInfo);
 	NET_LOG(LogTemp, Warning, TEXT("스킬 InputPressed"));
-	
-	if (CurrentFollowUpInputTag.IsValid())
-	{
-		if (CurrentFollowUpInputTag == FValorantGameplayTags::Get().InputTag_Default_LeftClick)
-		{
-			Active_Left_Click();
-		}
-		else if (CurrentFollowUpInputTag == FValorantGameplayTags::Get().InputTag_Default_RightClick)
-		{
-			Active_Right_Click();
-		}
-		else if (CurrentFollowUpInputTag == FValorantGameplayTags::Get().InputTag_Ability_C)
-		{
-			Active_C_Click();
-		}
-		else if (CurrentFollowUpInputTag == FValorantGameplayTags::Get().InputTag_Ability_E)
-		{
-			Active_E_Click();
-		}
-		else if (CurrentFollowUpInputTag == FValorantGameplayTags::Get().InputTag_Ability_Q)
-		{
-			Active_Q_Click();
-		}
-		else if (CurrentFollowUpInputTag == FValorantGameplayTags::Get().InputTag_Ability_X)
-		{
-			Active_X_Click();
-		}
-		
-		// EndAbility(Handle,ActorInfo,ActivationInfo,true,false);
-	}
-	
 }
 
 void UBaseGameplayAbility::InputReleased(const FGameplayAbilitySpecHandle Handle,
@@ -130,12 +100,12 @@ void UBaseGameplayAbility::EndAbility(const FGameplayAbilitySpecHandle Handle,
 	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
 	NET_LOG(LogTemp, Warning, TEXT("스킬 EndAbility"));
 
-	CurrentFollowUpInputTag = FGameplayTag(); 
+	// CurrentFollowUpInputTag = FGameplayTag(); 
 	
 	UAgentAbilitySystemComponent* asc = Cast<UAgentAbilitySystemComponent>(GetAbilitySystemComponentFromActorInfo());
 	if (asc)
 	{
-		asc->ClearCurrentAbilityHandle(Handle);
+		asc->SetSkillClear(true);
 	}
 }
 
@@ -146,12 +116,12 @@ void UBaseGameplayAbility::CancelAbility(const FGameplayAbilitySpecHandle Handle
 	Super::CancelAbility(Handle, ActorInfo, ActivationInfo, bReplicateCancelAbility);
 	NET_LOG(LogTemp, Warning, TEXT("스킬 CancelAbility"));
 
-	CurrentFollowUpInputTag = FGameplayTag();
+	// CurrentFollowUpInputTag = FGameplayTag();
 	
 	UAgentAbilitySystemComponent* asc = Cast<UAgentAbilitySystemComponent>(GetAbilitySystemComponentFromActorInfo());
 	if (asc)
 	{
-		asc->ClearCurrentAbilityHandle(Handle);
+		asc->SetSkillClear(true);
 	}
 }
 
@@ -159,29 +129,14 @@ void UBaseGameplayAbility::Active_General()
 {
 }
 
-void UBaseGameplayAbility::Active_Left_Click()
+void UBaseGameplayAbility::Active_Left_Click(FGameplayEventData data)
 {
 }
 
-void UBaseGameplayAbility::Active_Right_Click()
+void UBaseGameplayAbility::Active_Right_Click(FGameplayEventData data)
 {
 }
 
-void UBaseGameplayAbility::Active_C_Click()
-{
-}
-
-void UBaseGameplayAbility::Active_E_Click()
-{
-}
-
-void UBaseGameplayAbility::Active_Q_Click()
-{
-}
-
-void UBaseGameplayAbility::Active_X_Click()
-{
-}
 
 void UBaseGameplayAbility::SetAbilityID(int32 AbilityID)
 {

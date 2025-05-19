@@ -80,7 +80,7 @@ public:
 	USpringArmComponent* SpringArm;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
-	USkeletalMeshComponent* ThirdPersonMesh;
+	USkeletalMeshComponent* FirstPersonMesh;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
 	UAgentInputComponent* AgentInputComponent;
@@ -207,7 +207,7 @@ public:
 	UAgentAnimInstance* GetABP_1P() const { return ABP_1P; }
 	UAgentAnimInstance* GetABP_3P() const { return ABP_3P; }
 
-	USkeletalMeshComponent* GetMesh3P() const { return ThirdPersonMesh; }
+	USkeletalMeshComponent* GetMesh1P() const { return FirstPersonMesh; }
 
 	UFUNCTION(Server, Reliable)
 	void ServerApplyGE(TSubclassOf<UGameplayEffect> geClass);
