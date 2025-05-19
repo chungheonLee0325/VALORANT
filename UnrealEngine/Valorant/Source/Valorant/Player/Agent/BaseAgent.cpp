@@ -405,11 +405,6 @@ void ABaseAgent::Reload()
 	if (ABaseWeapon* weapon = Cast<ABaseWeapon>(CurrentInteractor))
 	{
 		weapon->ServerRPC_StartReload();
-		ABP_3P->Montage_Stop(0.1f);
-		if (AM_Reload)
-		{
-			ABP_3P->Montage_Play(AM_Reload, 1.0f);
-		}
 	}
 }
 
@@ -545,7 +540,7 @@ void ABaseAgent::SwitchInteractor(EInteractorType InteractorType)
 
 		if (InteractorType == EInteractorType::MainWeapon)
 		{
-			PoseIdxOffset = -11;
+			PoseIdxOffset = -7;
 			EquipInteractor(MainWeapon);
 			UpdateEquipSpeedMultiplier();
 		}
@@ -740,6 +735,7 @@ void ABaseAgent::EquipInteractor(ABaseInteractor* interactor)
 		ABP_1P->InteractorPoseIdx = PoseIdx;
 		ABP_3P->InteractorPoseIdx = PoseIdx;
 	}
+	// UE_LOG(LogTemp,Warning,TEXT("PoseIdx: %d"), PoseIdx);
 	// NET_LOG(LogTemp, Warning, TEXT("%hs Called, 현재 장착 중인 Interactor: %s"), __FUNCTION__, *CurrentInteractor->GetActorNameOrLabel());
 }
 
