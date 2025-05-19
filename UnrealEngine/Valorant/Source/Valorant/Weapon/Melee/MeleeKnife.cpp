@@ -65,13 +65,13 @@ void AMeleeKnife::Fire()
 	switch (MagazineAmmo)
 	{
 	case 3:
-		Server_PlayAttackAnim(AM_Fire);
+		Server_PlayAttackAnim(AM_Fire1_1P, AM_Fire1_3P);
 		break;
 	case 2:
-		Server_PlayAttackAnim(AM_Fire2);
+		Server_PlayAttackAnim(AM_Fire2_1P, AM_Fire2_3P);
 		break;
 	case 1:
-		Server_PlayAttackAnim(AM_Fire3);
+		Server_PlayAttackAnim(AM_Fire3_1P, AM_Fire3_3P);
 		break;
 	default:
 		break;
@@ -100,17 +100,17 @@ void AMeleeKnife::OnMontageEnded(UAnimMontage* AnimMontage, bool bInterrupted)
 	ResetCombo();
 }
 
-void AMeleeKnife::Server_PlayAttackAnim_Implementation(UAnimMontage* anim)
+void AMeleeKnife::Server_PlayAttackAnim_Implementation(UAnimMontage* anim1P, UAnimMontage* anim3P)
 {
-	if (!anim)
+	if (!anim1P || !anim3P)
 	{
 		return;
 	}
 	
-	Multicast_PlayAttackAnim(anim);
+	Multicast_PlayAttackAnim(anim1P, anim3P);
 }
 
-void AMeleeKnife::Multicast_PlayAttackAnim_Implementation(UAnimMontage* anim)
+void AMeleeKnife::Multicast_PlayAttackAnim_Implementation(UAnimMontage* anim1P, UAnimMontage* anim3P)
 {
 	MagazineAmmo--;
 	bIsAttacking = true;
@@ -119,38 +119,35 @@ void AMeleeKnife::Multicast_PlayAttackAnim_Implementation(UAnimMontage* anim)
 	{
 		return;
 	}
-
-	UAnimInstance* AnimInstance = nullptr;
 	
-	if (OwnerAgent->IsLocallyControlled())
+	UAnimInstance* abp3P = OwnerAgent->GetABP_3P();
+	if (OwnerAgent->GetABP_1P() == nullptr)
 	{
-		AnimInstance = OwnerAgent->GetABP_1P();
-		if (OwnerAgent->GetABP_3P() == nullptr)
-		{
-			NET_LOG(LogTemp, Warning, TEXT("%hs Called, ABP 3p is nullptr"), __FUNCTION__);
-		}
-	}
-	else
-	{
-		AnimInstance = OwnerAgent->GetABP_3P();
-		if (OwnerAgent->GetABP_1P() == nullptr)
-		{
-			NET_LOG(LogTemp, Warning, TEXT("%hs Called, ABP 1p is nullptr"), __FUNCTION__);
-		}
+		NET_LOG(LogTemp, Warning, TEXT("%hs Called, ABP 3p is nullptr"), __FUNCTION__);
 	}
 	
-	if (!AnimInstance)
+	if (!abp3P)
 	{
 		return;
 	}
 	
-	float Duration = AnimInstance->Montage_Play(anim, 1.0f);
+	float Duration = abp3P->Montage_Play(anim3P, 1.0f);
 	
 	if (Duration > 0.f && OwnerAgent->IsLocallyControlled())
 	{
 		FOnMontageEnded EndDelegate;
 		EndDelegate.BindUObject(this, &AMeleeKnife::OnMontageEnded);
 	
-		AnimInstance->Montage_SetEndDelegate(EndDelegate, anim);
+		abp3P->Montage_SetEndDelegate(EndDelegate, anim3P);
 	}
+
+	
+		UAnimInstance* abp = OwnerAgent->GetABP_1P();
+		if (abp == nullptr)
+		{
+			NET_LOG(LogTemp, Warning, TEXT("%hs Called, ABP 1p is nullptr"), __FUNCTION__);
+		}
+
+		abp->Montage_Play(anim1P, 1.0f);
+	
 }
