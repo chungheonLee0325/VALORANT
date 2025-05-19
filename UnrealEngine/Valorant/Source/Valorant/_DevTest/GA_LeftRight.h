@@ -8,7 +8,7 @@
 #include "Abilities/Tasks/AbilityTask_WaitGameplayEvent.h"
 #include "Abilities/Tasks/AbilityTask_WaitInputPress.h"
 #include "AbilitySystem/Tasks/PlayMontageWithEvent.h"
-#include "GA_Sample.generated.h"
+#include "GA_LeftRight.generated.h"
 
 /**
  * 피닉스 커브볼 스킬을 구현
@@ -18,7 +18,7 @@
  */
 
 UCLASS()
-class VALORANT_API UGA_Sample : public UBaseGameplayAbility
+class VALORANT_API UGA_LeftRight : public UBaseGameplayAbility
 {
 	GENERATED_BODY()
 	

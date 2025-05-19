@@ -1,13 +1,13 @@
 ﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 
-#include "GA_Sample.h"
+#include "GA_LeftRight.h"
 
 #include "EnhancedInputComponent.h"
 #include "AbilitySystem/AgentAbilitySystemComponent.h"
 
 
-void UGA_Sample::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
+void UGA_LeftRight::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
                                  const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData)
 {
 	Super::ActivateAbility(Handle, ActorInfo, ActivationInfo, TriggerEventData);
@@ -17,13 +17,13 @@ void UGA_Sample::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const 
 	// 대기 동작을 위한 MontageTask
 	UAbilityTask_PlayMontageAndWait* PreTask = UAbilityTask_PlayMontageAndWait::CreatePlayMontageAndWaitProxy(this,NAME_None,ReadyAnim,1.f,NAME_None,true);
 	
-	PreTask->OnCompleted.AddDynamic(this,&UGA_Sample::OnPreMontageFinished);
-	PreTask->OnCancelled.AddDynamic(this,&UGA_Sample::OnPreMontageCancelled);
+	PreTask->OnCompleted.AddDynamic(this,&UGA_LeftRight::OnPreMontageFinished);
+	PreTask->OnCancelled.AddDynamic(this,&UGA_LeftRight::OnPreMontageCancelled);
 	
 	PreTask->ReadyForActivation();
 }
 
-void UGA_Sample::OnPreMontageFinished()
+void UGA_LeftRight::OnPreMontageFinished()
 {
 	// UE_LOG(LogTemp,Warning,TEXT("준비 동작 종료"));
 	UAgentAbilitySystemComponent* asc = Cast<UAgentAbilitySystemComponent>(GetAbilitySystemComponentFromActorInfo());
@@ -36,23 +36,23 @@ void UGA_Sample::OnPreMontageFinished()
 	FGameplayTag LeftTag = FValorantGameplayTags::Get().InputTag_Default_LeftClick;
 	LeftTask = UAbilityTask_WaitGameplayEvent::WaitGameplayEvent(
 		this, LeftTag, nullptr, true, true);
-	LeftTask->EventReceived.AddDynamic(this, &UGA_Sample::Active_Left_Click);
+	LeftTask->EventReceived.AddDynamic(this, &UGA_LeftRight::Active_Left_Click);
 	LeftTask->Activate();
 	
 	FGameplayTag RightTag = FValorantGameplayTags::Get().InputTag_Default_RightClick;
 	RightTask = UAbilityTask_WaitGameplayEvent::WaitGameplayEvent(
 		this, RightTag, nullptr, true, true);
-	RightTask->EventReceived.AddDynamic(this, &UGA_Sample::Active_Right_Click);
+	RightTask->EventReceived.AddDynamic(this, &UGA_LeftRight::Active_Right_Click);
 	RightTask->Activate();
 }
 
-void UGA_Sample::OnPreMontageCancelled()
+void UGA_LeftRight::OnPreMontageCancelled()
 {
 	// UE_LOG(LogTemp,Log,TEXT("준비 동작 끊김"));
 	EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);
 }
 
-void UGA_Sample::Active_Left_Click(FGameplayEventData data)
+void UGA_LeftRight::Active_Left_Click(FGameplayEventData data)
 {
 	UE_LOG(LogTemp,Log,TEXT("Task에 의한 좌클릭 후속 입력"));
 	
@@ -63,7 +63,7 @@ void UGA_Sample::Active_Left_Click(FGameplayEventData data)
 	MainTask(ThrowTask);
 }
 
-void UGA_Sample::Active_Right_Click(FGameplayEventData data)
+void UGA_LeftRight::Active_Right_Click(FGameplayEventData data)
 {
 	UE_LOG(LogTemp,Log,TEXT("Task에 의한 우클릭 후속 입력"));
 
@@ -74,25 +74,25 @@ void UGA_Sample::Active_Right_Click(FGameplayEventData data)
 	MainTask(ThrowTask);
 }
 
-void UGA_Sample::MainTask(UAbilityTask_PlayMontageAndWait* ThrowTask)
+void UGA_LeftRight::MainTask(UAbilityTask_PlayMontageAndWait* ThrowTask)
 {
 	// UE_LOG(LogTemp,Warning,TEXT("스킬 동작 실행"));
 	LeftTask->EndTask();
 	RightTask->EndTask();
 	
-	ThrowTask->OnCompleted.AddDynamic(this,&UGA_Sample::OnProcessMontageFinished);
-	ThrowTask->OnCancelled.AddDynamic(this,&UGA_Sample::OnProcessMontageCancelled);
+	ThrowTask->OnCompleted.AddDynamic(this,&UGA_LeftRight::OnProcessMontageFinished);
+	ThrowTask->OnCancelled.AddDynamic(this,&UGA_LeftRight::OnProcessMontageCancelled);
 
 	ThrowTask->ReadyForActivation();
 }
 
-void UGA_Sample::OnProcessMontageFinished()
+void UGA_LeftRight::OnProcessMontageFinished()
 {
 	// UE_LOG(LogTemp,Warning,TEXT("스킬 동작 종료"));
 	EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);
 }
 
-void UGA_Sample::OnProcessMontageCancelled()
+void UGA_LeftRight::OnProcessMontageCancelled()
 {
 	UE_LOG(LogTemp,Warning,TEXT("스킬 동작 끊김"));
 	EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);
