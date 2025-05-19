@@ -164,6 +164,9 @@ public:
 	virtual void ServerRPC_Interact_Implementation(ABaseAgent* InteractAgent) override;
 	void ServerOnly_AttachWeapon(ABaseAgent* Agent);
 
+	UFUNCTION(NetMulticast, Reliable)
+	void MulticastRPC_AttachWeapon(ABaseAgent* Agent);
+
 	// 무기 사용 여부 리셋 (라운드 시작 시)
 	UFUNCTION(BlueprintCallable, Category="Weapon")
 	void ResetUsedStatus();
