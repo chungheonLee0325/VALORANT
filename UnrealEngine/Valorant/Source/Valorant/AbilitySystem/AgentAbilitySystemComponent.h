@@ -43,13 +43,6 @@ public:
 	UFUNCTION(BlueprintCallable)
 	FAbilityData GetAbility_X() { return m_Ability_X; }
 
-	
-	UFUNCTION(BlueprintCallable)
-	void SetCurrentAbilityHandle(const FGameplayAbilitySpecHandle handle);
-	
-	UFUNCTION(BlueprintCallable)
-	void ClearCurrentAbilityHandle(const FGameplayAbilitySpecHandle handle);
-
 	UFUNCTION(BlueprintCallable)
 	void ResisterFollowUpInput(const TSet<FGameplayTag>& tags);
 	
@@ -59,10 +52,14 @@ public:
 	UFUNCTION(BlueprintCallable)
 	bool TrySkillInput(const FGameplayTag& inputTag);
 
+	UFUNCTION(BlueprintCallable)
+	void SetSkillClear(const bool isClear) { bIsSkillClear = isClear; }
+	UFUNCTION(BlueprintCallable)
+	void SetSkillReady(const bool isReady) { bIsSkillReady = isReady; }
+	
 	UPROPERTY(BlueprintAssignable)
 	FOnAbilityWaitingStateChanged OnAbilityWaitingStateChanged;
 
-	
 private:
 	UPROPERTY()
 	UValorantGameInstance* m_GameInstance = nullptr;
@@ -73,12 +70,6 @@ private:
 		FValorantGameplayTags::Get().InputTag_Ability_Q,
 		FValorantGameplayTags::Get().InputTag_Ability_X
 	};
-	
-	// UPROPERTY(VisibleAnywhere)
-	// TMap<FGameplayTag, FGameplayAbilitySpecHandle> ReservedSkillHandleMap;
-	
-	UPROPERTY(VisibleAnywhere, Replicated)
-	FGameplayAbilitySpecHandle CurrentAbilityHandle;
 	
 	UPROPERTY(VisibleAnywhere)
 	TSet<FGameplayTag> FollowUpInputBySkill;
@@ -95,6 +86,9 @@ private:
 	UPROPERTY(Replicated)
 	FAbilityData m_Ability_X;
 
+	bool bIsSkillClear = true;
+	bool bIsSkillReady = false;
+	
 protected:
 	virtual void BeginPlay() override;
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType,
@@ -115,7 +109,5 @@ protected:
 
 	//Skill Input
 	bool IsFollowUpInput(const FGameplayTag& inputTag);
-
-	bool TrySkillFollowupInput(const FGameplayTag& inputTag);
 };
 

@@ -49,7 +49,7 @@ void UAgentAbilitySystemComponent::GetLifetimeReplicatedProps(TArray<class FLife
 	DOREPLIFETIME(UAgentAbilitySystemComponent, m_Ability_E);
 	DOREPLIFETIME(UAgentAbilitySystemComponent, m_Ability_Q);
 	DOREPLIFETIME(UAgentAbilitySystemComponent, m_Ability_X);
-	DOREPLIFETIME(UAgentAbilitySystemComponent, CurrentAbilityHandle);
+	// DOREPLIFETIME(UAgentAbilitySystemComponent, CurrentAbilityHandle);
 }
 
 int32 UAgentAbilitySystemComponent::HandleGameplayEvent(FGameplayTag EventTag, const FGameplayEventData* Payload)
@@ -164,11 +164,6 @@ void UAgentAbilitySystemComponent::ResetAgentAbilities()
 	}
 }
 
-void UAgentAbilitySystemComponent::SetCurrentAbilityHandle(const FGameplayAbilitySpecHandle handle)
-{
-	CurrentAbilityHandle = handle;
-}
-
 void UAgentAbilitySystemComponent::ResisterFollowUpInput(const TSet<FGameplayTag>& tags)
 {
 	FollowUpInputBySkill = tags;
@@ -188,68 +183,51 @@ bool UAgentAbilitySystemComponent::TrySkillInput(const FGameplayTag& inputTag)
 {
 	if (FollowUpInputBySkill.IsEmpty())
 	{
-		UE_LOG(LogTemp,Warning,TEXT("스킬 일반 입력 성공"));
+		UE_LOG(LogTemp,Warning,TEXT("스킬 일반 입력 시도: [%s]"), *inputTag.ToString());
+		if (!bIsSkillClear)
+		{
+			UE_LOG(LogTemp,Error,TEXT("이전 스킬 마무리중..."));
+			return true;
+		}
+		
 		FGameplayTagContainer tagCon(inputTag);
 		if (TryActivateAbilitiesByTag(tagCon))
 		{
+			UE_LOG(LogTemp,Warning,TEXT("스킬 일반 입력 성공"));
 			return true;
 		}
 	}
 	else
 	{ 
-		UE_LOG(LogTemp,Warning,TEXT("스킬 후속 입력 시도: [%s]"), *inputTag.ToString()); 
+		UE_LOG(LogTemp,Warning,TEXT("스킬 후속 입력 시도: [%s]"), *inputTag.ToString());
+		
+		if (!bIsSkillReady)
+		{
+			UE_LOG(LogTemp,Error,TEXT("준비 동작 진행중..."));
+			return true;
+		}
 		
 		if (IsFollowUpInput(inputTag))
 		{
-			if (TrySkillFollowupInput(inputTag))
-			{
-				UE_LOG(LogTemp,Warning,TEXT("스킬 후속 입력 성공"));
-				FollowUpInputBySkill.Empty();
-				OnAbilityWaitingStateChanged.Broadcast(false);
-				return true;
-			}
-			else
-			{
-				NET_LOG(LogTemp,Warning,TEXT("스킬 후속 입력 실패"));
-				return false;
-			}
+			UE_LOG(LogTemp,Warning,TEXT("스킬 후속 입력 성공"));
+
+			FGameplayEventData data;
+			data.EventTag = inputTag;
+			
+			HandleGameplayEvent(inputTag, &data);
+			
+			FollowUpInputBySkill.Empty();
+			OnAbilityWaitingStateChanged.Broadcast(false);
 		}
 		else
 		{
 			NET_LOG(LogTemp, Warning, TEXT("후속 입력 대기 중이라 일반 입력 [%s] 무시됨"), *inputTag.ToString());
-			return true;
 		}
+		return true;
 	}
 	
 	// UE_LOG(LogTemp,Warning,TEXT("%s 해당 입력에 해당하는 스킬이 없습니다."), *inputTag.ToString());
 	return false;
-}
-
-void UAgentAbilitySystemComponent::ClearCurrentAbilityHandle(const FGameplayAbilitySpecHandle handle)
-{
-	if (!CurrentAbilityHandle.IsValid())
-	{
-		UE_LOG(LogTemp, Warning, TEXT("CurrentAbilityHandle이 무효 상태입니다."));
-		return;
-	}
-	if (!handle.IsValid())
-	{
-		UE_LOG(LogTemp, Warning, TEXT("handle 이미 무효상태입니다."));
-		return;
-	}
-	
-	if (CurrentAbilityHandle == handle)
-	{
-		CurrentAbilityHandle = FGameplayAbilitySpecHandle();
-	}
-	else
-	{
-		FGameplayAbilitySpec* CurrentSpec = FindAbilitySpecFromHandle(CurrentAbilityHandle);
-		FGameplayAbilitySpec* InputSpec = FindAbilitySpecFromHandle(handle);
-		
-		NET_LOG(LogTemp, Error, TEXT("CurrentHandle: %s, 입력 Handle: %s"), *CurrentSpec->Ability->GetName(), *InputSpec->Ability->GetName());
-		NET_LOG(LogTemp, Error, TEXT("실제 사용 완료된 Ability와 ASC의 CurrentAbilityHandle이 일치하지 않습니다."));
-	}
 }
 
 void UAgentAbilitySystemComponent::Net_ReserveSkill_Implementation(const FGameplayTag& skillTag,
@@ -265,27 +243,3 @@ bool UAgentAbilitySystemComponent::IsFollowUpInput(const FGameplayTag& inputTag)
 {
 	return (FollowUpInputBySkill.Contains(inputTag));
 }
-
-bool UAgentAbilitySystemComponent::TrySkillFollowupInput(const FGameplayTag& inputTag)
-{
-	if (CurrentAbilityHandle.IsValid() == false)
-	{
-		UE_LOG(LogTemp, Warning, TEXT("후속 입력 대기 중인 스킬이 없습니다."));
-		return false;
-	}
-	
-	FGameplayAbilitySpec* spec = FindAbilitySpecFromHandle(CurrentAbilityHandle);
-	if (spec && spec->IsActive())
-	{
-		FGameplayEventData data;
-		data.EventTag = inputTag;
-		
-		HandleGameplayEvent(inputTag, &data);
-		
-		return true;
-	}
-	
-	UE_LOG(LogTemp, Warning, TEXT("ASC내에서 후속 입력 대기 중인 스킬과 실제 실행 중인 스킬이 불일치합니다."));
-	return false;
-}
-

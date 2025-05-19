@@ -60,16 +60,15 @@ void UBaseGameplayAbility::ActivateAbility(const FGameplayAbilitySpecHandle Hand
 	UAgentAbilitySystemComponent* asc = Cast<UAgentAbilitySystemComponent>(GetAbilitySystemComponentFromActorInfo());
 	if (asc)
 	{
-		asc->SetCurrentAbilityHandle(Handle);
-		
 		if (FollowUpInputTags.IsEmpty() == false)
 		{
+			asc->SetSkillReady(false);
+			asc->SetSkillClear(false);
 			asc->ResisterFollowUpInput(FollowUpInputTags);
 		}
 		else
 		{
 			Active_General();
-			// EndAbility(Handle,ActorInfo,ActivationInfo,true,false);
 		}
 	}
 	else
@@ -104,7 +103,7 @@ void UBaseGameplayAbility::EndAbility(const FGameplayAbilitySpecHandle Handle,
 	UAgentAbilitySystemComponent* asc = Cast<UAgentAbilitySystemComponent>(GetAbilitySystemComponentFromActorInfo());
 	if (asc)
 	{
-		asc->ClearCurrentAbilityHandle(Handle);
+		asc->SetSkillClear(true);
 	}
 }
 
@@ -120,7 +119,7 @@ void UBaseGameplayAbility::CancelAbility(const FGameplayAbilitySpecHandle Handle
 	UAgentAbilitySystemComponent* asc = Cast<UAgentAbilitySystemComponent>(GetAbilitySystemComponentFromActorInfo());
 	if (asc)
 	{
-		asc->ClearCurrentAbilityHandle(Handle);
+		asc->SetSkillClear(true);
 	}
 }
 
