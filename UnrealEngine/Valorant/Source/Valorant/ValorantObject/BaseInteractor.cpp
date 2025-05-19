@@ -82,6 +82,7 @@ void ABaseInteractor::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 	DOREPLIFETIME(ABaseInteractor, OwnerAgent);
+	DOREPLIFETIME(ABaseInteractor, ThirdPersonInteractor);
 }
 
 void ABaseInteractor::ServerOnly_OnSphereBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
@@ -153,7 +154,7 @@ void ABaseInteractor::SetActive(bool bActive)
 	{
 		Mesh->SetVisibility(bActive);
 		Multicast_SetActive(bActive);
-		//NET_LOG(LogTemp, Warning,TEXT("%s, 활성 상태: %d"), *GetActorNameOrLabel() ,bActive);
+		// NET_LOG(LogTemp, Warning,TEXT("%s, 활성 상태: %d"), *GetActorNameOrLabel() ,bActive);
 	}
 	else
 	{

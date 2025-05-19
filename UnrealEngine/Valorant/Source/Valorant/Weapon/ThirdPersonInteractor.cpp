@@ -44,7 +44,7 @@ void AThirdPersonInteractor::MulticastRPC_InitWeapon_Implementation(const int We
 		return;
 	}
 
-	NET_LOG(LogTemp, Warning, TEXT("%hs Called, WeaponId is %d"), __FUNCTION__, WeaponId);
+	// NET_LOG(LogTemp, Warning, TEXT("%hs Called, WeaponId is %d"), __FUNCTION__, WeaponId);
 	Mesh->SetSkeletalMeshAsset(WeaponMeshAsset);
 	Mesh->SetRelativeScale3D(FVector(0.34f));
 }
