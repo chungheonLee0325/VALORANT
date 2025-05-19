@@ -49,13 +49,20 @@ void UAgentAbilitySystemComponent::GetLifetimeReplicatedProps(TArray<class FLife
 	DOREPLIFETIME(UAgentAbilitySystemComponent, m_Ability_E);
 	DOREPLIFETIME(UAgentAbilitySystemComponent, m_Ability_Q);
 	DOREPLIFETIME(UAgentAbilitySystemComponent, m_Ability_X);
+	DOREPLIFETIME(UAgentAbilitySystemComponent, bIsSkillReady);
 	// DOREPLIFETIME(UAgentAbilitySystemComponent, CurrentAbilityHandle);
 }
 
 int32 UAgentAbilitySystemComponent::HandleGameplayEvent(FGameplayTag EventTag, const FGameplayEventData* Payload)
 {
-	UE_LOG(LogTemp, Warning, TEXT("핸들 게임플레이 이벤트"));
 	return Super::HandleGameplayEvent(EventTag, Payload);
+}
+
+void UAgentAbilitySystemComponent::ServerRPC_HandleGameplayEvent_Implementation(const FGameplayTag& inputTag)
+{
+	FGameplayEventData data;
+	data.EventTag = inputTag;
+	HandleGameplayEvent(inputTag, &data);
 }
 
 /**서버에서만 호출됩니다.*/
@@ -183,7 +190,7 @@ bool UAgentAbilitySystemComponent::TrySkillInput(const FGameplayTag& inputTag)
 {
 	if (FollowUpInputBySkill.IsEmpty())
 	{
-		UE_LOG(LogTemp,Warning,TEXT("일반 입력 시도: [%s]"), *inputTag.ToString());
+		NET_LOG(LogTemp,Warning,TEXT("일반 입력 시도: [%s]"), *inputTag.ToString());
 		if (!bIsSkillClear)
 		{
 			// UE_LOG(LogTemp,Error,TEXT("이전 스킬 마무리중..."));
@@ -193,13 +200,13 @@ bool UAgentAbilitySystemComponent::TrySkillInput(const FGameplayTag& inputTag)
 		FGameplayTagContainer tagCon(inputTag);
 		if (TryActivateAbilitiesByTag(tagCon))
 		{
-			UE_LOG(LogTemp,Warning,TEXT("스킬 일반 입력 성공"));
+			NET_LOG(LogTemp,Warning,TEXT("스킬 일반 입력 성공"));
 			return true;
 		}
 	}
 	else
 	{ 
-		UE_LOG(LogTemp,Warning,TEXT("스킬 후속 입력 시도: [%s]"), *inputTag.ToString());
+		NET_LOG(LogTemp,Warning,TEXT("스킬 후속 입력 시도: [%s]"), *inputTag.ToString());
 		
 		if (!bIsSkillReady)
 		{
@@ -209,12 +216,9 @@ bool UAgentAbilitySystemComponent::TrySkillInput(const FGameplayTag& inputTag)
 		
 		if (IsFollowUpInput(inputTag))
 		{
-			UE_LOG(LogTemp,Warning,TEXT("스킬 후속 입력 성공"));
-
-			FGameplayEventData data;
-			data.EventTag = inputTag;
+			NET_LOG(LogTemp,Warning,TEXT("스킬 후속 입력 성공"));
 			
-			HandleGameplayEvent(inputTag, &data);
+			ServerRPC_HandleGameplayEvent(inputTag);
 			
 			FollowUpInputBySkill.Empty();
 			OnAbilityWaitingStateChanged.Broadcast(false);
@@ -228,15 +232,6 @@ bool UAgentAbilitySystemComponent::TrySkillInput(const FGameplayTag& inputTag)
 	
 	// UE_LOG(LogTemp,Warning,TEXT("%s 해당 입력에 해당하는 스킬이 없습니다."), *inputTag.ToString());
 	return false;
-}
-
-void UAgentAbilitySystemComponent::Net_ReserveSkill_Implementation(const FGameplayTag& skillTag,
-	const FGameplayAbilitySpecHandle& handle)
-{
-}
-
-void UAgentAbilitySystemComponent::Net_ResetSkill_Implementation(const TArray<FGameplayTag>& tagsToRemove)
-{
 }
 
 bool UAgentAbilitySystemComponent::IsFollowUpInput(const FGameplayTag& inputTag)

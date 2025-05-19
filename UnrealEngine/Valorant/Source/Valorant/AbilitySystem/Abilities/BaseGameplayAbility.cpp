@@ -56,6 +56,8 @@ void UBaseGameplayAbility::ActivateAbility(const FGameplayAbilitySpecHandle Hand
 	}
 	
 	Super::ActivateAbility(Handle, ActorInfo, ActivationInfo, TriggerEventData);
+
+	// NET_LOG(LogTemp,Warning,TEXT("액티배이트 어빌리티"));
 	
 	UAgentAbilitySystemComponent* asc = Cast<UAgentAbilitySystemComponent>(GetAbilitySystemComponentFromActorInfo());
 	if (asc)

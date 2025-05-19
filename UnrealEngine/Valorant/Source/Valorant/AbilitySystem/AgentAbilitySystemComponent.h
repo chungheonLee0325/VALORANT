@@ -87,6 +87,7 @@ private:
 	FAbilityData m_Ability_X;
 
 	bool bIsSkillClear = true;
+	UPROPERTY(Replicated)
 	bool bIsSkillReady = false;
 	
 protected:
@@ -101,13 +102,10 @@ protected:
 	//AttributeSet
 	void InitializeAttribute(const FAgentData* agentData);
 
-	//Skill
-	UFUNCTION(NetMulticast, Reliable)
-	void Net_ReserveSkill(const FGameplayTag& skillTag, const FGameplayAbilitySpecHandle& handle);
-	UFUNCTION(NetMulticast, Reliable)
-	void Net_ResetSkill(const TArray<FGameplayTag>& tagsToRemove);
-
 	//Skill Input
 	bool IsFollowUpInput(const FGameplayTag& inputTag);
+
+	UFUNCTION(Server, Reliable)
+	void ServerRPC_HandleGameplayEvent(const FGameplayTag& inputTag);
 };
 
