@@ -7,6 +7,7 @@
 #include "CoreMinimal.h"
 #include "Engine/GameInstance.h"
 #include "ResourceManager/ValorantGameType.h"
+#include "Web/DatabaseManager.h"
 #include "ValorantGameInstance.generated.h"
 
 /**
@@ -51,6 +52,11 @@ public:
 	int MaxPlayerCount = 8;
 	// TODO: 추후 삭제, 테스트를 위해 사용
 	int ReqMatchAutoStartPlayerCount = 2;
+	FOnGetPlayerCompleted OnGetPlayerCompletedDelegate;
+	FString PlayerId = "";
+	FString Platform = "";
+	UFUNCTION()
+	void OnGetPlayerCompleted(const bool bIsSuccess, const FPlayerDTO& PlayerDto);
 
 	/*
 	 *	DataTable

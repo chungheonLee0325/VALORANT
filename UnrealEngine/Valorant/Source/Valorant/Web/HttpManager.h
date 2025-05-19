@@ -17,8 +17,6 @@ DECLARE_LOG_CATEGORY_EXTERN(LogHttpManager, Log, All);
 		CLEAR_WARN_COLOR(); \
 	}
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnHttpResponseReceived, int32, ResponseCode, const FString&, ResponseBody);
-
 USTRUCT(BlueprintType)
 struct FHttpQuery
 {
@@ -66,17 +64,12 @@ class VALORANT_API UHttpManager : public UObject
 	GENERATED_BODY()
 
 public:
-	UFUNCTION(BlueprintCallable)
 	static UHttpManager* GetInstance();
-	
-	UPROPERTY(BlueprintAssignable)
-	FOnHttpResponseReceived OnHttpResponseReceived;
-
-	UFUNCTION(BlueprintCallable)
-	void SendRequest(const FString& URL, const FString& Verb = TEXT("GET"), const FString& Content = TEXT(""));
+	void SendRequest(const FString& URL, const FString& Verb = TEXT("GET"), const FString& Content = TEXT(""), const TFunction<void(FHttpResponsePtr, bool)>& Callback = TFunction<void(FHttpResponsePtr, bool)>());
 
 private:
 	static UHttpManager* Singleton;
+	TMap<FHttpRequestPtr, TFunction<void(FHttpResponsePtr, bool)>> PendingRequests;
 	
 	void OnResponseReceived(FHttpRequestPtr Request, FHttpResponsePtr Response, bool bWasSuccessful);
 };

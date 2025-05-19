@@ -540,7 +540,7 @@ void ABaseAgent::SwitchInteractor(EInteractorType InteractorType)
 
 		if (InteractorType == EInteractorType::MainWeapon)
 		{
-			PoseIdxOffset = -7;
+			PoseIdxOffset = -11;
 			EquipInteractor(MainWeapon);
 			UpdateEquipSpeedMultiplier();
 		}
