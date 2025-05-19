@@ -33,9 +33,9 @@ bool UNiagaraMeshCheckNotifyState::ShouldPlayEffect(USkeletalMeshComponent* Mesh
     }
     
     // 1인칭 메쉬인지 확인
-    bool bIsFirstPersonMesh = (MeshComp == OwningAgent->GetMesh());
+    bool bIsFirstPersonMesh = (MeshComp == OwningAgent->GetMesh1P());
     // 3인칭 메쉬인지 확인
-    bool bIsThirdPersonMesh = (MeshComp == OwningAgent->ThirdPersonMesh);
+    bool bIsThirdPersonMesh = (MeshComp == OwningAgent->GetMesh());
     
     // 1인칭 전용이고 현재 메쉬가 1인칭 메쉬인 경우
     if (bFirstPersonOnly && bIsFirstPersonMesh)

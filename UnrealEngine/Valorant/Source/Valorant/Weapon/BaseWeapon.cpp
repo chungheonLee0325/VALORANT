@@ -495,34 +495,28 @@ void ABaseWeapon::ServerOnly_AttachWeapon(ABaseAgent* Agent)
 		NET_LOG(LogTemp, Error, TEXT("%hs Called, InteractAgent is nullptr"), __FUNCTION__);
 		return;
 	}
+
+	NET_LOG(LogTemp,Warning, TEXT("칼 부착 서버"));
+	MulticastRPC_AttachWeapon(Agent);
+
+	Agent->AcquireInteractor(this);
+}
+
+void ABaseWeapon::MulticastRPC_AttachWeapon_Implementation(ABaseAgent* Agent)
+{
+	if (Agent == nullptr)
+	{
+		return;
+	}
 	
 	FAttachmentTransformRules AttachmentRules(
 		EAttachmentRule::SnapToTarget,
 		EAttachmentRule::SnapToTarget,
 		EAttachmentRule::KeepRelative,
 		true
-	);
-	AttachToComponent(Agent->GetMesh(), AttachmentRules, FName(TEXT("R_WeaponPointSocket")));
-
-	// // Set up action bindings
-	// if (const AAgentPlayerController* PlayerController = Cast<AAgentPlayerController>(Agent->GetController()))
-	// {
-	// 	if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PlayerController->GetLocalPlayer()))
-	// 	{
-	// 		// Set the priority of the mapping to 1, so that it overrides the Jump action with the Fire action when using touch input
-	// 		Subsystem->AddMappingContext(FireMappingContext, 1);
-	// 	}
-	//
-	// 	if (UEnhancedInputComponent* EnhancedInputComponent = Cast<UEnhancedInputComponent>(PlayerController->InputComponent))
-	// 	{
-	// 		// Fire
-	// 		// EnhancedInputComponent->BindAction(StartFireAction, ETriggerEvent::Triggered, this, &ABaseWeapon::StartFire);
-	// 		// EnhancedInputComponent->BindAction(EndFireAction, ETriggerEvent::Triggered, this, &ABaseWeapon::EndFire);
-	// 		// EnhancedInputComponent->BindAction(StartReloadAction, ETriggerEvent::Triggered, this, &ABaseWeapon::StartReload);
-	// 	}
-	// }
-
-	Agent->AcquireInteractor(this);
+		);
+	
+	AttachToComponent(Agent->GetMesh1P(), AttachmentRules, FName(TEXT("R_WeaponPointSocket")));
 }
 
 void ABaseWeapon::NetMulti_ReloadWeaponData_Implementation(int32 NewWeaponID)

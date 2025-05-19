@@ -61,6 +61,11 @@ void AAgentPlayerController::BeginPlay()
 	{
 		// 미니맵 초기화 함수 호출
 		InitializeMinimap();
+		NET_LOG(LogTemp, Warning, TEXT("%hs Called, 미니맵 위젯 성공 "), __FUNCTION__);
+	}
+	else
+	{
+		NET_LOG(LogTemp, Warning, TEXT("%hs Called, 미니맵 위젯 생성 실패 "), __FUNCTION__);
 	}
 }
 

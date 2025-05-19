@@ -6,6 +6,16 @@
 #include "AgentAbility/BaseProjectile.h"
 #include "KayoKnife.generated.h"
 
+class UKayoKnifeAnim;
+
+UENUM(BlueprintType)
+enum class EKnifeState : uint8
+{
+	EKS_Idle,
+	EKS_Throw,
+	EKS_Active
+};
+
 UCLASS()
 class VALORANT_API AKayoKnife : public ABaseProjectile
 {
@@ -15,6 +25,7 @@ public:
 	AKayoKnife();
 
 private:
+	const bool bAutoActivate = false;
 	const float Speed = 4125;
 	const float Gravity = 0.7f;
 	const bool bShouldBounce = true;
@@ -30,11 +41,23 @@ private:
 public:
 	UPROPERTY(BlueprintReadWrite, VisibleAnywhere)
 	TObjectPtr<USkeletalMeshComponent> Mesh = nullptr;
+	UPROPERTY(Replicated, BlueprintReadWrite, EditAnywhere)
+	EKnifeState State = EKnifeState::EKS_Idle;
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere)
+	TObjectPtr<UKayoKnifeAnim> AnimInstance = nullptr;
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere)
+	bool bIsThirdPerson = false;
 
 protected:
 	virtual void BeginPlay() override;
 	virtual void Tick(float DeltaSeconds) override;
+	virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;
 	virtual void OnProjectileBounced(const FHitResult& ImpactResult, const FVector& ImpactVelocity) override;
-
 	void ActiveSuppressionZone();
+
+public:
+	void OnEquip() const;
+	void OnThrow();
+	UFUNCTION(BlueprintCallable)
+	void SetIsThirdPerson(const bool bNew);
 };

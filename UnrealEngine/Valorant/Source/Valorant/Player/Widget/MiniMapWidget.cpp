@@ -2,8 +2,11 @@
 
 
 #include "MiniMapWidget.h"
+
+#include "Valorant.h"
 #include "Valorant/Player/Agent/BaseAgent.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "GameManager/SubsystemSteamManager.h"
 #include "Kismet/GameplayStatics.h"
 
 
@@ -47,6 +50,7 @@ void UMiniMapWidget::AddAgentToMinimap(ABaseAgent* Agent)
 {
 	if (IsValid(Agent) && !MappedAgents.Contains(Agent)) // 에이전트가 유효하고 아직 미니맵에 등록되지 않은 경우만
 	{
+		NET_LOG(LogTemp, Warning, TEXT("%hs Called, 에이전트가 미니맵에 추가됨 "), __FUNCTION__);
 		MappedAgents.Add(Agent); // 미니맵에 표시될 에이전트 목록에 추가
 	}
 }

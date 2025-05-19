@@ -39,7 +39,7 @@ void ABaseInteractor::OnRep_OwnerAgent()
 {
 	if (OwnerAgent)
 	{
-		NET_LOG(LogTemp, Warning, TEXT("%hs Called, InteractorName: %s, AgentName: %s"), __FUNCTION__, *GetName(), *OwnerAgent->GetName());
+		// NET_LOG(LogTemp, Warning, TEXT("%hs Called, InteractorName: %s, AgentName: %s"), __FUNCTION__, *GetName(), *OwnerAgent->GetName());
 		OnDetect(false);
 		auto* Agent = Cast<ABaseAgent>(GetWorld()->GetFirstPlayerController()->GetCharacter());
 		if (Agent && Agent->GetFindInteractorActor() == this)
@@ -163,6 +163,7 @@ void ABaseInteractor::ServerRPC_PickUp_Implementation(ABaseAgent* Agent)
 	OnDetect(false);
 	
 	Sphere->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	
 }
 
 void ABaseInteractor::ServerRPC_Drop_Implementation()
