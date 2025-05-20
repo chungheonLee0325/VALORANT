@@ -79,7 +79,8 @@ bool USage_Q_SlowOrb::SpawnProjectile(const FGameplayAbilityActorInfo& ActorInfo
             SpawnTransform,
             SpawnParams
         );
-        
+
+        EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);        
         return (SpawnedProjectile != nullptr);
     }
     
@@ -89,4 +90,13 @@ bool USage_Q_SlowOrb::SpawnProjectile(const FGameplayAbilityActorInfo& ActorInfo
 void USage_Q_SlowOrb::Active_Left_Click(FGameplayEventData data)
 {
     SpawnProjectile(m_ActorInfo);
+}
+
+void USage_Q_SlowOrb::ActivateAbility(const FGameplayAbilitySpecHandle Handle,
+    const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo,
+    const FGameplayEventData* TriggerEventData)
+{
+    Super::ActivateAbility(Handle, ActorInfo, ActivationInfo, TriggerEventData);
+
+    Active_Left_Click(FGameplayEventData());
 } 
