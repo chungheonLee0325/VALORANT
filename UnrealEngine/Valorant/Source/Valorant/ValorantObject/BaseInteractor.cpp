@@ -44,8 +44,10 @@ void ABaseInteractor::OnRep_OwnerAgent()
 	if (OwnerAgent)
 	{
 		NET_LOG(LogTemp, Warning, TEXT("%hs Called, InteractorName: %s, AgentName: %s"), __FUNCTION__, *GetName(), *OwnerAgent->GetName());
+		SetOwner(OwnerAgent);
 		OnDetect(false);
 		Mesh->SetOnlyOwnerSee(true);
+		Sphere->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 		auto* Agent = Cast<ABaseAgent>(GetWorld()->GetFirstPlayerController()->GetCharacter());
 		if (Agent && Agent->GetFindInteractorActor() == this)
 		{
@@ -55,7 +57,9 @@ void ABaseInteractor::OnRep_OwnerAgent()
 	else
 	{
 		NET_LOG(LogTemp, Warning, TEXT("%hs Called, OwnerAgent is nullptr"), __FUNCTION__);
+		SetOwner(nullptr);
 		Mesh->SetOnlyOwnerSee(false);
+		Sphere->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
 		if (ThirdPersonInteractor)
 		{
 			ThirdPersonInteractor->Destroy();
@@ -74,6 +78,7 @@ void ABaseInteractor::BeginPlay()
 	Super::BeginPlay();
 	if (HasAuthority())
 	{
+		NET_LOG(LogTemp, Warning, TEXT("%hs Called"), __FUNCTION__);
 		Sphere->OnComponentBeginOverlap.AddDynamic(this, &ABaseInteractor::ServerOnly_OnSphereBeginOverlap);
 	}
 }
@@ -104,12 +109,14 @@ void ABaseInteractor::ServerOnly_OnSphereBeginOverlap(UPrimitiveComponent* Overl
 {
 	if (nullptr != OwnerAgent || IsActorBeingDestroyed())
 	{
+		NET_LOG(LogTemp, Warning, TEXT("%hs Called, OwnerAgent is not nullptr"), __FUNCTION__);
 		return;
 	}
 
 	ABaseAgent* Agent = Cast<ABaseAgent>(OtherActor);
 	if (nullptr == Agent)
 	{
+		NET_LOG(LogTemp, Warning, TEXT("%hs Called, OtherActor is not Agent or nullptr"), __FUNCTION__);
 		return;
 	}
 	
@@ -128,6 +135,7 @@ void ABaseInteractor::ServerOnly_OnSphereBeginOverlap(UPrimitiveComponent* Overl
 		return;
 	}
 
+	NET_LOG(LogTemp, Warning, TEXT("%hs Called, Interactor Name is %s, Interact with %s"), __FUNCTION__, *GetName(), *Agent->GetName());
 	ServerRPC_Interact(Agent);
 }
 
@@ -218,10 +226,7 @@ void ABaseInteractor::ServerRPC_Drop_Implementation()
 	const FVector Offset = FVector(0, 0, 32);
 	const FVector NewLocation = FeetLocation + Offset + ForwardVector * 300;
 	SetActorLocation(NewLocation);
-	
 	SetOwnerAgent(nullptr);
-	SetOwner(nullptr);
-	Sphere->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
 }
 
 void ABaseInteractor::ServerRPC_Interact_Implementation(ABaseAgent* InteractAgent)

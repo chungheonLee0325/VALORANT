@@ -61,12 +61,17 @@ ABaseAgent::ABaseAgent()
 	SpringArm->TargetArmLength = 0;
 	SpringArm->bUsePawnControlRotation = true;
 
+	BaseSpringArmHeight = SpringArm->GetRelativeLocation().Z;
+	CrouchSpringArmHeight = BaseSpringArmHeight - 28.0f;
+
 	Camera = CreateDefaultSubobject<UCameraComponent>("Camera");
 	Camera->SetupAttachment(SpringArm);
 
 	GetMesh()->SetupAttachment(GetRootComponent());
 	GetMesh()->SetRelativeScale3D(FVector(.34f));
 	GetMesh()->SetRelativeLocation(FVector(.0f, .0f, -90.f));
+	GetMesh()->SetCollisionProfileName(TEXT("Agent"));
+	GetMesh()->SetGenerateOverlapEvents(true);
 	
 	FirstPersonMesh = CreateDefaultSubobject<USkeletalMeshComponent>("FirstPersonMesh");
 	FirstPersonMesh->SetupAttachment(SpringArm);
@@ -81,15 +86,16 @@ ABaseAgent::ABaseAgent()
 	FirstPersonMesh->bAffectDynamicIndirectLighting = true;
 	FirstPersonMesh->PrimaryComponentTick.TickGroup = TG_PrePhysics;
 	FirstPersonMesh->SetGenerateOverlapEvents(true);
-	FirstPersonMesh->SetCollisionProfileName(TEXT("Agent"));
+	FirstPersonMesh->SetCollisionProfileName(TEXT("NoCollision"));
 	FirstPersonMesh->SetCanEverAffectNavigation(false);
 
-	GetCapsuleComponent()->SetCapsuleHalfHeight(72.0f);
-	BaseCapsuleHalfHeight = GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight();
+	BaseCapsuleHalfHeight = 72.0f;
+	CrouchCapsuleHalfHeight = 68.0f;
+	GetCapsuleComponent()->SetCapsuleHalfHeight(BaseCapsuleHalfHeight);
+	GetCharacterMovement()->SetCrouchedHalfHeight(BaseCapsuleHalfHeight);
 
 	GetCharacterMovement()->GetNavAgentPropertiesRef().bCanCrouch = true;
 	GetCharacterMovement()->MaxWalkSpeedCrouched = 330.0f;
-	GetCharacterMovement()->SetCrouchedHalfHeight(BaseCapsuleHalfHeight);
 
 	GetMesh()->SetOwnerNoSee(true);
 	FirstPersonMesh->SetOnlyOwnerSee(true);
@@ -102,6 +108,7 @@ ABaseAgent::ABaseAgent()
 	InteractionCapsule->SetRelativeRotation(FRotator(-90, 0, 0));
 	InteractionCapsule->SetCapsuleHalfHeight(150);
 	InteractionCapsule->SetCapsuleRadius(35);
+	InteractionCapsule->SetCollisionProfileName(TEXT("Interactable"));
 
 	TL_Crouch = CreateDefaultSubobject<UTimelineComponent>("TL_Crouch");
 	TL_DieCamera = CreateDefaultSubobject<UTimelineComponent>("TL_DieCamera");
@@ -184,14 +191,6 @@ void ABaseAgent::BeginPlay()
 
 	TL_DieCamera->SetTimelineLength(DieCameraTimeRange);
 	TL_DieCamera->SetTimelineLengthMode(ETimelineLengthMode::TL_TimelineLength);
-
-	if (HasAuthority() == false && IsLocallyControlled())
-	{
-		// NET_LOG(LogTemp, Error, TEXT("%hs, HasAuthority() == false && IsLocallyControlled()"), __FUNCTION__);
-		InteractionCapsule->OnComponentBeginOverlap.AddDynamic(this, &ABaseAgent::OnFindInteraction);
-		InteractionCapsule->OnComponentEndOverlap.AddDynamic(this, &ABaseAgent::OnInteractionCapsuleEndOverlap);
-	}
-	
 
 	//ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ
 	//             CYT             ♣
@@ -418,14 +417,14 @@ void ABaseAgent::Server_SetIsRun_Implementation(const bool _bIsRun)
 
 void ABaseAgent::OnStartCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust)
 {
-	Super::OnStartCrouch(HalfHeightAdjust, ScaledHalfHeightAdjust);
+	// Super::OnStartCrouch(HalfHeightAdjust, ScaledHalfHeightAdjust);
 	//NET_LOG(LogTemp,Warning,TEXT("OnStartCrouch"));
 	TL_Crouch->PlayFromStart();
 }
 
 void ABaseAgent::OnEndCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust)
 {
-	Super::OnEndCrouch(HalfHeightAdjust, ScaledHalfHeightAdjust);
+	// Super::OnEndCrouch(HalfHeightAdjust, ScaledHalfHeightAdjust);
 	//NET_LOG(LogTemp,Warning,TEXT("OnEndCrouch"));
 	TL_Crouch->Reverse();
 }
@@ -593,6 +592,9 @@ void ABaseAgent::AcquireInteractor(ABaseInteractor* Interactor)
 
 void ABaseAgent::SwitchInteractor(EInteractorType InteractorType)
 {
+	// ABP_1P->Montage_Play(AM_Reload, 1.0f);
+	// NET_LOG(LogTemp,Warning,TEXT("교체 애니 재생"));
+	
 	//TODO: 장착 애니메이션과 함께 기존 재생되던 몽타주 종료하기
 	if (HasAuthority())
 	{
@@ -687,18 +689,6 @@ void ABaseAgent::CancelSpike(ASpike* CancelObject)
 void ABaseAgent::ServerRPC_CancelSpike_Implementation(ASpike* CancelObject)
 {
 	CancelSpike(CancelObject);
-}
-
-void ABaseAgent::OnRep_ChangeInteractorState()
-{
-	if (ABP_1P)
-	{
-		ABP_1P->InteractorState = CurrentInteractorState;
-	}
-	if (ABP_3P)
-	{
-		ABP_3P->InteractorState = CurrentInteractorState;
-	}
 }
 
 void ABaseAgent::OnRep_ChangePoseIdx()
@@ -815,7 +805,7 @@ void ABaseAgent::OnFindInteraction(UPrimitiveComponent* OverlappedComponent, AAc
 		}
 		else
 		{
-			// NET_LOG(LogTemp, Warning, TEXT("%hs Called, 이미 감지된 Interactor가 있음"), __FUNCTION__);
+			NET_LOG(LogTemp, Warning, TEXT("%hs Called, 이미 감지된 Interactor가 있음"), __FUNCTION__);
 			return;
 		}
 	}
@@ -824,12 +814,12 @@ void ABaseAgent::OnFindInteraction(UPrimitiveComponent* OverlappedComponent, AAc
 	{
 		if (CurrentInteractor == Interactor)
 		{
-			// NET_LOG(LogTemp, Error, TEXT("%hs Called, 현재 들고 있는 Interactor와 동일함"), __FUNCTION__);
+			NET_LOG(LogTemp, Error, TEXT("%hs Called, 현재 들고 있는 Interactor와 동일함"), __FUNCTION__);
 			return;
 		}
 		if (Interactor->HasOwnerAgent())
 		{
-			// NET_LOG(LogTemp, Warning, TEXT("%hs Called, 이미 주인이 있는 Interactor"), __FUNCTION__);
+			NET_LOG(LogTemp, Warning, TEXT("%hs Called, 이미 주인이 있는 Interactor"), __FUNCTION__);
 			return;
 		}
 		if (const auto* DetectedSpike = Cast<ASpike>(Interactor))
@@ -859,6 +849,10 @@ void ABaseAgent::OnFindInteraction(UPrimitiveComponent* OverlappedComponent, AAc
 		FindInteractActor = Interactor;
 		FindInteractActor->OnDetect(true);
 	}
+	else
+	{
+		NET_LOG(LogTemp, Error, TEXT("%hs Called, OtherActor is nullptr or not interactor, OtherActor Name is %s"), __FUNCTION__, *OtherActor->GetName());
+	}
 }
 
 void ABaseAgent::OnInteractionCapsuleEndOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
@@ -876,9 +870,19 @@ void ABaseAgent::OnInteractionCapsuleEndOverlap(UPrimitiveComponent* OverlappedC
 
 void ABaseAgent::HandleCrouchProgress(float Value)
 {
-	float newHalfHeight = BaseCapsuleHalfHeight - Value;
-	//NET_LOG(LogTemp,Warning,TEXT("HandleCrouchProgress %f"), newHalfHeight);
+	float newHalfHeight = FMath::Lerp(
+	   BaseCapsuleHalfHeight,
+	   CrouchCapsuleHalfHeight,
+	   Value
+   );
 	GetCapsuleComponent()->SetCapsuleHalfHeight(newHalfHeight, true);
+
+	float newSprinArmHeight = FMath::Lerp(
+	   BaseSpringArmHeight,
+	   CrouchSpringArmHeight,
+	   Value
+   );
+	SpringArm->SetRelativeLocation(FVector(SpringArm->GetRelativeLocation().X,SpringArm->GetRelativeLocation().Y, newSprinArmHeight));
 }
 
 void ABaseAgent::HandleDieCamera(FVector newPos)
@@ -1455,4 +1459,18 @@ void ABaseAgent::OnFire()
 void ABaseAgent::OnReload()
 {
 	OnAgentReload.Broadcast();
+}
+
+void ABaseAgent::OnRep_Controller()
+{
+	Super::OnRep_Controller();
+	// 클라이언트 입장에서 Possess가 되었는지 알 수 있는 곳
+	// InteractionCapsule AddDynamic을 여기서 처리
+	if (false == bInteractionCapsuleInit && nullptr != Controller && false == HasAuthority() && IsLocallyControlled())
+	{
+		NET_LOG(LogTemp, Warning, TEXT("%hs Called, InteractionCapsule AddDynamic"), __FUNCTION__);
+		bInteractionCapsuleInit = true;
+		InteractionCapsule->OnComponentBeginOverlap.AddDynamic(this, &ABaseAgent::OnFindInteraction);
+		InteractionCapsule->OnComponentEndOverlap.AddDynamic(this, &ABaseAgent::OnInteractionCapsuleEndOverlap);
+	}
 }
