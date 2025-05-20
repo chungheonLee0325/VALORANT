@@ -20,7 +20,8 @@ class USpringArmComponent;
 class UValorantGameInstance;
 class UAgentInputComponent;
 class UAgentAbilitySystemComponent;
-
+class UMiniMapWidget;
+class AAgentPlayerController;
 
 //ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ
 //             CYT             ♣
