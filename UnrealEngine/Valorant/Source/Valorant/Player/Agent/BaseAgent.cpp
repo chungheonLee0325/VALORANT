@@ -691,18 +691,6 @@ void ABaseAgent::ServerRPC_CancelSpike_Implementation(ASpike* CancelObject)
 	CancelSpike(CancelObject);
 }
 
-void ABaseAgent::OnRep_ChangeInteractorState()
-{
-	if (ABP_1P)
-	{
-		ABP_1P->InteractorState = CurrentInteractorState;
-	}
-	if (ABP_3P)
-	{
-		ABP_3P->InteractorState = CurrentInteractorState;
-	}
-}
-
 void ABaseAgent::OnRep_ChangePoseIdx()
 {
 	if (ABP_1P)
