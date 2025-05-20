@@ -48,7 +48,10 @@ protected:
     // 현재 미니맵을 보고 있는 플레이어의 에이전트
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Minimap") 
     ABaseAgent* ObserverAgent; 
-    
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (BindWidget), Category = "Minimap") 
+	class UCanvasPanel* CanvasPanel; // 미니맵 배경 이미지 위젯
+	
     // 미니맵 배경 이미지
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (BindWidget), Category = "Minimap") 
     class UImage* MinimapBackground; // 미니맵 배경 이미지 위젯
@@ -87,7 +90,7 @@ protected:
     
 	// 아이콘 크기 변수 추가
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Minimap")
-	FVector2D IconSize = FVector2D(24.0f, 24.0f);
+	FVector2D IconSize = FVector2D(12.0f, 12.0f);
     
 	// 스캔 주기 타이머 추가
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Minimap")
