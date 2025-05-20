@@ -40,7 +40,9 @@ public:
 
 	virtual void NativeInitializeAnimation() override;
 	virtual void NativeUpdateAnimation(float DeltaSeconds) override;
-	void SetWeaponState(const EInteractorType newState) { InteractorState = newState; }
+	void SetWeaponState(const EInteractorType newState);
+	UFUNCTION(BlueprintImplementableEvent)
+	void OnChangedWeaponState();
 
 	UFUNCTION(BlueprintImplementableEvent)
 	void OnEquip();

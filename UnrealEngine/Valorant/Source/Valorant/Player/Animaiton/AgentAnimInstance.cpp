@@ -54,3 +54,9 @@ void UAgentAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 		// }
 	}
 }
+
+void UAgentAnimInstance::SetWeaponState(const EInteractorType newState)
+{
+	InteractorState = newState;
+	OnChangedWeaponState();
+}

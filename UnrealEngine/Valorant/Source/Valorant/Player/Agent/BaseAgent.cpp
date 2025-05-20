@@ -722,10 +722,12 @@ void ABaseAgent::EquipInteractor(ABaseInteractor* interactor)
 	if (ABP_1P)
 	{
 		ABP_1P->InteractorState = CurrentInteractorState;
+		ABP_1P->SetWeaponState(interactor->GetInteractorType());
 	}
 	if (ABP_3P)
 	{
 		ABP_3P->InteractorState = CurrentInteractorState;
+		ABP_3P->SetWeaponState(interactor->GetInteractorType());
 	}
 
 	//TODO: 인터랙터에도 적용할지 말지
