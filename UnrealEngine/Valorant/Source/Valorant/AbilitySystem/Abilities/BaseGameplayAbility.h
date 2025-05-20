@@ -16,6 +16,8 @@ class VALORANT_API UBaseGameplayAbility : public UGameplayAbility
 	GENERATED_BODY()
 
 public:
+	UBaseGameplayAbility();
+
 	UFUNCTION(BlueprintCallable)
 	void SetAbilityID(int32 AbilityID);
 
@@ -29,11 +31,11 @@ public:
 	
 	// 어빌리티 스택 감소 메서드
 	UFUNCTION(BlueprintCallable, Category = "Ability|Stack")
-	bool ConsumeAbilityStack();
+	bool ConsumeAbilityStack(const APlayerController* PlayerController);
 	
 	// 어빌리티 스택 확인 메서드 
 	UFUNCTION(BlueprintCallable, Category = "Ability|Stack")
-	int32 GetAbilityStack() const;
+	int32 GetAbilityStack(const APlayerController* PlayerController) const;
 
 protected:
 	UPROPERTY(EditAnywhere)
@@ -42,7 +44,9 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Input")
 	TSet<FGameplayTag> FollowUpInputTags;
 
-protected:
+	UPROPERTY()
+	FGameplayAbilityActorInfo m_ActorInfo;
+	
 	virtual bool CanActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayTagContainer* SourceTags = nullptr, const FGameplayTagContainer* TargetTags = nullptr, FGameplayTagContainer* OptionalRelevantTags = nullptr) const override;
 	virtual void ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData) override;
 	

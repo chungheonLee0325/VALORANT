@@ -61,11 +61,7 @@ void AAgentPlayerController::BeginPlay()
 	{
 		// 미니맵 초기화 함수 호출
 		InitializeMinimap();
-		NET_LOG(LogTemp, Warning, TEXT("%hs Called, 미니맵 위젯 성공 "), __FUNCTION__);
-	}
-	else
-	{
-		NET_LOG(LogTemp, Warning, TEXT("%hs Called, 미니맵 위젯 생성 실패 "), __FUNCTION__);
+		UE_LOG(LogTemp, Warning, TEXT("로컬 컨트롤러에서 미니맵 초기화 완료"));
 	}
 }
 
@@ -78,7 +74,6 @@ void AAgentPlayerController::OnPossess(APawn* InPawn)
 	if (IsLocalController())
 	{
 		m_GameInstance = Cast<UValorantGameInstance>(GetGameInstance());
-		// InitAgentWidget();
 	}
 
 	// 에이전트 소유 시 ShopComponent 초기화
@@ -467,36 +462,27 @@ void AAgentPlayerController::Client_ReceivePurchaseResult_Implementation(
 // 미니맵 초기화 함수
 void AAgentPlayerController::InitializeMinimap()
 {
-	if (MinimapWidgetClass) // 미니맵 위젯 클래스가 설정되어 있는 경우
+	// 미니맵 위젯 클래스가 설정되어 있는지 확인
+	if (MinimapWidgetClass)
 	{
 		// 미니맵 위젯 생성
-		// 지정된 클래스로 위젯 인스턴스 생성
 		MinimapWidget = CreateWidget<UMiniMapWidget>(this, MinimapWidgetClass);
-		// 위젯이 성공적으로 생성된 경우
 		if (MinimapWidget)
 		{
-			// 화면에 추가
-			// 화면에 위젯 표시
-			MinimapWidget->AddToViewport();
+			// 뷰포트에 위젯 추가
+			MinimapWidget->AddToViewport(1); // Z-Order 1로 설정 (UI 레이어)
             
-			// 게임의 모든 에이전트를 미니맵에 등록
-			// 모든 에이전트 배열
-			TArray<AActor*> AllAgents;
-			// BaseAgent 클래스의 모든 인스턴스 가져오기
-			UGameplayStatics::GetAllActorsOfClass(GetWorld(), ABaseAgent::StaticClass(), AllAgents);
+			UE_LOG(LogTemp, Warning, TEXT("미니맵 위젯이 생성되었습니다."));
             
-			// 모든 에이전트에 대해 반복
-			for (AActor* ActorAgent : AllAgents)
-			{
-				// Actor를 BaseAgent로 형변환
-				ABaseAgent* Agent = Cast<ABaseAgent>(ActorAgent);
-				// 에이전트가 유효한 경우
-				if (IsValid(Agent))
-				{
-					// 미니맵에 에이전트 등록
-					MinimapWidget->AddAgentToMinimap(Agent);
-				}
-			}
+			// 미니맵 위젯 생성 후 에이전트 스캔은 위젯 내부에서 자동으로 수행됨
 		}
+		else
+		{
+			UE_LOG(LogTemp, Error, TEXT("미니맵 위젯 생성 실패!"));
+		}
+	}
+	else
+	{
+		UE_LOG(LogTemp, Error, TEXT("MinimapWidgetClass가 설정되지 않았습니다!"));
 	}
 }

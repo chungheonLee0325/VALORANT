@@ -19,6 +19,7 @@ ABaseInteractor::ABaseInteractor()
 	PrimaryActorTick.bCanEverTick = true;
 	bReplicates = true;
 	bNetLoadOnClient = true;
+	bAlwaysRelevant = true;
 	SetReplicatingMovement(true);
 
 	Mesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("WeaponMesh"));
@@ -32,6 +33,7 @@ ABaseInteractor::ABaseInteractor()
 	DetectWidgetComponent->SetupAttachment(GetRootComponent());
 
 	Sphere = CreateDefaultSubobject<USphereComponent>(TEXT("Sphere"));
+	Sphere->SetVisibility(false);
 	Sphere->SetSphereRadius(32.f);
 	Sphere->SetCollisionProfileName(TEXT("Interactable"));
 	Sphere->SetupAttachment(GetRootComponent());
@@ -43,6 +45,7 @@ void ABaseInteractor::OnRep_OwnerAgent()
 	{
 		NET_LOG(LogTemp, Warning, TEXT("%hs Called, InteractorName: %s, AgentName: %s"), __FUNCTION__, *GetName(), *OwnerAgent->GetName());
 		OnDetect(false);
+		Mesh->SetOnlyOwnerSee(true);
 		auto* Agent = Cast<ABaseAgent>(GetWorld()->GetFirstPlayerController()->GetCharacter());
 		if (Agent && Agent->GetFindInteractorActor() == this)
 		{
@@ -52,7 +55,18 @@ void ABaseInteractor::OnRep_OwnerAgent()
 	else
 	{
 		NET_LOG(LogTemp, Warning, TEXT("%hs Called, OwnerAgent is nullptr"), __FUNCTION__);
+		Mesh->SetOnlyOwnerSee(false);
+		if (ThirdPersonInteractor)
+		{
+			ThirdPersonInteractor->Destroy();
+		}
 	}
+}
+
+void ABaseInteractor::SetOwnerAgent(ABaseAgent* NewAgent)
+{
+	OwnerAgent = NewAgent;
+	OnRep_OwnerAgent();
 }
 
 void ABaseInteractor::BeginPlay()
@@ -150,16 +164,9 @@ bool ABaseInteractor::ServerOnly_CanInteract() const
 
 void ABaseInteractor::SetActive(bool bActive)
 {
-	if (HasAuthority())
-	{
-		Mesh->SetVisibility(bActive);
-		Multicast_SetActive(bActive);
-		// NET_LOG(LogTemp, Warning,TEXT("%s, 활성 상태: %d"), *GetActorNameOrLabel() ,bActive);
-	}
-	else
-	{
-		ServerRPC_SetActive(bActive);
-	}
+	Mesh->SetHiddenInGame(!bActive, true);
+	Sphere->SetVisibility(false);
+	ServerRPC_SetActive(bActive);
 }
 
 void ABaseInteractor::ServerRPC_PickUp_Implementation(ABaseAgent* Agent)
@@ -169,12 +176,14 @@ void ABaseInteractor::ServerRPC_PickUp_Implementation(ABaseAgent* Agent)
 		NET_LOG(LogTemp, Error, TEXT("%hs Called, InteractorName: %s, Agent is nullptr"), __FUNCTION__, *GetName());
 		return;
 	}
+	
 	NET_LOG(LogTemp, Warning, TEXT("%hs Called, InteractorName: %s"), __FUNCTION__, *GetName());
-	OwnerAgent = Agent;
+	SetOwnerAgent(Agent);
 	SetOwner(OwnerAgent);
 	OnDetect(false);
 	
 	Sphere->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	MulticastRPC_BroadcastOnPickUp();
 }
 
 void ABaseInteractor::ServerRPC_Drop_Implementation()
@@ -191,8 +200,9 @@ void ABaseInteractor::ServerRPC_Drop_Implementation()
 	{
 		OwnerAgent->ServerRPC_SetCurrentInteractor(nullptr);
 	}
-	
-	SetActive(true);
+
+	MulticastRPC_BroadcastOnDrop();
+	Multicast_SetActive(true);
 	
 	// TODO: 툭 놓는게 아니라 던지도록 변경
 	FDetachmentTransformRules DetachmentRule(
@@ -201,13 +211,15 @@ void ABaseInteractor::ServerRPC_Drop_Implementation()
 		EDetachmentRule::KeepRelative,
 		true
 	);
+	
 	Mesh->DetachFromComponent(DetachmentRule);
 	const FVector& ForwardVector = OwnerAgent->GetActorForwardVector();
 	const FVector& FeetLocation = OwnerAgent->GetMovementComponent()->GetActorFeetLocation();
 	const FVector Offset = FVector(0, 0, 32);
-	SetActorLocation(FeetLocation + Offset + ForwardVector * 300);
+	const FVector NewLocation = FeetLocation + Offset + ForwardVector * 300;
+	SetActorLocation(NewLocation);
 	
-	OwnerAgent = nullptr;
+	SetOwnerAgent(nullptr);
 	SetOwner(nullptr);
 	Sphere->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
 }
@@ -220,14 +232,23 @@ void ABaseInteractor::ServerRPC_Interact_Implementation(ABaseAgent* InteractAgen
 
 void ABaseInteractor::ServerRPC_SetActive_Implementation(bool bActive)
 {
-	SetActive(bActive);
+	Multicast_SetActive(bActive);
 }
 
 void ABaseInteractor::Multicast_SetActive_Implementation(bool bActive)
 {
-	if (ThirdPersonInteractor)
-	{
-		ThirdPersonInteractor->Mesh->SetVisibility(bActive);
-	}
-	Mesh->SetVisibility(bActive);
+	Mesh->SetHiddenInGame(!bActive, true);
+	Sphere->SetVisibility(false);
+}
+
+void ABaseInteractor::MulticastRPC_BroadcastOnDrop_Implementation()
+{
+	NET_LOG(LogTemp, Warning, TEXT("%hs Called"), __FUNCTION__);
+	OnInteractorDrop.Broadcast();
+}
+
+void ABaseInteractor::MulticastRPC_BroadcastOnPickUp_Implementation()
+{
+	NET_LOG(LogTemp, Warning, TEXT("%hs Called"), __FUNCTION__);
+	OnPickUp.Broadcast();
 }

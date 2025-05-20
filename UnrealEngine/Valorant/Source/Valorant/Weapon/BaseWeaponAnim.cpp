@@ -16,5 +16,7 @@ void UBaseWeaponAnim::NativeInitializeAnimation()
 		Weapon->OnEquip.AddDynamic(this, &UBaseWeaponAnim::OnEquip);
 		Weapon->OnFire.AddDynamic(this, &UBaseWeaponAnim::OnFire);
 		Weapon->OnReload.AddDynamic(this, &UBaseWeaponAnim::OnReload);
+		Weapon->OnPickUp.AddDynamic(this, &UBaseWeaponAnim::OnPickUp);
+		Weapon->OnInteractorDrop.AddDynamic(this, &UBaseWeaponAnim::OnDrop);
 	}
 }
