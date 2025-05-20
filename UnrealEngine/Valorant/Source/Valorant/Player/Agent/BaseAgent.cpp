@@ -52,6 +52,9 @@ EAgentDamagedPart ABaseAgent::GetHitDamagedPart(const FName& BoneName)
 ABaseAgent::ABaseAgent()
 {
 	PrimaryActorTick.bCanEverTick = true;
+	bReplicates = true;
+	bAlwaysRelevant = true;
+	
 	SpringArm = CreateDefaultSubobject<USpringArmComponent>("Spring Arm");
 	SpringArm->SetupAttachment(GetRootComponent());
 	SpringArm->SetRelativeLocation(FVector(-10, 0, 60));
