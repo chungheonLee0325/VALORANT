@@ -1,7 +1,7 @@
 ﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 
-#include "GA_Jett_E_Tailwind.h"
+#include "GA_Jett_E_Tailwind_oldest.h"
 #include "AbilitySystemComponent.h"
 #include "GameFramework/Character.h"
 #include "GameFramework/CharacterMovementComponent.h"
@@ -10,7 +10,7 @@
 #include "Player/AgentPlayerState.h"
 #include "Valorant/AbilitySystem/Attributes/Jett/JettAttributeSet.h" // Needed to check charges
 
-UGA_Jett_E_Tailwind::UGA_Jett_E_Tailwind()
+UGA_Jett_E_Tailwind_oldest::UGA_Jett_E_Tailwind_oldest()
 {
 	AbilityTags.AddTag(FGameplayTag::RequestGameplayTag(FName("Ability.Jett.Tailwind")));
 	ActivationOwnedTags.AddTag(FGameplayTag::RequestGameplayTag(FName("Ability.Jett.Tailwind.Active")));
@@ -32,7 +32,7 @@ UGA_Jett_E_Tailwind::UGA_Jett_E_Tailwind()
 	InstancingPolicy = EGameplayAbilityInstancingPolicy::InstancedPerActor;
 }
 
-bool UGA_Jett_E_Tailwind::CanActivateAbility(const FGameplayAbilitySpecHandle Handle,
+bool UGA_Jett_E_Tailwind_oldest::CanActivateAbility(const FGameplayAbilitySpecHandle Handle,
                                              const FGameplayAbilityActorInfo* ActorInfo,
                                              const FGameplayTagContainer* SourceTags,
                                              const FGameplayTagContainer* TargetTags,
@@ -63,7 +63,7 @@ bool UGA_Jett_E_Tailwind::CanActivateAbility(const FGameplayAbilitySpecHandle Ha
 	return true;
 }
 
-void UGA_Jett_E_Tailwind::ActivateAbility(const FGameplayAbilitySpecHandle Handle,
+void UGA_Jett_E_Tailwind_oldest::ActivateAbility(const FGameplayAbilitySpecHandle Handle,
                                           const FGameplayAbilityActorInfo* ActorInfo,
                                           const FGameplayAbilityActivationInfo ActivationInfo,
                                           const FGameplayEventData* TriggerEventData)
@@ -124,7 +124,7 @@ void UGA_Jett_E_Tailwind::ActivateAbility(const FGameplayAbilitySpecHandle Handl
 	UAbilityTask_WaitDelay* WaitDelay = UAbilityTask_WaitDelay::WaitDelay(this, DashDuration);
 	if (WaitDelay)
 	{
-		WaitDelay->OnFinish.AddDynamic(this, &UGA_Jett_E_Tailwind::OnDashFinished);
+		WaitDelay->OnFinish.AddDynamic(this, &UGA_Jett_E_Tailwind_oldest::OnDashFinished);
 		WaitDelay->ReadyForActivation();
 	}
 	else
@@ -136,19 +136,19 @@ void UGA_Jett_E_Tailwind::ActivateAbility(const FGameplayAbilitySpecHandle Handl
 	// You might also play a montage here using UAbilityTask_PlayMontageAndWait
 }
 
-void UGA_Jett_E_Tailwind::OnDashFinished()
+void UGA_Jett_E_Tailwind_oldest::OnDashFinished()
 {
 	// This is called when the WaitDelay task finishes
 	EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
 }
 
-void UGA_Jett_E_Tailwind::FinishDash()
+void UGA_Jett_E_Tailwind_oldest::FinishDash()
 {
 	// This is called if using a simple FTimerHandle
 	EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
 }
 
-int32 UGA_Jett_E_Tailwind::GetAbilityStack(const ACharacter* Character, int32 AbilityID)
+int32 UGA_Jett_E_Tailwind_oldest::GetAbilityStack(const ACharacter* Character, int32 AbilityID)
 {
 	AAgentPlayerState* PS = Cast<AAgentPlayerState>(Character->GetPlayerState());
 	if (!PS)
@@ -158,7 +158,7 @@ int32 UGA_Jett_E_Tailwind::GetAbilityStack(const ACharacter* Character, int32 Ab
 	return PS->GetAbilityStack(AbilityID);
 }
 
-void UGA_Jett_E_Tailwind::ReduceAbilityStack(const ACharacter* Character, int32 AbilityID)
+void UGA_Jett_E_Tailwind_oldest::ReduceAbilityStack(const ACharacter* Character, int32 AbilityID)
 {
 	AAgentPlayerState* PS = Cast<AAgentPlayerState>(Character->GetPlayerState());
 	if (!PS)
@@ -169,7 +169,7 @@ void UGA_Jett_E_Tailwind::ReduceAbilityStack(const ACharacter* Character, int32 
 }
 
 
-void UGA_Jett_E_Tailwind::EndAbility(const FGameplayAbilitySpecHandle Handle,
+void UGA_Jett_E_Tailwind_oldest::EndAbility(const FGameplayAbilitySpecHandle Handle,
                                      const FGameplayAbilityActorInfo* ActorInfo,
                                      const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility,
                                      bool bWasCancelled)
