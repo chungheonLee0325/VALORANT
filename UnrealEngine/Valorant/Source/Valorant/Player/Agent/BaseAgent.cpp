@@ -1474,3 +1474,21 @@ void ABaseAgent::OnRep_Controller()
 		InteractionCapsule->OnComponentEndOverlap.AddDynamic(this, &ABaseAgent::OnInteractionCapsuleEndOverlap);
 	}
 }
+
+bool ABaseAgent::IsBlueTeam() const
+{
+	if (const AAgentPlayerState* PS = GetPlayerState<AAgentPlayerState>())
+	{
+		return PS->bIsBlueTeam;
+	}
+	return false;
+}
+
+bool ABaseAgent::IsAttacker() const
+{
+	if (const AAgentPlayerState* PS = GetPlayerState<AAgentPlayerState>())
+	{
+		return PS->bIsAttacker;
+	}
+	return false;
+}
