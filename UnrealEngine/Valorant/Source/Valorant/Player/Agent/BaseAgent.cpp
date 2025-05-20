@@ -597,8 +597,15 @@ void ABaseAgent::AcquireInteractor(ABaseInteractor* Interactor)
 
 void ABaseAgent::SwitchInteractor(EInteractorType InteractorType)
 {
-	// ABP_1P->Montage_Play(AM_Reload, 1.0f);
-	// NET_LOG(LogTemp,Warning,TEXT("교체 애니 재생"));
+	// 스킬이 진행 중일 때는 교체 불가능
+	if (ASC->GetIsSkillProcess())
+	{
+		UE_LOG(LogTemp,Error, TEXT("스킬 진행중이라 무기 교체 불가능"));
+		return;
+	}
+	
+	// TODO: Activate된 스킬 있으면 Cancel하기
+	ASC->CancelCurrentSkill();
 	
 	//TODO: 장착 애니메이션과 함께 기존 재생되던 몽타주 종료하기
 	if (HasAuthority())
@@ -777,7 +784,7 @@ void ABaseAgent::EquipInteractor(ABaseInteractor* interactor)
 		ABP_1P->InteractorState = EInteractorType::None;
 		ABP_3P->InteractorState = EInteractorType::None;
 
-		NET_LOG(LogTemp, Error, TEXT("%hs Called, Interactor를 장착하려 하는데 nullptr임"), __FUNCTION__);
+		// NET_LOG(LogTemp, Error, TEXT("%hs Called, Interactor를 장착하려 하는데 nullptr임"), __FUNCTION__);
 		return;
 	}
 	CurrentInteractorState = CurrentInteractor->GetInteractorType();
