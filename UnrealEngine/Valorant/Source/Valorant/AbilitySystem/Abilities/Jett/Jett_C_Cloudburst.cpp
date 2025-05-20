@@ -8,3 +8,15 @@ UJett_C_Cloudburst::UJett_C_Cloudburst(): UBaseGameplayAbility()
 	SetAssetTags(Tags);
 	m_AbilityID = 4001;
 }
+
+void UJett_C_Cloudburst::ActivateAbility(const FGameplayAbilitySpecHandle Handle,
+	const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo,
+	const FGameplayEventData* TriggerEventData)
+{
+	Super::ActivateAbility(Handle, ActorInfo, ActivationInfo, TriggerEventData);
+
+	ActorInfo->GetAnimInstance()->Montage_Play(AbilityMontage);
+
+	// 타이머 할지 시간 보기
+	SpawnProjectile(m_ActorInfo);
+}

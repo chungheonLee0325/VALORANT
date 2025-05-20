@@ -273,9 +273,7 @@ public:
 	void CancelSpike(ASpike* CancelObject);
 	UFUNCTION(Server, Reliable)
 	void ServerRPC_CancelSpike(ASpike* CancelObject);
-
-	UFUNCTION()
-	void OnRep_ChangeInteractorState();
+	
 	UFUNCTION()
 	void OnRep_ChangePoseIdx();
 
@@ -384,7 +382,7 @@ protected:
 	UPROPERTY(VisibleAnywhere, Replicated)
 	ABaseInteractor* CurrentInteractor = nullptr;
 
-	UPROPERTY(Replicated, ReplicatedUsing=OnRep_ChangeInteractorState)
+	UPROPERTY(Replicated)
 	EInteractorType CurrentInteractorState = EInteractorType::None;
 
 	UPROPERTY(Replicated, ReplicatedUsing=OnRep_ChangePoseIdx)
@@ -453,4 +451,6 @@ public:
 	void OnEquip();
 	void OnFire();
 	void OnReload();
+	bool bInteractionCapsuleInit = false;
+	virtual void OnRep_Controller() override;
 };
