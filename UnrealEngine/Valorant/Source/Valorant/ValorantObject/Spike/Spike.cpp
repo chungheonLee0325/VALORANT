@@ -341,7 +341,7 @@ void ASpike::ServerRPC_FinishPlanting_Implementation()
 	);
 	DetachFromActor(DetachmentRule);
 	SetOwner(nullptr);
-	OwnerAgent = nullptr;
+	SetOwnerAgent(nullptr);
 	Sphere->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
 	
 	// 게임 모드에 설치 완료 알림

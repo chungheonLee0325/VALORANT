@@ -28,6 +28,10 @@ public:
 	void OnFire();
 	UFUNCTION(BlueprintImplementableEvent)
 	void OnReload();
+	UFUNCTION(BlueprintImplementableEvent)
+	void OnPickUp();
+	UFUNCTION(BlueprintImplementableEvent)
+	void OnDrop();
 
 protected:
 	virtual void NativeInitializeAnimation() override;
