@@ -5,7 +5,7 @@ DEFINE_LOG_CATEGORY(LogHttpManager);
 
 UHttpManager* UHttpManager::Singleton = nullptr;
 
-UHttpManager* UHttpManager::GetInstance()
+/* static */ UHttpManager* UHttpManager::GetInstance()
 {
 	if (!Singleton)
 	{
@@ -15,17 +15,20 @@ UHttpManager* UHttpManager::GetInstance()
 	return Singleton;
 }
 
-void UHttpManager::SendRequest(const FString& URL, const FString& Verb, const FString& Content)
+void UHttpManager::SendRequest(const FString& URL, const FString& Verb, const FString& Content, const TFunction<void(FHttpResponsePtr Response, bool bWasSuccessful)>& Callback)
 {
 	TSharedRef<IHttpRequest, ESPMode::ThreadSafe> Request = FHttpModule::Get().CreateRequest();
 	Request->SetURL(URL);
 	Request->SetVerb(Verb);
+	Request->SetHeader(TEXT("accept"), TEXT("application/json"));
 	Request->SetHeader(TEXT("Content-Type"), TEXT("application/json"));
+	
 	if (!Content.IsEmpty())
 	{
 		Request->SetContentAsString(Content);
 	}
 
+	
 	// Debugging
 	{
 		FString DebugString;
@@ -48,15 +51,21 @@ void UHttpManager::SendRequest(const FString& URL, const FString& Verb, const FS
 	}
 	
 	Request->OnProcessRequestComplete().BindUObject(this, &UHttpManager::OnResponseReceived);
+	if (Callback)
+	{
+		PendingRequests.Add(Request, Callback);
+	}
 	Request->ProcessRequest();
 }
 
 void UHttpManager::OnResponseReceived(FHttpRequestPtr Request, FHttpResponsePtr Response, bool bWasSuccessful)
 {
 	HTTP_LOG(TEXT("%hs Called, bWasSuccessful: %hs"), __FUNCTION__, bWasSuccessful?"Success":"Failed");
-	
-	int32 Code = Response.IsValid() ? Response->GetResponseCode() : -1;
-	FString Body = Response.IsValid() ? Response->GetContentAsString() : TEXT("Invalid response");
 
-	OnHttpResponseReceived.Broadcast(Code, Body);
+	if (PendingRequests.Contains(Request))
+	{
+		TFunction<void(FHttpResponsePtr, bool)> Callback = PendingRequests[Request];
+		PendingRequests.Remove(Request);
+		Callback(Response, bWasSuccessful);
+	}
 }

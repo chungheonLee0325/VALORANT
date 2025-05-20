@@ -14,9 +14,17 @@ class VALORANT_API AMeleeKnife : public ABaseWeapon
 public:
 	AMeleeKnife();
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
-	UAnimMontage* AM_Fire2;
+	UAnimMontage* AM_Fire1_1P;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
-	UAnimMontage* AM_Fire3;
+	UAnimMontage* AM_Fire1_3P;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
+	UAnimMontage* AM_Fire2_1P;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
+	UAnimMontage* AM_Fire2_3P;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
+	UAnimMontage* AM_Fire3_1P;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
+	UAnimMontage* AM_Fire3_3P;
 
 	bool bIsAttacking = false;
 	bool bIsCombo = false;
@@ -36,9 +44,9 @@ public:
 	void ResetCombo();
 
 	UFUNCTION(Server, Reliable)
-	void Server_PlayAttackAnim(UAnimMontage* anim);
+	void Server_PlayAttackAnim(UAnimMontage* anim1P, UAnimMontage* anim3P);
 	UFUNCTION(NetMulticast, Reliable)
-	void Multicast_PlayAttackAnim(UAnimMontage* anim);
+	void Multicast_PlayAttackAnim(UAnimMontage* anim1P, UAnimMontage* anim3P);
 
 	// void MeleeAnimPlay(UAnimInstance* animInstance, UAnimMontage* anim);
 	

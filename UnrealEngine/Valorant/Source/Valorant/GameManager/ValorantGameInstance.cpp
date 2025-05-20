@@ -6,11 +6,11 @@
 #include "OnlineSubsystem.h"
 #include "OnlineSubsystemUtils.h"
 #include "SubsystemSteamManager.h"
-#include "Valorant.h"
 #include "AbilitySystem/ValorantGameplayTags.h"
 #include "Blueprint/UserWidget.h"
 #include "GameFramework/PlayerController.h" 
 #include "ResourceManager/ValorantGameType.h"
+#include "Web/DatabaseManager.h"
 
 template<typename RowStructType, typename IDType>
 void LoadDataTableToMap(const FString& Path, TMap<IDType, RowStructType>& OutMap, IDType RowStructType::* IDMember)
@@ -86,6 +86,10 @@ void UValorantGameInstance::Init()
 				UE_LOG(LogTemp, Warning, TEXT("UniquePlayerId : %s"), *UniquePlayerId->ToString());
 				UE_LOG(LogTemp, Warning, TEXT("Nickname : %s"), *Nickname);
 				UE_LOG(LogTemp, Warning, TEXT("LoginStatus : %s"), ELoginStatus::ToString(LoginStatus));
+				PlayerId = UniquePlayerId->ToString();
+				Platform = SubsystemName.ToString();
+				OnGetPlayerCompletedDelegate.AddDynamic(this, &UValorantGameInstance::OnGetPlayerCompleted);
+				UDatabaseManager::GetInstance()->GetPlayer(UniquePlayerId->ToString(), SubsystemName.ToString(), OnGetPlayerCompletedDelegate);
 			}
 		}
 	}
@@ -137,6 +141,17 @@ void UValorantGameInstance::EndLoadingScreen(UWorld* InLoadedWorld)
 	UE_LOG(LogTemp, Warning, TEXT("EndLoadingScreen"));
 }
 
+void UValorantGameInstance::OnGetPlayerCompleted(const bool bIsSuccess, const FPlayerDTO& PlayerDto)
+{
+	if (bIsSuccess)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("OnGetPlayerCompleted, PlayerId: %s, Platform: %s"), *PlayerDto.player_id, *PlayerDto.platform);
+	}
+	else
+	{
+		UDatabaseManager::GetInstance()->PostPlayer(PlayerId, Platform);
+	}
+}
 
 FAgentData* UValorantGameInstance::GetAgentData(int AgentID)
 {

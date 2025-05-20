@@ -7,6 +7,7 @@
 #include "ResourceManager/ValorantGameType.h"
 #include "BaseInteractor.generated.h"
 
+class AThirdPersonInteractor;
 class UWidgetComponent;
 class USphereComponent;
 class ABaseAgent;
@@ -20,6 +21,9 @@ public:
 	ABaseInteractor();
 
 protected:
+	UPROPERTY(VisibleAnywhere, meta=(AllowPrivateAccess = "true"), Replicated)
+	TObjectPtr<AThirdPersonInteractor> ThirdPersonInteractor = nullptr;
+	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess = "true"))
 	TObjectPtr<USkeletalMeshComponent> Mesh;
 	
@@ -41,6 +45,7 @@ public:
 protected:
 	virtual void BeginPlay() override;
 	virtual void Tick(float DeltaTime) override;
+	virtual void BeginDestroy() override;
 
 	virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;
 	
@@ -65,6 +70,7 @@ public:
 	UFUNCTION(Server, Reliable)
 	virtual void ServerRPC_Interact(ABaseAgent* InteractAgent);
 
+	USkeletalMeshComponent* GetMesh() const { return Mesh; }
 	EInteractorType GetInteractorType() const { return InteractorType; }
 
 	void SetActive(bool bActive);

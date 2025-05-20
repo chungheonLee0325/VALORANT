@@ -8,6 +8,7 @@
 #include "GameplayTagContainer.h"
 #include "ValorantGameType.generated.h"
 
+class UBaseWeaponAnim;
 class ABaseWeapon;
 class ABaseAgent;
 struct FGameplayTag;
@@ -352,6 +353,9 @@ struct FWeaponData : public FTableRowBase
 	UAnimMontage* FireAnim = nullptr;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Data")
 	UAnimMontage* ReloadAnim = nullptr;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Data")
+	TSubclassOf<UBaseWeaponAnim> GunABPClass = nullptr;
 };
 
 // GameplayEffectData

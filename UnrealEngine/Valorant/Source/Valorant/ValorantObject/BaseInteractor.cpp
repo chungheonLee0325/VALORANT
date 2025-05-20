@@ -11,6 +11,7 @@
 #include "GameManager/SubsystemSteamManager.h"
 #include "Net/UnrealNetwork.h"
 #include "Player/Agent/BaseAgent.h"
+#include "Weapon/ThirdPersonInteractor.h"
 
 
 ABaseInteractor::ABaseInteractor()
@@ -21,6 +22,7 @@ ABaseInteractor::ABaseInteractor()
 	SetReplicatingMovement(true);
 
 	Mesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("WeaponMesh"));
+	Mesh->SetOnlyOwnerSee(true);
 	SetRootComponent(Mesh);
 	
 	DetectWidgetComponent = CreateDefaultSubobject<UWidgetComponent>("DetectWidget");
@@ -49,7 +51,7 @@ void ABaseInteractor::OnRep_OwnerAgent()
 	}
 	else
 	{
-		// NET_LOG(LogTemp, Warning, TEXT("%hs Called, OwnerAgent is nullptr"), __FUNCTION__);
+		NET_LOG(LogTemp, Warning, TEXT("%hs Called, OwnerAgent is nullptr"), __FUNCTION__);
 	}
 }
 
@@ -67,10 +69,20 @@ void ABaseInteractor::Tick(float DeltaTime)
 	Super::Tick(DeltaTime);
 }
 
+void ABaseInteractor::BeginDestroy()
+{
+	Super::BeginDestroy();
+	if (ThirdPersonInteractor)
+	{
+		ThirdPersonInteractor->Destroy();
+	}
+}
+
 void ABaseInteractor::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 	DOREPLIFETIME(ABaseInteractor, OwnerAgent);
+	DOREPLIFETIME(ABaseInteractor, ThirdPersonInteractor);
 }
 
 void ABaseInteractor::ServerOnly_OnSphereBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
@@ -142,7 +154,7 @@ void ABaseInteractor::SetActive(bool bActive)
 	{
 		Mesh->SetVisibility(bActive);
 		Multicast_SetActive(bActive);
-		//NET_LOG(LogTemp, Warning,TEXT("%s, 활성 상태: %d"), *GetActorNameOrLabel() ,bActive);
+		// NET_LOG(LogTemp, Warning,TEXT("%s, 활성 상태: %d"), *GetActorNameOrLabel() ,bActive);
 	}
 	else
 	{
@@ -157,7 +169,7 @@ void ABaseInteractor::ServerRPC_PickUp_Implementation(ABaseAgent* Agent)
 		NET_LOG(LogTemp, Error, TEXT("%hs Called, InteractorName: %s, Agent is nullptr"), __FUNCTION__, *GetName());
 		return;
 	}
-	
+	NET_LOG(LogTemp, Warning, TEXT("%hs Called, InteractorName: %s"), __FUNCTION__, *GetName());
 	OwnerAgent = Agent;
 	SetOwner(OwnerAgent);
 	OnDetect(false);
@@ -173,7 +185,7 @@ void ABaseInteractor::ServerRPC_Drop_Implementation()
 		return;
 	}
 
-	NET_LOG(LogTemp, Error, TEXT("%hs Called, InteractorName: %s"), __FUNCTION__, *GetName());
+	NET_LOG(LogTemp, Warning, TEXT("%hs Called, InteractorName: %s"), __FUNCTION__, *GetName());
 	
 	if (OwnerAgent->GetCurrentInterator() == this)
 	{
@@ -189,7 +201,7 @@ void ABaseInteractor::ServerRPC_Drop_Implementation()
 		EDetachmentRule::KeepRelative,
 		true
 	);
-	DetachFromActor(DetachmentRule);
+	Mesh->DetachFromComponent(DetachmentRule);
 	const FVector& ForwardVector = OwnerAgent->GetActorForwardVector();
 	const FVector& FeetLocation = OwnerAgent->GetMovementComponent()->GetActorFeetLocation();
 	const FVector Offset = FVector(0, 0, 32);
@@ -213,5 +225,9 @@ void ABaseInteractor::ServerRPC_SetActive_Implementation(bool bActive)
 
 void ABaseInteractor::Multicast_SetActive_Implementation(bool bActive)
 {
+	if (ThirdPersonInteractor)
+	{
+		ThirdPersonInteractor->Mesh->SetVisibility(bActive);
+	}
 	Mesh->SetVisibility(bActive);
 }

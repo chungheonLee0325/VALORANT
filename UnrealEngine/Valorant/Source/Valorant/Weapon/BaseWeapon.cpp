@@ -3,7 +3,9 @@
 
 #include "BaseWeapon.h"
 
+#include "BaseWeaponAnim.h"
 #include "EnhancedInputSubsystems.h"
+#include "ThirdPersonInteractor.h"
 #include "Valorant.h"
 #include "Components/WidgetComponent.h"
 #include "GameFramework/PawnMovementComponent.h"
@@ -54,6 +56,13 @@ void ABaseWeapon::BeginPlay()
 	
 	Mesh->SetSkeletalMeshAsset(WeaponMeshAsset);
 	Mesh->SetRelativeScale3D(FVector(0.34f));
+
+	NET_LOG(LogTemp, Warning, TEXT("%hs Called, WeaponId: %d"), __FUNCTION__, WeaponData->WeaponID);
+	if (WeaponData->GunABPClass)
+	{
+		NET_LOG(LogTemp, Warning, TEXT("%hs Called, WeaponData->GunABPClass, %s"), __FUNCTION__, *GetName());
+		Mesh->SetAnimInstanceClass(WeaponData->GunABPClass);
+	}
 
 	if (WeaponData->WeaponCategory == EWeaponCategory::Sidearm)
 	{
@@ -334,21 +343,46 @@ void ABaseWeapon::MulticastRPC_PlayFireAnimation_Implementation()
 		return;
 	}
 	
-	if (OwnerAgent->IsLocallyControlled())
+	// if (OwnerAgent->IsLocallyControlled())
+	// {
+	// 	if (OwnerAgent->GetABP_1P()->Montage_IsPlaying(AM_Fire))
+	// 	{
+	// 		OwnerAgent->GetABP_1P()->Montage_Stop(0.05f, AM_Fire);
+	// 	}
+	// 	OwnerAgent->GetABP_1P()->Montage_Play(AM_Fire, 1.0f);
+	// }
+	// else
+	// {
+	// 	if (OwnerAgent->GetABP_3P()->Montage_IsPlaying(AM_Fire))
+	// 	{
+	// 		OwnerAgent->GetABP_3P()->Montage_Stop(0.05f, AM_Fire);
+	// 	}
+	// 	OwnerAgent->GetABP_3P()->Montage_Play(AM_Fire, 1.0f);
+	// }
+
+	NET_LOG(LogTemp, Warning, TEXT("%hs Called"), __FUNCTION__);
+	OnFire.Broadcast();
+	if (OwnerAgent)
 	{
-		if (OwnerAgent->GetABP_1P()->Montage_IsPlaying(AM_Fire))
-		{
-			OwnerAgent->GetABP_1P()->Montage_Stop(0.05f, AM_Fire);
-		}
-		OwnerAgent->GetABP_1P()->Montage_Play(AM_Fire, 1.0f);
+		OwnerAgent->OnFire();
 	}
-	else
+}
+
+void ABaseWeapon::MulticastRPC_PlayReloadAnimation_Implementation()
+{
+	OnReload.Broadcast();
+	if (OwnerAgent)
 	{
-		if (OwnerAgent->GetABP_3P()->Montage_IsPlaying(AM_Fire))
-		{
-			OwnerAgent->GetABP_3P()->Montage_Stop(0.05f, AM_Fire);
-		}
-		OwnerAgent->GetABP_3P()->Montage_Play(AM_Fire, 1.0f);
+		OwnerAgent->OnReload();
+	}
+}
+
+void ABaseWeapon::MulticastRPC_PlayEquipAnimation_Implementation()
+{
+	OnEquip.Broadcast();
+	if (OwnerAgent)
+	{
+		OwnerAgent->OnEquip();
 	}
 }
 
@@ -386,33 +420,33 @@ void ABaseWeapon::StopReload()
 
 void ABaseWeapon::ServerRPC_PlayReloadAnim_Implementation()
 {
-	MulticastRPC_PlayReloadAnim();
+	MulticastRPC_PlayReloadAnimation_Implementation();
 }
 
-void ABaseWeapon::MulticastRPC_PlayReloadAnim_Implementation()
-{
-	if (AM_Reload == nullptr)
-	{
-		UE_LOG(LogTemp, Error, TEXT("총기에 장전 애니메이션이 없어요."));
-		return;
-	}
-	if (OwnerAgent->IsLocallyControlled())
-	{
-		if (OwnerAgent->GetABP_1P()->Montage_IsPlaying(AM_Reload))
-		{
-			OwnerAgent->GetABP_1P()->Montage_Stop(0.05f, AM_Reload);
-		}
-		OwnerAgent->GetABP_1P()->Montage_Play(AM_Reload, 1.0f);
-	}
-	else
-	{
-		if (OwnerAgent->GetABP_3P()->Montage_IsPlaying(AM_Reload))
-		{
-			OwnerAgent->GetABP_3P()->Montage_Stop(0.05f, AM_Reload);
-		}
-		OwnerAgent->GetABP_3P()->Montage_Play(AM_Reload, 1.0f);
-	}
-}
+// void ABaseWeapon::MulticastRPC_PlayReloadAnim_Implementation()
+// {
+// 	// if (AM_Reload == nullptr)
+// 	// {
+// 	// 	UE_LOG(LogTemp, Error, TEXT("총기에 장전 애니메이션이 없어요."));
+// 	// 	return;
+// 	// }
+// 	// if (OwnerAgent->IsLocallyControlled())
+// 	// {
+// 	// 	if (OwnerAgent->GetABP_1P()->Montage_IsPlaying(AM_Reload))
+// 	// 	{
+// 	// 		OwnerAgent->GetABP_1P()->Montage_Stop(0.05f, AM_Reload);
+// 	// 	}
+// 	// 	OwnerAgent->GetABP_1P()->Montage_Play(AM_Reload, 1.0f);
+// 	// }
+// 	// else
+// 	// {
+// 	// 	if (OwnerAgent->GetABP_3P()->Montage_IsPlaying(AM_Reload))
+// 	// 	{
+// 	// 		OwnerAgent->GetABP_3P()->Montage_Stop(0.05f, AM_Reload);
+// 	// 	}
+// 	// 	OwnerAgent->GetABP_3P()->Montage_Play(AM_Reload, 1.0f);
+// 	// }
+// }
 
 bool ABaseWeapon::ServerOnly_CanAutoPickUp(ABaseAgent* Agent) const
 {
@@ -501,27 +535,20 @@ void ABaseWeapon::ServerOnly_AttachWeapon(ABaseAgent* Agent)
 		EAttachmentRule::SnapToTarget,
 		EAttachmentRule::KeepRelative,
 		true
-	);
-	AttachToComponent(Agent->GetMesh(), AttachmentRules, FName(TEXT("R_WeaponPointSocket")));
-
-	// // Set up action bindings
-	// if (const AAgentPlayerController* PlayerController = Cast<AAgentPlayerController>(Agent->GetController()))
-	// {
-	// 	if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PlayerController->GetLocalPlayer()))
-	// 	{
-	// 		// Set the priority of the mapping to 1, so that it overrides the Jump action with the Fire action when using touch input
-	// 		Subsystem->AddMappingContext(FireMappingContext, 1);
-	// 	}
-	//
-	// 	if (UEnhancedInputComponent* EnhancedInputComponent = Cast<UEnhancedInputComponent>(PlayerController->InputComponent))
-	// 	{
-	// 		// Fire
-	// 		// EnhancedInputComponent->BindAction(StartFireAction, ETriggerEvent::Triggered, this, &ABaseWeapon::StartFire);
-	// 		// EnhancedInputComponent->BindAction(EndFireAction, ETriggerEvent::Triggered, this, &ABaseWeapon::EndFire);
-	// 		// EnhancedInputComponent->BindAction(StartReloadAction, ETriggerEvent::Triggered, this, &ABaseWeapon::StartReload);
-	// 	}
-	// }
-
+		);
+	Mesh->AttachToComponent(Agent->GetMesh1P(), AttachmentRules, FName(TEXT("R_WeaponSocket")));
+	if (nullptr != ThirdPersonInteractor)
+	{
+		ThirdPersonInteractor->Destroy();
+		ThirdPersonInteractor = nullptr;
+	}
+	if ((ThirdPersonInteractor = GetWorld()->SpawnActor<AThirdPersonInteractor>()))
+	{
+		ThirdPersonInteractor->SetOwner(Agent);
+		ThirdPersonInteractor->MulticastRPC_InitWeapon(WeaponID);
+		ThirdPersonInteractor->AttachToComponent(Agent->GetMesh(), AttachmentRules, FName(TEXT("R_WeaponSocket")));
+	}
+	
 	Agent->AcquireInteractor(this);
 }
 
@@ -588,6 +615,7 @@ void ABaseWeapon::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifet
 	DOREPLIFETIME(ABaseWeapon, MagazineAmmo);
 	DOREPLIFETIME(ABaseWeapon, SpareAmmo);
 	DOREPLIFETIME(ABaseWeapon, bIsReloading);
+	DOREPLIFETIME(ABaseWeapon, WeaponID);
 }
 
 // 라운드 시작/종료 시 무기 사용 여부 리셋을 위한 함수 추가
@@ -597,6 +625,11 @@ void ABaseWeapon::ResetUsedStatus()
 	{
 		bWasUsed = false;
 	}
+}
+
+void ABaseWeapon::SetWeaponID(const int NewWeaponID)
+{
+	this->WeaponID = NewWeaponID;
 }
 
 // 무기 사용 여부에 따른 시각적 효과 업데이트

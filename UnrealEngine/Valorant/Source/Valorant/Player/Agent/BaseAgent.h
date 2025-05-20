@@ -64,6 +64,10 @@ struct FAgentVisibilityInfo
 	
 };
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnAgentEquip);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnAgentFire);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnAgentReload);
+
 UCLASS()
 class VALORANT_API ABaseAgent : public ACharacter
 {
@@ -81,7 +85,7 @@ public:
 	USpringArmComponent* SpringArm;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
-	USkeletalMeshComponent* ThirdPersonMesh;
+	USkeletalMeshComponent* FirstPersonMesh;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
 	UAgentInputComponent* AgentInputComponent;
@@ -208,7 +212,7 @@ public:
 	UAgentAnimInstance* GetABP_1P() const { return ABP_1P; }
 	UAgentAnimInstance* GetABP_3P() const { return ABP_3P; }
 
-	USkeletalMeshComponent* GetMesh3P() const { return ThirdPersonMesh; }
+	USkeletalMeshComponent* GetMesh1P() const { return FirstPersonMesh; }
 
 	UFUNCTION(Server, Reliable)
 	void ServerApplyGE(TSubclassOf<UGameplayEffect> geClass);
@@ -432,4 +436,12 @@ private:
 	// ToDo : 수정
 	UPROPERTY(Replicated)
 	bool IsInPlantZone = false;
+
+public:
+	FOnAgentEquip OnAgentEquip;
+	FOnAgentEquip OnAgentFire;
+	FOnAgentEquip OnAgentReload;
+	void OnEquip();
+	void OnFire();
+	void OnReload();
 };
