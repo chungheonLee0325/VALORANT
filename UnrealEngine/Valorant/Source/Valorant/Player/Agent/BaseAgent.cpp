@@ -20,6 +20,7 @@
 #include "Net/UnrealNetwork.h"
 #include "Player/Animaiton/AgentAnimInstance.h"
 #include "Player/Component/AgentInputComponent.h"
+#include "Player/Widget/MiniMapWidget.h"
 #include "Valorant/Player/AgentPlayerController.h"
 #include "Valorant/Player/AgentPlayerState.h"
 #include "ValorantObject/BaseInteractor.h"
@@ -192,6 +193,7 @@ void ABaseAgent::BeginPlay()
 	//ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ
 	//             CYT             ♣
 	//ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ
+
 	
 	// 서버에서만 시야 체크 처리 -현재 액터가 서버에서 실행 중인지 확인 (권한 있음)
     if (HasAuthority()) 
@@ -200,20 +202,78 @@ void ABaseAgent::BeginPlay()
         PerformVisibilityChecks();
     	
     	FTimerHandle SpawnWeaponTimerHandle;
-    	if (UWorld* World = GetWorld())
-    	{
-    		FTimerDelegate TimerDel;
-    		TimerDel.BindLambda([this, World]()
-			{
-				if (AMatchGameMode* gm = World->GetAuthGameMode<AMatchGameMode>())
-				{
-					gm->SpawnDefaultWeapon(this);
-				}
-			});
-    		
-    		World->GetTimerManager().SetTimer(SpawnWeaponTimerHandle,TimerDel,1.0f,false);
-    	}
+        if (UWorld* World = GetWorld())
+        {
+            FTimerDelegate TimerDel;
+            TimerDel.BindLambda([this, World]()
+            {
+                if (AMatchGameMode* gm = World->GetAuthGameMode<AMatchGameMode>())
+                {
+                    gm->SpawnDefaultWeapon(this);
+                }
+            });
+            
+            World->GetTimerManager().SetTimer(SpawnWeaponTimerHandle,TimerDel,1.0f,false);
+        }
     }
+
+    // 에이전트 ID에 따라 다른 아이콘 설정
+    if (MinimapIcon == nullptr && GetWorld())
+    {
+        // 게임 인스턴스에서 에이전트 데이터 가져오기
+        if (UValorantGameInstance* GameInstance = Cast<UValorantGameInstance>(GetGameInstance()))
+        {
+            // 에이전트 ID로 에이전트 데이터 얻기
+            FAgentData* AgentData = GameInstance->GetAgentData(m_AgentID);
+            if (AgentData)
+            {
+                // 데이터에서 아이콘 정보 가져오기
+                FString IconPath = AgentData->AgentName;
+                if (!IconPath.IsEmpty())
+                {
+                    // 경로에서 아이콘 로드
+                    MinimapIcon = LoadObject<UTexture2D>(nullptr, *IconPath);
+                }
+                
+                // 물음표 아이콘 설정 (모든 에이전트 공통 또는 각자 다른 물음표)
+                FString QuestionPath = AgentData->AgentName;
+                if (!QuestionPath.IsEmpty())
+                {
+                    QuestionMarkIcon = LoadObject<UTexture2D>(nullptr, *QuestionPath);
+                }
+            }
+        }
+        
+        // 여전히 아이콘이 없다면 기본 아이콘 설정
+        if (MinimapIcon == nullptr)
+        {
+            // 기본 아이콘 로드
+            MinimapIcon = LoadObject<UTexture2D>(nullptr, TEXT("/Game/Resource/MapObject/Images"));
+        }
+        
+        if (QuestionMarkIcon == nullptr)
+        {
+            // 기본 물음표 아이콘 로드
+            QuestionMarkIcon = LoadObject<UTexture2D>(nullptr, TEXT("/Game/Resource/MapObject/Images"));
+        }
+    }
+    
+    // 자신을 로컬 플레이어의 미니맵에 등록하기
+    // 약간의 지연을 두고 실행하여 모든 컨트롤러가 초기화될 시간을 확보
+    FTimerHandle RegisterTimerHandle;
+    GetWorld()->GetTimerManager().SetTimer(RegisterTimerHandle, [this]()
+    {
+        // 모든 플레이어 컨트롤러 탐색
+        for (FConstPlayerControllerIterator It = GetWorld()->GetPlayerControllerIterator(); It; ++It)
+        {
+            AAgentPlayerController* PC = Cast<AAgentPlayerController>(It->Get());
+        	if (IsValid(PC) && PC->IsLocalController() && PC->GetMinimapWidget())
+            {
+        		PC->GetMinimapWidget()->AddAgentToMinimap(this);
+                UE_LOG(LogTemp, Warning, TEXT("에이전트(%s)가 자신을 미니맵에 등록함"), *GetName());
+            }
+        }
+    }, 1.0f, false);
 }
 
 void ABaseAgent::Tick(float DeltaTime)
@@ -719,14 +779,14 @@ void ABaseAgent::EquipInteractor(ABaseInteractor* interactor)
 
 	CurrentInteractor->SetActive(true);
 
-	if (ABP_1P)
-	{
-		ABP_1P->InteractorState = CurrentInteractorState;
-	}
-	if (ABP_3P)
-	{
-		ABP_3P->InteractorState = CurrentInteractorState;
-	}
+	// if (ABP_1P)
+	// {
+	// 	ABP_1P->InteractorState = CurrentInteractorState;
+	// }
+	// if (ABP_3P)
+	// {
+	// 	ABP_3P->InteractorState = CurrentInteractorState;
+	// }
 
 	//TODO: 인터랙터에도 적용할지 말지
 	if (auto* weapon = Cast<ABaseWeapon>(CurrentInteractor))
@@ -736,7 +796,7 @@ void ABaseAgent::EquipInteractor(ABaseInteractor* interactor)
 		ABP_3P->InteractorPoseIdx = PoseIdx;
 	}
 	// UE_LOG(LogTemp,Warning,TEXT("PoseIdx: %d"), PoseIdx);
-	// NET_LOG(LogTemp, Warning, TEXT("%hs Called, 현재 장착 중인 Interactor: %s"), __FUNCTION__, *CurrentInteractor->GetActorNameOrLabel());
+	NET_LOG(LogTemp, Warning, TEXT("%hs Called, 현재 장착 중인 Interactor: %s"), __FUNCTION__, *CurrentInteractor->GetActorNameOrLabel());
 }
 
 void ABaseAgent::OnFindInteraction(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
@@ -1377,4 +1437,19 @@ void ABaseAgent::RewardSpikeInstall()
 			}
 		}
 	}
+}
+
+void ABaseAgent::OnEquip()
+{
+	OnAgentEquip.Broadcast();
+}
+
+void ABaseAgent::OnFire()
+{
+	OnAgentFire.Broadcast();
+}
+
+void ABaseAgent::OnReload()
+{
+	OnAgentReload.Broadcast();
 }

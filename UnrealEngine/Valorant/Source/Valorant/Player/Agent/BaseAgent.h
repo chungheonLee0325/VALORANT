@@ -20,7 +20,8 @@ class USpringArmComponent;
 class UValorantGameInstance;
 class UAgentInputComponent;
 class UAgentAbilitySystemComponent;
-
+class UMiniMapWidget;
+class AAgentPlayerController;
 
 //ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ
 //             CYT             ♣
@@ -62,6 +63,10 @@ struct FAgentVisibilityInfo
 	float QuestionMarkTimer = 0.0f;
 	
 };
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnAgentEquip);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnAgentFire);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnAgentReload);
 
 UCLASS()
 class VALORANT_API ABaseAgent : public ACharacter
@@ -431,4 +436,12 @@ private:
 	// ToDo : 수정
 	UPROPERTY(Replicated)
 	bool IsInPlantZone = false;
+
+public:
+	FOnAgentEquip OnAgentEquip;
+	FOnAgentEquip OnAgentFire;
+	FOnAgentEquip OnAgentReload;
+	void OnEquip();
+	void OnFire();
+	void OnReload();
 };

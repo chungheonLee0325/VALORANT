@@ -157,7 +157,7 @@ protected:
 	//ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ
 	//             CYT             ♣
 	//ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ
-	
+public:
 	// 미니맵 위젯 클래스
 	// 에디터에서 기본값만 편집 가능하고 블루프린트에서 읽기만 가능한 속성
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "UI")
@@ -166,11 +166,13 @@ protected:
     
 	// 미니맵 위젯 인스턴스
 	// 블루프린트에서 읽기만 가능한 속성
-	UPROPERTY(BlueprintReadOnly, Category = "UI")
-	// 생성된 미니맵 위젯 인스턴스
+	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "UI")
 	UMiniMapWidget* MinimapWidget;
     
 	// 게임 시작 시 미니맵 초기화
 	// 미니맵을 초기화하는 함수
 	void InitializeMinimap();
+
+	UMiniMapWidget* GetMinimapWidget() const { return MinimapWidget; }
+	
 };

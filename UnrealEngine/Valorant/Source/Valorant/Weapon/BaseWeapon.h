@@ -11,13 +11,17 @@
 class UInputMappingContext;
 class UInputAction;
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnEquip);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnFire);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnReload);
+
 UCLASS(config=Game)
 class VALORANT_API ABaseWeapon : public ABaseInteractor
 {
 	GENERATED_BODY()
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Weapon", meta = (AllowPrivateAccess = "true"))
-	int WeaponID = 13;
+	UPROPERTY(Replicated, EditAnywhere, BlueprintReadOnly, Category="Weapon", meta = (AllowPrivateAccess = "true"))
+	int WeaponID = 0;
 
 	FWeaponData* WeaponData = nullptr;
 	TArray<FGunRecoilData> RecoilData;
@@ -115,14 +119,18 @@ protected:
 	void MulticastRPC_PlayFireAnimation();
 	UFUNCTION(BlueprintImplementableEvent)
 	void PlayFireSound();
+	UFUNCTION(NetMulticast, Reliable)
+	void MulticastRPC_PlayReloadAnimation();
+	UFUNCTION(NetMulticast, Reliable)
+	void MulticastRPC_PlayEquipAnimation();
 
 	UFUNCTION(BlueprintCallable, Category="Weapon")
 	void Reload();
 
 	UFUNCTION(Server, Reliable)
 	void ServerRPC_PlayReloadAnim();
-	UFUNCTION(NetMulticast, Reliable)
-	void MulticastRPC_PlayReloadAnim();
+	// UFUNCTION(NetMulticast, Reliable)
+	// void MulticastRPC_PlayReloadAnim();
 
 	UFUNCTION(BlueprintCallable, Category="Weapon")
 	void StopReload();
@@ -167,4 +175,11 @@ public:
 	// 무기 사용 여부 리셋 (라운드 시작 시)
 	UFUNCTION(BlueprintCallable, Category="Weapon")
 	void ResetUsedStatus();
+	void SetWeaponID(const int NewWeaponID);
+	UPROPERTY(BlueprintAssignable)
+	FOnEquip OnEquip;
+	UPROPERTY(BlueprintAssignable)
+	FOnFire OnFire;
+	UPROPERTY(BlueprintAssignable)
+	FOnReload OnReload;
 };

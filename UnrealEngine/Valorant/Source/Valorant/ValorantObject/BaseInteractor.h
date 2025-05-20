@@ -70,6 +70,7 @@ public:
 	UFUNCTION(Server, Reliable)
 	virtual void ServerRPC_Interact(ABaseAgent* InteractAgent);
 
+	USkeletalMeshComponent* GetMesh() const { return Mesh; }
 	EInteractorType GetInteractorType() const { return InteractorType; }
 
 	void SetActive(bool bActive);
