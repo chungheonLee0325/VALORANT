@@ -7,6 +7,7 @@
 #include "AbilitySystem/ValorantGameplayTags.h"
 #include "BaseGameplayAbility.generated.h"
 
+class ABaseProjectile;
 /**
  * 
  */
@@ -44,6 +45,9 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Input")
 	TSet<FGameplayTag> FollowUpInputTags;
 
+	UPROPERTY(EditDefaultsOnly)
+	TSubclassOf<ABaseProjectile> ProjectileClass;
+
 	UPROPERTY()
 	FGameplayAbilityActorInfo m_ActorInfo;
 	
@@ -64,4 +68,7 @@ protected:
 	virtual void Active_Left_Click(FGameplayEventData data);
 	UFUNCTION()
 	virtual void Active_Right_Click(FGameplayEventData data);
+
+	UFUNCTION()
+	virtual bool SpawnProjectile(const FGameplayAbilityActorInfo& ActorInfo);
 };
