@@ -13,7 +13,7 @@ class VALORANT_API AThirdPersonInteractor : public AActor
 
 public:
 	AThirdPersonInteractor();
-	
+
 public:
 	UPROPERTY(VisibleAnywhere)
 	TObjectPtr<USkeletalMeshComponent> Mesh;

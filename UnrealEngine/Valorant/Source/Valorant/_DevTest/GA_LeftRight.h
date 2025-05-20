@@ -13,8 +13,8 @@
 /**
  * 피닉스 커브볼 스킬을 구현
  * 즉발성이 아닌 스킬은 GamePlayTask를 2개 사용합니다.
- * 준비 동작 Task: UAbilityTask_PlayMontageAndWait,	커브볼을 손에 들고 좌/우 클릭을 대기하는 기능
- * 실제 스킬 Task: UAbilityTask_WaitInputPress,		커브볼을 날리는 기능
+ * 준비 동작 Task: UAbilityTask_PlayMontageAndWait,	커브볼을 손에 드는 기능
+ * 실제 스킬 Task: UAbilityTask_WaitGameplayEvent,	커브볼을 손에 들고 좌/우 클릭을 대기하는 기능
  */
 
 UCLASS()
@@ -30,16 +30,6 @@ public:
 	UAnimMontage* LeftAnim = nullptr;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Anim")
 	UAnimMontage* RightAnim = nullptr;
-
-private:
-	UPROPERTY()
-	UAbilityTask_PlayMontageAndWait* MontageTask;
-
-	UPROPERTY()
-	UAbilityTask_WaitGameplayEvent* LeftTask;
-
-	UPROPERTY()
-	UAbilityTask_WaitGameplayEvent* RightTask;
 
 protected:
 	virtual void ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData) override;

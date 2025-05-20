@@ -7,6 +7,7 @@
 #include "AbilitySystem/ValorantGameplayTags.h"
 #include "BaseGameplayAbility.generated.h"
 
+class ABaseProjectile;
 /**
  * 
  */
@@ -16,6 +17,8 @@ class VALORANT_API UBaseGameplayAbility : public UGameplayAbility
 	GENERATED_BODY()
 
 public:
+	UBaseGameplayAbility();
+
 	UFUNCTION(BlueprintCallable)
 	void SetAbilityID(int32 AbilityID);
 
@@ -29,11 +32,11 @@ public:
 	
 	// 어빌리티 스택 감소 메서드
 	UFUNCTION(BlueprintCallable, Category = "Ability|Stack")
-	bool ConsumeAbilityStack();
+	bool ConsumeAbilityStack(const APlayerController* PlayerController);
 	
 	// 어빌리티 스택 확인 메서드 
 	UFUNCTION(BlueprintCallable, Category = "Ability|Stack")
-	int32 GetAbilityStack() const;
+	int32 GetAbilityStack(const APlayerController* PlayerController) const;
 
 protected:
 	UPROPERTY(EditAnywhere)
@@ -42,15 +45,22 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Input")
 	TSet<FGameplayTag> FollowUpInputTags;
 
-protected:
+	UPROPERTY(EditDefaultsOnly)
+	TSubclassOf<ABaseProjectile> ProjectileClass;
+
+	UPROPERTY()
+	FGameplayAbilityActorInfo m_ActorInfo;
+	
 	virtual bool CanActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayTagContainer* SourceTags = nullptr, const FGameplayTagContainer* TargetTags = nullptr, FGameplayTagContainer* OptionalRelevantTags = nullptr) const override;
 	virtual void ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData) override;
 	
 	virtual void InputPressed(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo) override;
 	virtual void InputReleased(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo) override;
-
+	
 	virtual void EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility, bool bWasCancelled) override;
 	virtual void CancelAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateCancelAbility) override;
+
+	void ClearAgentSkill(const FGameplayAbilityActorInfo* ActorInfo);
 	
 	virtual void Active_General();
 	
@@ -58,4 +68,7 @@ protected:
 	virtual void Active_Left_Click(FGameplayEventData data);
 	UFUNCTION()
 	virtual void Active_Right_Click(FGameplayEventData data);
+
+	UFUNCTION()
+	virtual bool SpawnProjectile(const FGameplayAbilityActorInfo& ActorInfo);
 };

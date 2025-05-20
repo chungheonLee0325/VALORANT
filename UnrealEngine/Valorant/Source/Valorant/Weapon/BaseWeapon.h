@@ -11,10 +11,6 @@
 class UInputMappingContext;
 class UInputAction;
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnEquip);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnFire);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnReload);
-
 UCLASS(config=Game)
 class VALORANT_API ABaseWeapon : public ABaseInteractor
 {
@@ -126,9 +122,6 @@ protected:
 
 	UFUNCTION(BlueprintCallable, Category="Weapon")
 	void Reload();
-
-	UFUNCTION(Server, Reliable)
-	void ServerRPC_PlayReloadAnim();
 	// UFUNCTION(NetMulticast, Reliable)
 	// void MulticastRPC_PlayReloadAnim();
 
@@ -176,10 +169,4 @@ public:
 	UFUNCTION(BlueprintCallable, Category="Weapon")
 	void ResetUsedStatus();
 	void SetWeaponID(const int NewWeaponID);
-	UPROPERTY(BlueprintAssignable)
-	FOnEquip OnEquip;
-	UPROPERTY(BlueprintAssignable)
-	FOnFire OnFire;
-	UPROPERTY(BlueprintAssignable)
-	FOnReload OnReload;
 };

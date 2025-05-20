@@ -12,6 +12,12 @@ class UWidgetComponent;
 class USphereComponent;
 class ABaseAgent;
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnEquip);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnFire);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnReload);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnPickUp);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnInteractorDrop);
+
 UCLASS()
 class VALORANT_API ABaseInteractor : public AActor
 {
@@ -19,7 +25,7 @@ class VALORANT_API ABaseInteractor : public AActor
 
 public:
 	ABaseInteractor();
-
+	
 protected:
 	UPROPERTY(VisibleAnywhere, meta=(AllowPrivateAccess = "true"), Replicated)
 	TObjectPtr<AThirdPersonInteractor> ThirdPersonInteractor = nullptr;
@@ -34,6 +40,7 @@ protected:
 	TObjectPtr<ABaseAgent> OwnerAgent = nullptr;
 	UFUNCTION()
 	void OnRep_OwnerAgent();
+	void SetOwnerAgent(ABaseAgent* NewAgent);
 
 	UPROPERTY()
 	EInteractorType InteractorType = EInteractorType::None;
@@ -78,4 +85,19 @@ public:
 	void ServerRPC_SetActive(bool bActive);
 	UFUNCTION(NetMulticast, Reliable)
 	void Multicast_SetActive(bool bActive);
+
+	UPROPERTY(BlueprintAssignable)
+	FOnEquip OnEquip;
+	UPROPERTY(BlueprintAssignable)
+	FOnFire OnFire;
+	UPROPERTY(BlueprintAssignable)
+	FOnReload OnReload;
+	UPROPERTY(BlueprintAssignable)
+	FOnReload OnPickUp;
+	UFUNCTION(NetMulticast, Reliable)
+	void MulticastRPC_BroadcastOnPickUp();
+	UPROPERTY(BlueprintAssignable)
+	FOnInteractorDrop OnInteractorDrop;
+	UFUNCTION(NetMulticast, Reliable)
+	void MulticastRPC_BroadcastOnDrop();
 };

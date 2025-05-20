@@ -4,7 +4,9 @@
 #include "GA_LeftRight.h"
 
 #include "EnhancedInputComponent.h"
+#include "Valorant.h"
 #include "AbilitySystem/AgentAbilitySystemComponent.h"
+#include "GameManager/SubsystemSteamManager.h"
 
 
 void UGA_LeftRight::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
@@ -14,13 +16,17 @@ void UGA_LeftRight::ActivateAbility(const FGameplayAbilitySpecHandle Handle, con
 
 	// UE_LOG(LogTemp,Warning,TEXT("준비 동작 실행"));
 
-	// 대기 동작을 위한 MontageTask
-	UAbilityTask_PlayMontageAndWait* PreTask = UAbilityTask_PlayMontageAndWait::CreatePlayMontageAndWaitProxy(this,NAME_None,ReadyAnim,1.f,NAME_None,true);
+
+	if (HasAuthority(&ActivationInfo))
+	{
+		// 대기 동작을 위한 MontageTask
+		UAbilityTask_PlayMontageAndWait* PreTask = UAbilityTask_PlayMontageAndWait::CreatePlayMontageAndWaitProxy(this,NAME_None,ReadyAnim,1.f,NAME_None,true);
 	
-	PreTask->OnCompleted.AddDynamic(this,&UGA_LeftRight::OnPreMontageFinished);
-	PreTask->OnCancelled.AddDynamic(this,&UGA_LeftRight::OnPreMontageCancelled);
+		PreTask->OnCompleted.AddDynamic(this,&UGA_LeftRight::OnPreMontageFinished);
+		PreTask->OnCancelled.AddDynamic(this,&UGA_LeftRight::OnPreMontageCancelled);
 	
-	PreTask->ReadyForActivation();
+		PreTask->ReadyForActivation();
+	}
 }
 
 void UGA_LeftRight::OnPreMontageFinished()
@@ -34,13 +40,15 @@ void UGA_LeftRight::OnPreMontageFinished()
 
 	// 실질 실행을 위한 후속 입력 대기 Task
 	FGameplayTag LeftTag = FValorantGameplayTags::Get().InputTag_Default_LeftClick;
-	LeftTask = UAbilityTask_WaitGameplayEvent::WaitGameplayEvent(
+	
+	UAbilityTask_WaitGameplayEvent* LeftTask = UAbilityTask_WaitGameplayEvent::WaitGameplayEvent(
 		this, LeftTag, nullptr, true, true);
 	LeftTask->EventReceived.AddDynamic(this, &UGA_LeftRight::Active_Left_Click);
 	LeftTask->Activate();
 	
 	FGameplayTag RightTag = FValorantGameplayTags::Get().InputTag_Default_RightClick;
-	RightTask = UAbilityTask_WaitGameplayEvent::WaitGameplayEvent(
+	
+	UAbilityTask_WaitGameplayEvent* RightTask = UAbilityTask_WaitGameplayEvent::WaitGameplayEvent(
 		this, RightTag, nullptr, true, true);
 	RightTask->EventReceived.AddDynamic(this, &UGA_LeftRight::Active_Right_Click);
 	RightTask->Activate();
@@ -76,10 +84,6 @@ void UGA_LeftRight::Active_Right_Click(FGameplayEventData data)
 
 void UGA_LeftRight::MainTask(UAbilityTask_PlayMontageAndWait* ThrowTask)
 {
-	// UE_LOG(LogTemp,Warning,TEXT("스킬 동작 실행"));
-	LeftTask->EndTask();
-	RightTask->EndTask();
-	
 	ThrowTask->OnCompleted.AddDynamic(this,&UGA_LeftRight::OnProcessMontageFinished);
 	ThrowTask->OnCancelled.AddDynamic(this,&UGA_LeftRight::OnProcessMontageCancelled);
 
