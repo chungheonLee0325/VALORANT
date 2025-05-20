@@ -19,6 +19,7 @@ ABaseInteractor::ABaseInteractor()
 	PrimaryActorTick.bCanEverTick = true;
 	bReplicates = true;
 	bNetLoadOnClient = true;
+	bAlwaysRelevant = true;
 	SetReplicatingMovement(true);
 
 	Mesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("WeaponMesh"));
