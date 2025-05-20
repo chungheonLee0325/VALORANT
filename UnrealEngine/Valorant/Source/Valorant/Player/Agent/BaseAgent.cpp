@@ -57,6 +57,9 @@ ABaseAgent::ABaseAgent()
 	SpringArm->TargetArmLength = 0;
 	SpringArm->bUsePawnControlRotation = true;
 
+	BaseSpringArmHeight = SpringArm->GetRelativeLocation().Z;
+	CrouchSpringArmHeight = BaseSpringArmHeight - 28.0f;
+
 	Camera = CreateDefaultSubobject<UCameraComponent>("Camera");
 	Camera->SetupAttachment(SpringArm);
 
@@ -80,12 +83,13 @@ ABaseAgent::ABaseAgent()
 	FirstPersonMesh->SetCollisionProfileName(TEXT("Agent"));
 	FirstPersonMesh->SetCanEverAffectNavigation(false);
 
-	GetCapsuleComponent()->SetCapsuleHalfHeight(72.0f);
-	BaseCapsuleHalfHeight = GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight();
+	BaseCapsuleHalfHeight = 72.0f;
+	CrouchCapsuleHalfHeight = 68.0f;
+	GetCapsuleComponent()->SetCapsuleHalfHeight(BaseCapsuleHalfHeight);
+	GetCharacterMovement()->SetCrouchedHalfHeight(BaseCapsuleHalfHeight);
 
 	GetCharacterMovement()->GetNavAgentPropertiesRef().bCanCrouch = true;
 	GetCharacterMovement()->MaxWalkSpeedCrouched = 330.0f;
-	GetCharacterMovement()->SetCrouchedHalfHeight(BaseCapsuleHalfHeight);
 
 	GetMesh()->SetOwnerNoSee(true);
 	FirstPersonMesh->SetOnlyOwnerSee(true);
@@ -355,14 +359,14 @@ void ABaseAgent::Server_SetIsRun_Implementation(const bool _bIsRun)
 
 void ABaseAgent::OnStartCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust)
 {
-	Super::OnStartCrouch(HalfHeightAdjust, ScaledHalfHeightAdjust);
+	// Super::OnStartCrouch(HalfHeightAdjust, ScaledHalfHeightAdjust);
 	//NET_LOG(LogTemp,Warning,TEXT("OnStartCrouch"));
 	TL_Crouch->PlayFromStart();
 }
 
 void ABaseAgent::OnEndCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust)
 {
-	Super::OnEndCrouch(HalfHeightAdjust, ScaledHalfHeightAdjust);
+	// Super::OnEndCrouch(HalfHeightAdjust, ScaledHalfHeightAdjust);
 	//NET_LOG(LogTemp,Warning,TEXT("OnEndCrouch"));
 	TL_Crouch->Reverse();
 }
@@ -530,6 +534,9 @@ void ABaseAgent::AcquireInteractor(ABaseInteractor* Interactor)
 
 void ABaseAgent::SwitchInteractor(EInteractorType InteractorType)
 {
+	// ABP_1P->Montage_Play(AM_Reload, 1.0f);
+	// NET_LOG(LogTemp,Warning,TEXT("교체 애니 재생"));
+	
 	//TODO: 장착 애니메이션과 함께 기존 재생되던 몽타주 종료하기
 	if (HasAuthority())
 	{
@@ -813,9 +820,23 @@ void ABaseAgent::OnInteractionCapsuleEndOverlap(UPrimitiveComponent* OverlappedC
 
 void ABaseAgent::HandleCrouchProgress(float Value)
 {
-	float newHalfHeight = BaseCapsuleHalfHeight - Value;
-	//NET_LOG(LogTemp,Warning,TEXT("HandleCrouchProgress %f"), newHalfHeight);
+	float newHalfHeight = FMath::Lerp(
+	   BaseCapsuleHalfHeight,
+	   CrouchCapsuleHalfHeight,
+	   Value
+   );
 	GetCapsuleComponent()->SetCapsuleHalfHeight(newHalfHeight, true);
+
+	float newSprinArmHeight = FMath::Lerp(
+	   BaseSpringArmHeight,
+	   CrouchSpringArmHeight,
+	   Value
+   );
+	SpringArm->SetRelativeLocation(FVector(SpringArm->GetRelativeLocation().X,SpringArm->GetRelativeLocation().Y, newSprinArmHeight));
+	
+	NET_LOG(LogTemp,Warning,TEXT("HandleCrouchProgress %f"), newHalfHeight);
+	NET_LOG(LogTemp,Warning,TEXT("캡슐 높이 %f"), GetCapsuleComponent()->GetComponentLocation().Z);
+	NET_LOG(LogTemp,Warning,TEXT("카메라 높이 %f"), Camera->GetComponentLocation().Z);
 }
 
 void ABaseAgent::HandleDieCamera(FVector newPos)

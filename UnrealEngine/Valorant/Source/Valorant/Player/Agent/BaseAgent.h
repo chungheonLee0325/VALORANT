@@ -349,7 +349,16 @@ protected:
 	UPROPERTY()
 	bool bIsDead = false;
 
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float BaseSpringArmHeight = 0.0f;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float CrouchSpringArmHeight = -0.0f;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	float BaseCapsuleHalfHeight = 0.0f;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float CrouchCapsuleHalfHeight = 0.0f;
 
 	float BaseRunSpeed = 675.0f;
 	float BaseWalkSpeed = 330.0f;
