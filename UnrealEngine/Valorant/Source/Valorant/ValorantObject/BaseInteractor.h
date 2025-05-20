@@ -21,7 +21,7 @@ public:
 	ABaseInteractor();
 
 protected:
-	UPROPERTY(VisibleAnywhere, meta=(AllowPrivateAccess = "true"))
+	UPROPERTY(VisibleAnywhere, meta=(AllowPrivateAccess = "true"), Replicated)
 	TObjectPtr<AThirdPersonInteractor> ThirdPersonInteractor = nullptr;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess = "true"))
@@ -70,6 +70,7 @@ public:
 	UFUNCTION(Server, Reliable)
 	virtual void ServerRPC_Interact(ABaseAgent* InteractAgent);
 
+	USkeletalMeshComponent* GetMesh() const { return Mesh; }
 	EInteractorType GetInteractorType() const { return InteractorType; }
 
 	void SetActive(bool bActive);

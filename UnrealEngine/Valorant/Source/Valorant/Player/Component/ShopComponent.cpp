@@ -679,18 +679,23 @@ void UShopComponent::SpawnWeaponForPlayer(int32 WeaponID)
 		FRotator SpawnRotation = Agent->GetActorRotation();
 
 		// 무기 생성
-		FActorSpawnParameters SpawnParams;
-		SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-		SpawnParams.Owner = Agent;
+		// FActorSpawnParameters SpawnParams;
+		// SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+		// SpawnParams.Owner = Agent;
 
-		ABaseWeapon* NewWeapon = GetWorld()->SpawnActor<ABaseWeapon>((*WeaponInfo)->WeaponClass, SpawnLocation,
-		                                                             SpawnRotation, SpawnParams);
-
+		const FTransform NewTransform = FTransform(SpawnRotation, SpawnLocation);
+		ABaseWeapon* NewWeapon = GetWorld()->SpawnActorDeferred<ABaseWeapon>((*WeaponInfo)->WeaponClass, NewTransform);
+		if (IsValid(NewWeapon))
+		{
+			// KBD: BeginPlay 실행을 지연시키고 ID 설정
+			NewWeapon->SetWeaponID(WeaponID);
+			// BeginPlay 실행
+			NewWeapon->FinishSpawning(NewTransform);
+		}
+		
 		if (NewWeapon)
 		{
-			// 무기 ID 설정
-			// 현재 BP가 모두 ID와 나머지 설정되어있지않아서 override하는 방식으로 동작 -> ToDo : 만약 BP Driven으로 변경된다면 SetWeaponID 삭제
-			NewWeapon->NetMulti_ReloadWeaponData(WeaponID);
+			// NewWeapon->NetMulti_ReloadWeaponData(WeaponID);
 			// 무기 카테고리에 따라 장착 방식 결정
 
 			if (CurrentWeapon)
