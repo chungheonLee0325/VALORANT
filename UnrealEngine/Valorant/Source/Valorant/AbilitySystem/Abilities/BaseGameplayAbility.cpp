@@ -8,6 +8,7 @@
 #include "Valorant.h"
 #include "AbilitySystem/AgentAbilitySystemComponent.h"
 #include "Player/AgentPlayerState.h"
+#include "Player/Agent/BaseAgent.h"
 
 bool UBaseGameplayAbility::CanActivateAbility(const FGameplayAbilitySpecHandle Handle,
                                               const FGameplayAbilityActorInfo* ActorInfo, const FGameplayTagContainer* SourceTags,
@@ -77,6 +78,23 @@ void UBaseGameplayAbility::ActivateAbility(const FGameplayAbilitySpecHandle Hand
 	{
 		UE_LOG(LogTemp, Error, TEXT("GA, asc가 AgentAbilitySystemComponent를 상속받지 않았어요."));
 	}
+
+	if (auto* ps = Cast<AAgentPlayerState>(ActorInfo->OwnerActor))
+	{
+		auto* agent = Cast<ABaseAgent>(ps->GetPawn());
+		if (agent == nullptr)
+		{
+			UE_LOG(LogTemp,Error,TEXT("BaseGameplayAbility, Agent Null"));
+		}
+		
+		auto* curInteractor = agent->GetCurrentInterator();
+		if (curInteractor)
+		{
+			// NET_LOG(LogTemp,Warning,TEXT("인터랙터 숨기기 %s"), *curInteractor->GetActorNameOrLabel());
+			curInteractor->SetActive(false);
+			agent->ServerRPC_SetCurrentInteractor(nullptr);
+		}
+	}
 }
 
 void UBaseGameplayAbility::InputPressed(const FGameplayAbilitySpecHandle Handle,
@@ -94,19 +112,13 @@ void UBaseGameplayAbility::InputReleased(const FGameplayAbilitySpecHandle Handle
 }
 
 void UBaseGameplayAbility::EndAbility(const FGameplayAbilitySpecHandle Handle,
-	const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo,
-	bool bReplicateEndAbility, bool bWasCancelled)
+                                      const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo,
+                                      bool bReplicateEndAbility, bool bWasCancelled)
 {
 	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
 	NET_LOG(LogTemp, Warning, TEXT("스킬 EndAbility"));
-
-	// CurrentFollowUpInputTag = FGameplayTag(); 
 	
-	UAgentAbilitySystemComponent* asc = Cast<UAgentAbilitySystemComponent>(GetAbilitySystemComponentFromActorInfo());
-	if (asc)
-	{
-		asc->SetSkillClear(true);
-	}
+	ClearAgentSkill(ActorInfo);
 }
 
 void UBaseGameplayAbility::CancelAbility(const FGameplayAbilitySpecHandle Handle,
@@ -116,12 +128,24 @@ void UBaseGameplayAbility::CancelAbility(const FGameplayAbilitySpecHandle Handle
 	Super::CancelAbility(Handle, ActorInfo, ActivationInfo, bReplicateCancelAbility);
 	NET_LOG(LogTemp, Warning, TEXT("스킬 CancelAbility"));
 
-	// CurrentFollowUpInputTag = FGameplayTag();
-	
-	UAgentAbilitySystemComponent* asc = Cast<UAgentAbilitySystemComponent>(GetAbilitySystemComponentFromActorInfo());
-	if (asc)
+	ClearAgentSkill(ActorInfo);
+}
+
+void UBaseGameplayAbility::ClearAgentSkill(const FGameplayAbilityActorInfo* ActorInfo)
+{
+	if (auto* ps = Cast<AAgentPlayerState>(ActorInfo->OwnerActor))
 	{
+		auto* asc = Cast<UAgentAbilitySystemComponent>(ps->GetAbilitySystemComponent());
+		auto* agent = Cast<ABaseAgent>(ps->GetPawn());
+		
+		if (asc == nullptr || agent == nullptr)
+		{
+			UE_LOG(LogTemp,Error,TEXT("BaseGameplayAbility, ASC || Agent Null"));
+			return;
+		}
+
 		asc->SetSkillClear(true);
+		agent->SwitchInteractor(EInteractorType::MainWeapon);
 	}
 }
 
