@@ -9,6 +9,19 @@
 #include "Net/UnrealNetwork.h"
 #include "Player/Agent/BaseAgent.h"
 
+void UAgentAnimInstance::NativeInitializeAnimation()
+{
+	Super::NativeInitializeAnimation();
+
+	auto* ownerPawn = TryGetPawnOwner();
+	if (auto* player = Cast<ABaseAgent>(ownerPawn))
+	{
+		player->OnAgentEquip.AddDynamic(this, &UAgentAnimInstance::OnEquip);
+		player->OnAgentFire.AddDynamic(this, &UAgentAnimInstance::OnFire);
+		player->OnAgentReload.AddDynamic(this, &UAgentAnimInstance::OnReload);
+	}
+}
+
 void UAgentAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 {
 	Super::NativeUpdateAnimation(DeltaSeconds);
@@ -17,10 +30,6 @@ void UAgentAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 	auto player = Cast<ABaseAgent>(ownerPawn);
 	if (player)
 	{
-		player->OnAgentEquip.AddDynamic(this, &UAgentAnimInstance::OnEquip);
-		player->OnAgentFire.AddDynamic(this, &UAgentAnimInstance::OnFire);
-		player->OnAgentReload.AddDynamic(this, &UAgentAnimInstance::OnReload);
-		
 		FVector velocity = player->GetVelocity();
 
 		FVector forward = player->GetActorForwardVector();
