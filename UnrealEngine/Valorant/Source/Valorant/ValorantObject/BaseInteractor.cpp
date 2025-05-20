@@ -173,6 +173,10 @@ bool ABaseInteractor::ServerOnly_CanInteract() const
 void ABaseInteractor::SetActive(bool bActive)
 {
 	Mesh->SetHiddenInGame(!bActive, true);
+	if (ThirdPersonInteractor)
+	{
+		ThirdPersonInteractor->SetActorHiddenInGame(!bActive);
+	}
 	Sphere->SetVisibility(false);
 	ServerRPC_SetActive(bActive);
 }
@@ -243,6 +247,10 @@ void ABaseInteractor::ServerRPC_SetActive_Implementation(bool bActive)
 void ABaseInteractor::Multicast_SetActive_Implementation(bool bActive)
 {
 	Mesh->SetHiddenInGame(!bActive, true);
+	if (ThirdPersonInteractor)
+	{
+		ThirdPersonInteractor->SetActorHiddenInGame(!bActive);
+	}
 	Sphere->SetVisibility(false);
 }
 
