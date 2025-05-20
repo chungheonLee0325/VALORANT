@@ -896,10 +896,6 @@ void ABaseAgent::HandleCrouchProgress(float Value)
 	   Value
    );
 	SpringArm->SetRelativeLocation(FVector(SpringArm->GetRelativeLocation().X,SpringArm->GetRelativeLocation().Y, newSprinArmHeight));
-	
-	NET_LOG(LogTemp,Warning,TEXT("HandleCrouchProgress %f"), newHalfHeight);
-	NET_LOG(LogTemp,Warning,TEXT("캡슐 높이 %f"), GetCapsuleComponent()->GetComponentLocation().Z);
-	NET_LOG(LogTemp,Warning,TEXT("카메라 높이 %f"), Camera->GetComponentLocation().Z);
 }
 
 void ABaseAgent::HandleDieCamera(FVector newPos)
