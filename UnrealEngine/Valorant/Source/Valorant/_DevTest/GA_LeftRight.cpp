@@ -84,6 +84,12 @@ void UGA_LeftRight::Active_Right_Click(FGameplayEventData data)
 
 void UGA_LeftRight::MainTask(UAbilityTask_PlayMontageAndWait* ThrowTask)
 {
+	UAgentAbilitySystemComponent* asc = Cast<UAgentAbilitySystemComponent>(GetAbilitySystemComponentFromActorInfo());
+	if (asc)
+	{
+		asc->SetSkillProcess(true);
+	}
+	
 	ThrowTask->OnCompleted.AddDynamic(this,&UGA_LeftRight::OnProcessMontageFinished);
 	ThrowTask->OnCancelled.AddDynamic(this,&UGA_LeftRight::OnProcessMontageCancelled);
 
