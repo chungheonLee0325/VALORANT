@@ -32,6 +32,7 @@ ABaseInteractor::ABaseInteractor()
 	DetectWidgetComponent->SetupAttachment(GetRootComponent());
 
 	Sphere = CreateDefaultSubobject<USphereComponent>(TEXT("Sphere"));
+	Sphere->SetVisibility(false);
 	Sphere->SetSphereRadius(32.f);
 	Sphere->SetCollisionProfileName(TEXT("Interactable"));
 	Sphere->SetupAttachment(GetRootComponent());
@@ -225,9 +226,6 @@ void ABaseInteractor::ServerRPC_SetActive_Implementation(bool bActive)
 
 void ABaseInteractor::Multicast_SetActive_Implementation(bool bActive)
 {
-	if (ThirdPersonInteractor)
-	{
-		ThirdPersonInteractor->Mesh->SetVisibility(bActive);
-	}
-	Mesh->SetVisibility(bActive);
+	Mesh->SetHiddenInGame(!bActive, true);
+	Sphere->SetVisibility(false);
 }

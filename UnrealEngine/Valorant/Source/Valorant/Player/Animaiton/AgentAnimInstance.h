@@ -37,9 +37,11 @@ public:
 	EInteractorType InteractorState = EInteractorType::None;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category=Interactor)
 	int InteractorPoseIdx = 0;
-	
+
+	virtual void NativeBeginPlay() override;
 	virtual void NativeUpdateAnimation(float DeltaSeconds) override;
-	void SetWeaponState(const EInteractorType newState) { InteractorState = newState; }
+	UFUNCTION(BlueprintImplementableEvent)
+	void OnChangedWeaponState();
 
 	UFUNCTION(BlueprintImplementableEvent)
 	void OnEquip();
