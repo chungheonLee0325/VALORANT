@@ -719,16 +719,14 @@ void ABaseAgent::EquipInteractor(ABaseInteractor* interactor)
 
 	CurrentInteractor->SetActive(true);
 
-	if (ABP_1P)
-	{
-		ABP_1P->InteractorState = CurrentInteractorState;
-		ABP_1P->SetWeaponState(interactor->GetInteractorType());
-	}
-	if (ABP_3P)
-	{
-		ABP_3P->InteractorState = CurrentInteractorState;
-		ABP_3P->SetWeaponState(interactor->GetInteractorType());
-	}
+	// if (ABP_1P)
+	// {
+	// 	ABP_1P->InteractorState = CurrentInteractorState;
+	// }
+	// if (ABP_3P)
+	// {
+	// 	ABP_3P->InteractorState = CurrentInteractorState;
+	// }
 
 	//TODO: 인터랙터에도 적용할지 말지
 	if (auto* weapon = Cast<ABaseWeapon>(CurrentInteractor))

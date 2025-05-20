@@ -3,15 +3,12 @@
 
 #include "AgentAnimInstance.h"
 
-#include "Valorant.h"
 #include "GameFramework/CharacterMovementComponent.h"
-#include "GameManager/SubsystemSteamManager.h"
-#include "Net/UnrealNetwork.h"
 #include "Player/Agent/BaseAgent.h"
 
-void UAgentAnimInstance::NativeInitializeAnimation()
+void UAgentAnimInstance::NativeBeginPlay()
 {
-	Super::NativeInitializeAnimation();
+	Super::NativeBeginPlay();
 
 	auto* ownerPawn = TryGetPawnOwner();
 	if (auto* player = Cast<ABaseAgent>(ownerPawn))
@@ -40,6 +37,12 @@ void UAgentAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 		bIsCrouch = player->bIsCrouched;
 		bIsInAir = player->GetCharacterMovement()->IsFalling();
 
+		if (InteractorState != player->GetInteractorState())
+		{
+			InteractorState = player->GetInteractorState();
+			OnChangedWeaponState();
+		}
+
 		// if (InteractorState == EInteractorType::Melee)
 		// {
 		// 	NET_LOG(LogTemp,Warning,TEXT("밀리"));
@@ -53,10 +56,4 @@ void UAgentAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 		// 	NET_LOG(LogTemp,Warning,TEXT("Main"));
 		// }
 	}
-}
-
-void UAgentAnimInstance::SetWeaponState(const EInteractorType newState)
-{
-	InteractorState = newState;
-	OnChangedWeaponState();
 }
