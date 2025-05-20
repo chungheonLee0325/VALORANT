@@ -7,6 +7,7 @@
 #include "AbilitySystem/ValorantGameplayTags.h"
 #include "BaseGameplayAbility.generated.h"
 
+class ABaseProjectile;
 /**
  * 
  */
@@ -44,6 +45,9 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Input")
 	TSet<FGameplayTag> FollowUpInputTags;
 
+	UPROPERTY(EditDefaultsOnly)
+	TSubclassOf<ABaseProjectile> ProjectileClass;
+
 	UPROPERTY()
 	FGameplayAbilityActorInfo m_ActorInfo;
 	
@@ -52,9 +56,11 @@ protected:
 	
 	virtual void InputPressed(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo) override;
 	virtual void InputReleased(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo) override;
-
+	
 	virtual void EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility, bool bWasCancelled) override;
 	virtual void CancelAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateCancelAbility) override;
+
+	void ClearAgentSkill(const FGameplayAbilityActorInfo* ActorInfo);
 	
 	virtual void Active_General();
 	
@@ -62,4 +68,7 @@ protected:
 	virtual void Active_Left_Click(FGameplayEventData data);
 	UFUNCTION()
 	virtual void Active_Right_Click(FGameplayEventData data);
+
+	UFUNCTION()
+	virtual bool SpawnProjectile(const FGameplayAbilityActorInfo& ActorInfo);
 };
