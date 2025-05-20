@@ -126,9 +126,6 @@ protected:
 
 	UFUNCTION(BlueprintCallable, Category="Weapon")
 	void Reload();
-
-	UFUNCTION(Server, Reliable)
-	void ServerRPC_PlayReloadAnim();
 	// UFUNCTION(NetMulticast, Reliable)
 	// void MulticastRPC_PlayReloadAnim();
 

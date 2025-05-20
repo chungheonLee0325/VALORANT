@@ -319,7 +319,7 @@ void ABaseWeapon::ServerRPC_StartReload_Implementation()
 		NET_LOG(LogTemp, Warning, TEXT("%hs Called, Reload Start"), __FUNCTION__);
 		bIsFiring = false;
 		bIsReloading = true;
-		ServerRPC_PlayReloadAnim();
+		MulticastRPC_PlayReloadAnimation();
 		GetWorld()->GetTimerManager().SetTimer(ReloadHandle, this, &ABaseWeapon::Reload, 3, false, WeaponData->ReloadTime);
 	}
 }
@@ -370,6 +370,7 @@ void ABaseWeapon::MulticastRPC_PlayFireAnimation_Implementation()
 
 void ABaseWeapon::MulticastRPC_PlayReloadAnimation_Implementation()
 {
+	NET_LOG(LogTemp, Warning, TEXT("%hs Called"), __FUNCTION__);
 	OnReload.Broadcast();
 	if (OwnerAgent)
 	{
@@ -379,6 +380,7 @@ void ABaseWeapon::MulticastRPC_PlayReloadAnimation_Implementation()
 
 void ABaseWeapon::MulticastRPC_PlayEquipAnimation_Implementation()
 {
+	NET_LOG(LogTemp, Warning, TEXT("%hs Called"), __FUNCTION__);
 	OnEquip.Broadcast();
 	if (OwnerAgent)
 	{
@@ -415,12 +417,6 @@ void ABaseWeapon::StopReload()
 	{
 		World->GetTimerManager().ClearTimer(ReloadHandle);
 	}
-}
-
-
-void ABaseWeapon::ServerRPC_PlayReloadAnim_Implementation()
-{
-	MulticastRPC_PlayReloadAnimation_Implementation();
 }
 
 // void ABaseWeapon::MulticastRPC_PlayReloadAnim_Implementation()
