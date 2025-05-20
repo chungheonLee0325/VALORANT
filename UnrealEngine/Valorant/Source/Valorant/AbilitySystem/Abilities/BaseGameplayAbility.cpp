@@ -80,7 +80,6 @@ void UBaseGameplayAbility::ActivateAbility(const FGameplayAbilitySpecHandle Hand
 		if (FollowUpInputTags.IsEmpty() == false)
 		{
 			asc->SetSkillReady(false);
-			asc->SetSkillClear(false);
 			asc->ResisterFollowUpInput(FollowUpInputTags);
 		}
 		else
@@ -179,7 +178,8 @@ void UBaseGameplayAbility::ClearAgentSkill(const FGameplayAbilityActorInfo* Acto
 			return;
 		}
 
-		asc->SetSkillClear(true);
+		asc->SetSkillReady(false);
+		asc->SetSkillProcess(false);
 		agent->SwitchInteractor(EInteractorType::MainWeapon);
 	}
 }

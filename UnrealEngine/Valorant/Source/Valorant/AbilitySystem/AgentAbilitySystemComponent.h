@@ -53,7 +53,13 @@ public:
 	bool TrySkillInput(const FGameplayTag& inputTag);
 
 	UFUNCTION(BlueprintCallable)
-	void SetSkillClear(const bool isClear) { bIsSkillClear = isClear; }
+	void CancelCurrentSkill();
+
+	UFUNCTION(BlueprintCallable)
+	bool GetIsSkillProcess() const { return bIsSkillProcess; }
+	UFUNCTION(BlueprintCallable)
+	void SetSkillProcess(const bool isProcess) { bIsSkillProcess = isProcess; }
+	
 	UFUNCTION(BlueprintCallable)
 	void SetSkillReady(const bool isReady) { bIsSkillReady = isReady; }
 	
@@ -86,7 +92,7 @@ private:
 	UPROPERTY(Replicated)
 	FAbilityData m_Ability_X;
 
-	bool bIsSkillClear = true;
+	bool bIsSkillProcess = false;
 	UPROPERTY(Replicated)
 	bool bIsSkillReady = false;
 	

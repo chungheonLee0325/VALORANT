@@ -31,7 +31,6 @@ void UAgentAbilitySystemComponent::BeginPlay()
 	SkillTags.Add(tagManager.RequestGameplayTag("Input.Skill.E"));
 	SkillTags.Add(tagManager.RequestGameplayTag("Input.Skill.X"));
 	SkillTags.Add(tagManager.RequestGameplayTag("Input.Skill.C"));
-	
 }
 
 void UAgentAbilitySystemComponent::TickComponent(float DeltaTime, ELevelTick TickType,
@@ -188,14 +187,15 @@ void UAgentAbilitySystemComponent::ResetFollowUpInput()
 
 bool UAgentAbilitySystemComponent::TrySkillInput(const FGameplayTag& inputTag)
 {
+	if (bIsSkillProcess)
+	{
+		UE_LOG(LogTemp,Error,TEXT("이전 스킬 마무리중..."));
+		return true;
+	}
+	
 	if (FollowUpInputBySkill.IsEmpty())
 	{
-		NET_LOG(LogTemp,Warning,TEXT("일반 입력 시도: [%s]"), *inputTag.ToString());
-		if (!bIsSkillClear)
-		{
-			// UE_LOG(LogTemp,Error,TEXT("이전 스킬 마무리중..."));
-			return true;
-		}
+		// NET_LOG(LogTemp,Warning,TEXT("일반 입력 시도: [%s]"), *inputTag.ToString());
 		
 		FGameplayTagContainer tagCon(inputTag);
 		if (TryActivateAbilitiesByTag(tagCon))
@@ -205,8 +205,10 @@ bool UAgentAbilitySystemComponent::TrySkillInput(const FGameplayTag& inputTag)
 		}
 	}
 	else
-	{ 
-		NET_LOG(LogTemp,Warning,TEXT("스킬 후속 입력 시도: [%s]"), *inputTag.ToString());
+	{
+		// NET_LOG(LogTemp,Warning,TEXT("스킬 후속 입력 시도: [%s]"), *inputTag.ToString());
+
+		// TODO: 다른 스킬 입력 들어오면, 현재 스킬 취소하고 전환
 		
 		if (!bIsSkillReady)
 		{
@@ -232,6 +234,19 @@ bool UAgentAbilitySystemComponent::TrySkillInput(const FGameplayTag& inputTag)
 	
 	// UE_LOG(LogTemp,Warning,TEXT("%s 해당 입력에 해당하는 스킬이 없습니다."), *inputTag.ToString());
 	return false;
+}
+
+void UAgentAbilitySystemComponent::CancelCurrentSkill()
+{
+	for (const FGameplayAbilitySpec& Spec : GetActivatableAbilities())
+	{
+		if (Spec.IsActive())
+		{
+			UE_LOG(LogTemp, Warning, TEXT("지금 실행 중인 Ability: %s 취소할게"), *Spec.Ability->GetName());
+			CancelAbility(Spec.Ability);
+			FollowUpInputBySkill.Empty();
+		}
+	}
 }
 
 bool UAgentAbilitySystemComponent::IsFollowUpInput(const FGameplayTag& inputTag)
