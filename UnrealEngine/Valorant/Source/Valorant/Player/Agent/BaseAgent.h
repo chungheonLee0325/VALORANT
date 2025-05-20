@@ -444,4 +444,6 @@ public:
 	void OnEquip();
 	void OnFire();
 	void OnReload();
+	bool bInteractionCapsuleInit = false;
+	virtual void OnRep_Controller() override;
 };

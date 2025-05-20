@@ -340,9 +340,7 @@ void ASpike::ServerRPC_FinishPlanting_Implementation()
 		true
 	);
 	DetachFromActor(DetachmentRule);
-	SetOwner(nullptr);
 	SetOwnerAgent(nullptr);
-	Sphere->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
 	
 	// 게임 모드에 설치 완료 알림
 	AMatchGameMode* GameMode = Cast<AMatchGameMode>(UGameplayStatics::GetGameMode(GetWorld()));
