@@ -92,6 +92,6 @@ protected:
 	// 스캔 주기 타이머 추가
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Minimap")
 	float ScanInterval = 2.0f;
-    
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Minimap")
 	float TimeSinceLastScan = 0.0f;
 };

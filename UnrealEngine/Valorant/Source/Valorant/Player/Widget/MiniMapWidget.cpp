@@ -22,9 +22,20 @@ void UMiniMapWidget::NativeConstruct()
 	{
 		// 로컬 플레이어의 캐릭터 가져오기
 		APawn* PlayerPawn = PC->GetPawn(); // 플레이어 컨트롤러가 제어하는 폰(캐릭터) 가져오기
-		ObserverAgent = Cast<ABaseAgent>(PlayerPawn); // 폰을 BaseAgent로 형변환하여 저장
+		if (PlayerPawn)
+		{
+			ObserverAgent = Cast<ABaseAgent>(PlayerPawn); // 폰을 BaseAgent로 형변환하여 저장
+			UE_LOG(LogTemp, Warning, TEXT("ObserverAgent 설정 완료 : %s"), *GetNameSafe(ObserverAgent));
+		}
+		else
+		{
+			UE_LOG(LogTemp, Warning, TEXT("플레이어 폰이 아직 생성되지 않았습니다 !!! "))
+		}
 	}
-
+	else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("컨트롤러를 찾을수가 없습니다 @@@"))
+	}
 
 	if (MinimapBackground)
 	{
@@ -59,6 +70,7 @@ void UMiniMapWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
 		ScanForAgents();
 		TimeSinceLastScan = 0.0f;
 	}
+//	UE_LOG(LogTemp, Error, TEXT("UpDateMinimap"));
 }
 
 

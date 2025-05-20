@@ -472,7 +472,7 @@ void AAgentPlayerController::InitializeMinimap()
 			// 뷰포트에 위젯 추가
 			MinimapWidget->AddToViewport(1); // Z-Order 1로 설정 (UI 레이어)
             
-			UE_LOG(LogTemp, Warning, TEXT("미니맵 위젯이 생성되었습니다."));
+			UE_LOG(LogTemp, Error, TEXT("미니맵 위젯이 생성되었습니다."));
             
 			// 미니맵 위젯 생성 후 에이전트 스캔은 위젯 내부에서 자동으로 수행됨
 		}
