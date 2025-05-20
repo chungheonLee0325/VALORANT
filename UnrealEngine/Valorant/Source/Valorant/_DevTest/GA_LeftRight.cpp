@@ -19,6 +19,7 @@ void UGA_LeftRight::ActivateAbility(const FGameplayAbilitySpecHandle Handle, con
 
 	if (HasAuthority(&ActivationInfo))
 	{
+		MontageStop();
 		// 대기 동작을 위한 MontageTask
 		UAbilityTask_PlayMontageAndWait* PreTask = UAbilityTask_PlayMontageAndWait::CreatePlayMontageAndWaitProxy(this,NAME_None,ReadyAnim,1.f,NAME_None,true);
 	
