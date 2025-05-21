@@ -198,4 +198,11 @@ protected:
 	
 	// 해제 진행도 체크하여 반 해제 여부 설정
 	void CheckHalfDefuse();
+	
+	UFUNCTION(NetMulticast, Reliable)
+	void MulticastRPC_AgentStartPlant(ABaseAgent* Agent);
+	UFUNCTION(NetMulticast, Reliable)
+	void MulticastRPC_AgentCancelPlant(ABaseAgent* Agent);
+	UFUNCTION(NetMulticast, Reliable)
+	void MulticastRPC_AgentFinishPlant(ABaseAgent* Agent);
 };
