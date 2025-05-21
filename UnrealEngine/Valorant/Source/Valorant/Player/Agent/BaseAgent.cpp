@@ -444,11 +444,16 @@ void ABaseAgent::StartFire()
 		// NET_LOG(LogTemp, Warning, TEXT("%hs Called, CurrentInteractor is nullptr"), __FUNCTION__);
 		return;
 	}
-
-	// TODO: 무기를 발사하다가 교체하였을 때, EndFire() 호출?
+	
 	if (auto* weapon = Cast<ABaseWeapon>(CurrentInteractor))
 	{
 		weapon->StartFire();
+		return;
+	}
+
+	if (Spike && Spike->GetSpikeState() == ESpikeState::Carried)
+	{
+		ServerRPC_Interact(Spike);
 	}
 }
 
@@ -462,7 +467,13 @@ void ABaseAgent::EndFire()
 	if (auto* weapon = Cast<ABaseWeapon>(CurrentInteractor))
 	{
 		weapon->EndFire();
+		return;
 	}
+
+	if (CurrentInteractorState == EInteractorType::Spike && bIsSpikePlanting)
+	{
+		ServerRPC_SetIsSpikePlanting(false);
+	}	
 }
 
 void ABaseAgent::Reload()
@@ -513,6 +524,7 @@ void ABaseAgent::ServerRPC_DropCurrentInteractor_Implementation()
 		{
 			SubWeapon = nullptr;
 		}
+		
 		CurrentInteractor->ServerRPC_Drop();
 		ServerRPC_SetCurrentInteractor(nullptr);
 
@@ -524,15 +536,12 @@ void ABaseAgent::ServerRPC_SetCurrentInteractor_Implementation(ABaseInteractor* 
 {
 	CurrentInteractor = interactor;
 	CurrentInteractorState = CurrentInteractor ? CurrentInteractor->GetInteractorType() : EInteractorType::None;
+	
 	OnRep_CurrentInteractorState();
+	
 	if (CurrentInteractor)
 	{
 		CurrentInteractor->SetActive(true);
-		if (CurrentInteractorState == EInteractorType::Spike)
-		{
-			// ToDo : 위치 맞게 수정
-			// CurrentInteractor->SetActorLocation(GetActorLocation() + GetActorUpVector() * -200);
-		}
 		NET_LOG(LogTemp, Warning, TEXT("%hs Called, 현재 장착 중인 Interactor: %s"), __FUNCTION__, *CurrentInteractor->GetActorNameOrLabel());
 	}
 }
@@ -773,7 +782,7 @@ void ABaseAgent::OnFindInteraction(UPrimitiveComponent* OverlappedComponent, AAc
 		}
 		else
 		{
-			NET_LOG(LogTemp, Warning, TEXT("%hs Called, 이미 감지된 Interactor가 있음"), __FUNCTION__);
+			// NET_LOG(LogTemp, Warning, TEXT("%hs Called, 이미 감지된 Interactor가 있음"), __FUNCTION__);
 			return;
 		}
 	}
@@ -782,12 +791,12 @@ void ABaseAgent::OnFindInteraction(UPrimitiveComponent* OverlappedComponent, AAc
 	{
 		if (CurrentInteractor == Interactor)
 		{
-			NET_LOG(LogTemp, Error, TEXT("%hs Called, 현재 들고 있는 Interactor와 동일함"), __FUNCTION__);
+			// NET_LOG(LogTemp, Error, TEXT("%hs Called, 현재 들고 있는 Interactor와 동일함"), __FUNCTION__);
 			return;
 		}
 		if (Interactor->HasOwnerAgent())
 		{
-			NET_LOG(LogTemp, Warning, TEXT("%hs Called, 이미 주인이 있는 Interactor"), __FUNCTION__);
+			// NET_LOG(LogTemp, Warning, TEXT("%hs Called, 이미 주인이 있는 Interactor"), __FUNCTION__);
 			return;
 		}
 		if (const auto* DetectedSpike = Cast<ASpike>(Interactor))
@@ -813,13 +822,13 @@ void ABaseAgent::OnFindInteraction(UPrimitiveComponent* OverlappedComponent, AAc
 			}
 		}
 		
-		NET_LOG(LogTemp, Warning, TEXT("%hs Called, Interactor Name is %s"), __FUNCTION__, *Interactor->GetName());
+		// NET_LOG(LogTemp, Warning, TEXT("%hs Called, Interactor Name is %s"), __FUNCTION__, *Interactor->GetName());
 		FindInteractActor = Interactor;
 		FindInteractActor->OnDetect(true);
 	}
 	else
 	{
-		NET_LOG(LogTemp, Error, TEXT("%hs Called, OtherActor is nullptr or not interactor, OtherActor Name is %s"), __FUNCTION__, *OtherActor->GetName());
+		// NET_LOG(LogTemp, Error, TEXT("%hs Called, OtherActor is nullptr or not interactor, OtherActor Name is %s"), __FUNCTION__, *OtherActor->GetName());
 	}
 }
 
@@ -869,6 +878,8 @@ void ABaseAgent::HandleDieCameraPitch(float newPitch)
 /** 서버에서만 호출됨*/
 void ABaseAgent::Die()
 {
+	//TODO: 클래식 / 나이프는 없애기
+	
 	if (MainWeapon)
 	{
 		MainWeapon->ServerRPC_Drop();
@@ -1084,6 +1095,11 @@ void ABaseAgent::UpdateEquipSpeedMultiplier()
 			}
 		}
 	}
+}
+
+void ABaseAgent::ServerRPC_SetIsSpikePlanting_Implementation(const bool isPlanting)
+{
+	bIsSpikePlanting = isPlanting;
 }
 
 //ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ
@@ -1355,6 +1371,7 @@ void ABaseAgent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifeti
 	DOREPLIFETIME(ABaseAgent, CurrentInteractorState);
 	DOREPLIFETIME(ABaseAgent, PoseIdx);
 	DOREPLIFETIME(ABaseAgent, IsInPlantZone);
+	DOREPLIFETIME(ABaseAgent, bIsSpikePlanting);
 }
 
 
@@ -1434,6 +1451,35 @@ void ABaseAgent::OnFire()
 void ABaseAgent::OnReload()
 {
 	OnAgentReload.Broadcast();
+}
+
+void ABaseAgent::OnSpikeStartPlant()
+{
+	// NET_LOG(LogTemp,Warning,TEXT("baseAgent:: OnSpikeStartPlant"));
+	bCanMove = false;
+	bIsSpikePlanting = true;
+	OnSpikeActive.Broadcast();
+}
+
+void ABaseAgent::OnSpikeCancelPlant()
+{
+	// NET_LOG(LogTemp,Warning,TEXT("baseAgent:: OnSpikeCancelPlant"));
+	bCanMove = true;
+	OnSpikeCancel.Broadcast();
+}
+
+void ABaseAgent::OnSpikeFinishPlant()
+{
+	bCanMove = true;
+	bIsSpikePlanting = false;
+	
+	if (CurrentInteractor == Spike)
+	{
+		CurrentInteractor = nullptr;
+	}
+	
+	Spike = nullptr;
+	SwitchInteractor(EInteractorType::MainWeapon);
 }
 
 void ABaseAgent::OnRep_Controller()

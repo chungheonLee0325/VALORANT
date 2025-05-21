@@ -113,7 +113,7 @@ void UAgentInputComponent::BindInput(UInputComponent* InputComponent)
 
 void UAgentInputComponent::OnMove(const FInputActionValue& value)
 {
-	if (Agent)
+	if (Agent->CanMove())
 	{
 		const FVector2D& moveVector = value.Get<FVector2D>();
 		Agent->AddMovementInput(Agent->GetActorForwardVector(), moveVector.Y);

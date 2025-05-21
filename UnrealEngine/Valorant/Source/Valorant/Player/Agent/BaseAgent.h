@@ -67,6 +67,8 @@ struct FAgentVisibilityInfo
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnAgentEquip);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnAgentFire);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnAgentReload);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnSpikeActive);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnSpikeCancel);
 
 UCLASS()
 class VALORANT_API ABaseAgent : public ACharacter
@@ -212,7 +214,11 @@ public:
 	UAgentAnimInstance* GetABP_1P() const { return ABP_1P; }
 	UAgentAnimInstance* GetABP_3P() const { return ABP_3P; }
 	USkeletalMeshComponent* GetMesh1P() const { return FirstPersonMesh; }
+	
 	bool IsDead() const { return bIsDead; }
+	bool CanMove() const { return bCanMove; }
+	bool IsSpikePlanting() const { return bIsSpikePlanting; }
+	
 	int GetPoseIdx() const { return PoseIdx; }
 
 	UFUNCTION(Server, Reliable)
@@ -314,8 +320,6 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void SetIsInPlantZone(bool IsInZone) { IsInPlantZone = IsInZone; }
 
-	bool GetIsDead() const { return bIsDead; }
-
 	// 현재 팀이 블루팀인지 반환
 	UFUNCTION(BlueprintCallable, Category = "Team")
 	bool IsBlueTeam() const;
@@ -352,7 +356,11 @@ protected:
 	bool bIsRun = true;
 	UPROPERTY()
 	bool bIsDead = false;
+	
+	bool bCanMove = true;
 
+	UPROPERTY(Replicated)
+	bool bIsSpikePlanting = false;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	float BaseSpringArmHeight = 0.0f;
@@ -447,6 +455,9 @@ protected:
 	// 무기 카테고리에 따른 이동 속도 멀티플라이어 업데이트
 	void UpdateEquipSpeedMultiplier();
 
+	UFUNCTION(Server, Reliable)
+	void ServerRPC_SetIsSpikePlanting(const bool isPlanting);
+
 private:
 	// ToDo : 수정
 	UPROPERTY(Replicated)
@@ -456,9 +467,16 @@ public:
 	FOnAgentEquip OnAgentEquip;
 	FOnAgentEquip OnAgentFire;
 	FOnAgentEquip OnAgentReload;
+	FOnSpikeActive OnSpikeActive;
+	FOnSpikeCancel OnSpikeCancel;
+	
 	void OnEquip();
 	void OnFire();
 	void OnReload();
+	void OnSpikeStartPlant();
+	void OnSpikeCancelPlant();
+	void OnSpikeFinishPlant();
+	
 	bool bInteractionCapsuleInit = false;
 	virtual void OnRep_Controller() override;
 };
