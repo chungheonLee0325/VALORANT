@@ -100,4 +100,8 @@ public:
 	FOnInteractorDrop OnInteractorDrop;
 	UFUNCTION(NetMulticast, Reliable)
 	void MulticastRPC_BroadcastOnDrop();
+
+	virtual void PlayEquipAnimation();
+
+	USkeletalMeshComponent* GetMesh() { return Mesh; }
 };

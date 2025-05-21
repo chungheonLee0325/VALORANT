@@ -132,10 +132,7 @@ void ABaseAgent::OnRep_CurrentInteractorState()
 {
 	if (CurrentInteractorState != EInteractorType::None)
 	{
-		if (auto* Weapon = Cast<ABaseWeapon>(CurrentInteractor))
-		{
-			Weapon->PlayEquipAnimation();
-		}
+		CurrentInteractor->PlayEquipAnimation();
 	}
 }
 
@@ -536,7 +533,7 @@ void ABaseAgent::ServerRPC_SetCurrentInteractor_Implementation(ABaseInteractor* 
 		if (CurrentInteractorState == EInteractorType::Spike)
 		{
 			// ToDo : 위치 맞게 수정
-			CurrentInteractor->SetActorLocation(GetActorLocation() + GetActorUpVector() * -200);
+			// CurrentInteractor->SetActorLocation(GetActorLocation() + GetActorUpVector() * -200);
 		}
 		NET_LOG(LogTemp, Warning, TEXT("%hs Called, 현재 장착 중인 Interactor: %s"), __FUNCTION__, *CurrentInteractor->GetActorNameOrLabel());
 	}
@@ -574,8 +571,7 @@ void ABaseAgent::AcquireInteractor(ABaseInteractor* Interactor)
 		Server_AcquireInteractor(Interactor);
 		return;
 	}
-
-	// 스파이크일 경우 처리
+	
 	auto* spike = Cast<ASpike>(Interactor);
 	if (spike)
 	{
@@ -617,12 +613,13 @@ void ABaseAgent::AcquireInteractor(ABaseInteractor* Interactor)
 
 void ABaseAgent::SwitchInteractor(EInteractorType InteractorType)
 {
-	// ABP_1P->Montage_Play(AM_Reload, 1.0f);
-	// NET_LOG(LogTemp,Warning,TEXT("교체 애니 재생"));
-	
-	//TODO: 장착 애니메이션과 함께 기존 재생되던 몽타주 종료하기
 	if (HasAuthority())
 	{
+		if (InteractorType == CurrentInteractorState)
+		{
+			return;
+		}
+		
 		if (CurrentInteractor)
 		{
 			CurrentInteractor->SetActive(false);

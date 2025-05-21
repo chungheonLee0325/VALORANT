@@ -24,6 +24,13 @@ AThirdPersonInteractor::AThirdPersonInteractor()
 	Mesh->SetOwnerNoSee(true);
 }
 
+void AThirdPersonInteractor::MulticastRPC_InitSpike_Implementation(ASpike* Spike)
+{
+	OwnerInteractor = Spike;
+	Mesh->SetSkeletalMeshAsset(Spike->GetMesh()->GetSkeletalMeshAsset());
+	Mesh->SetRelativeScale3D(FVector(0.34f));
+}
+
 void AThirdPersonInteractor::MulticastRPC_InitWeapon_Implementation(ABaseWeapon* Weapon, const int WeaponId)
 {
 	auto* GameInstance = Cast<UValorantGameInstance>(UGameplayStatics::GetGameInstance(GetWorld()));

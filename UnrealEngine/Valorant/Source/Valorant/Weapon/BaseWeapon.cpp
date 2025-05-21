@@ -378,15 +378,7 @@ void ABaseWeapon::MulticastRPC_PlayReloadAnimation_Implementation()
 	}
 }
 
-void ABaseWeapon::PlayEquipAnimation()
-{
-	NET_LOG(LogTemp, Warning, TEXT("%hs Called"), __FUNCTION__);
-	OnEquip.Broadcast();
-	if (OwnerAgent)
-	{
-		OwnerAgent->OnEquip();
-	}
-}
+
 
 void ABaseWeapon::Reload()
 {

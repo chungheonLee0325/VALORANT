@@ -49,7 +49,7 @@ void AMeleeKnife::StartFire()
 	{
 		if (bIsCombo == false)
 		{
-			// NET_LOG(LogTemp, Warning, TEXT("입력 무시"));
+			NET_LOG(LogTemp, Warning, TEXT("입력 무시"));
 			return;
 		}
 	}
@@ -59,7 +59,7 @@ void AMeleeKnife::StartFire()
 
 void AMeleeKnife::Fire()
 {
-	// NET_LOG(LogTemp, Warning, TEXT("장탄 상태 = %d."), MagazineAmmo);
+	// NET_LOG(LogTemp, Warning, TEXT("칼 콤보 상태 = %d."), MagazineAmmo);
 
 	bIsComboTransition = true;
 	
@@ -120,35 +120,31 @@ void AMeleeKnife::Multicast_PlayAttackAnim_Implementation(UAnimMontage* anim1P, 
 	{
 		return;
 	}
-	
-	UAnimInstance* abp3P = OwnerAgent->GetABP_3P();
-	if (OwnerAgent->GetABP_1P() == nullptr)
+
+	if (OwnerAgent->IsLocallyControlled())
 	{
-		NET_LOG(LogTemp, Warning, TEXT("%hs Called, ABP 3p is nullptr"), __FUNCTION__);
+		UAnimInstance* abp = OwnerAgent->GetABP_1P();
+		if (abp == nullptr)
+		{
+			NET_LOG(LogTemp, Error, TEXT("%hs Called, ABP 1p is nullptr"), __FUNCTION__);
+		}
+		abp->Montage_Play(anim1P, 1.0f);
 	}
 	
-	if (!abp3P)
+	UAnimInstance* abp3P = OwnerAgent->GetABP_3P();
+	if (abp3P == nullptr)
 	{
+		NET_LOG(LogTemp, Error, TEXT("%hs Called, ABP 3p is nullptr"), __FUNCTION__);
 		return;
 	}
 	
 	float Duration = abp3P->Montage_Play(anim3P, 1.0f);
 	
-	if (Duration > 0.f && OwnerAgent->IsLocallyControlled())
+	if (Duration > 0.f && OwnerAgent->HasAuthority())
 	{
 		FOnMontageEnded EndDelegate;
 		EndDelegate.BindUObject(this, &AMeleeKnife::OnMontageEnded);
 	
 		abp3P->Montage_SetEndDelegate(EndDelegate, anim3P);
 	}
-
-	
-		UAnimInstance* abp = OwnerAgent->GetABP_1P();
-		if (abp == nullptr)
-		{
-			NET_LOG(LogTemp, Warning, TEXT("%hs Called, ABP 1p is nullptr"), __FUNCTION__);
-		}
-
-		abp->Montage_Play(anim1P, 1.0f);
-	
 }
