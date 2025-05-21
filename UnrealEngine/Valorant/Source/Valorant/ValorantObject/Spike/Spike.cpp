@@ -3,6 +3,7 @@
 
 #include "Spike.h"
 
+#include "Valorant.h"
 #include "Components/SphereComponent.h"
 #include "Components/WidgetComponent.h"
 #include "GameFramework/PawnMovementComponent.h"
@@ -12,6 +13,7 @@
 #include "Net/UnrealNetwork.h"
 #include "Kismet/GameplayStatics.h"
 #include "GameManager/MatchGameState.h"
+#include "GameManager/SubsystemSteamManager.h"
 #include "Weapon/ThirdPersonInteractor.h"
 
 
@@ -54,7 +56,7 @@ void ASpike::Tick(float DeltaTime)
 		if (SpikeState == ESpikeState::Planting && InteractingAgent)
 		{
 			// 플레이어가 죽었는지 확인
-			if (InteractingAgent->IsDead())
+			if (InteractingAgent->IsDead() || !InteractingAgent->IsSpikePlanting())
 			{
 				ServerRPC_CancelPlanting();
 				return;
@@ -205,6 +207,7 @@ void ASpike::ServerRPC_Drop_Implementation()
 
 void ASpike::ServerRPC_Interact_Implementation(ABaseAgent* InteractAgent)
 {
+	// NET_LOG(LogTemp, Warning, TEXT("%hs,스파이크 인터랙트 호출됨"), __FUNCTION__);
 	if (!InteractAgent)
 	{
 		return;
@@ -215,7 +218,7 @@ void ASpike::ServerRPC_Interact_Implementation(ABaseAgent* InteractAgent)
 	{
 		return;
 	}
-
+	
 	// 상태에 따른 상호작용 처리
 	switch (SpikeState)
 	{
@@ -318,6 +321,7 @@ void ASpike::ServerRPC_StartPlanting_Implementation(ABaseAgent* Agent)
 
 	// 설치 시작 이벤트 발생
 	MulticastRPC_OnPlantingStarted();
+	MulticastRPC_AgentStartPlant(Agent);
 }
 
 void ASpike::ServerRPC_CancelPlanting_Implementation()
@@ -326,14 +330,13 @@ void ASpike::ServerRPC_CancelPlanting_Implementation()
 	{
 		return;
 	}
+	
+	MulticastRPC_AgentCancelPlant(InteractingAgent);
 
 	// 설치 취소
 	SpikeState = ESpikeState::Carried;
 	InteractingAgent = nullptr;
 	InteractProgress = 0.0f;
-
-	// 스파이크 Mesh 숨기기
-	SetActive(false);
 
 	// 설치 취소 이벤트 발생
 	MulticastRPC_OnPlantingCancelled();
@@ -348,21 +351,8 @@ void ASpike::ServerRPC_FinishPlanting_Implementation()
 
 	// 설치 완료
 	SpikeState = ESpikeState::Planted;
+	InteractProgress = 0.0f;
 	RemainingDetonationTime = 45.0f; // 폭발까지 45초
-
-	// 스파이크 위치 고정
-	PlantingLocation = GetActorLocation();
-	SetActorLocation(PlantingLocation); // 바닥에서 약간 띄움
-
-	// BaseInteractor::Drop에서 하던 일들을 직접 한다
-	FDetachmentTransformRules DetachmentRule(
-		EDetachmentRule::KeepWorld,
-		EDetachmentRule::KeepWorld,
-		EDetachmentRule::KeepRelative,
-		true
-	);
-	DetachFromActor(DetachmentRule);
-	SetOwnerAgent(nullptr);
 	
 	// 게임 모드에 설치 완료 알림
 	AMatchGameMode* GameMode = Cast<AMatchGameMode>(UGameplayStatics::GetGameMode(GetWorld()));
@@ -376,11 +366,28 @@ void ASpike::ServerRPC_FinishPlanting_Implementation()
 		}
 	}
 
+	// BaseInteractor::Drop에서 하던 일들을 직접 한다
+	FDetachmentTransformRules DetachmentRule(
+		EDetachmentRule::KeepWorld,
+		EDetachmentRule::KeepWorld,
+		EDetachmentRule::KeepRelative,
+		true
+	);
+	Mesh->DetachFromComponent(DetachmentRule);
+	
+	// 스파이크 위치 고정
+	const FVector& ForwardVector = OwnerAgent->GetActorForwardVector();
+	const FVector& FeetLocation = OwnerAgent->GetMovementComponent()->GetActorFeetLocation();
+	const FVector NewLocation = FeetLocation + ForwardVector * 50;
+	SetActorLocation(NewLocation);
+	SetActorRotation(FRotator(0, 0, 0));
+	
 	// 보상 지급
 	InteractingAgent->RewardSpikeInstall();
+	MulticastRPC_AgentFinishPlant(InteractingAgent);
 
 	InteractingAgent = nullptr;
-	InteractProgress = 0.0f;
+	SetOwnerAgent(nullptr);
 
 	// 설치 완료 이벤트 발생
 	MulticastRPC_OnPlantingFinished();
@@ -616,4 +623,19 @@ void ASpike::Destroyed()
 	{
 		OwnerAgent->ResetOwnSpike();
 	}
+}
+
+void ASpike::MulticastRPC_AgentStartPlant_Implementation(ABaseAgent* Agent)
+{
+	Agent->OnSpikeStartPlant();
+}
+
+void ASpike::MulticastRPC_AgentCancelPlant_Implementation(ABaseAgent* Agent)
+{
+	Agent->OnSpikeCancelPlant();	
+}
+
+void ASpike::MulticastRPC_AgentFinishPlant_Implementation(ABaseAgent* Agent)
+{
+	Agent->OnSpikeFinishPlant();
 }
