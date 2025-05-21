@@ -342,23 +342,6 @@ void ABaseWeapon::MulticastRPC_PlayFireAnimation_Implementation()
 		NET_LOG(LogTemp, Error, TEXT("%hs Called, OwnerAgent is nullptr"), __FUNCTION__);
 		return;
 	}
-	
-	// if (OwnerAgent->IsLocallyControlled())
-	// {
-	// 	if (OwnerAgent->GetABP_1P()->Montage_IsPlaying(AM_Fire))
-	// 	{
-	// 		OwnerAgent->GetABP_1P()->Montage_Stop(0.05f, AM_Fire);
-	// 	}
-	// 	OwnerAgent->GetABP_1P()->Montage_Play(AM_Fire, 1.0f);
-	// }
-	// else
-	// {
-	// 	if (OwnerAgent->GetABP_3P()->Montage_IsPlaying(AM_Fire))
-	// 	{
-	// 		OwnerAgent->GetABP_3P()->Montage_Stop(0.05f, AM_Fire);
-	// 	}
-	// 	OwnerAgent->GetABP_3P()->Montage_Play(AM_Fire, 1.0f);
-	// }
 
 	NET_LOG(LogTemp, Warning, TEXT("%hs Called"), __FUNCTION__);
 	OnFire.Broadcast();
@@ -460,7 +443,6 @@ bool ABaseWeapon::ServerOnly_CanAutoPickUp(ABaseAgent* Agent) const
 
 bool ABaseWeapon::ServerOnly_CanDrop() const
 {
-	// TODO: 근접무기인 경우 false
 	return Super::ServerOnly_CanDrop();
 }
 
@@ -478,21 +460,6 @@ void ABaseWeapon::ServerRPC_PickUp_Implementation(ABaseAgent* Agent)
 void ABaseWeapon::ServerRPC_Drop_Implementation()
 {
 	Super::ServerRPC_Drop_Implementation();
-
-	//TODO: 이미 Super에서 Onwer가 Null로 처리됨. 필요시 수정
-	if (nullptr == OwnerAgent)
-	{
-		return;
-	}
-	
-	if (const AAgentPlayerController* PlayerController = Cast<AAgentPlayerController>(OwnerAgent->GetController()))
-	{
-		if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PlayerController->GetLocalPlayer()))
-		{
-			// UE_LOG(LogTemp, Warning, TEXT("RemoveMappingContext"));
-			Subsystem->RemoveMappingContext(FireMappingContext);
-		}
-	}
 }
 
 void ABaseWeapon::ServerRPC_Interact_Implementation(ABaseAgent* InteractAgent)
