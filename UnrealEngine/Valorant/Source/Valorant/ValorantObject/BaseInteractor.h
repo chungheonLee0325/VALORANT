@@ -36,7 +36,7 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess = "true"))
 	TObjectPtr<USphereComponent> Sphere = nullptr;
 
-	UPROPERTY(VisibleAnywhere, ReplicatedUsing=OnRep_OwnerAgent)
+	UPROPERTY(Replicated, ReplicatedUsing=OnRep_OwnerAgent, VisibleAnywhere)
 	TObjectPtr<ABaseAgent> OwnerAgent = nullptr;
 	UFUNCTION()
 	void OnRep_OwnerAgent();

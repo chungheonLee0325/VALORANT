@@ -211,8 +211,9 @@ public:
 
 	UAgentAnimInstance* GetABP_1P() const { return ABP_1P; }
 	UAgentAnimInstance* GetABP_3P() const { return ABP_3P; }
-
 	USkeletalMeshComponent* GetMesh1P() const { return FirstPersonMesh; }
+	bool IsDead() const { return bIsDead; }
+	int GetPoseIdx() const { return PoseIdx; }
 
 	UFUNCTION(Server, Reliable)
 	void ServerApplyGE(TSubclassOf<UGameplayEffect> geClass);
@@ -273,9 +274,6 @@ public:
 	void CancelSpike(ASpike* CancelObject);
 	UFUNCTION(Server, Reliable)
 	void ServerRPC_CancelSpike(ASpike* CancelObject);
-	
-	UFUNCTION()
-	void OnRep_ChangePoseIdx();
 
 	UFUNCTION(Server, Reliable, Category = "Weapon")
 	void ServerRPC_Interact(ABaseInteractor* Interactor);
@@ -316,7 +314,7 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void SetIsInPlantZone(bool IsInZone) { IsInPlantZone = IsInZone; }
 
-	bool IsDead() const { return bIsDead; }
+	bool GetIsDead() const { return bIsDead; }
 
 	// 현재 팀이 블루팀인지 반환
 	UFUNCTION(BlueprintCallable, Category = "Team")
@@ -389,10 +387,12 @@ protected:
 	UPROPERTY(VisibleAnywhere, Replicated)
 	ABaseInteractor* CurrentInteractor = nullptr;
 
-	UPROPERTY(Replicated)
+	UPROPERTY(Replicated, ReplicatedUsing = OnRep_CurrentInteractorState)
 	EInteractorType CurrentInteractorState = EInteractorType::None;
+	UFUNCTION()
+	void OnRep_CurrentInteractorState();
 
-	UPROPERTY(Replicated, ReplicatedUsing=OnRep_ChangePoseIdx)
+	UPROPERTY(Replicated)
 	int PoseIdx = 0;
 	int PoseIdxOffset = 0;
 

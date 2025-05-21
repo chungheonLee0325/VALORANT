@@ -10,50 +10,40 @@ void UAgentAnimInstance::NativeBeginPlay()
 {
 	Super::NativeBeginPlay();
 
-	auto* ownerPawn = TryGetPawnOwner();
-	if (auto* player = Cast<ABaseAgent>(ownerPawn))
+	OwnerAgent = Cast<ABaseAgent>(GetOwningActor());
+	if (OwnerAgent)
 	{
-		player->OnAgentEquip.AddDynamic(this, &UAgentAnimInstance::OnEquip);
-		player->OnAgentFire.AddDynamic(this, &UAgentAnimInstance::OnFire);
-		player->OnAgentReload.AddDynamic(this, &UAgentAnimInstance::OnReload);
+		OwnerAgent->OnAgentEquip.AddDynamic(this, &UAgentAnimInstance::OnEquip);
+		OwnerAgent->OnAgentFire.AddDynamic(this, &UAgentAnimInstance::OnFire);
+		OwnerAgent->OnAgentReload.AddDynamic(this, &UAgentAnimInstance::OnReload);
 	}
 }
 
 void UAgentAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 {
 	Super::NativeUpdateAnimation(DeltaSeconds);
-	auto ownerPawn = TryGetPawnOwner();
-	
-	auto player = Cast<ABaseAgent>(ownerPawn);
-	if (player)
-	{
-		FVector velocity = player->GetVelocity();
+	UpdateState();
+}
 
-		FVector forward = player->GetActorForwardVector();
+void UAgentAnimInstance::UpdateState()
+{
+	if (OwnerAgent)
+	{
+		FVector velocity = OwnerAgent->GetVelocity();
+		FVector forward = OwnerAgent->GetActorForwardVector();
 		Speed = FVector::DotProduct(velocity, forward);
-		FVector right = player->GetActorRightVector();
+		FVector right = OwnerAgent->GetActorRightVector();
 		Direction = FVector::DotProduct(velocity, right);
 		
-		bIsCrouch = player->bIsCrouched;
-		bIsInAir = player->GetCharacterMovement()->IsFalling();
-
-		if (InteractorState != player->GetInteractorState())
+		bIsCrouch = OwnerAgent->bIsCrouched;
+		bIsInAir = OwnerAgent->GetCharacterMovement()->IsFalling();
+		bIsDead = OwnerAgent->GetIsDead();
+		InteractorPoseIdx = OwnerAgent->GetPoseIdx();
+		
+		if (InteractorState != OwnerAgent->GetInteractorState())
 		{
-			InteractorState = player->GetInteractorState();
+			InteractorState = OwnerAgent->GetInteractorState();
 			OnChangedWeaponState();
 		}
-
-		// if (InteractorState == EInteractorType::Melee)
-		// {
-		// 	NET_LOG(LogTemp,Warning,TEXT("밀리"));
-		// }
-		// else if (InteractorState == EInteractorType::None)
-		// {
-		// 	NET_LOG(LogTemp,Warning,TEXT("None"));
-		// }
-		// else if (InteractorState == EInteractorType::MainWeapon)
-		// {
-		// 	NET_LOG(LogTemp,Warning,TEXT("Main"));
-		// }
 	}
 }

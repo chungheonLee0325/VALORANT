@@ -378,7 +378,7 @@ void ABaseWeapon::MulticastRPC_PlayReloadAnimation_Implementation()
 	}
 }
 
-void ABaseWeapon::MulticastRPC_PlayEquipAnimation_Implementation()
+void ABaseWeapon::PlayEquipAnimation()
 {
 	NET_LOG(LogTemp, Warning, TEXT("%hs Called"), __FUNCTION__);
 	OnEquip.Broadcast();
