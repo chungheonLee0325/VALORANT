@@ -102,4 +102,6 @@ public:
 	void MulticastRPC_BroadcastOnDrop();
 
 	virtual void PlayEquipAnimation();
+
+	USkeletalMeshComponent* GetMesh() { return Mesh; }
 };

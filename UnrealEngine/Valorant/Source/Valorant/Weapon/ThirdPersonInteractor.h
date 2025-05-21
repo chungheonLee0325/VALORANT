@@ -6,6 +6,7 @@
 #include "GameFramework/Actor.h"
 #include "ThirdPersonInteractor.generated.h"
 
+class ASpike;
 class ABaseInteractor;
 class ABaseWeapon;
 
@@ -25,4 +26,6 @@ public:
 
 	UFUNCTION(NetMulticast, Reliable)
 	void MulticastRPC_InitWeapon(ABaseWeapon* Weapon, const int WeaponId);
+	UFUNCTION(NetMulticast, Reliable)
+	void MulticastRPC_InitSpike(ASpike* Spike);
 };
