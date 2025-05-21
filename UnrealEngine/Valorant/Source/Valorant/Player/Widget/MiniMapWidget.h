@@ -11,11 +11,10 @@ class ABaseAgent;
 /**
  * 
  */
-UCLASS()
+UCLASS(meta = (DisableNativeTick))
 class VALORANT_API UMiniMapWidget : public UUserWidget
 {
 	GENERATED_BODY()
-
 
 public:
 	virtual void NativeConstruct() override; // 위젯이 생성될 때 호출되는 함수, 부모 클래스 함수 오버라이드
@@ -35,7 +34,7 @@ public:
     
     // 미니맵 업데이트 - 월드 좌표를 미니맵 좌표로 변환하는 함수 (월드 좌표 -> 미니맵 좌표 변환)
     UFUNCTION(BlueprintCallable, Category = "Minimap") 
-    FVector2D WorldToMinimapPosition(const FVector& WorldLocation); 
+    FVector2D WorldToMinimapPosition(const FVector& TargetActorLocation); 
 	// 주기적으로 모든 에이전트 검색하여 등록하는 함수 추가
 	UFUNCTION(BlueprintCallable, Category = "Minimap")
 	void ScanForAgents();
@@ -94,7 +93,11 @@ protected:
     
 	// 스캔 주기 타이머 추가
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Minimap")
-	float ScanInterval = 2.0f;
+	float ScanInterval = 0.3f;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Minimap")
 	float TimeSinceLastScan = 0.0f;
+
+private:
+	FTimerHandle ScanTimerHandle;
+	void Scan();
 };

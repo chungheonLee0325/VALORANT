@@ -1469,3 +1469,28 @@ bool ABaseAgent::IsAttacker() const
 	}
 	return false;
 }
+
+bool ABaseAgent::IsInFrustum(const AActor* Actor) const
+{
+	// Ref: https://forums.unrealengine.com/t/perform-frustum-check/287524/10
+	ULocalPlayer* LocalPlayer = GetWorld()->GetFirstLocalPlayerFromController();
+	if (LocalPlayer != nullptr && LocalPlayer->ViewportClient != nullptr && LocalPlayer->ViewportClient->Viewport)
+	{
+		FSceneViewFamilyContext ViewFamily(FSceneViewFamily::ConstructionValues(
+			LocalPlayer->ViewportClient->Viewport,
+			GetWorld()->Scene,
+			LocalPlayer->ViewportClient->EngineShowFlags)
+			.SetRealtimeUpdate(true));
+
+		FVector ViewLocation;
+		FRotator ViewRotation;
+		FSceneView* SceneView = LocalPlayer->CalcSceneView(&ViewFamily, ViewLocation, ViewRotation, LocalPlayer->ViewportClient->Viewport);
+		if (SceneView != nullptr)
+		{
+			bool bIsInFrustum = SceneView->ViewFrustum.IntersectSphere(Actor->GetActorLocation(), Actor->GetSimpleCollisionRadius());
+			// 절두체 안에 있으면서 최근에 렌더링 된 적 있는 경우에만 true 반환
+			return bIsInFrustum && Actor->WasRecentlyRendered(0.1f);
+		}
+	}
+	return false;
+}
