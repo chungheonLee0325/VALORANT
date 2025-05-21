@@ -16,6 +16,8 @@ void UAgentAnimInstance::NativeBeginPlay()
 		OwnerAgent->OnAgentEquip.AddDynamic(this, &UAgentAnimInstance::OnEquip);
 		OwnerAgent->OnAgentFire.AddDynamic(this, &UAgentAnimInstance::OnFire);
 		OwnerAgent->OnAgentReload.AddDynamic(this, &UAgentAnimInstance::OnReload);
+		OwnerAgent->OnSpikeActive.AddDynamic(this, &UAgentAnimInstance::OnSpikeActive);
+		OwnerAgent->OnSpikeCancel.AddDynamic(this, &UAgentAnimInstance::OnSpikeCancel);
 	}
 }
 
@@ -37,7 +39,7 @@ void UAgentAnimInstance::UpdateState()
 		
 		bIsCrouch = OwnerAgent->bIsCrouched;
 		bIsInAir = OwnerAgent->GetCharacterMovement()->IsFalling();
-		bIsDead = OwnerAgent->GetIsDead();
+		bIsDead = OwnerAgent->IsDead();
 		InteractorPoseIdx = OwnerAgent->GetPoseIdx();
 		
 		if (InteractorState != OwnerAgent->GetInteractorState())
