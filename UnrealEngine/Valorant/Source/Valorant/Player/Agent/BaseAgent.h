@@ -389,6 +389,7 @@ protected:
 
 	UPROPERTY(Replicated, ReplicatedUsing = OnRep_CurrentInteractorState)
 	EInteractorType CurrentInteractorState = EInteractorType::None;
+	
 	UFUNCTION()
 	void OnRep_CurrentInteractorState();
 

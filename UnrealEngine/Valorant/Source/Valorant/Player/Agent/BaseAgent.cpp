@@ -130,10 +130,7 @@ void ABaseAgent::OnRep_CurrentInteractorState()
 {
 	if (CurrentInteractorState != EInteractorType::None)
 	{
-		if (auto* Weapon = Cast<ABaseWeapon>(CurrentInteractor))
-		{
-			Weapon->PlayEquipAnimation();
-		}
+		CurrentInteractor->PlayEquipAnimation();
 	}
 }
 
