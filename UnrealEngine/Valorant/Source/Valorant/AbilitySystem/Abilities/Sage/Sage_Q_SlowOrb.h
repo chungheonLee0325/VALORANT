@@ -7,7 +7,6 @@
 class ABaseProjectile;
 
 UCLASS()
-//class VALORANT_API USage_Q_SlowOrb : public UBaseGameplayAbility
 class VALORANT_API USage_Q_SlowOrb : public UGA_LeftRight
 {
     GENERATED_BODY()

@@ -174,5 +174,6 @@ public:
 	void InitializeMinimap();
 
 	UMiniMapWidget* GetMinimapWidget() const { return MinimapWidget; }
+	virtual void OnRep_Pawn() override;
 	
 };

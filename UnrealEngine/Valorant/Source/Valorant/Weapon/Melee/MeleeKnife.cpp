@@ -12,6 +12,7 @@
 AMeleeKnife::AMeleeKnife()
 {
 	PrimaryActorTick.bCanEverTick = true;
+	InteractorType = EInteractorType::Melee;
 }
 
 void AMeleeKnife::BeginPlay()

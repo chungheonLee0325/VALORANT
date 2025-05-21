@@ -117,8 +117,6 @@ protected:
 	void PlayFireSound();
 	UFUNCTION(NetMulticast, Reliable)
 	void MulticastRPC_PlayReloadAnimation();
-	UFUNCTION(NetMulticast, Reliable)
-	void MulticastRPC_PlayEquipAnimation();
 
 	UFUNCTION(BlueprintCallable, Category="Weapon")
 	void Reload();
@@ -145,6 +143,9 @@ public:
 	UFUNCTION(Server, Reliable, BlueprintCallable, Category="Weapon")
 	void ServerRPC_StartReload();
 
+	UFUNCTION(NetMulticast, Reliable)
+	void MulticastRPC_PlayEquipAnimation();
+	
 	UFUNCTION(BlueprintCallable)
 	EWeaponCategory GetWeaponCategory() const { return WeaponData->WeaponCategory; }
 

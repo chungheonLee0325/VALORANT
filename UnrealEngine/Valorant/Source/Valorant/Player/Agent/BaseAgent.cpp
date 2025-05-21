@@ -605,19 +605,16 @@ void ABaseAgent::SwitchInteractor(EInteractorType InteractorType)
 
 		if (InteractorType == EInteractorType::MainWeapon)
 		{
-			PoseIdxOffset = -11;
 			EquipInteractor(MainWeapon);
 			UpdateEquipSpeedMultiplier();
 		}
 		else if (InteractorType == EInteractorType::SubWeapon)
 		{
-			PoseIdxOffset = -2;
 			EquipInteractor(SubWeapon);
 			UpdateEquipSpeedMultiplier();
 		}
 		else if (InteractorType == EInteractorType::Melee)
 		{
-			PoseIdx = 0;
 			EquipInteractor(MeleeKnife);
 			UpdateEquipSpeedMultiplier();
 		}
@@ -763,32 +760,22 @@ void ABaseAgent::EquipInteractor(ABaseInteractor* interactor)
 		NET_LOG(LogTemp, Error, TEXT("%hs Called, Interactor를 장착하려 하는데 nullptr임"), __FUNCTION__);
 		return;
 	}
+	
+	CurrentInteractor->SetActive(true);
+	
 	CurrentInteractorState = CurrentInteractor->GetInteractorType();
+	
 	if (CurrentInteractorState == EInteractorType::Spike)
 	{
 		// ToDo : 위치 맞게 수정
 		CurrentInteractor->SetActorLocation(GetActorLocation() + GetActorUpVector() * -200);
 	}
-
-	CurrentInteractor->SetActive(true);
-
-	// if (ABP_1P)
-	// {
-	// 	ABP_1P->InteractorState = CurrentInteractorState;
-	// }
-	// if (ABP_3P)
-	// {
-	// 	ABP_3P->InteractorState = CurrentInteractorState;
-	// }
-
-	//TODO: 인터랙터에도 적용할지 말지
+	
 	if (auto* weapon = Cast<ABaseWeapon>(CurrentInteractor))
 	{
-		PoseIdx = weapon->GetWeaponID() + PoseIdxOffset;
-		ABP_1P->InteractorPoseIdx = PoseIdx;
-		ABP_3P->InteractorPoseIdx = PoseIdx;
+		weapon->MulticastRPC_PlayEquipAnimation();
 	}
-	// UE_LOG(LogTemp,Warning,TEXT("PoseIdx: %d"), PoseIdx);
+	
 	NET_LOG(LogTemp, Warning, TEXT("%hs Called, 현재 장착 중인 Interactor: %s"), __FUNCTION__, *CurrentInteractor->GetActorNameOrLabel());
 }
 
@@ -1473,4 +1460,22 @@ void ABaseAgent::OnRep_Controller()
 		InteractionCapsule->OnComponentBeginOverlap.AddDynamic(this, &ABaseAgent::OnFindInteraction);
 		InteractionCapsule->OnComponentEndOverlap.AddDynamic(this, &ABaseAgent::OnInteractionCapsuleEndOverlap);
 	}
+}
+
+bool ABaseAgent::IsBlueTeam() const
+{
+	if (const AAgentPlayerState* PS = GetPlayerState<AAgentPlayerState>())
+	{
+		return PS->bIsBlueTeam;
+	}
+	return false;
+}
+
+bool ABaseAgent::IsAttacker() const
+{
+	if (const AAgentPlayerState* PS = GetPlayerState<AAgentPlayerState>())
+	{
+		return PS->bIsAttacker;
+	}
+	return false;
 }

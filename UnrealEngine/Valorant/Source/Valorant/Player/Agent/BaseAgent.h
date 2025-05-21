@@ -318,6 +318,13 @@ public:
 
 	bool IsDead() const { return bIsDead; }
 
+	// 현재 팀이 블루팀인지 반환
+	UFUNCTION(BlueprintCallable, Category = "Team")
+	bool IsBlueTeam() const;
+	// 현재 팀이 공격팀인지 반환
+	UFUNCTION(BlueprintCallable, Category = "Team")
+	bool IsAttacker() const;
+
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	UValorantGameInstance* m_GameInstance;
