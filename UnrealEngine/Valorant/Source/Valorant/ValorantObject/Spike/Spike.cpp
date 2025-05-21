@@ -122,12 +122,12 @@ void ASpike::OnRep_SpikeState()
 	{
 	case ESpikeState::Dropped:
 		// 떨어진 상태 - 시각적 표시 활성화
-		DetectWidgetComponent->SetVisibility(true);
+		// DetectWidgetComponent->SetVisibility(true);
 		break;
 
 	case ESpikeState::Carried:
 		// 소지 상태 - 위젯 비활성화
-		DetectWidgetComponent->SetVisibility(false);
+		// DetectWidgetComponent->SetVisibility(false);
 		break;
 
 	case ESpikeState::Planting:
@@ -175,7 +175,7 @@ void ASpike::ServerRPC_Drop_Implementation()
 	Super::ServerRPC_Drop_Implementation();
 
 	// 스파이크 Mesh 보이기
-	SetActive(true);
+	// SetActive(true);
 
 	// 스파이크 상태 업데이트
 	SpikeState = ESpikeState::Dropped;
