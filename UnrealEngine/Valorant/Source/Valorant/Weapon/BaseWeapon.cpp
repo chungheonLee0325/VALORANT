@@ -541,7 +541,7 @@ void ABaseWeapon::ServerOnly_AttachWeapon(ABaseAgent* Agent)
 	if ((ThirdPersonInteractor = GetWorld()->SpawnActor<AThirdPersonInteractor>()))
 	{
 		ThirdPersonInteractor->SetOwner(Agent);
-		ThirdPersonInteractor->MulticastRPC_InitWeapon(WeaponID);
+		ThirdPersonInteractor->MulticastRPC_InitWeapon(this, WeaponID);
 		ThirdPersonInteractor->AttachToComponent(Agent->GetMesh(), AttachmentRules, FName(TEXT("R_WeaponSocket")));
 	}
 	

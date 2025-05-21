@@ -6,6 +6,9 @@
 #include "GameFramework/Actor.h"
 #include "ThirdPersonInteractor.generated.h"
 
+class ABaseInteractor;
+class ABaseWeapon;
+
 UCLASS()
 class VALORANT_API AThirdPersonInteractor : public AActor
 {
@@ -15,9 +18,11 @@ public:
 	AThirdPersonInteractor();
 
 public:
+	UPROPERTY()
+	TObjectPtr<ABaseInteractor> OwnerInteractor;
 	UPROPERTY(VisibleAnywhere)
 	TObjectPtr<USkeletalMeshComponent> Mesh;
 
 	UFUNCTION(NetMulticast, Reliable)
-	void MulticastRPC_InitWeapon(const int WeaponId);
+	void MulticastRPC_InitWeapon(ABaseWeapon* Weapon, const int WeaponId);
 };
