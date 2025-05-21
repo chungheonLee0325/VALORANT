@@ -34,5 +34,5 @@ public:
 	void OnDrop();
 
 protected:
-	virtual void NativeInitializeAnimation() override;
+	virtual void NativeBeginPlay() override;
 };

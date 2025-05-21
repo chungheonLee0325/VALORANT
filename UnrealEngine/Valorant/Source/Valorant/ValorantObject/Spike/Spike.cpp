@@ -12,6 +12,7 @@
 #include "Net/UnrealNetwork.h"
 #include "Kismet/GameplayStatics.h"
 #include "GameManager/MatchGameState.h"
+#include "Weapon/ThirdPersonInteractor.h"
 
 
 ASpike::ASpike()
@@ -122,12 +123,12 @@ void ASpike::OnRep_SpikeState()
 	{
 	case ESpikeState::Dropped:
 		// 떨어진 상태 - 시각적 표시 활성화
-		DetectWidgetComponent->SetVisibility(true);
+		// DetectWidgetComponent->SetVisibility(true);
 		break;
 
 	case ESpikeState::Carried:
 		// 소지 상태 - 위젯 비활성화
-		DetectWidgetComponent->SetVisibility(false);
+		// DetectWidgetComponent->SetVisibility(false);
 		break;
 
 	case ESpikeState::Planting:
@@ -163,6 +164,27 @@ void ASpike::ServerRPC_PickUp_Implementation(ABaseAgent* Agent)
 
 	// 스파이크 상태 업데이트
 	SpikeState = ESpikeState::Carried;
+
+	FAttachmentTransformRules AttachmentRules(
+		EAttachmentRule::SnapToTarget,
+		EAttachmentRule::SnapToTarget,
+		EAttachmentRule::KeepRelative,
+		true
+		);
+	Mesh->AttachToComponent(Agent->GetMesh1P(), AttachmentRules, FName(TEXT("R_WeaponSocket")));
+
+	Mesh->AttachToComponent(Agent->GetMesh1P(), AttachmentRules, FName(TEXT("R_WeaponSocket")));
+	if (nullptr != ThirdPersonInteractor)
+	{
+		ThirdPersonInteractor->Destroy();
+		ThirdPersonInteractor = nullptr;
+	}
+	if ((ThirdPersonInteractor = GetWorld()->SpawnActor<AThirdPersonInteractor>()))
+	{
+		ThirdPersonInteractor->SetOwner(Agent);
+		ThirdPersonInteractor->MulticastRPC_InitSpike(this);
+		ThirdPersonInteractor->AttachToComponent(Agent->GetMesh(), AttachmentRules, FName(TEXT("R_WeaponSocket")));
+	}
 }
 
 void ASpike::ServerRPC_Drop_Implementation()

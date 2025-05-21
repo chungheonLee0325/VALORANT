@@ -5,6 +5,7 @@
 
 #include "Valorant.h"
 #include "Components/CanvasPanel.h"
+#include "Components/CanvasPanelSlot.h"
 #include "Components/Image.h"
 #include "Valorant/Player/Agent/BaseAgent.h"
 #include "GameFramework/CharacterMovementComponent.h"
@@ -25,16 +26,16 @@ void UMiniMapWidget::NativeConstruct()
 		if (PlayerPawn)
 		{
 			ObserverAgent = Cast<ABaseAgent>(PlayerPawn); // 폰을 BaseAgent로 형변환하여 저장
-			UE_LOG(LogTemp, Warning, TEXT("ObserverAgent 설정 완료 : %s"), *GetNameSafe(ObserverAgent));
+			NET_LOG(LogTemp, Warning, TEXT("%hs Called, ObserverAgent 설정 완료 : %s"), __FUNCTION__, *GetNameSafe(ObserverAgent));
 		}
 		else
 		{
-			UE_LOG(LogTemp, Warning, TEXT("플레이어 폰이 아직 생성되지 않았습니다 !!! "))
+			NET_LOG(LogTemp, Warning, TEXT("%hs Called, 플레이어 폰이 아직 생성되지 않았습니다 !!! "), __FUNCTION__);
 		}
 	}
 	else
 	{
-		UE_LOG(LogTemp, Warning, TEXT("컨트롤러를 찾을수가 없습니다 @@@"))
+		NET_LOG(LogTemp, Warning, TEXT("%hs Called, 컨트롤러를 찾을수가 없습니다 @@@"), __FUNCTION__);
 	}
 
 	if (MinimapBackground)
@@ -61,8 +62,7 @@ void UMiniMapWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
 
 	// 매 프레임 아이콘 업데이트
 	UpdateAgentIcons(); // 모든 에이전트 아이콘 업데이트 함수 호출
-
-
+	
 	// 주기적으로 에이전트 스캔
 	TimeSinceLastScan += InDeltaTime;
 	if (TimeSinceLastScan >= ScanInterval)
@@ -70,7 +70,6 @@ void UMiniMapWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
 		ScanForAgents();
 		TimeSinceLastScan = 0.0f;
 	}
-//	UE_LOG(LogTemp, Error, TEXT("UpDateMinimap"));
 }
 
 
@@ -89,7 +88,7 @@ void UMiniMapWidget::ScanForAgents()
 		if (IsValid(Agent) && !MappedAgents.Contains(Agent))
 		{
 			AddAgentToMinimap(Agent);
-			UE_LOG(LogTemp, Warning, TEXT("미니맵이 에이전트(%s)를 자동 감지하여 등록"), *Agent->GetName());
+			NET_LOG(LogTemp, Warning, TEXT("미니맵이 에이전트(%s)를 자동 감지하여 등록"), *Agent->GetName());
 		}
 	}
 }
@@ -175,7 +174,10 @@ FVector2D UMiniMapWidget::WorldToMinimapPosition(const FVector& WorldLocation)
 {
 	if (!IsValid(ObserverAgent)) // 관찰자 에이전트가 유효하지 않은 경우
 		return MinimapCenter; // 기본값으로 미니맵 중앙 반환
-    
+
+	const auto& Position = Cast<UCanvasPanelSlot>(CanvasPanel->GetSlots()[0])->GetPosition();
+	// NET_LOG(LogTemp, Warning, TEXT("%hs Called, Position: %s"), __FUNCTION__, *Position.ToString());
+	
 	// 관찰자 위치와 회전
 	FVector ObserverLocation = ObserverAgent->GetActorLocation(); // 관찰자의 월드 위치 가져오기
 	float ObserverYaw = ObserverAgent->GetActorRotation().Yaw; // 관찰자의 Yaw 회전값 가져오기 (수평 회전)
@@ -186,13 +188,23 @@ FVector2D UMiniMapWidget::WorldToMinimapPosition(const FVector& WorldLocation)
     
 	// 관찰자 회전에 맞게 회전 변환 (관찰자 기준으로 미니맵 회전)
 	float RotationRadians = FMath::DegreesToRadians(ObserverYaw); // 회전값을 라디안으로 변환
-	float RotatedX = DeltaX * FMath::Cos(RotationRadians) + DeltaY * FMath::Sin(RotationRadians); // 회전 변환된 X 좌표
-	float RotatedY = -DeltaX * FMath::Sin(RotationRadians) + DeltaY * FMath::Cos(RotationRadians); // 회전 변환된 Y 좌표
+	// float RotatedX = DeltaX * FMath::Cos(RotationRadians) + DeltaY * FMath::Sin(RotationRadians); // 회전 변환된 X 좌표
+	// float RotatedY = -DeltaX * FMath::Sin(RotationRadians) + DeltaY * FMath::Cos(RotationRadians); // 회전 변환된 Y 좌표
     
 	// 미니맵 스케일 적용하여 미니맵 좌표 계산
 	FVector2D MinimapPos; // 미니맵 좌표 변수
-	MinimapPos.X = MinimapCenter.X + RotatedX * MapScale; // X 좌표 계산 (중앙에서의 오프셋)
-	MinimapPos.Y = MinimapCenter.Y + RotatedY * MapScale; // Y 좌표 계산 (중앙에서의 오프셋)
+
+	MinimapPos.X = (WorldLocation.Y + 10000) / 20000.0f * 256.0f;
+	MinimapPos.Y = 256 - (WorldLocation.X + 10000) / 20000.0f * 256.0f;
+	// MinimapPos.X = 128 + DeltaX * 1; // X 좌표 계산 (중앙에서의 오프셋)
+	// MinimapPos.Y = 128 + DeltaY * 1; // Y 좌표 계산 (중앙에서의 오프셋)
+	// NET_LOG(LogTemp, Warning, TEXT("%hs Called, %s"), __FUNCTION__, *MinimapPos.ToString());
+	// MinimapPos.X = MinimapCenter.X + DeltaX * MapScale; // X 좌표 계산 (중앙에서의 오프셋)
+	// MinimapPos.Y = MinimapCenter.Y + DeltaY * MapScale; // Y 좌표 계산 (중앙에서의 오프셋)
+
+	// TODO: 미니맵 돌리기 한 다음에 아래 공식 쓰셈
+	// MinimapPos.X = MinimapCenter.X + RotatedX * MapScale; // X 좌표 계산 (중앙에서의 오프셋)
+	// MinimapPos.Y = MinimapCenter.Y + RotatedY * MapScale; // Y 좌표 계산 (중앙에서의 오프셋)
     
 	return MinimapPos; // 계산된 미니맵 좌표 반환
 }
@@ -202,16 +214,15 @@ void UMiniMapWidget::UpdateAgentIcons()
 {
 	if (!IsValid(ObserverAgent)) // 관찰자 에이전트가 유효하지 않은 경우
 		return; // 함수 종료
-    
+	
 	// 모든 에이전트 위치 및 아이콘 업데이트
 	for (ABaseAgent* Agent : MappedAgents) // 미니맵에 표시될 모든 에이전트에 대해 반복
 	{
-		if (!IsValid(Agent)) // 에이전트가 유효하지 않은 경우
-			continue; // 다음 에이전트로 넘어감
+		if (!IsValid(Agent)) continue;
         
 		// 월드 위치를 미니맵 좌표로 변환
-		FVector WorldLocation = Agent->GetActorLocation(); // 에이전트의 월드 위치 가져오기
-		FVector2D MinimapPosition = WorldToMinimapPosition(WorldLocation); // 월드 위치를 미니맵 좌표로 변환
+		FVector TargetActorLocation = Agent->GetActorLocation(); // 에이전트의 월드 위치 가져오기
+		FVector2D ConvertedMinimapPosition = WorldToMinimapPosition(TargetActorLocation); // 월드 위치를 미니맵 좌표로 변환
         
 		// 에이전트 가시성 상태 확인
 		EVisibilityState VisState = Agent->GetVisibilityStateForAgent(ObserverAgent); // 현재 관찰자에게 보이는 상태 확인
@@ -233,9 +244,8 @@ void UMiniMapWidget::UpdateAgentIcons()
 		}
         
 		// 아이콘 업데이트 (블루프린트에서 구현)
-		UpdateAgentIcon(Agent, MinimapPosition, IconToUse, VisState); // 블루프린트에서 구현된 함수 호출하여 UI 업데이트
-		NET_LOG(LogTemp, Warning, TEXT("%hs Called, 아이콘 업데이트 함수 호출 "), __FUNCTION__);
-
+		UpdateAgentIcon(Agent, ConvertedMinimapPosition, IconToUse, VisState); // 블루프린트에서 구현된 함수 호출하여 UI 업데이트
+		// NET_LOG(LogTemp, Warning, TEXT("%hs Called, 아이콘 업데이트 함수 호출 "), __FUNCTION__);
 	}
 }
 

@@ -57,15 +57,14 @@ ABaseAgent::ABaseAgent()
 	
 	SpringArm = CreateDefaultSubobject<USpringArmComponent>("Spring Arm");
 	SpringArm->SetupAttachment(GetRootComponent());
-	SpringArm->SetRelativeLocation(FVector(-10, 0, 60));
+	SpringArm->SetRelativeLocation(FVector(0, 0, 60));
 	SpringArm->TargetArmLength = 0;
+	SpringArm->bEnableCameraLag = true;
+	SpringArm->CameraLagSpeed = 20.0f;
 	SpringArm->bUsePawnControlRotation = true;
 
 	BaseSpringArmHeight = SpringArm->GetRelativeLocation().Z;
 	CrouchSpringArmHeight = BaseSpringArmHeight - 28.0f;
-
-	Camera = CreateDefaultSubobject<UCameraComponent>("Camera");
-	Camera->SetupAttachment(SpringArm);
 
 	GetMesh()->SetupAttachment(GetRootComponent());
 	GetMesh()->SetRelativeScale3D(FVector(.34f));
@@ -76,8 +75,7 @@ ABaseAgent::ABaseAgent()
 	FirstPersonMesh = CreateDefaultSubobject<USkeletalMeshComponent>("FirstPersonMesh");
 	FirstPersonMesh->SetupAttachment(SpringArm);
 	FirstPersonMesh->SetRelativeScale3D(FVector(.34f));
-	FirstPersonMesh->SetRelativeLocation(FVector(10, 0, -155));
-
+	FirstPersonMesh->SetRelativeLocation(FVector(0, 0, -120));
 	FirstPersonMesh->AlwaysLoadOnClient = true;
 	FirstPersonMesh->AlwaysLoadOnServer = true;
 	FirstPersonMesh->bOwnerNoSee = false;
@@ -88,6 +86,10 @@ ABaseAgent::ABaseAgent()
 	FirstPersonMesh->SetGenerateOverlapEvents(true);
 	FirstPersonMesh->SetCollisionProfileName(TEXT("NoCollision"));
 	FirstPersonMesh->SetCanEverAffectNavigation(false);
+
+	Camera = CreateDefaultSubobject<UCameraComponent>("Camera");
+	Camera->SetupAttachment(FirstPersonMesh, TEXT("CameraSocket"));
+	Camera->SetFieldOfView(70.f);
 
 	BaseCapsuleHalfHeight = 72.0f;
 	CrouchCapsuleHalfHeight = 68.0f;
@@ -124,6 +126,14 @@ ABaseAgent::ABaseAgent()
 	QuestionMarkDuration = 3.0f;
 	// 마지막 시야 체크 시간 초기화 
 	LastVisibilityCheckTime = 0.0f;
+}
+
+void ABaseAgent::OnRep_CurrentInteractorState()
+{
+	if (CurrentInteractorState != EInteractorType::None)
+	{
+		CurrentInteractor->PlayEquipAnimation();
+	}
 }
 
 // 서버 전용. 캐릭터를 Possess할 때 호출됨. 게임 첫 시작시, BeginPlay 보다 먼저 호출됩니다.
@@ -515,6 +525,18 @@ void ABaseAgent::ServerRPC_DropCurrentInteractor_Implementation()
 void ABaseAgent::ServerRPC_SetCurrentInteractor_Implementation(ABaseInteractor* interactor)
 {
 	CurrentInteractor = interactor;
+	CurrentInteractorState = CurrentInteractor ? CurrentInteractor->GetInteractorType() : EInteractorType::None;
+	OnRep_CurrentInteractorState();
+	if (CurrentInteractor)
+	{
+		CurrentInteractor->SetActive(true);
+		if (CurrentInteractorState == EInteractorType::Spike)
+		{
+			// ToDo : 위치 맞게 수정
+			// CurrentInteractor->SetActorLocation(GetActorLocation() + GetActorUpVector() * -200);
+		}
+		NET_LOG(LogTemp, Warning, TEXT("%hs Called, 현재 장착 중인 Interactor: %s"), __FUNCTION__, *CurrentInteractor->GetActorNameOrLabel());
+	}
 }
 
 ABaseWeapon* ABaseAgent::GetMainWeapon() const
@@ -549,8 +571,7 @@ void ABaseAgent::AcquireInteractor(ABaseInteractor* Interactor)
 		Server_AcquireInteractor(Interactor);
 		return;
 	}
-
-	// 스파이크일 경우 처리
+	
 	auto* spike = Cast<ASpike>(Interactor);
 	if (spike)
 	{
@@ -592,12 +613,13 @@ void ABaseAgent::AcquireInteractor(ABaseInteractor* Interactor)
 
 void ABaseAgent::SwitchInteractor(EInteractorType InteractorType)
 {
-	// ABP_1P->Montage_Play(AM_Reload, 1.0f);
-	// NET_LOG(LogTemp,Warning,TEXT("교체 애니 재생"));
-	
-	//TODO: 장착 애니메이션과 함께 기존 재생되던 몽타주 종료하기
 	if (HasAuthority())
 	{
+		if (InteractorType == CurrentInteractorState)
+		{
+			return;
+		}
+		
 		if (CurrentInteractor)
 		{
 			CurrentInteractor->SetActive(false);
@@ -605,19 +627,16 @@ void ABaseAgent::SwitchInteractor(EInteractorType InteractorType)
 
 		if (InteractorType == EInteractorType::MainWeapon)
 		{
-			PoseIdxOffset = -11;
 			EquipInteractor(MainWeapon);
 			UpdateEquipSpeedMultiplier();
 		}
 		else if (InteractorType == EInteractorType::SubWeapon)
 		{
-			PoseIdxOffset = -2;
 			EquipInteractor(SubWeapon);
 			UpdateEquipSpeedMultiplier();
 		}
 		else if (InteractorType == EInteractorType::Melee)
 		{
-			PoseIdx = 0;
 			EquipInteractor(MeleeKnife);
 			UpdateEquipSpeedMultiplier();
 		}
@@ -691,18 +710,6 @@ void ABaseAgent::ServerRPC_CancelSpike_Implementation(ASpike* CancelObject)
 	CancelSpike(CancelObject);
 }
 
-void ABaseAgent::OnRep_ChangePoseIdx()
-{
-	if (ABP_1P)
-	{
-		ABP_1P->InteractorPoseIdx = PoseIdx;
-	}
-	if (ABP_3P)
-	{
-		ABP_3P->InteractorPoseIdx = PoseIdx;
-	}
-}
-
 void ABaseAgent::Server_AcquireInteractor_Implementation(ABaseInteractor* Interactor)
 {
 	AcquireInteractor(Interactor);
@@ -753,43 +760,6 @@ void ABaseAgent::SetShopUI()
 void ABaseAgent::EquipInteractor(ABaseInteractor* interactor)
 {
 	ServerRPC_SetCurrentInteractor(interactor);
-
-	if (CurrentInteractor == nullptr)
-	{
-		CurrentInteractorState = EInteractorType::None;
-		ABP_1P->InteractorState = EInteractorType::None;
-		ABP_3P->InteractorState = EInteractorType::None;
-
-		NET_LOG(LogTemp, Error, TEXT("%hs Called, Interactor를 장착하려 하는데 nullptr임"), __FUNCTION__);
-		return;
-	}
-	CurrentInteractorState = CurrentInteractor->GetInteractorType();
-	if (CurrentInteractorState == EInteractorType::Spike)
-	{
-		// ToDo : 위치 맞게 수정
-		CurrentInteractor->SetActorLocation(GetActorLocation() + GetActorUpVector() * -200);
-	}
-
-	CurrentInteractor->SetActive(true);
-
-	// if (ABP_1P)
-	// {
-	// 	ABP_1P->InteractorState = CurrentInteractorState;
-	// }
-	// if (ABP_3P)
-	// {
-	// 	ABP_3P->InteractorState = CurrentInteractorState;
-	// }
-
-	//TODO: 인터랙터에도 적용할지 말지
-	if (auto* weapon = Cast<ABaseWeapon>(CurrentInteractor))
-	{
-		PoseIdx = weapon->GetWeaponID() + PoseIdxOffset;
-		ABP_1P->InteractorPoseIdx = PoseIdx;
-		ABP_3P->InteractorPoseIdx = PoseIdx;
-	}
-	// UE_LOG(LogTemp,Warning,TEXT("PoseIdx: %d"), PoseIdx);
-	NET_LOG(LogTemp, Warning, TEXT("%hs Called, 현재 장착 중인 Interactor: %s"), __FUNCTION__, *CurrentInteractor->GetActorNameOrLabel());
 }
 
 void ABaseAgent::OnFindInteraction(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
@@ -995,7 +965,6 @@ void ABaseAgent::Net_Die_Implementation()
 
 	ABP_3P->Montage_Stop(0.1f);
 	ABP_3P->Montage_Play(AM_Die, 1.0f);
-	ABP_3P->bIsDead = true;
 }
 
 void ABaseAgent::ServerApplyGE_Implementation(TSubclassOf<UGameplayEffect> geClass)
@@ -1448,6 +1417,14 @@ void ABaseAgent::RewardSpikeInstall()
 
 void ABaseAgent::OnEquip()
 {
+	if (ABP_1P)
+	{
+		ABP_1P->UpdateState();
+	}
+	if (ABP_3P)
+	{
+		ABP_3P->UpdateState();
+	}
 	OnAgentEquip.Broadcast();
 }
 

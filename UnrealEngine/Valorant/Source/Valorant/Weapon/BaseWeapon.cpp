@@ -400,15 +400,7 @@ void ABaseWeapon::MulticastRPC_PlayReloadAnimation_Implementation()
 	}
 }
 
-void ABaseWeapon::MulticastRPC_PlayEquipAnimation_Implementation()
-{
-	NET_LOG(LogTemp, Warning, TEXT("%hs Called"), __FUNCTION__);
-	OnEquip.Broadcast();
-	if (OwnerAgent)
-	{
-		OwnerAgent->OnEquip();
-	}
-}
+
 
 void ABaseWeapon::Reload()
 {
@@ -567,7 +559,7 @@ void ABaseWeapon::ServerOnly_AttachWeapon(ABaseAgent* Agent)
 	if ((ThirdPersonInteractor = GetWorld()->SpawnActor<AThirdPersonInteractor>()))
 	{
 		ThirdPersonInteractor->SetOwner(Agent);
-		ThirdPersonInteractor->MulticastRPC_InitWeapon(WeaponID);
+		ThirdPersonInteractor->MulticastRPC_InitWeapon(this, WeaponID);
 		ThirdPersonInteractor->AttachToComponent(Agent->GetMesh(), AttachmentRules, FName(TEXT("R_WeaponSocket")));
 	}
 
