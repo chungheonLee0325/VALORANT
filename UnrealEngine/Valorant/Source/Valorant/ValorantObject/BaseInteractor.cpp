@@ -182,6 +182,7 @@ void ABaseInteractor::SetActive(bool bActive)
 	ServerRPC_SetActive(bActive);
 }
 
+
 void ABaseInteractor::ServerRPC_PickUp_Implementation(ABaseAgent* Agent)
 {
 	if (nullptr == Agent)
@@ -261,4 +262,14 @@ void ABaseInteractor::MulticastRPC_BroadcastOnPickUp_Implementation()
 {
 	NET_LOG(LogTemp, Warning, TEXT("%hs Called"), __FUNCTION__);
 	OnPickUp.Broadcast();
+}
+
+void ABaseInteractor::PlayEquipAnimation()
+{
+	NET_LOG(LogTemp, Warning, TEXT("%hs Called"), __FUNCTION__);
+	OnEquip.Broadcast();
+	if (OwnerAgent)
+	{
+		OwnerAgent->OnEquip();
+	}
 }

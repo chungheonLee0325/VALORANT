@@ -143,8 +143,6 @@ public:
 	UFUNCTION(Server, Reliable, BlueprintCallable, Category="Weapon")
 	void ServerRPC_StartReload();
 	
-	void PlayEquipAnimation();
-	
 	UFUNCTION(BlueprintCallable)
 	EWeaponCategory GetWeaponCategory() const { return WeaponData->WeaponCategory; }
 

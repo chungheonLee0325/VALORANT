@@ -100,4 +100,6 @@ public:
 	FOnInteractorDrop OnInteractorDrop;
 	UFUNCTION(NetMulticast, Reliable)
 	void MulticastRPC_BroadcastOnDrop();
+
+	virtual void PlayEquipAnimation();
 };
