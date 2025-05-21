@@ -57,15 +57,14 @@ ABaseAgent::ABaseAgent()
 	
 	SpringArm = CreateDefaultSubobject<USpringArmComponent>("Spring Arm");
 	SpringArm->SetupAttachment(GetRootComponent());
-	SpringArm->SetRelativeLocation(FVector(-10, 0, 60));
+	SpringArm->SetRelativeLocation(FVector(0, 0, 60));
 	SpringArm->TargetArmLength = 0;
+	SpringArm->bEnableCameraLag = true;
+	SpringArm->CameraLagSpeed = 20.0f;
 	SpringArm->bUsePawnControlRotation = true;
 
 	BaseSpringArmHeight = SpringArm->GetRelativeLocation().Z;
 	CrouchSpringArmHeight = BaseSpringArmHeight - 28.0f;
-
-	Camera = CreateDefaultSubobject<UCameraComponent>("Camera");
-	Camera->SetupAttachment(SpringArm);
 
 	GetMesh()->SetupAttachment(GetRootComponent());
 	GetMesh()->SetRelativeScale3D(FVector(.34f));
@@ -76,8 +75,7 @@ ABaseAgent::ABaseAgent()
 	FirstPersonMesh = CreateDefaultSubobject<USkeletalMeshComponent>("FirstPersonMesh");
 	FirstPersonMesh->SetupAttachment(SpringArm);
 	FirstPersonMesh->SetRelativeScale3D(FVector(.34f));
-	FirstPersonMesh->SetRelativeLocation(FVector(10, 0, -155));
-
+	FirstPersonMesh->SetRelativeLocation(FVector(0, 0, -120));
 	FirstPersonMesh->AlwaysLoadOnClient = true;
 	FirstPersonMesh->AlwaysLoadOnServer = true;
 	FirstPersonMesh->bOwnerNoSee = false;
@@ -88,6 +86,10 @@ ABaseAgent::ABaseAgent()
 	FirstPersonMesh->SetGenerateOverlapEvents(true);
 	FirstPersonMesh->SetCollisionProfileName(TEXT("NoCollision"));
 	FirstPersonMesh->SetCanEverAffectNavigation(false);
+
+	Camera = CreateDefaultSubobject<UCameraComponent>("Camera");
+	Camera->SetupAttachment(FirstPersonMesh, TEXT("CameraSocket"));
+	Camera->SetFieldOfView(70.f);
 
 	BaseCapsuleHalfHeight = 72.0f;
 	CrouchCapsuleHalfHeight = 68.0f;
