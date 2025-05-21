@@ -169,4 +169,20 @@ public:
 	UFUNCTION(BlueprintCallable, Category="Weapon")
 	void ResetUsedStatus();
 	void SetWeaponID(const int NewWeaponID);
+
+	UFUNCTION(NetMulticast, Unreliable)
+	void Multicast_SpawnMuzzleFlash();
+	UFUNCTION(NetMulticast, Unreliable)
+	void Multicast_SpawnTracer(const FVector& Start, const FVector& End);
+	UFUNCTION(NetMulticast, Unreliable)
+	void Multicast_SpawnImpactEffect(const FVector& Location, const FRotator& Rotation);
+
+	UFUNCTION(NetMulticast, Unreliable)
+	void Multicast_PlayFireSound();
+	UFUNCTION(NetMulticast, Unreliable)
+	void Multicast_PlayImpactSound(const FVector& Location);
+	UFUNCTION(NetMulticast, Unreliable)
+	void Multicast_PlayReloadSound();
+	UFUNCTION(NetMulticast, Unreliable)
+	void Multicast_PlayEquipSound();
 };

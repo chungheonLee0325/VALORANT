@@ -8,6 +8,7 @@
 #include "GameplayTagContainer.h"
 #include "ValorantGameType.generated.h"
 
+class UNiagaraSystem;
 class UBaseWeaponAnim;
 class ABaseWeapon;
 class ABaseAgent;
@@ -356,6 +357,27 @@ struct FWeaponData : public FTableRowBase
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Data")
 	TSubclassOf<UBaseWeaponAnim> GunABPClass = nullptr;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Effects")
+	UNiagaraSystem* MuzzleFlashEffect = nullptr;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Effects")
+	UNiagaraSystem* TracerEffect = nullptr;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Effects")
+	UNiagaraSystem* ImpactEffect = nullptr;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Effects")
+	FName MuzzleSocketName = "MuzzlePoint";
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Sound")
+	USoundBase* FireSound = nullptr;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Sound")
+	USoundBase* ImpactSound = nullptr;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Sound")
+	USoundBase* ReloadSound = nullptr;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Sound")
+	USoundBase* EquipSound = nullptr;
 };
 
 // GameplayEffectData
