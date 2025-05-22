@@ -9,14 +9,15 @@ UJett_C_Cloudburst::UJett_C_Cloudburst(): UBaseGameplayAbility()
 	m_AbilityID = 4001;
 }
 
-void UJett_C_Cloudburst::ActivateAbility(const FGameplayAbilitySpecHandle Handle,
-	const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo,
-	const FGameplayEventData* TriggerEventData)
+void UJett_C_Cloudburst::HandleInstantAbility()
 {
-	Super::ActivateAbility(Handle, ActorInfo, ActivationInfo, TriggerEventData);
+	//SpawnProjectile(CachedActorInfo);
+	Super::HandleInstantAbility();
+}
 
-	ActorInfo->GetAnimInstance()->Montage_Play(AbilityMontage);
-
-	// 타이머 할지 시간 보기
+void UJett_C_Cloudburst::HandleExecutingState()
+{
 	SpawnProjectile(CachedActorInfo);
+	CommitAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo);
+	Super::HandleExecutingState();
 }

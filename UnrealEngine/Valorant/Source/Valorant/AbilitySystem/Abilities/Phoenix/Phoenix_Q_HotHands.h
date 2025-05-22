@@ -20,26 +20,6 @@ public:
     UPhoenix_Q_HotHands();
 
 protected:
-    // === 애니메이션 ===
-    UPROPERTY(EditDefaultsOnly, Category = "Animation")
-    UAnimMontage* ThrowMontage;       
-    
-    UPROPERTY(EditDefaultsOnly, Category = "Animation")
-    UAnimMontage* CancelMontage;
-    
-    // === 이펙트 ===
-    UPROPERTY(EditDefaultsOnly, Category = "Effects")
-    UParticleSystem* HandFireEffect;
-    
-    UPROPERTY(EditDefaultsOnly, Category = "Effects")
-    USoundBase* ReadySound;
-    
-    UPROPERTY(EditDefaultsOnly, Category = "Effects")
-    USoundBase* ThrowSound;
-    
-    UPROPERTY()
-    UParticleSystemComponent* HandFireComponent;
-    
     UPROPERTY(BlueprintReadOnly, Category = "State")
     EPhoenixQThrowType CurrentThrowType = EPhoenixQThrowType::None;
  
@@ -47,15 +27,6 @@ protected:
     virtual void HandleRightClick(FGameplayEventData EventData) override;
     
     // === 내부 처리 함수들 ===
-    UFUNCTION()
-    void OnThrowAnimationCompleted();
-    
-    UFUNCTION()
-    void OnReadyEffectStarted();
-    
-    void StartHandFireEffect();
-    void StopHandFireEffect();
-    
     // 던지기 타입별 처리
     void ExecuteStraightThrow();
     void ExecuteCurvedThrow();

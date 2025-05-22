@@ -136,12 +136,12 @@ void UBaseGameplayAbility::ActivateAbility(const FGameplayAbilitySpecHandle Hand
 	}
 
 	// 현재 상호작용 객체 비활성화 (무기 등)
-	if (auto* ps = Cast<AAgentPlayerState>(ActorInfo->OwnerActor))
+	if (auto* agent = Cast<ABaseAgent>(ActorInfo->AvatarActor))
 	{
-		auto* agent = Cast<ABaseAgent>(ps->GetPawn());
 		if (agent == nullptr)
 		{
 			UE_LOG(LogTemp, Error, TEXT("BaseGameplayAbility, Agent Null"));
+			return;
 		}
 
 		auto* curInteractor = agent->GetCurrentInterator();
@@ -183,7 +183,7 @@ void UBaseGameplayAbility::InputPressed(const FGameplayAbilitySpecHandle Handle,
 
 			if (CurrentRepeatCount >= MaxRepeatCount)
 			{
-				TransitionToState(FValorantGameplayTags::Get().State_Ability_Cooldown);
+				TransitionToState(FValorantGameplayTags::Get().State_Ability_Ended);
 			}
 		}
 	}
@@ -197,7 +197,7 @@ void UBaseGameplayAbility::InputPressed(const FGameplayAbilitySpecHandle Handle,
 		}
 		else if (CurrentAbilityState == FValorantGameplayTags::Get().State_Ability_Executing)
 		{
-			TransitionToState(FValorantGameplayTags::Get().State_Ability_Cooldown);
+			TransitionToState(FValorantGameplayTags::Get().State_Ability_Ended);
 		}
 	}
 
@@ -231,16 +231,20 @@ void UBaseGameplayAbility::InputReleased(const FGameplayAbilitySpecHandle Handle
 	NET_LOG(LogTemp, Warning, TEXT("스킬 InputReleased"));
 }
 
+bool UBaseGameplayAbility::CommitAbility(const FGameplayAbilitySpecHandle Handle,
+                                         const FGameplayAbilityActorInfo* ActorInfo,
+                                         const FGameplayAbilityActivationInfo ActivationInfo,
+                                         FGameplayTagContainer* OptionalRelevantTags)
+{
+	ConsumeAbilityStack(ActorInfo->PlayerController.Get());
+	return Super::CommitAbility(Handle, ActorInfo, ActivationInfo, OptionalRelevantTags);
+}
+
 void UBaseGameplayAbility::EndAbility(const FGameplayAbilitySpecHandle Handle,
                                       const FGameplayAbilityActorInfo* ActorInfo,
                                       const FGameplayAbilityActivationInfo ActivationInfo,
                                       bool bReplicateEndAbility, bool bWasCancelled)
 {
-	if (!bWasCancelled)
-	{
-		ConsumeAbilityStack(ActorInfo->PlayerController.Get());
-	}
-
 	CleanupAbility();
 
 	// 어빌리티 종료 이벤트 브로드캐스트
@@ -410,8 +414,9 @@ void UBaseGameplayAbility::HandleFollowUpInput(FGameplayTag InputTag, FGameplayE
 
 void UBaseGameplayAbility::HandleInstantAbility()
 {
-	TransitionToState(FValorantGameplayTags::Get().State_Ability_Executing);
-	ExecuteStateAction();
+	TransitionToState(FValorantGameplayTags::Get().State_Ability_Preparing);
+	// TransitionToState(FValorantGameplayTags::Get().State_Ability_Executing);
+	// ExecuteStateAction();
 }
 
 void UBaseGameplayAbility::HandleHoldAbility()
@@ -428,7 +433,7 @@ void UBaseGameplayAbility::HandleHoldAbility()
 		{
 			// 애니메이션이 없으면 바로 Ready 상태로 전환하고 후속 입력 등록
 			TransitionToState(FValorantGameplayTags::Get().State_Ability_Ready);
-			OnReadyAnimationCompleted();
+			OnPreparingAnimationCompleted();
 		}
 	}
 	else
@@ -452,7 +457,7 @@ void UBaseGameplayAbility::HandleToggleAbility()
 		{
 			// 애니메이션이 없으면 바로 Ready 상태로 전환하고 후속 입력 등록
 			TransitionToState(FValorantGameplayTags::Get().State_Ability_Ready);
-			OnReadyAnimationCompleted();
+			OnPreparingAnimationCompleted();
 		}
 	}
 	else
@@ -476,7 +481,7 @@ void UBaseGameplayAbility::HandleSequenceAbility()
 		{
 			// 애니메이션이 없으면 바로 Ready 상태로 전환하고 후속 입력 등록
 			TransitionToState(FValorantGameplayTags::Get().State_Ability_Ready);
-			OnReadyAnimationCompleted();
+			OnPreparingAnimationCompleted();
 		}
 	}
 	else
@@ -506,6 +511,91 @@ void UBaseGameplayAbility::HandleRepeatableAbility()
 	CurrentRepeatCount = 0;
 }
 
+void UBaseGameplayAbility::HandlePreparingState()
+{
+	// 애니메이션 재생
+	if (Ready3pMontage)
+	{
+		UAbilityTask_PlayMontageAndWait* Task = UAbilityTask_PlayMontageAndWait::CreatePlayMontageAndWaitProxy(
+			this,
+			"ReadyAnimation",
+			Ready3pMontage,
+			1.0f
+		);
+
+		if (Task)
+		{
+			Task->OnBlendOut.AddDynamic(this, &UBaseGameplayAbility::OnPreparingAnimationCompleted);
+			Task->OnCompleted.AddDynamic(this, &UBaseGameplayAbility::OnPreparingAnimationCompleted);
+			Task->OnInterrupted.AddDynamic(this, &UBaseGameplayAbility::OnPreparingAnimationCompleted);
+			Task->OnCancelled.AddDynamic(this, &UBaseGameplayAbility::OnPreparingAnimationCompleted);
+			Task->ReadyForActivation();
+		}
+		if (Ready1pMontage)
+		{
+			Play1pAnimation(Ready1pMontage);
+		}
+	}
+	else
+	{
+		// 애니메이션이 없으면 바로 완료 처리
+		OnPreparingAnimationCompleted();
+	}
+}
+
+void UBaseGameplayAbility::HandleReadyState()
+{
+	UAgentAbilitySystemComponent* ASC = Cast<UAgentAbilitySystemComponent>(GetAbilitySystemComponentFromActorInfo());
+	// 후속 입력이 있는 경우에만 등록
+	if (!ValidFollowUpInputs.IsEmpty())
+	{
+		TSet<FGameplayTag> InputSet;
+		for (const FGameplayTag& Tag : ValidFollowUpInputs)
+		{
+			InputSet.Add(Tag);
+		}
+		ASC->RegisterFollowUpInputs(InputSet, GetAssetTags().First());
+	}
+	else
+	{
+		TransitionToState(FValorantGameplayTags::Get().State_Ability_Executing);
+	}
+
+	NET_LOG(LogTemp, Warning, TEXT("스킬 준비 완료 - 후속 입력 대기"));
+}
+
+void UBaseGameplayAbility::HandleExecutingState()
+{
+	// 애니메이션 재생
+	if (Executing3pMontage)
+	{
+		UAbilityTask_PlayMontageAndWait* Task = UAbilityTask_PlayMontageAndWait::CreatePlayMontageAndWaitProxy(
+			this,
+			"ExecutingAnimation",
+			Executing3pMontage,
+			1.0f
+		);
+
+		if (Task)
+		{
+			Task->OnBlendOut.AddDynamic(this, &UBaseGameplayAbility::OnExecutingAnimationCompleted);
+			Task->OnCompleted.AddDynamic(this, &UBaseGameplayAbility::OnExecutingAnimationCompleted);
+			Task->OnInterrupted.AddDynamic(this, &UBaseGameplayAbility::OnExecutingAnimationCompleted);
+			Task->OnCancelled.AddDynamic(this, &UBaseGameplayAbility::OnExecutingAnimationCompleted);
+			Task->ReadyForActivation();
+		}
+		if (Executing1pMontage)
+		{
+			Play1pAnimation(Executing1pMontage);
+		}
+	}
+	else
+	{
+		// 애니메이션이 없으면 바로 완료 처리
+		OnExecutingAnimationCompleted();
+	}
+}
+
 // === 상태 관리 ===
 
 void UBaseGameplayAbility::TransitionToState(FGameplayTag NewState)
@@ -525,11 +615,13 @@ void UBaseGameplayAbility::TransitionToState(FGameplayTag NewState)
 	if (NewState == FValorantGameplayTags::Get().State_Ability_Preparing)
 	{
 		if (ASC) ASC->SetAbilityState(FValorantGameplayTags::Get().State_Ability_Preparing, true);
+		HandlePreparingState();
 		// 애니메이션 재생 중이므로 아직 후속 입력 등록하지 않음
 	}
 	else if (NewState == FValorantGameplayTags::Get().State_Ability_Ready)
 	{
 		if (ASC) ASC->SetAbilityState(FValorantGameplayTags::Get().State_Ability_Ready, true);
+		HandleReadyState();
 		PlayReadyEffects();
 	}
 	else if (NewState == FValorantGameplayTags::Get().State_Ability_Aiming)
@@ -545,15 +637,12 @@ void UBaseGameplayAbility::TransitionToState(FGameplayTag NewState)
 	}
 	else if (NewState == FValorantGameplayTags::Get().State_Ability_Executing)
 	{
+		HandleExecutingState();
 		PlayExecuteEffects();
 	}
-	else if (NewState == FValorantGameplayTags::Get().State_Ability_Cooldown)
+	else if (NewState == FValorantGameplayTags::Get().State_Ability_Ended)
 	{
-		PlayCooldownEffects();
-
-		UAbilityTask_WaitDelay* CooldownTask = UAbilityTask_WaitDelay::WaitDelay(this, 0.5f);
-		CooldownTask->OnFinish.AddDynamic(this, &UBaseGameplayAbility::OnAbilityComplete);
-		CooldownTask->ReadyForActivation();
+		OnAbilityComplete();
 	}
 
 	// 새 상태 이벤트
@@ -697,7 +786,7 @@ bool UBaseGameplayAbility::SpawnProjectile(const FGameplayAbilityActorInfo& Acto
 		SpawnParams
 	);
 
-	EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
+	//EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
 	return (SpawnedProjectile != nullptr);
 }
 
@@ -724,10 +813,10 @@ void UBaseGameplayAbility::PlayReadyAnimation()
 
 		if (Task)
 		{
-			Task->OnBlendOut.AddDynamic(this, &UBaseGameplayAbility::OnReadyAnimationCompleted);
-			Task->OnCompleted.AddDynamic(this, &UBaseGameplayAbility::OnReadyAnimationCompleted);
-			Task->OnInterrupted.AddDynamic(this, &UBaseGameplayAbility::OnReadyAnimationCompleted);
-			Task->OnCancelled.AddDynamic(this, &UBaseGameplayAbility::OnReadyAnimationCompleted);
+			Task->OnBlendOut.AddDynamic(this, &UBaseGameplayAbility::OnPreparingAnimationCompleted);
+			Task->OnCompleted.AddDynamic(this, &UBaseGameplayAbility::OnPreparingAnimationCompleted);
+			Task->OnInterrupted.AddDynamic(this, &UBaseGameplayAbility::OnPreparingAnimationCompleted);
+			Task->OnCancelled.AddDynamic(this, &UBaseGameplayAbility::OnPreparingAnimationCompleted);
 			Task->ReadyForActivation();
 		}
 		if (Ready1pMontage)
@@ -738,23 +827,19 @@ void UBaseGameplayAbility::PlayReadyAnimation()
 	else
 	{
 		// 애니메이션이 없으면 바로 완료 처리
-		OnReadyAnimationCompleted();
+		OnPreparingAnimationCompleted();
 	}
 }
 
 void UBaseGameplayAbility::Play1pAnimation(UAnimMontage* AnimMontage)
 {
-	if (auto* ps = Cast<AAgentPlayerState>(CachedActorInfo.OwnerActor))
+	if (auto* agent = Cast<ABaseAgent>(CachedActorInfo.AvatarActor))
 	{
-		auto* agent = Cast<ABaseAgent>(ps->GetPawn());
-		if (agent)
-		{
-			agent->PlayFirstPersonMontage(AnimMontage);
-		}
+		agent->PlayFirstPersonMontage(AnimMontage);
 	}
 }
 
-void UBaseGameplayAbility::OnReadyAnimationCompleted()
+void UBaseGameplayAbility::OnPreparingAnimationCompleted()
 {
 	// 현재 상태가 Preparing인지 확인 (에러 처리)
 	if (CurrentAbilityState != FValorantGameplayTags::Get().State_Ability_Preparing)
@@ -764,25 +849,13 @@ void UBaseGameplayAbility::OnReadyAnimationCompleted()
 		return;
 	}
 
-	UAgentAbilitySystemComponent* ASC = Cast<UAgentAbilitySystemComponent>(GetAbilitySystemComponentFromActorInfo());
-	if (ASC)
-	{
-		// 애니메이션 완료 후에 비로소 Ready 상태로 전환
-		TransitionToState(FValorantGameplayTags::Get().State_Ability_Ready);
+	// 애니메이션 완료 후에 비로소 Ready 상태로 전환
+	TransitionToState(FValorantGameplayTags::Get().State_Ability_Ready);
+}
 
-		// 후속 입력이 있는 경우에만 등록
-		if (!ValidFollowUpInputs.IsEmpty())
-		{
-			TSet<FGameplayTag> InputSet;
-			for (const FGameplayTag& Tag : ValidFollowUpInputs)
-			{
-				InputSet.Add(Tag);
-			}
-			ASC->RegisterFollowUpInputs(InputSet, GetAssetTags().First());
-		}
-
-		NET_LOG(LogTemp, Warning, TEXT("스킬 준비 완료 - 후속 입력 대기"));
-	}
+void UBaseGameplayAbility::OnExecutingAnimationCompleted()
+{
+	TransitionToState(FValorantGameplayTags::Get().State_Ability_Ended);
 }
 
 void UBaseGameplayAbility::SetupStateTimeout()
@@ -798,19 +871,15 @@ void UBaseGameplayAbility::SetupStateTimeout()
 
 void UBaseGameplayAbility::SetInputContext(bool bToAbilityContext)
 {
-	if (auto* ps = Cast<AAgentPlayerState>(CachedActorInfo.OwnerActor))
+	if (auto* agent = Cast<ABaseAgent>(CachedActorInfo.AvatarActor))
 	{
-		auto* agent = Cast<ABaseAgent>(ps->GetPawn());
-		if (agent)
+		if (bToAbilityContext)
 		{
-			if (bToAbilityContext)
-			{
-				agent->SwitchEquipment(EInteractorType::Ability);
-			}
-			else
-			{
-				agent->SwitchEquipment(agent->GetPrevEquipmentType());
-			}
+			agent->SwitchEquipment(EInteractorType::Ability);
+		}
+		else
+		{
+			agent->SwitchEquipment(agent->GetPrevEquipmentType());
 		}
 	}
 }
