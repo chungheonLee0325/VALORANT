@@ -8,6 +8,7 @@
 #include "ResourceManager/ValorantGameType.h"
 #include "MatchMapHUD.generated.h"
 
+class UHorizontalBox;
 class UAgentAbilitySystemComponent;
 class AAgentPlayerState;
 class UWidgetSwitcher;
@@ -131,6 +132,8 @@ protected:
 	void UpdateDisplayHealth(const float health);
 	UFUNCTION()
 	void UpdateDisplayArmor(const float armor);
+	UFUNCTION()
+	void UpdateAmmo(bool bDisplayWidget, int MagazineAmmo, int SpareAmmo);
 
 	// 어빌리티 스택 관련 함수들
 	UFUNCTION()
@@ -207,6 +210,12 @@ public:
 	TObjectPtr<UTextBlock> TextBlockRedScore = nullptr;
 	UPROPERTY(meta=(BindWidget))
 	TObjectPtr<UWidgetSwitcher> WidgetSwitcherAnnouncement = nullptr;
+	UPROPERTY(meta=(BindWidget))
+	TObjectPtr<UHorizontalBox> HorizontalBoxAmmo = nullptr;
+	UPROPERTY(meta=(BindWidget))
+	TObjectPtr<UTextBlock> TextBlockMagazineAmmo = nullptr;
+	UPROPERTY(meta=(BindWidget))
+	TObjectPtr<UTextBlock> TextBlockSpareAmmo = nullptr;
 
 	UPROPERTY(meta=(BindWidget))
 	UTextBlock* txt_Armor;

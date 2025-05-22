@@ -224,6 +224,7 @@ void ABaseWeapon::ServerRPC_Fire_Implementation(const FVector& Location, const F
 	}
 
 	MagazineAmmo--;
+	OnRep_Ammo();
 	NET_LOG(LogTemp, Warning, TEXT("%hs Called, MagazineAmmo: %d, SpareAmmo: %d"), __FUNCTION__, MagazineAmmo,
 	        SpareAmmo);
 
@@ -393,6 +394,7 @@ void ABaseWeapon::Reload()
 	       MagazineAmmo + D, SpareAmmo, SpareAmmo - D);
 	MagazineAmmo += D;
 	SpareAmmo -= D;
+	OnRep_Ammo();
 
 	// 무기를 사용한 것으로 표시
 	bWasUsed = true;
@@ -557,6 +559,15 @@ void ABaseWeapon::OnRep_Ammo() const
 				Controller->NotifyChangedAmmo(false, MagazineAmmo, SpareAmmo);
 			}
 		}
+	}
+}
+
+void ABaseWeapon::Multicast_SetActive_Implementation(bool bActive)
+{
+	Super::Multicast_SetActive_Implementation(bActive);
+	if (bActive)
+	{
+		OnRep_Ammo();
 	}
 }
 
