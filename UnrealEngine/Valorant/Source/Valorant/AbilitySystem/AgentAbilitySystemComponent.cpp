@@ -55,7 +55,50 @@ void UAgentAbilitySystemComponent::GetLifetimeReplicatedProps(TArray<class FLife
 
 int32 UAgentAbilitySystemComponent::HandleGameplayEvent(FGameplayTag EventTag, const FGameplayEventData* Payload)
 {
-	return Super::HandleGameplayEvent(EventTag, Payload);
+	// 부모 클래스 호출
+	int32 Result = Super::HandleGameplayEvent(EventTag, Payload);
+    
+	// 현재 활성화된 어빌리티 찾기
+	// 시스템은 현재 활성화된 모든 어빌리티를 가져옴
+	FGameplayAbilitySpec* FoundSpec = nullptr;
+	for (FGameplayAbilitySpec& Spec : GetActivatableAbilities())
+	{
+		// 이미 활성화된 어빌리티인지 확인
+		if (Spec.IsActive())
+		{
+			FoundSpec = &Spec;
+			break;
+		}
+	}
+
+	// 활성화된 어빌리티가 없으면 종료
+	if (!FoundSpec) return Result;
+
+	// 어빌리티 인스턴스 가져오기
+	UBaseGameplayAbility* AbilityInstance = Cast<UBaseGameplayAbility>(FoundSpec->GetPrimaryInstance());
+	if (!AbilityInstance) return Result;
+
+	// 이벤트 데이터 준비
+	FGameplayEventData EventData;
+	if (Payload)
+	{
+		EventData = *Payload;
+	}
+	EventData.EventTag = EventTag;
+
+	// 태그에 따라 적절한 메서드 호출
+	if (EventTag == FGameplayTag::RequestGameplayTag(FName("Input.Default.LeftClick")))
+	{
+		// 좌클릭 처리
+		AbilityInstance->Active_Left_Click(EventData);
+	}
+	else if (EventTag ==  FGameplayTag::RequestGameplayTag(FName("Input.Default.RightClick")))
+	{
+		// 우클릭 처리
+		AbilityInstance->Active_Right_Click(EventData);
+	}
+
+	return Result;
 }
 
 void UAgentAbilitySystemComponent::ServerRPC_HandleGameplayEvent_Implementation(const FGameplayTag& inputTag)
@@ -219,9 +262,10 @@ bool UAgentAbilitySystemComponent::TrySkillInput(const FGameplayTag& inputTag)
 			NET_LOG(LogTemp,Warning,TEXT("스킬 후속 입력 성공"));
 			
 			ServerRPC_HandleGameplayEvent(inputTag);
-			
-			FollowUpInputBySkill.Empty();
-			OnAbilityWaitingStateChanged.Broadcast(false);
+
+			// Noty : 여기서 초기화하는게 아닌  ability에서 명시적으로 초기화하기
+			// FollowUpInputBySkill.Empty();
+			// OnAbilityWaitingStateChanged.Broadcast(false);
 		}
 		else
 		{

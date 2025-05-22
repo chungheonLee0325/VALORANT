@@ -69,11 +69,11 @@ void ABaseWeapon::BeginPlay()
 
 	if (WeaponData->WeaponCategory == EWeaponCategory::Sidearm)
 	{
-		InteractorType = EInteractorType::SubWeapon;
+		InteractorType = EEquipmentType::SubWeapon;
 	}
 	else
 	{
-		InteractorType = EInteractorType::MainWeapon;
+		InteractorType = EEquipmentType::MainWeapon;
 	}
 
 	MagazineSize = WeaponData->MagazineSize;

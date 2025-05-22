@@ -58,13 +58,14 @@ enum class EPlayerRole : uint8
 };
 
 UENUM(BlueprintType)
-enum class EInteractorType : uint8
+enum class EEquipmentType : uint8
 {
 	None UMETA(DisplayName = "None"),
 	MainWeapon UMETA(DisplayName = "MainWeapon"),
 	SubWeapon UMETA(DisplayName = "SubWeapon"),
 	Melee UMETA(DisplayName = "Melee"),
-	Spike UMETA(DisplayName = "Spike")
+	Spike UMETA(DisplayName = "Spike"),
+	Ability UMETA(DisplayName = "Ability"),
 };
 
 // 무기 카테고리

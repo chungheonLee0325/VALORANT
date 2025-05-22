@@ -43,7 +43,7 @@ protected:
 	void SetOwnerAgent(ABaseAgent* NewAgent);
 
 	UPROPERTY()
-	EInteractorType InteractorType = EInteractorType::None;
+	EEquipmentType InteractorType = EEquipmentType::None;
 
 public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
@@ -78,7 +78,7 @@ public:
 	virtual void ServerRPC_Interact(ABaseAgent* InteractAgent);
 
 	USkeletalMeshComponent* GetMesh() const { return Mesh; }
-	EInteractorType GetInteractorType() const { return InteractorType; }
+	EEquipmentType GetInteractorType() const { return InteractorType; }
 
 	void SetActive(bool bActive);
 	UFUNCTION(Server, Reliable)

@@ -130,7 +130,7 @@ ABaseAgent::ABaseAgent()
 
 void ABaseAgent::OnRep_CurrentInteractorState()
 {
-	if (CurrentInteractorState != EInteractorType::None)
+	if (CurrentEquipmentState != EEquipmentType::None)
 	{
 		CurrentInteractor->PlayEquipAnimation();
 	}
@@ -525,12 +525,12 @@ void ABaseAgent::ServerRPC_DropCurrentInteractor_Implementation()
 void ABaseAgent::ServerRPC_SetCurrentInteractor_Implementation(ABaseInteractor* interactor)
 {
 	CurrentInteractor = interactor;
-	CurrentInteractorState = CurrentInteractor ? CurrentInteractor->GetInteractorType() : EInteractorType::None;
+	CurrentEquipmentState = CurrentInteractor ? CurrentInteractor->GetInteractorType() : EEquipmentType::None;
 	OnRep_CurrentInteractorState();
 	if (CurrentInteractor)
 	{
 		CurrentInteractor->SetActive(true);
-		if (CurrentInteractorState == EInteractorType::Spike)
+		if (CurrentEquipmentState == EEquipmentType::Spike)
 		{
 			// ToDo : 위치 맞게 수정
 			// CurrentInteractor->SetActorLocation(GetActorLocation() + GetActorUpVector() * -200);
@@ -608,14 +608,14 @@ void ABaseAgent::AcquireInteractor(ABaseInteractor* Interactor)
 
 
 	// 무기를 얻으면, 해당 무기의 타입의 슬롯으로 전환해 바로 장착하도록
-	SwitchInteractor(Interactor->GetInteractorType());
+	SwitchEquipment(Interactor->GetInteractorType());
 }
 
-void ABaseAgent::SwitchInteractor(EInteractorType InteractorType)
+void ABaseAgent::SwitchEquipment(EEquipmentType EquipmentType)
 {
 	if (HasAuthority())
 	{
-		if (InteractorType == CurrentInteractorState)
+		if (EquipmentType == CurrentEquipmentState)
 		{
 			return;
 		}
@@ -623,32 +623,38 @@ void ABaseAgent::SwitchInteractor(EInteractorType InteractorType)
 		if (CurrentInteractor)
 		{
 			CurrentInteractor->SetActive(false);
+			PrevEquipmentState = CurrentEquipmentState;
+			ASC->ResetFollowUpInput();
 		}
 
-		if (InteractorType == EInteractorType::MainWeapon)
+		if (EquipmentType == EEquipmentType::Ability)
+		{
+			EquipInteractor(nullptr);
+			// EqupInteractor 에서 Current를 Set 하므로 메뉴얼릭하게 설정
+			CurrentEquipmentState = EEquipmentType::Ability;
+		}
+		else if (EquipmentType == EEquipmentType::MainWeapon)
 		{
 			EquipInteractor(MainWeapon);
-			UpdateEquipSpeedMultiplier();
 		}
-		else if (InteractorType == EInteractorType::SubWeapon)
+		else if (EquipmentType == EEquipmentType::SubWeapon)
 		{
 			EquipInteractor(SubWeapon);
-			UpdateEquipSpeedMultiplier();
 		}
-		else if (InteractorType == EInteractorType::Melee)
+		else if (EquipmentType == EEquipmentType::Melee)
 		{
 			EquipInteractor(MeleeKnife);
-			UpdateEquipSpeedMultiplier();
 		}
-		else if (InteractorType == EInteractorType::Spike)
+		else if (EquipmentType == EEquipmentType::Spike)
 		{
 			EquipInteractor(Spike);
-			UpdateEquipSpeedMultiplier();
 		}
+
+		UpdateEquipSpeedMultiplier();
 	}
 	else
 	{
-		ServerRPC_SwitchInteractor(InteractorType);
+		ServerRPC_SwitchEquipment(EquipmentType);
 	}
 }
 
@@ -673,7 +679,7 @@ void ABaseAgent::ActivateSpike()
 		{
 			return;
 		}
-		SwitchInteractor(EInteractorType::Spike);
+		SwitchEquipment(EEquipmentType::Spike);
 	}
 }
 
@@ -715,9 +721,9 @@ void ABaseAgent::Server_AcquireInteractor_Implementation(ABaseInteractor* Intera
 	AcquireInteractor(Interactor);
 }
 
-void ABaseAgent::ServerRPC_SwitchInteractor_Implementation(EInteractorType InteractorType)
+void ABaseAgent::ServerRPC_SwitchEquipment_Implementation(EEquipmentType InteractorType)
 {
-	SwitchInteractor(InteractorType);
+	SwitchEquipment(InteractorType);
 }
 
 void ABaseAgent::SetShopUI()
@@ -1354,7 +1360,8 @@ void ABaseAgent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifeti
 	DOREPLIFETIME(ABaseAgent, SubWeapon);
 	DOREPLIFETIME(ABaseAgent, Spike);
 	DOREPLIFETIME(ABaseAgent, CurrentInteractor);
-	DOREPLIFETIME(ABaseAgent, CurrentInteractorState);
+	DOREPLIFETIME(ABaseAgent, CurrentEquipmentState);
+	DOREPLIFETIME(ABaseAgent, PrevEquipmentState);
 	DOREPLIFETIME(ABaseAgent, PoseIdx);
 	DOREPLIFETIME(ABaseAgent, IsInPlantZone);
 }
@@ -1468,4 +1475,9 @@ bool ABaseAgent::IsAttacker() const
 		return PS->bIsAttacker;
 	}
 	return false;
+}
+
+EEquipmentType ABaseAgent::GetPrevEquipmentType() const
+{
+	return PrevEquipmentState;
 }
