@@ -28,7 +28,7 @@ ASpike::ASpike()
 	Mesh->SetRelativeScale3D(FVector(0.34f));
 
 	// 인터랙터 타입 설정
-	InteractorType = EEquipmentType::Spike;
+	InteractorType = EInteractorType::Spike;
 }
 
 void ASpike::BeginPlay()

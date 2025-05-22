@@ -12,13 +12,13 @@
 AMeleeKnife::AMeleeKnife()
 {
 	PrimaryActorTick.bCanEverTick = true;
-	InteractorType = EEquipmentType::Melee;
+	InteractorType = EInteractorType::Melee;
 }
 
 void AMeleeKnife::BeginPlay()
 {
 	Super::BeginPlay();
-	InteractorType = EEquipmentType::Melee;
+	InteractorType = EInteractorType::Melee;
 }
 
 void AMeleeKnife::Tick(float DeltaTime)

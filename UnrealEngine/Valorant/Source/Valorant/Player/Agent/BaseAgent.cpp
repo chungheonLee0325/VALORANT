@@ -130,7 +130,7 @@ ABaseAgent::ABaseAgent()
 
 void ABaseAgent::OnRep_CurrentInteractorState()
 {
-	if (CurrentEquipmentState != EEquipmentType::None)
+	if (CurrentInteractor && CurrentEquipmentState != EInteractorType::None)
 	{
 		CurrentInteractor->PlayEquipAnimation();
 	}
@@ -525,12 +525,12 @@ void ABaseAgent::ServerRPC_DropCurrentInteractor_Implementation()
 void ABaseAgent::ServerRPC_SetCurrentInteractor_Implementation(ABaseInteractor* interactor)
 {
 	CurrentInteractor = interactor;
-	CurrentEquipmentState = CurrentInteractor ? CurrentInteractor->GetInteractorType() : EEquipmentType::None;
+	CurrentEquipmentState = CurrentInteractor ? CurrentInteractor->GetInteractorType() : EInteractorType::None;
 	OnRep_CurrentInteractorState();
 	if (CurrentInteractor)
 	{
 		CurrentInteractor->SetActive(true);
-		if (CurrentEquipmentState == EEquipmentType::Spike)
+		if (CurrentEquipmentState == EInteractorType::Spike)
 		{
 			// ToDo : 위치 맞게 수정
 			// CurrentInteractor->SetActorLocation(GetActorLocation() + GetActorUpVector() * -200);
@@ -611,7 +611,7 @@ void ABaseAgent::AcquireInteractor(ABaseInteractor* Interactor)
 	SwitchEquipment(Interactor->GetInteractorType());
 }
 
-void ABaseAgent::SwitchEquipment(EEquipmentType EquipmentType)
+void ABaseAgent::SwitchEquipment(EInteractorType EquipmentType)
 {
 	if (HasAuthority())
 	{
@@ -627,27 +627,39 @@ void ABaseAgent::SwitchEquipment(EEquipmentType EquipmentType)
 			ASC->ResetFollowUpInput();
 		}
 
-		if (EquipmentType == EEquipmentType::Ability)
+		if (EquipmentType == EInteractorType::Ability)
 		{
 			EquipInteractor(nullptr);
 			// EqupInteractor 에서 Current를 Set 하므로 메뉴얼릭하게 설정
-			CurrentEquipmentState = EEquipmentType::Ability;
+			CurrentEquipmentState = EInteractorType::Ability;
 		}
-		else if (EquipmentType == EEquipmentType::MainWeapon)
+		else if (EquipmentType == EInteractorType::MainWeapon)
 		{
-			EquipInteractor(MainWeapon);
+			if (MainWeapon)
+			{
+				EquipInteractor(MainWeapon);
+			}
 		}
-		else if (EquipmentType == EEquipmentType::SubWeapon)
+		else if (EquipmentType == EInteractorType::SubWeapon)
 		{
-			EquipInteractor(SubWeapon);
+			if (SubWeapon)
+			{
+				EquipInteractor(SubWeapon);
+			}
 		}
-		else if (EquipmentType == EEquipmentType::Melee)
+		else if (EquipmentType == EInteractorType::Melee)
 		{
-			EquipInteractor(MeleeKnife);
+			if (MeleeKnife)
+			{
+				EquipInteractor(MeleeKnife);
+			}
 		}
-		else if (EquipmentType == EEquipmentType::Spike)
+		else if (EquipmentType == EInteractorType::Spike)
 		{
-			EquipInteractor(Spike);
+			if (Spike)
+			{
+				EquipInteractor(Spike);
+			}
 		}
 
 		UpdateEquipSpeedMultiplier();
@@ -679,7 +691,7 @@ void ABaseAgent::ActivateSpike()
 		{
 			return;
 		}
-		SwitchEquipment(EEquipmentType::Spike);
+		SwitchEquipment(EInteractorType::Spike);
 	}
 }
 
@@ -721,7 +733,7 @@ void ABaseAgent::Server_AcquireInteractor_Implementation(ABaseInteractor* Intera
 	AcquireInteractor(Interactor);
 }
 
-void ABaseAgent::ServerRPC_SwitchEquipment_Implementation(EEquipmentType InteractorType)
+void ABaseAgent::ServerRPC_SwitchEquipment_Implementation(EInteractorType InteractorType)
 {
 	SwitchEquipment(InteractorType);
 }
@@ -1477,7 +1489,47 @@ bool ABaseAgent::IsAttacker() const
 	return false;
 }
 
-EEquipmentType ABaseAgent::GetPrevEquipmentType() const
+EInteractorType ABaseAgent::GetPrevEquipmentType() const
 {
 	return PrevEquipmentState;
+}
+
+void ABaseAgent::PlayFirstPersonMontage(UAnimMontage* MontageToPlay, float PlayRate, FName StartSectionName)
+{
+	if (ABP_1P && MontageToPlay)
+	{
+		ABP_1P->Montage_Play(MontageToPlay, PlayRate);
+		if (StartSectionName != NAME_None)
+		{
+			ABP_1P->Montage_JumpToSection(StartSectionName, MontageToPlay);
+		}
+	}
+}
+
+void ABaseAgent::PlayThirdPersonMontage(UAnimMontage* MontageToPlay, float PlayRate, FName StartSectionName)
+{
+	if (ABP_3P && MontageToPlay)
+	{
+		ABP_3P->Montage_Play(MontageToPlay, PlayRate);
+		if (StartSectionName != NAME_None)
+		{
+			ABP_3P->Montage_JumpToSection(StartSectionName, MontageToPlay);
+		}
+	}
+}
+
+void ABaseAgent::StopFirstPersonMontage(float BlendOutTime)
+{
+	if (ABP_1P)
+	{
+		ABP_1P->Montage_Stop(BlendOutTime);
+	}
+}
+
+void ABaseAgent::StopThirdPersonMontage(float BlendOutTime)
+{
+	if (ABP_3P)
+	{
+		ABP_3P->Montage_Stop(BlendOutTime);
+	}
 }
