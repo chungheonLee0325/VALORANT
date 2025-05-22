@@ -98,6 +98,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category="Weapon")
 	void UpdateVisualState();
 
+	// 무기 탄약 리셋
+	void ServerOnly_ClearAmmo();
+
 protected:
 	// Called when the game starts
 	virtual void BeginPlay() override;
@@ -125,9 +128,10 @@ protected:
 
 	UFUNCTION(BlueprintCallable, Category="Weapon")
 	void StopReload();
-
+	
 	UFUNCTION()
 	void OnRep_Ammo() const;
+	virtual void Multicast_SetActive_Implementation(bool bActive) override;
 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
@@ -142,9 +146,6 @@ public:
 
 	UFUNCTION(Server, Reliable, BlueprintCallable, Category="Weapon")
 	void ServerRPC_StartReload();
-
-	UFUNCTION(NetMulticast, Reliable)
-	void MulticastRPC_PlayEquipAnimation();
 	
 	UFUNCTION(BlueprintCallable)
 	EWeaponCategory GetWeaponCategory() const { return WeaponData->WeaponCategory; }
@@ -170,4 +171,20 @@ public:
 	UFUNCTION(BlueprintCallable, Category="Weapon")
 	void ResetUsedStatus();
 	void SetWeaponID(const int NewWeaponID);
+
+	UFUNCTION(NetMulticast, Unreliable)
+	void Multicast_SpawnMuzzleFlash();
+	UFUNCTION(NetMulticast, Unreliable)
+	void Multicast_SpawnTracer(const FVector& Start, const FVector& End);
+	UFUNCTION(NetMulticast, Unreliable)
+	void Multicast_SpawnImpactEffect(const FVector& Location, const FRotator& Rotation);
+
+	UFUNCTION(NetMulticast, Unreliable)
+	void Multicast_PlayFireSound();
+	UFUNCTION(NetMulticast, Unreliable)
+	void Multicast_PlayImpactSound(const FVector& Location);
+	UFUNCTION(NetMulticast, Unreliable)
+	void Multicast_PlayReloadSound();
+	UFUNCTION(NetMulticast, Unreliable)
+	void Multicast_PlayEquipSound();
 };

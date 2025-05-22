@@ -513,6 +513,13 @@ void AMatchGameMode::ClearObjects()
 		{
 			Interactor->Destroy();
 		}
+		else
+		{
+			if (auto* Weapon = Cast<ABaseWeapon>(Interactor))
+			{
+				Weapon->ServerOnly_ClearAmmo();
+			}
+		}
 	}
 }
 
@@ -576,6 +583,7 @@ void AMatchGameMode::RespawnPlayer(AAgentPlayerState* ps, AAgentPlayerController
 	{
 		Agent = Cast<ABaseAgent>(ps->GetPawn());
 		Agent->SetActorTransform(spawnTransform);
+		Agent->SetCanMove(true);
 	}
 }
 

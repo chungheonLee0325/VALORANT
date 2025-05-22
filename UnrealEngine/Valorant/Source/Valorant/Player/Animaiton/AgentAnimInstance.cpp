@@ -10,50 +10,46 @@ void UAgentAnimInstance::NativeBeginPlay()
 {
 	Super::NativeBeginPlay();
 
-	auto* ownerPawn = TryGetPawnOwner();
-	if (auto* player = Cast<ABaseAgent>(ownerPawn))
+	OwnerAgent = Cast<ABaseAgent>(GetOwningActor());
+	if (OwnerAgent)
 	{
-		player->OnAgentEquip.AddDynamic(this, &UAgentAnimInstance::OnEquip);
-		player->OnAgentFire.AddDynamic(this, &UAgentAnimInstance::OnFire);
-		player->OnAgentReload.AddDynamic(this, &UAgentAnimInstance::OnReload);
+		OwnerAgent->OnAgentEquip.AddDynamic(this, &UAgentAnimInstance::OnEquip);
+		OwnerAgent->OnAgentFire.AddDynamic(this, &UAgentAnimInstance::OnFire);
+		OwnerAgent->OnAgentReload.AddDynamic(this, &UAgentAnimInstance::OnReload);
+		OwnerAgent->OnSpikeActive.AddDynamic(this, &UAgentAnimInstance::OnSpikeActive);
+		OwnerAgent->OnSpikeCancel.AddDynamic(this, &UAgentAnimInstance::OnSpikeCancel);
 	}
 }
 
 void UAgentAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 {
 	Super::NativeUpdateAnimation(DeltaSeconds);
-	auto ownerPawn = TryGetPawnOwner();
-	
-	auto player = Cast<ABaseAgent>(ownerPawn);
-	if (player)
+	UpdateState();
+}
+
+void UAgentAnimInstance::UpdateState()
+{
+	if (OwnerAgent)
 	{
-		FVector velocity = player->GetVelocity();
-
-		FVector forward = player->GetActorForwardVector();
+		FVector velocity = OwnerAgent->GetVelocity();
+		FVector forward = OwnerAgent->GetActorForwardVector();
 		Speed = FVector::DotProduct(velocity, forward);
-		FVector right = player->GetActorRightVector();
+		FVector right = OwnerAgent->GetActorRightVector();
 		Direction = FVector::DotProduct(velocity, right);
-		
-		bIsCrouch = player->bIsCrouched;
-		bIsInAir = player->GetCharacterMovement()->IsFalling();
 
-		if (InteractorState != player->GetInteractorState())
+		Pitch = FRotator::NormalizeAxis(OwnerAgent->ReplicatedControlRotation.Pitch);
+		// Yaw = FRotator::NormalizeAxis(OwnerAgent->ReplicatedControlRotation.Yaw);
+		// NET_LOG(LogTemp, Warning, TEXT("Pitch : %f, Yaw : %f"), Pitch, Yaw);
+		
+		bIsCrouch = OwnerAgent->bIsCrouched;
+		bIsInAir = OwnerAgent->GetCharacterMovement()->IsFalling();
+		bIsDead = OwnerAgent->IsDead();
+		InteractorPoseIdx = OwnerAgent->GetPoseIdx();
+		
+		if (InteractorState != OwnerAgent->GetInteractorState())
 		{
-			InteractorState = player->GetInteractorState();
+			InteractorState = OwnerAgent->GetInteractorState();
 			OnChangedWeaponState();
 		}
-
-		// if (InteractorState == EInteractorType::Melee)
-		// {
-		// 	NET_LOG(LogTemp,Warning,TEXT("밀리"));
-		// }
-		// else if (InteractorState == EInteractorType::None)
-		// {
-		// 	NET_LOG(LogTemp,Warning,TEXT("None"));
-		// }
-		// else if (InteractorState == EInteractorType::MainWeapon)
-		// {
-		// 	NET_LOG(LogTemp,Warning,TEXT("Main"));
-		// }
 	}
 }

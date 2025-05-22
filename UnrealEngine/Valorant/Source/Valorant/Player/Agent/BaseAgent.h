@@ -67,6 +67,8 @@ struct FAgentVisibilityInfo
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnAgentEquip);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnAgentFire);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnAgentReload);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnSpikeActive);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnSpikeCancel);
 
 UCLASS()
 class VALORANT_API ABaseAgent : public ACharacter
@@ -211,8 +213,13 @@ public:
 
 	UAgentAnimInstance* GetABP_1P() const { return ABP_1P; }
 	UAgentAnimInstance* GetABP_3P() const { return ABP_3P; }
-
 	USkeletalMeshComponent* GetMesh1P() const { return FirstPersonMesh; }
+	
+	bool IsDead() const { return bIsDead; }
+	bool CanMove() const { return bCanMove; }
+	void SetCanMove(bool canMove) { bCanMove = canMove; }
+	
+	int GetPoseIdx() const { return PoseIdx; }
 
 	UFUNCTION(Server, Reliable)
 	void ServerApplyGE(TSubclassOf<UGameplayEffect> geClass);
@@ -273,9 +280,6 @@ public:
 	void CancelSpike(ASpike* CancelObject);
 	UFUNCTION(Server, Reliable)
 	void ServerRPC_CancelSpike(ASpike* CancelObject);
-	
-	UFUNCTION()
-	void OnRep_ChangePoseIdx();
 
 	UFUNCTION(Server, Reliable, Category = "Weapon")
 	void ServerRPC_Interact(ABaseInteractor* Interactor);
@@ -316,8 +320,6 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void SetIsInPlantZone(bool IsInZone) { IsInPlantZone = IsInZone; }
 
-	bool IsDead() const { return bIsDead; }
-
 	// 현재 팀이 블루팀인지 반환
 	UFUNCTION(BlueprintCallable, Category = "Team")
 	bool IsBlueTeam() const;
@@ -354,8 +356,9 @@ protected:
 	bool bIsRun = true;
 	UPROPERTY()
 	bool bIsDead = false;
-
-
+	
+	bool bCanMove = true;
+	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	float BaseSpringArmHeight = 0.0f;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
@@ -389,10 +392,13 @@ protected:
 	UPROPERTY(VisibleAnywhere, Replicated)
 	ABaseInteractor* CurrentInteractor = nullptr;
 
-	UPROPERTY(Replicated)
+	UPROPERTY(Replicated, ReplicatedUsing = OnRep_CurrentInteractorState)
 	EInteractorType CurrentInteractorState = EInteractorType::None;
+	
+	UFUNCTION()
+	void OnRep_CurrentInteractorState();
 
-	UPROPERTY(Replicated, ReplicatedUsing=OnRep_ChangePoseIdx)
+	UPROPERTY(Replicated)
 	int PoseIdx = 0;
 	int PoseIdxOffset = 0;
 
@@ -455,9 +461,21 @@ public:
 	FOnAgentEquip OnAgentEquip;
 	FOnAgentEquip OnAgentFire;
 	FOnAgentEquip OnAgentReload;
+	FOnSpikeActive OnSpikeActive;
+	FOnSpikeCancel OnSpikeCancel;
+	
 	void OnEquip();
 	void OnFire();
 	void OnReload();
+	void OnSpikeStartPlant();
+	void OnSpikeCancelPlant();
+	void OnSpikeFinishPlant();
+	
 	bool bInteractionCapsuleInit = false;
 	virtual void OnRep_Controller() override;
+
+	bool IsInFrustum(const AActor* Actor) const;
+
+	UPROPERTY(Replicated)
+	FRotator ReplicatedControlRotation = FRotator::ZeroRotator;
 };

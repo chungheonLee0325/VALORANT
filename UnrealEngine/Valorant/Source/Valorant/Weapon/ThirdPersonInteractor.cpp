@@ -3,6 +3,7 @@
 
 #include "ThirdPersonInteractor.h"
 
+#include "BaseWeaponAnim.h"
 #include "Valorant.h"
 #include "GameManager/SubsystemSteamManager.h"
 #include "GameManager/ValorantGameInstance.h"
@@ -14,6 +15,8 @@ AThirdPersonInteractor::AThirdPersonInteractor()
 {
 	PrimaryActorTick.bCanEverTick = true;
 	bReplicates = true;
+	bNetLoadOnClient = true;
+	bAlwaysRelevant = true;
 	SetReplicatingMovement(true);
 	
 	Mesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("Mesh"));
@@ -21,7 +24,14 @@ AThirdPersonInteractor::AThirdPersonInteractor()
 	Mesh->SetOwnerNoSee(true);
 }
 
-void AThirdPersonInteractor::MulticastRPC_InitWeapon_Implementation(const int WeaponId)
+void AThirdPersonInteractor::MulticastRPC_InitSpike_Implementation(ASpike* Spike)
+{
+	OwnerInteractor = Spike;
+	Mesh->SetSkeletalMeshAsset(Spike->GetMesh()->GetSkeletalMeshAsset());
+	Mesh->SetRelativeScale3D(FVector(0.34f));
+}
+
+void AThirdPersonInteractor::MulticastRPC_InitWeapon_Implementation(ABaseWeapon* Weapon, const int WeaponId)
 {
 	auto* GameInstance = Cast<UValorantGameInstance>(UGameplayStatics::GetGameInstance(GetWorld()));
 	if (nullptr == GameInstance)
@@ -44,7 +54,14 @@ void AThirdPersonInteractor::MulticastRPC_InitWeapon_Implementation(const int We
 		return;
 	}
 
+	OwnerInteractor = Weapon;
+
 	// NET_LOG(LogTemp, Warning, TEXT("%hs Called, WeaponId is %d"), __FUNCTION__, WeaponId);
 	Mesh->SetSkeletalMeshAsset(WeaponMeshAsset);
 	Mesh->SetRelativeScale3D(FVector(0.34f));
+
+	if (WeaponData->GunABPClass)
+	{
+		Mesh->SetAnimInstanceClass(WeaponData->GunABPClass);
+	}
 }
