@@ -35,7 +35,7 @@ class VALORANT_API UAgentAnimInstance : public UAnimInstance
 	bool bIsDead = false;
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category=Interactor, meta=(AllowPrivateAccess = "true"))
-	EEquipmentType InteractorState = EEquipmentType::None;
+	EInteractorType InteractorState = EInteractorType::None;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category=Interactor, meta=(AllowPrivateAccess = "true"))
 	int InteractorPoseIdx = 0;
 	
