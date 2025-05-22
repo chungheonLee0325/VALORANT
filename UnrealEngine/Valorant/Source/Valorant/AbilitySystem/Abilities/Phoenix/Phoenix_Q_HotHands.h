@@ -79,9 +79,6 @@ protected:
     // 투사체 생성 (타입별)
     bool SpawnProjectileByType(EPhoenixQThrowType ThrowType);
     
-    // === 하위 호환성을 위한 기존 메서드 ===
-    virtual void Active_Left_Click(FGameplayEventData data) override;
-    
     // === 정리 함수 ===
     virtual void CleanupAbility() override;
     

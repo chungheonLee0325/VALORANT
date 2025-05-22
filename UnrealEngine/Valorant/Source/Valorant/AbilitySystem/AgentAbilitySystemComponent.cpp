@@ -44,7 +44,6 @@ void UAgentAbilitySystemComponent::GetLifetimeReplicatedProps(TArray<class FLife
     DOREPLIFETIME(UAgentAbilitySystemComponent, m_Ability_E);
     DOREPLIFETIME(UAgentAbilitySystemComponent, m_Ability_Q);
     DOREPLIFETIME(UAgentAbilitySystemComponent, m_Ability_X);
-    DOREPLIFETIME(UAgentAbilitySystemComponent, bIsSkillReady);
 }
 
 int32 UAgentAbilitySystemComponent::HandleGameplayEvent(FGameplayTag EventTag, const FGameplayEventData* Payload)
@@ -202,7 +201,12 @@ void UAgentAbilitySystemComponent::ResetAgentAbilities()
     AbilityDataMap.Empty();
 }
 
-// === 개선된 태그 기반 상태 관리 함수들 ===
+// === 태그 기반 상태 관리 함수들 ===
+
+bool UAgentAbilitySystemComponent::IsAbilityPreparing() const
+{
+    return HasMatchingGameplayTag(FValorantGameplayTags::Get().State_Ability_Preparing);
+}
 
 bool UAgentAbilitySystemComponent::IsAbilityExecuting() const
 {
@@ -242,8 +246,7 @@ void UAgentAbilitySystemComponent::SetAbilityState(FGameplayTag StateTag, bool b
     // 서버에서 클라이언트로 동기화
     if (GetOwnerRole() == ROLE_Authority)
     {
-        // 멀티캐스트로 모든 클라이언트에게 상태 변경 알림
-        // 필요시 별도 RPC 구현
+        MulticastRPC_NotifyAbilityStateChanged(StateTag, bApply);
     }
 }
 
@@ -272,6 +275,20 @@ void UAgentAbilitySystemComponent::ClearFollowUpInputs()
     OnAbilityStateChanged.Broadcast(FGameplayTag());
 }
 
+void UAgentAbilitySystemComponent::CleanupAbilityState()
+{
+    // 모든 어빌리티 상태 정리
+    SetAbilityState(FValorantGameplayTags::Get().State_Ability_Preparing, false);
+    SetAbilityState(FValorantGameplayTags::Get().State_Ability_Executing, false);
+    SetAbilityState(FValorantGameplayTags::Get().State_Ability_Ready, false);
+    SetAbilityState(FValorantGameplayTags::Get().State_Ability_WaitingFollowUp, false);
+    SetAbilityState(FValorantGameplayTags::Get().State_Ability_Charging, false);
+    SetAbilityState(FValorantGameplayTags::Get().State_Ability_Aiming, false);
+    SetAbilityState(FValorantGameplayTags::Get().State_Ability_Cooldown, false);
+    
+    ClearFollowUpInputs();
+}
+
 bool UAgentAbilitySystemComponent::TrySkillInput(const FGameplayTag& inputTag)
 {
     if (!IsWaitingForFollowUp())
@@ -297,7 +314,7 @@ bool UAgentAbilitySystemComponent::TrySkillInput(const FGameplayTag& inputTag)
         
         if (!IsAbilityReady())
         {
-            // UE_LOG(LogTemp,Error,TEXT("준비 동작 진행중..."));
+            // 준비 동작 진행중이거나 애니메이션 재생 중...
             return true;
         }
         
@@ -327,46 +344,42 @@ void UAgentAbilitySystemComponent::BroadcastStateChange(FGameplayTag NewState)
     OnAbilityStateChanged.Broadcast(NewState);
 }
 
-void UAgentAbilitySystemComponent::CleanupAbilityState()
+void UAgentAbilitySystemComponent::MulticastRPC_NotifyAbilityStateChanged_Implementation(FGameplayTag StateTag, bool bApply)
 {
-    // 모든 어빌리티 상태 정리
-    SetAbilityState(FValorantGameplayTags::Get().State_Ability_Executing, false);
-    SetAbilityState(FValorantGameplayTags::Get().State_Ability_Ready, false);
-    SetAbilityState(FValorantGameplayTags::Get().State_Ability_WaitingFollowUp, false);
-    SetAbilityState(FValorantGameplayTags::Get().State_Ability_Charging, false);
-    SetAbilityState(FValorantGameplayTags::Get().State_Ability_Aiming, false);
-    
-    ClearFollowUpInputs();
+    // 클라이언트에서 상태 동기화 (서버에서는 이미 설정됨)
+    if (GetOwnerRole() != ROLE_Authority)
+    {
+        if (bApply)
+        {
+            AddLooseGameplayTag(StateTag);
+        }
+        else
+        {
+            RemoveLooseGameplayTag(StateTag);
+        }
+        BroadcastStateChange(StateTag);
+    }
 }
 
-// === 기존 함수들 (하위 호환성을 위해 유지하되, 내부적으로는 태그 사용) ===
-
-void UAgentAbilitySystemComponent::SetSkillClear(const bool isClear)
+void UAgentAbilitySystemComponent::MulticastRPC_NotifyAnimationCompleted_Implementation()
 {
-    bIsSkillClear = isClear;  // 기존 변수도 동기화
-    SetAbilityState(FValorantGameplayTags::Get().State_Ability_Executing, !isClear);
-}
+    // 모든 클라이언트에서 애니메이션 완료 처리
+    FGameplayAbilitySpec* FoundSpec = nullptr;
+    for (FGameplayAbilitySpec& Spec : GetActivatableAbilities())
+    {
+        if (Spec.IsActive())
+        {
+            FoundSpec = &Spec;
+            break;
+        }
+    }
 
-void UAgentAbilitySystemComponent::SetSkillReady(const bool isReady)
-{
-    bIsSkillReady = isReady;  // 기존 변수도 동기화
-    SetAbilityState(FValorantGameplayTags::Get().State_Ability_Ready, isReady);
-}
-
-void UAgentAbilitySystemComponent::ResisterFollowUpInput(const TSet<FGameplayTag>& tags)
-{
-    FollowUpInputBySkill = tags;  // 기존 변수도 동기화
-    RegisterFollowUpInputs(tags, CurrentExecutingAbility);
-    OnAbilityWaitingStateChanged.Broadcast(true);
-}
-
-void UAgentAbilitySystemComponent::ResetFollowUpInput()
-{
-    FollowUpInputBySkill.Empty();  // 기존 변수도 동기화
-    ClearFollowUpInputs();
-}
-
-bool UAgentAbilitySystemComponent::IsFollowUpInput(const FGameplayTag& inputTag)
-{
-    return IsValidFollowUpInput(inputTag);
+    if (FoundSpec)
+    {
+        UBaseGameplayAbility* AbilityInstance = Cast<UBaseGameplayAbility>(FoundSpec->GetPrimaryInstance());
+        if (AbilityInstance)
+        {
+            AbilityInstance->OnReadyAnimationCompleted();
+        }
+    }
 }

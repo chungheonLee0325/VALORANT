@@ -16,12 +16,14 @@ struct FValorantGameplayTags
     FGameplayTag InputTag_Default_RightClick;
     FGameplayTag InputTag_Default_Repeat;
     
-    // 어빌리티 실행 상태 (기존 bool 변수들을 대체)
-    FGameplayTag State_Ability_Ready;              // "State.Ability.Ready" (bIsSkillReady = true)
-    FGameplayTag State_Ability_WaitingFollowUp;    // "State.Ability.WaitingFollowUp" (후속 입력 대기)
-    FGameplayTag State_Ability_Executing;          // "State.Ability.Executing" (bIsSkillClear = false)
-    FGameplayTag State_Ability_Charging;           // "State.Ability.Charging"
+    // 어빌리티 상태 태그들 (State만 사용, Phase 제거)
+    FGameplayTag State_Ability_Preparing;          // "State.Ability.Preparing" (애니메이션 재생 중)
+    FGameplayTag State_Ability_Ready;              // "State.Ability.Ready"
     FGameplayTag State_Ability_Aiming;             // "State.Ability.Aiming"
+    FGameplayTag State_Ability_Charging;           // "State.Ability.Charging"
+    FGameplayTag State_Ability_Executing;          // "State.Ability.Executing"
+    FGameplayTag State_Ability_Cooldown;           // "State.Ability.Cooldown"
+    FGameplayTag State_Ability_WaitingFollowUp;    // "State.Ability.WaitingFollowUp"
     
     // 어빌리티 차단 태그들
     FGameplayTag Block_Ability_Input;              // "Block.Ability.Input"
@@ -29,18 +31,11 @@ struct FValorantGameplayTags
     FGameplayTag Block_Movement;                   // "Block.Movement"
     FGameplayTag Block_WeaponSwitch;               // "Block.WeaponSwitch"
     
-    // 어빌리티 단계 태그들
-    FGameplayTag Phase_Ready;                      // "Phase.Ready"
-    FGameplayTag Phase_Aiming;                     // "Phase.Aiming"
-    FGameplayTag Phase_Charging;                   // "Phase.Charging"
-    FGameplayTag Phase_Executing;                  // "Phase.Executing"
-    FGameplayTag Phase_Cooldown;                   // "Phase.Cooldown"
-    
     // 이벤트 태그들
     FGameplayTag Event_Ability_Started;            // "Event.Ability.Started"
     FGameplayTag Event_Ability_Ended;              // "Event.Ability.Ended"
     FGameplayTag Event_Ability_Cancelled;          // "Event.Ability.Cancelled"
-    FGameplayTag Event_Ability_PhaseChanged;       // "Event.Ability.PhaseChanged"
+    FGameplayTag Event_Ability_StateChanged;       // "Event.Ability.StateChanged"
     
     static FValorantGameplayTags& Get();
     void InitializeNativeTags();

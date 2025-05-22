@@ -651,7 +651,7 @@ void ABaseAgent::SwitchEquipment(EInteractorType EquipmentType)
 		{
 			CurrentInteractor->SetActive(false);
 			PrevEquipmentState = CurrentEquipmentState;
-			ASC->ResetFollowUpInput();
+			ASC->ClearFollowUpInputs();
 		}
 
 		if (EquipmentType == EInteractorType::Ability)
