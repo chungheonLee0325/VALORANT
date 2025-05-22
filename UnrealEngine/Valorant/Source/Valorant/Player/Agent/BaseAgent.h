@@ -72,8 +72,13 @@ struct FAgentVisibilityInfo
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnAgentEquip);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnAgentFire);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnAgentReload);
+
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnSpikeActive);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnSpikeCancel);
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnSpikeDeactive);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnSpikeDefuseFinish);
+
 
 UCLASS()
 class VALORANT_API ABaseAgent : public ACharacter
@@ -94,6 +99,9 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
 	USkeletalMeshComponent* FirstPersonMesh;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
+	USkeletalMeshComponent* DefusalMesh;
+	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
 	UAgentInputComponent* AgentInputComponent;
 
@@ -487,15 +495,24 @@ public:
 	FOnAgentEquip OnAgentEquip;
 	FOnAgentEquip OnAgentFire;
 	FOnAgentEquip OnAgentReload;
+	
 	FOnSpikeActive OnSpikeActive;
 	FOnSpikeCancel OnSpikeCancel;
+	
+	FOnSpikeDeactive OnSpikeDeactive;
+	FOnSpikeDefuseFinish OnSpikeDefuseFinish;
 	
 	void OnEquip();
 	void OnFire();
 	void OnReload();
+	
 	void OnSpikeStartPlant();
-	void OnSpikeCancelPlant();
+	void OnSpikeCancelInteract();
 	void OnSpikeFinishPlant();
+	
+	void OnSpikeStartDefuse();
+	void OnSpikeCancelDefuse();
+	void OnSpikeFinishDefuse();
 	
 	bool bInteractionCapsuleInit = false;
 	virtual void OnRep_Controller() override;
