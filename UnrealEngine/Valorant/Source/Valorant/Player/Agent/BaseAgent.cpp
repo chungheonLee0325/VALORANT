@@ -472,9 +472,9 @@ void ABaseAgent::EndFire()
 		return;
 	}
 
-	if (CurrentInteractorState == EInteractorType::Spike && bIsSpikePlanting)
+	if (Spike && Spike->GetSpikeState() == ESpikeState::Planting)
 	{
-		ServerRPC_SetIsSpikePlanting(false);
+		CancelSpike(Spike);
 	}	
 }
 
@@ -510,7 +510,19 @@ void ABaseAgent::ServerRPC_Interact_Implementation(ABaseInteractor* Interactor)
 		NET_LOG(LogTemp, Error, TEXT("%hs Called, Interactor is nullptr"), __FUNCTION__);
 		return;
 	}
-		
+
+	//TODO: 플랜트 존에서, 스파이크를 들고 있지 않다가 바로 설치를 하려할 경우, 스파이크를 장착을 따로 해줌
+	// if (Interactor == Spike && CurrentInteractor != Spike)
+	// {
+	// 	NET_LOG(LogTemp,Error,TEXT("스파이크 수동장착"));
+	// 	if (CurrentInteractor)
+	// 	{
+	// 		CurrentInteractor->SetActive(false);
+	// 	}
+	// 	CurrentInteractor = Spike;
+	// 	CurrentInteractorState = EInteractorType::Spike;
+	// }
+	
 	Interactor->ServerRPC_Interact(this);
 }
 
@@ -544,7 +556,7 @@ void ABaseAgent::ServerRPC_SetCurrentInteractor_Implementation(ABaseInteractor* 
 	if (CurrentInteractor)
 	{
 		CurrentInteractor->SetActive(true);
-		NET_LOG(LogTemp, Warning, TEXT("%hs Called, 현재 장착 중인 Interactor: %s"), __FUNCTION__, *CurrentInteractor->GetActorNameOrLabel());
+		//NET_LOG(LogTemp, Warning, TEXT("%hs Called, 현재 장착 중인 Interactor: %s"), __FUNCTION__, *CurrentInteractor->GetActorNameOrLabel());
 	}
 }
 
@@ -614,8 +626,7 @@ void ABaseAgent::AcquireInteractor(ABaseInteractor* Interactor)
 		}
 		MainWeapon = weapon;
 	}
-
-
+	
 	// 무기를 얻으면, 해당 무기의 타입의 슬롯으로 전환해 바로 장착하도록
 	SwitchInteractor(Interactor->GetInteractorType());
 }
@@ -703,7 +714,7 @@ void ABaseAgent::CancelSpike(ASpike* CancelObject)
 			return;
 		}
 	}
-
+	
 	if (HasAuthority() && CancelObject)
 	{
 		CancelObject->ServerRPC_Cancel(this);
@@ -1099,11 +1110,6 @@ void ABaseAgent::UpdateEquipSpeedMultiplier()
 	}
 }
 
-void ABaseAgent::ServerRPC_SetIsSpikePlanting_Implementation(const bool isPlanting)
-{
-	bIsSpikePlanting = isPlanting;
-}
-
 //ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ
 //             CYT             ♣
 //ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ
@@ -1373,7 +1379,6 @@ void ABaseAgent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifeti
 	DOREPLIFETIME(ABaseAgent, CurrentInteractorState);
 	DOREPLIFETIME(ABaseAgent, PoseIdx);
 	DOREPLIFETIME(ABaseAgent, IsInPlantZone);
-	DOREPLIFETIME(ABaseAgent, bIsSpikePlanting);
 }
 
 
@@ -1457,9 +1462,8 @@ void ABaseAgent::OnReload()
 
 void ABaseAgent::OnSpikeStartPlant()
 {
-	// NET_LOG(LogTemp,Warning,TEXT("baseAgent:: OnSpikeStartPlant"));
+	// NET_LOG(LogTemp,Error,TEXT("baseAgent:: OnSpikeStartPlant"));
 	bCanMove = false;
-	bIsSpikePlanting = true;
 	OnSpikeActive.Broadcast();
 }
 
@@ -1473,7 +1477,6 @@ void ABaseAgent::OnSpikeCancelPlant()
 void ABaseAgent::OnSpikeFinishPlant()
 {
 	bCanMove = true;
-	bIsSpikePlanting = false;
 	
 	if (CurrentInteractor == Spike)
 	{
