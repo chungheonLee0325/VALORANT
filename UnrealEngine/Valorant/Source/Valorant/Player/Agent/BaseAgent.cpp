@@ -317,6 +317,10 @@ void ABaseAgent::Tick(float DeltaTime)
 
 	GetCharacterMovement()->MaxWalkSpeed = baseSpeed * EffectSpeedMultiplier * EquipSpeedMultiplier;
 
+	if (HasAuthority() && Controller)
+	{
+		ReplicatedControlRotation = Controller->GetControlRotation();
+	}
 
 	//ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ
 	//             CYT             ♣
@@ -1390,6 +1394,7 @@ void ABaseAgent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifeti
 	DOREPLIFETIME(ABaseAgent, PoseIdx);
 	DOREPLIFETIME(ABaseAgent, IsInPlantZone);
 	DOREPLIFETIME(ABaseAgent, bIsSpikePlanting);
+	DOREPLIFETIME(ABaseAgent, ReplicatedControlRotation);
 }
 
 
