@@ -36,6 +36,10 @@ void UAgentAnimInstance::UpdateState()
 		Speed = FVector::DotProduct(velocity, forward);
 		FVector right = OwnerAgent->GetActorRightVector();
 		Direction = FVector::DotProduct(velocity, right);
+
+		Pitch = FRotator::NormalizeAxis(OwnerAgent->ReplicatedControlRotation.Pitch);
+		// Yaw = FRotator::NormalizeAxis(OwnerAgent->ReplicatedControlRotation.Yaw);
+		// NET_LOG(LogTemp, Warning, TEXT("Pitch : %f, Yaw : %f"), Pitch, Yaw);
 		
 		bIsCrouch = OwnerAgent->bIsCrouched;
 		bIsInAir = OwnerAgent->GetCharacterMovement()->IsFalling();

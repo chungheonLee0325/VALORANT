@@ -27,8 +27,7 @@
 #include "ValorantObject/Spike/Spike.h"
 #include "Player/Component/CreditComponent.h"
 
-/* static */
-EAgentDamagedPart ABaseAgent::GetHitDamagedPart(const FName& BoneName)
+/* static */ EAgentDamagedPart ABaseAgent::GetHitDamagedPart(const FName& BoneName)
 {
 	const FString& NameStr = BoneName.ToString();
 	if (NameStr.Contains(TEXT("Neck"), ESearchCase::IgnoreCase))
@@ -47,14 +46,18 @@ EAgentDamagedPart ABaseAgent::GetHitDamagedPart(const FName& BoneName)
 	return EAgentDamagedPart::None;
 }
 
-
-
 ABaseAgent::ABaseAgent()
 {
 	PrimaryActorTick.bCanEverTick = true;
 	bReplicates = true;
 	bAlwaysRelevant = true;
+
+	// Root Capsule
+	BaseCapsuleHalfHeight = 72.0f;
+	CrouchCapsuleHalfHeight = 68.0f;
+	GetCapsuleComponent()->SetCapsuleHalfHeight(BaseCapsuleHalfHeight);
 	
+	// SpringArm
 	SpringArm = CreateDefaultSubobject<USpringArmComponent>("Spring Arm");
 	SpringArm->SetupAttachment(GetRootComponent());
 	SpringArm->SetRelativeLocation(FVector(0, 0, 60));
@@ -62,16 +65,19 @@ ABaseAgent::ABaseAgent()
 	SpringArm->bEnableCameraLag = true;
 	SpringArm->CameraLagSpeed = 20.0f;
 	SpringArm->bUsePawnControlRotation = true;
-
 	BaseSpringArmHeight = SpringArm->GetRelativeLocation().Z;
 	CrouchSpringArmHeight = BaseSpringArmHeight - 28.0f;
 
-	GetMesh()->SetupAttachment(GetRootComponent());
-	GetMesh()->SetRelativeScale3D(FVector(.34f));
-	GetMesh()->SetRelativeLocation(FVector(.0f, .0f, -90.f));
-	GetMesh()->SetCollisionProfileName(TEXT("Agent"));
-	GetMesh()->SetGenerateOverlapEvents(true);
+	// TP Mesh
+	auto* TpMesh = GetMesh();
+	TpMesh->SetupAttachment(GetRootComponent());
+	TpMesh->SetRelativeScale3D(FVector(.34f));
+	TpMesh->SetRelativeLocation(FVector(.0f, .0f, -90.f));
+	TpMesh->SetCollisionProfileName(TEXT("Agent"));
+	TpMesh->SetGenerateOverlapEvents(true);
+	TpMesh->SetOwnerNoSee(true);
 	
+	// FP Mesh
 	FirstPersonMesh = CreateDefaultSubobject<USkeletalMeshComponent>("FirstPersonMesh");
 	FirstPersonMesh->SetupAttachment(SpringArm);
 	FirstPersonMesh->SetRelativeScale3D(FVector(.34f));
@@ -86,24 +92,14 @@ ABaseAgent::ABaseAgent()
 	FirstPersonMesh->SetGenerateOverlapEvents(true);
 	FirstPersonMesh->SetCollisionProfileName(TEXT("NoCollision"));
 	FirstPersonMesh->SetCanEverAffectNavigation(false);
+	FirstPersonMesh->SetOnlyOwnerSee(true);
 
+	// Camera
 	Camera = CreateDefaultSubobject<UCameraComponent>("Camera");
 	Camera->SetupAttachment(FirstPersonMesh, TEXT("CameraSocket"));
 	Camera->SetFieldOfView(70.f);
 
-	BaseCapsuleHalfHeight = 72.0f;
-	CrouchCapsuleHalfHeight = 68.0f;
-	GetCapsuleComponent()->SetCapsuleHalfHeight(BaseCapsuleHalfHeight);
-	GetCharacterMovement()->SetCrouchedHalfHeight(BaseCapsuleHalfHeight);
-
-	GetCharacterMovement()->GetNavAgentPropertiesRef().bCanCrouch = true;
-	GetCharacterMovement()->MaxWalkSpeedCrouched = 330.0f;
-
-	GetMesh()->SetOwnerNoSee(true);
-	FirstPersonMesh->SetOnlyOwnerSee(true);
-
-	AgentInputComponent = CreateDefaultSubobject<UAgentInputComponent>("InputComponent");
-
+	// Interaction Capsule
 	InteractionCapsule = CreateDefaultSubobject<UCapsuleComponent>(TEXT("InteractionCapsule"));
 	InteractionCapsule->SetupAttachment(Camera);
 	InteractionCapsule->SetRelativeLocation(FVector(150, 0, 0));
@@ -111,7 +107,27 @@ ABaseAgent::ABaseAgent()
 	InteractionCapsule->SetCapsuleHalfHeight(150);
 	InteractionCapsule->SetCapsuleRadius(35);
 	InteractionCapsule->SetCollisionProfileName(TEXT("Interactable"));
+	
+	// Character Movement Component
+	auto* Movement = GetCharacterMovement();
+	Movement->GravityScale = 0.9f; // Set Global Gravity Z -2100.f in Level - World Settings
+	Movement->MaxAcceleration = 1800.f;
+	Movement->GroundFriction = 3.3f;
+	Movement->MaxWalkSpeed = BaseRunSpeed;
+	Movement->BrakingDecelerationWalking = 225.f;
+	Movement->bIgnoreBaseRotation = true;
+	Movement->JumpZVelocity = 600.f;
+	Movement->BrakingDecelerationFalling = 1200.f;
+	Movement->AirControl = 0.45f;
+	Movement->NetworkSmoothingMode = ENetworkSmoothingMode::Disabled;
+	
+	Movement->SetCrouchedHalfHeight(BaseCapsuleHalfHeight);
+	Movement->GetNavAgentPropertiesRef().bCanCrouch = true;
+	Movement->MaxWalkSpeedCrouched = 330.0f;
 
+	// Agent Input Component
+	AgentInputComponent = CreateDefaultSubobject<UAgentInputComponent>("InputComponent");
+	
 	TL_Crouch = CreateDefaultSubobject<UTimelineComponent>("TL_Crouch");
 	TL_DieCamera = CreateDefaultSubobject<UTimelineComponent>("TL_DieCamera");
 
@@ -301,6 +317,10 @@ void ABaseAgent::Tick(float DeltaTime)
 
 	GetCharacterMovement()->MaxWalkSpeed = baseSpeed * EffectSpeedMultiplier * EquipSpeedMultiplier;
 
+	if (HasAuthority() && Controller)
+	{
+		ReplicatedControlRotation = Controller->GetControlRotation();
+	}
 
 	//ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ
 	//             CYT             ♣
@@ -714,7 +734,7 @@ void ABaseAgent::CancelSpike(ASpike* CancelObject)
 			return;
 		}
 	}
-	
+
 	if (HasAuthority() && CancelObject)
 	{
 		CancelObject->ServerRPC_Cancel(this);
@@ -1379,6 +1399,7 @@ void ABaseAgent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifeti
 	DOREPLIFETIME(ABaseAgent, CurrentInteractorState);
 	DOREPLIFETIME(ABaseAgent, PoseIdx);
 	DOREPLIFETIME(ABaseAgent, IsInPlantZone);
+	DOREPLIFETIME(ABaseAgent, ReplicatedControlRotation);
 }
 
 
@@ -1462,7 +1483,7 @@ void ABaseAgent::OnReload()
 
 void ABaseAgent::OnSpikeStartPlant()
 {
-	// NET_LOG(LogTemp,Error,TEXT("baseAgent:: OnSpikeStartPlant"));
+	// NET_LOG(LogTemp,Warning,TEXT("baseAgent:: OnSpikeStartPlant"));
 	bCanMove = false;
 	OnSpikeActive.Broadcast();
 }
@@ -1515,6 +1536,31 @@ bool ABaseAgent::IsAttacker() const
 	if (const AAgentPlayerState* PS = GetPlayerState<AAgentPlayerState>())
 	{
 		return PS->bIsAttacker;
+	}
+	return false;
+}
+
+bool ABaseAgent::IsInFrustum(const AActor* Actor) const
+{
+	// Ref: https://forums.unrealengine.com/t/perform-frustum-check/287524/10
+	ULocalPlayer* LocalPlayer = GetWorld()->GetFirstLocalPlayerFromController();
+	if (LocalPlayer != nullptr && LocalPlayer->ViewportClient != nullptr && LocalPlayer->ViewportClient->Viewport)
+	{
+		FSceneViewFamilyContext ViewFamily(FSceneViewFamily::ConstructionValues(
+			LocalPlayer->ViewportClient->Viewport,
+			GetWorld()->Scene,
+			LocalPlayer->ViewportClient->EngineShowFlags)
+			.SetRealtimeUpdate(true));
+
+		FVector ViewLocation;
+		FRotator ViewRotation;
+		FSceneView* SceneView = LocalPlayer->CalcSceneView(&ViewFamily, ViewLocation, ViewRotation, LocalPlayer->ViewportClient->Viewport);
+		if (SceneView != nullptr)
+		{
+			bool bIsInFrustum = SceneView->ViewFrustum.IntersectSphere(Actor->GetActorLocation(), Actor->GetSimpleCollisionRadius());
+			// 절두체 안에 있으면서 최근에 렌더링 된 적 있는 경우에만 true 반환
+			return bIsInFrustum && Actor->WasRecentlyRendered(0.1f);
+		}
 	}
 	return false;
 }
