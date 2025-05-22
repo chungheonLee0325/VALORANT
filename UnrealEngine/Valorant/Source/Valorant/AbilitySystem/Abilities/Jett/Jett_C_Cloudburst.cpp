@@ -6,13 +6,8 @@ UJett_C_Cloudburst::UJett_C_Cloudburst(): UBaseGameplayAbility()
 	FGameplayTagContainer Tags;
 	Tags.AddTag(FGameplayTag::RequestGameplayTag(FName("Input.Skill.C")));
 	SetAssetTags(Tags);
+	
 	m_AbilityID = 4001;
-}
-
-void UJett_C_Cloudburst::HandleInstantAbility()
-{
-	//SpawnProjectile(CachedActorInfo);
-	Super::HandleInstantAbility();
 }
 
 void UJett_C_Cloudburst::HandleExecutingState()

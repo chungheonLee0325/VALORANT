@@ -10,9 +10,5 @@ class VALORANT_API UJett_C_Cloudburst : public UBaseGameplayAbility
 
     UJett_C_Cloudburst();
 
-    void HandleInstantAbility() override;
     virtual void HandleExecutingState() override;
-    
-    UPROPERTY(EditDefaultsOnly)
-    UAnimMontage* AbilityMontage = nullptr;
 }; 

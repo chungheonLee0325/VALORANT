@@ -9,16 +9,20 @@ UJett_Q_Updraft::UJett_Q_Updraft(): UBaseGameplayAbility()
 	FGameplayTagContainer Tags;
 	Tags.AddTag(FGameplayTag::RequestGameplayTag(FName("Input.Skill.Q")));
 	SetAssetTags(Tags);
+
 	m_AbilityID = 4002;
+	InputType = EAbilityInputType::Instant;
 }
 
-void UJett_Q_Updraft::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData)
+void UJett_Q_Updraft::HandleExecutingState()
 {
-	Super::ActivateAbility(Handle, ActorInfo, ActivationInfo, TriggerEventData);
+	Super::HandleExecutingState();
 
-	ACharacter* Character = Cast<ACharacter>(ActorInfo->AvatarActor.Get());
+	ACharacter* Character = Cast<ACharacter>(CachedActorInfo.AvatarActor.Get());
 	if (Character)
 	{
+		CommitAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo);
+
 		UCharacterMovementComponent* MoveComp = Character->GetCharacterMovement();
 		if (MoveComp)
 		{
@@ -42,6 +46,4 @@ void UJett_Q_Updraft::ActivateAbility(const FGameplayAbilitySpecHandle Handle, c
 			}, 0.3f, false);
 		}
 	}
-
-	EndAbility(Handle, ActorInfo, ActivationInfo, true, false);
 }
