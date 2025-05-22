@@ -84,7 +84,7 @@ public:
 	UFUNCTION(Server, Reliable)
 	void ServerRPC_SetActive(bool bActive);
 	UFUNCTION(NetMulticast, Reliable)
-	void Multicast_SetActive(bool bActive);
+	virtual void Multicast_SetActive(bool bActive);
 
 	UPROPERTY(BlueprintAssignable)
 	FOnEquip OnEquip;

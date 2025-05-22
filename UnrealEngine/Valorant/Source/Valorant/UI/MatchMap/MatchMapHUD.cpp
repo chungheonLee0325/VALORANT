@@ -5,6 +5,7 @@
 
 #include "OnlineSubsystemUtils.h"
 #include "Valorant.h"
+#include "Components/HorizontalBox.h"
 #include "Components/TextBlock.h"
 #include "Components/WidgetSwitcher.h"
 #include "Components/Image.h"
@@ -210,10 +211,25 @@ void UMatchMapHUD::UpdateDisplayArmor(const float armor)
 	txt_Armor->SetText(FText::AsNumber(armor));
 }
 
+void UMatchMapHUD::UpdateAmmo(bool bDisplayWidget, int MagazineAmmo, int SpareAmmo)
+{
+	if (bDisplayWidget)
+	{
+		HorizontalBoxAmmo->SetVisibility(ESlateVisibility::Visible);
+		TextBlockMagazineAmmo->SetText(FText::FromString(FString::Printf(TEXT("%d"), MagazineAmmo)));
+		TextBlockSpareAmmo->SetText(FText::FromString(FString::Printf(TEXT("%d"), SpareAmmo)));
+	}
+	else
+	{
+		HorizontalBoxAmmo->SetVisibility(ESlateVisibility::Hidden);
+	}
+}
+
 void UMatchMapHUD::BindToDelegatePC(UAgentAbilitySystemComponent* asc, AAgentPlayerController* pc)
 {
 	pc->OnHealthChanged_PC.AddDynamic(this, &UMatchMapHUD::UpdateDisplayHealth);
 	pc->OnArmorChanged_PC.AddDynamic(this, &UMatchMapHUD::UpdateDisplayArmor);
+	pc->OnChangedAmmo.AddDynamic(this, &UMatchMapHUD::UpdateAmmo);
 
 	if (asc == nullptr)
 	{

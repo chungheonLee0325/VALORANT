@@ -52,4 +52,9 @@ public:
 	void OnFire();
 	UFUNCTION(BlueprintImplementableEvent)
 	void OnReload();
+	
+	UFUNCTION(BlueprintImplementableEvent)
+	void OnSpikeActive();
+	UFUNCTION(BlueprintImplementableEvent)
+	void OnSpikeCancel();
 };

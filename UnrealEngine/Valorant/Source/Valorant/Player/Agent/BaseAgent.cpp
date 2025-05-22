@@ -27,8 +27,7 @@
 #include "ValorantObject/Spike/Spike.h"
 #include "Player/Component/CreditComponent.h"
 
-/* static */
-EAgentDamagedPart ABaseAgent::GetHitDamagedPart(const FName& BoneName)
+/* static */ EAgentDamagedPart ABaseAgent::GetHitDamagedPart(const FName& BoneName)
 {
 	const FString& NameStr = BoneName.ToString();
 	if (NameStr.Contains(TEXT("Neck"), ESearchCase::IgnoreCase))
@@ -47,14 +46,18 @@ EAgentDamagedPart ABaseAgent::GetHitDamagedPart(const FName& BoneName)
 	return EAgentDamagedPart::None;
 }
 
-
-
 ABaseAgent::ABaseAgent()
 {
 	PrimaryActorTick.bCanEverTick = true;
 	bReplicates = true;
 	bAlwaysRelevant = true;
+
+	// Root Capsule
+	BaseCapsuleHalfHeight = 72.0f;
+	CrouchCapsuleHalfHeight = 68.0f;
+	GetCapsuleComponent()->SetCapsuleHalfHeight(BaseCapsuleHalfHeight);
 	
+	// SpringArm
 	SpringArm = CreateDefaultSubobject<USpringArmComponent>("Spring Arm");
 	SpringArm->SetupAttachment(GetRootComponent());
 	SpringArm->SetRelativeLocation(FVector(0, 0, 60));
@@ -62,16 +65,19 @@ ABaseAgent::ABaseAgent()
 	SpringArm->bEnableCameraLag = true;
 	SpringArm->CameraLagSpeed = 20.0f;
 	SpringArm->bUsePawnControlRotation = true;
-
 	BaseSpringArmHeight = SpringArm->GetRelativeLocation().Z;
 	CrouchSpringArmHeight = BaseSpringArmHeight - 28.0f;
 
-	GetMesh()->SetupAttachment(GetRootComponent());
-	GetMesh()->SetRelativeScale3D(FVector(.34f));
-	GetMesh()->SetRelativeLocation(FVector(.0f, .0f, -90.f));
-	GetMesh()->SetCollisionProfileName(TEXT("Agent"));
-	GetMesh()->SetGenerateOverlapEvents(true);
+	// TP Mesh
+	auto* TpMesh = GetMesh();
+	TpMesh->SetupAttachment(GetRootComponent());
+	TpMesh->SetRelativeScale3D(FVector(.34f));
+	TpMesh->SetRelativeLocation(FVector(.0f, .0f, -90.f));
+	TpMesh->SetCollisionProfileName(TEXT("Agent"));
+	TpMesh->SetGenerateOverlapEvents(true);
+	TpMesh->SetOwnerNoSee(true);
 	
+	// FP Mesh
 	FirstPersonMesh = CreateDefaultSubobject<USkeletalMeshComponent>("FirstPersonMesh");
 	FirstPersonMesh->SetupAttachment(SpringArm);
 	FirstPersonMesh->SetRelativeScale3D(FVector(.34f));
@@ -86,24 +92,14 @@ ABaseAgent::ABaseAgent()
 	FirstPersonMesh->SetGenerateOverlapEvents(true);
 	FirstPersonMesh->SetCollisionProfileName(TEXT("NoCollision"));
 	FirstPersonMesh->SetCanEverAffectNavigation(false);
+	FirstPersonMesh->SetOnlyOwnerSee(true);
 
+	// Camera
 	Camera = CreateDefaultSubobject<UCameraComponent>("Camera");
 	Camera->SetupAttachment(FirstPersonMesh, TEXT("CameraSocket"));
 	Camera->SetFieldOfView(70.f);
 
-	BaseCapsuleHalfHeight = 72.0f;
-	CrouchCapsuleHalfHeight = 68.0f;
-	GetCapsuleComponent()->SetCapsuleHalfHeight(BaseCapsuleHalfHeight);
-	GetCharacterMovement()->SetCrouchedHalfHeight(BaseCapsuleHalfHeight);
-
-	GetCharacterMovement()->GetNavAgentPropertiesRef().bCanCrouch = true;
-	GetCharacterMovement()->MaxWalkSpeedCrouched = 330.0f;
-
-	GetMesh()->SetOwnerNoSee(true);
-	FirstPersonMesh->SetOnlyOwnerSee(true);
-
-	AgentInputComponent = CreateDefaultSubobject<UAgentInputComponent>("InputComponent");
-
+	// Interaction Capsule
 	InteractionCapsule = CreateDefaultSubobject<UCapsuleComponent>(TEXT("InteractionCapsule"));
 	InteractionCapsule->SetupAttachment(Camera);
 	InteractionCapsule->SetRelativeLocation(FVector(150, 0, 0));
@@ -111,7 +107,27 @@ ABaseAgent::ABaseAgent()
 	InteractionCapsule->SetCapsuleHalfHeight(150);
 	InteractionCapsule->SetCapsuleRadius(35);
 	InteractionCapsule->SetCollisionProfileName(TEXT("Interactable"));
+	
+	// Character Movement Component
+	auto* Movement = GetCharacterMovement();
+	Movement->GravityScale = 0.9f; // Set Global Gravity Z -2100.f in Level - World Settings
+	Movement->MaxAcceleration = 1800.f;
+	Movement->GroundFriction = 3.3f;
+	Movement->MaxWalkSpeed = BaseRunSpeed;
+	Movement->BrakingDecelerationWalking = 225.f;
+	Movement->bIgnoreBaseRotation = true;
+	Movement->JumpZVelocity = 600.f;
+	Movement->BrakingDecelerationFalling = 1200.f;
+	Movement->AirControl = 0.45f;
+	Movement->NetworkSmoothingMode = ENetworkSmoothingMode::Disabled;
+	
+	Movement->SetCrouchedHalfHeight(BaseCapsuleHalfHeight);
+	Movement->GetNavAgentPropertiesRef().bCanCrouch = true;
+	Movement->MaxWalkSpeedCrouched = 330.0f;
 
+	// Agent Input Component
+	AgentInputComponent = CreateDefaultSubobject<UAgentInputComponent>("InputComponent");
+	
 	TL_Crouch = CreateDefaultSubobject<UTimelineComponent>("TL_Crouch");
 	TL_DieCamera = CreateDefaultSubobject<UTimelineComponent>("TL_DieCamera");
 
@@ -301,6 +317,10 @@ void ABaseAgent::Tick(float DeltaTime)
 
 	GetCharacterMovement()->MaxWalkSpeed = baseSpeed * EffectSpeedMultiplier * EquipSpeedMultiplier;
 
+	if (HasAuthority() && Controller)
+	{
+		ReplicatedControlRotation = Controller->GetControlRotation();
+	}
 
 	//ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ
 	//             CYT             ♣
@@ -446,11 +466,16 @@ void ABaseAgent::StartFire()
 		// NET_LOG(LogTemp, Warning, TEXT("%hs Called, CurrentInteractor is nullptr"), __FUNCTION__);
 		return;
 	}
-
-	// TODO: 무기를 발사하다가 교체하였을 때, EndFire() 호출?
+	
 	if (auto* weapon = Cast<ABaseWeapon>(CurrentInteractor))
 	{
 		weapon->StartFire();
+		return;
+	}
+
+	if (Spike && Spike->GetSpikeState() == ESpikeState::Carried)
+	{
+		ServerRPC_Interact(Spike);
 	}
 }
 
@@ -464,7 +489,13 @@ void ABaseAgent::EndFire()
 	if (auto* weapon = Cast<ABaseWeapon>(CurrentInteractor))
 	{
 		weapon->EndFire();
+		return;
 	}
+
+	if (Spike && Spike->GetSpikeState() == ESpikeState::Planting)
+	{
+		CancelSpike(Spike);
+	}	
 }
 
 void ABaseAgent::Reload()
@@ -499,7 +530,7 @@ void ABaseAgent::ServerRPC_Interact_Implementation(ABaseInteractor* Interactor)
 		NET_LOG(LogTemp, Error, TEXT("%hs Called, Interactor is nullptr"), __FUNCTION__);
 		return;
 	}
-		
+	
 	Interactor->ServerRPC_Interact(this);
 }
 
@@ -515,6 +546,7 @@ void ABaseAgent::ServerRPC_DropCurrentInteractor_Implementation()
 		{
 			SubWeapon = nullptr;
 		}
+		
 		CurrentInteractor->ServerRPC_Drop();
 		ServerRPC_SetCurrentInteractor(nullptr);
 
@@ -527,15 +559,11 @@ void ABaseAgent::ServerRPC_SetCurrentInteractor_Implementation(ABaseInteractor* 
 	CurrentInteractor = interactor;
 	CurrentEquipmentState = CurrentInteractor ? CurrentInteractor->GetInteractorType() : EInteractorType::None;
 	OnRep_CurrentInteractorState();
+	
 	if (CurrentInteractor)
 	{
 		CurrentInteractor->SetActive(true);
-		if (CurrentEquipmentState == EInteractorType::Spike)
-		{
-			// ToDo : 위치 맞게 수정
-			// CurrentInteractor->SetActorLocation(GetActorLocation() + GetActorUpVector() * -200);
-		}
-		NET_LOG(LogTemp, Warning, TEXT("%hs Called, 현재 장착 중인 Interactor: %s"), __FUNCTION__, *CurrentInteractor->GetActorNameOrLabel());
+		//NET_LOG(LogTemp, Warning, TEXT("%hs Called, 현재 장착 중인 Interactor: %s"), __FUNCTION__, *CurrentInteractor->GetActorNameOrLabel());
 	}
 }
 
@@ -605,8 +633,7 @@ void ABaseAgent::AcquireInteractor(ABaseInteractor* Interactor)
 		}
 		MainWeapon = weapon;
 	}
-
-
+	
 	// 무기를 얻으면, 해당 무기의 타입의 슬롯으로 전환해 바로 장착하도록
 	SwitchEquipment(Interactor->GetInteractorType());
 }
@@ -677,6 +704,15 @@ void ABaseAgent::ActivateSpike()
 		// 스파이크 소지자이고, 설치 상태이면 설치
 		if (Spike && Spike->GetSpikeState() == ESpikeState::Carried)
 		{
+			// 스파이크를 들지 않은 상태에서 설치하려 할 경우, 장착 로직 따로 실행
+			if (CurrentInteractor != Spike)
+			{
+				if (CurrentInteractor)
+				{
+					CurrentInteractor->SetActive(false);
+				}
+				CurrentInteractor = Spike;
+			}
 			ServerRPC_Interact(Spike);
 		}
 		// 스파이크 해제 가능 상태이면 스파이크 해제
@@ -793,7 +829,7 @@ void ABaseAgent::OnFindInteraction(UPrimitiveComponent* OverlappedComponent, AAc
 		}
 		else
 		{
-			NET_LOG(LogTemp, Warning, TEXT("%hs Called, 이미 감지된 Interactor가 있음"), __FUNCTION__);
+			// NET_LOG(LogTemp, Warning, TEXT("%hs Called, 이미 감지된 Interactor가 있음"), __FUNCTION__);
 			return;
 		}
 	}
@@ -802,12 +838,12 @@ void ABaseAgent::OnFindInteraction(UPrimitiveComponent* OverlappedComponent, AAc
 	{
 		if (CurrentInteractor == Interactor)
 		{
-			NET_LOG(LogTemp, Error, TEXT("%hs Called, 현재 들고 있는 Interactor와 동일함"), __FUNCTION__);
+			// NET_LOG(LogTemp, Error, TEXT("%hs Called, 현재 들고 있는 Interactor와 동일함"), __FUNCTION__);
 			return;
 		}
 		if (Interactor->HasOwnerAgent())
 		{
-			NET_LOG(LogTemp, Warning, TEXT("%hs Called, 이미 주인이 있는 Interactor"), __FUNCTION__);
+			// NET_LOG(LogTemp, Warning, TEXT("%hs Called, 이미 주인이 있는 Interactor"), __FUNCTION__);
 			return;
 		}
 		if (const auto* DetectedSpike = Cast<ASpike>(Interactor))
@@ -833,13 +869,13 @@ void ABaseAgent::OnFindInteraction(UPrimitiveComponent* OverlappedComponent, AAc
 			}
 		}
 		
-		NET_LOG(LogTemp, Warning, TEXT("%hs Called, Interactor Name is %s"), __FUNCTION__, *Interactor->GetName());
+		// NET_LOG(LogTemp, Warning, TEXT("%hs Called, Interactor Name is %s"), __FUNCTION__, *Interactor->GetName());
 		FindInteractActor = Interactor;
 		FindInteractActor->OnDetect(true);
 	}
 	else
 	{
-		NET_LOG(LogTemp, Error, TEXT("%hs Called, OtherActor is nullptr or not interactor, OtherActor Name is %s"), __FUNCTION__, *OtherActor->GetName());
+		// NET_LOG(LogTemp, Error, TEXT("%hs Called, OtherActor is nullptr or not interactor, OtherActor Name is %s"), __FUNCTION__, *OtherActor->GetName());
 	}
 }
 
@@ -889,6 +925,8 @@ void ABaseAgent::HandleDieCameraPitch(float newPitch)
 /** 서버에서만 호출됨*/
 void ABaseAgent::Die()
 {
+	//TODO: 클래식 / 나이프는 없애기
+	
 	if (MainWeapon)
 	{
 		MainWeapon->ServerRPC_Drop();
@@ -1376,6 +1414,7 @@ void ABaseAgent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifeti
 	DOREPLIFETIME(ABaseAgent, PrevEquipmentState);
 	DOREPLIFETIME(ABaseAgent, PoseIdx);
 	DOREPLIFETIME(ABaseAgent, IsInPlantZone);
+	DOREPLIFETIME(ABaseAgent, ReplicatedControlRotation);
 }
 
 
@@ -1457,6 +1496,34 @@ void ABaseAgent::OnReload()
 	OnAgentReload.Broadcast();
 }
 
+void ABaseAgent::OnSpikeStartPlant()
+{
+	// NET_LOG(LogTemp,Warning,TEXT("baseAgent:: OnSpikeStartPlant"));
+	bCanMove = false;
+	OnSpikeActive.Broadcast();
+}
+
+void ABaseAgent::OnSpikeCancelPlant()
+{
+	// NET_LOG(LogTemp,Warning,TEXT("baseAgent:: OnSpikeCancelPlant"));
+	SwitchEquipment(EInteractorType::Spike);
+	bCanMove = true;
+	OnSpikeCancel.Broadcast();
+}
+
+void ABaseAgent::OnSpikeFinishPlant()
+{
+	bCanMove = true;
+	
+	if (CurrentInteractor == Spike)
+	{
+		CurrentInteractor = nullptr;
+	}
+	
+	Spike = nullptr;
+	SwitchEquipment(EInteractorType::MainWeapon);
+}
+
 void ABaseAgent::OnRep_Controller()
 {
 	Super::OnRep_Controller();
@@ -1485,6 +1552,31 @@ bool ABaseAgent::IsAttacker() const
 	if (const AAgentPlayerState* PS = GetPlayerState<AAgentPlayerState>())
 	{
 		return PS->bIsAttacker;
+	}
+	return false;
+}
+
+bool ABaseAgent::IsInFrustum(const AActor* Actor) const
+{
+	// Ref: https://forums.unrealengine.com/t/perform-frustum-check/287524/10
+	ULocalPlayer* LocalPlayer = GetWorld()->GetFirstLocalPlayerFromController();
+	if (LocalPlayer != nullptr && LocalPlayer->ViewportClient != nullptr && LocalPlayer->ViewportClient->Viewport)
+	{
+		FSceneViewFamilyContext ViewFamily(FSceneViewFamily::ConstructionValues(
+			LocalPlayer->ViewportClient->Viewport,
+			GetWorld()->Scene,
+			LocalPlayer->ViewportClient->EngineShowFlags)
+			.SetRealtimeUpdate(true));
+
+		FVector ViewLocation;
+		FRotator ViewRotation;
+		FSceneView* SceneView = LocalPlayer->CalcSceneView(&ViewFamily, ViewLocation, ViewRotation, LocalPlayer->ViewportClient->Viewport);
+		if (SceneView != nullptr)
+		{
+			bool bIsInFrustum = SceneView->ViewFrustum.IntersectSphere(Actor->GetActorLocation(), Actor->GetSimpleCollisionRadius());
+			// 절두체 안에 있으면서 최근에 렌더링 된 적 있는 경우에만 true 반환
+			return bIsInFrustum && Actor->WasRecentlyRendered(0.1f);
+		}
 	}
 	return false;
 }

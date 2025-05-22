@@ -47,36 +47,31 @@ void UMiniMapWidget::NativeConstruct()
 
 	if (IconContainer)
 	{
-		
 		IconContainer->SetVisibility(ESlateVisibility::Visible);
 		UE_LOG(LogTemp, Warning, TEXT("아이콘 컨테이너 가시성 설정: Visible"));
 	}
 
 	// 초기 에이전트 스캔 수행
 	ScanForAgents();
+	GetWorld()->GetTimerManager().SetTimer(ScanTimerHandle, this, &UMiniMapWidget::Scan, ScanInterval, true);
+}
+
+void UMiniMapWidget::Scan()
+{
+	ScanForAgents();
+	UpdateAgentIcons(); // 모든 에이전트 아이콘 업데이트 함수 호출
 }
 
 void UMiniMapWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
 {
 	Super::NativeTick(MyGeometry, InDeltaTime);
-
-	// 매 프레임 아이콘 업데이트
-	UpdateAgentIcons(); // 모든 에이전트 아이콘 업데이트 함수 호출
-	
-	// 주기적으로 에이전트 스캔
-	TimeSinceLastScan += InDeltaTime;
-	if (TimeSinceLastScan >= ScanInterval)
-	{
-		ScanForAgents();
-		TimeSinceLastScan = 0.0f;
-	}
+	NET_LOG(LogTemp, Warning, TEXT("%hs Called"), __FUNCTION__);
 }
 
 
 // 에이전트 자동 스캔 함수 구현
 void UMiniMapWidget::ScanForAgents()
 {
-	
 	// 월드의 모든 BaseAgent 검색
 	TArray<AActor*> FoundAgents;
 	UGameplayStatics::GetAllActorsOfClass(GetWorld(), ABaseAgent::StaticClass(), FoundAgents);
@@ -98,39 +93,52 @@ void UMiniMapWidget::AddAgentToMinimap(ABaseAgent* Agent)
 {
 	if (IsValid(Agent) && !MappedAgents.Contains(Agent)) // 에이전트가 유효하고 아직 미니맵에 등록되지 않은 경우만
 	{
-
-		UE_LOG(LogTemp, Warning, TEXT(    "에이전트 추가 시도: %s, 아이콘: %s"),
+		UE_LOG(LogTemp, Warning, TEXT("에이전트 추가 시도: %s, 아이콘: %s"),
 			*Agent->GetName(),
 			Agent->GetMinimapIcon() ? TEXT("있음") : TEXT("NULL"));
-
 		MappedAgents.Add(Agent); // 미니맵에 표시될 에이전트 목록에 추가
 		
-
-
 		// 아이콘 즉시 생성
 		if (ObserverAgent)
 		{
-			FVector WorldLocation = Agent->GetActorLocation();
-			FVector2D MinimapPosition = WorldToMinimapPosition(WorldLocation);
+			// FVector WorldLocation = Agent->GetActorLocation();
+			// FVector2D MinimapPosition = WorldToMinimapPosition(WorldLocation);
+			//
+			// UE_LOG(LogTemp, Warning, TEXT("위치 변환: 월드(%s) -> 미니맵(%s)"),
+			// 	*WorldLocation.ToString(), *MinimapPosition.ToString());
+			//
+			// EVisibilityState VisState = Agent->GetVisibilityStateForAgent(ObserverAgent);
+			// UTexture2D* IconToUse = nullptr;
+   //          
+			// // 상태에 따라 아이콘 선택
+			// if (VisState == EVisibilityState::Visible)
+			// 	IconToUse = Agent->GetMinimapIcon();
+			// else if (VisState == EVisibilityState::QuestionMark)
+			// 	IconToUse = Agent->GetQuestionMarkIcon();
+			//
+			// UE_LOG(LogTemp, Warning, TEXT("아이콘 생성 시도: 상태=%d, 텍스처=%s"),
+			// 	(int32)VisState, IconToUse ? TEXT("있음") : TEXT("NULL"));
+   //          
+			// // 블루프린트 함수 호출하여 아이콘 생성
+			// CreateAgentIcon(Agent, MinimapPosition, IconToUse, VisState);
+			// UE_LOG(LogTemp, Warning, TEXT("CreateAgentIcon 함수 호출 완료"));
 
-			UE_LOG(LogTemp, Warning, TEXT("위치 변환: 월드(%s) -> 미니맵(%s)"),
-				*WorldLocation.ToString(), *MinimapPosition.ToString());
+			FVector TargetActorLocation = Agent->GetActorLocation(); // 에이전트의 월드 위치 가져오기
+			FVector2D ConvertedMinimapPosition = WorldToMinimapPosition(TargetActorLocation); // 월드 위치를 미니맵 좌표로 변환
 			
-			EVisibilityState VisState = Agent->GetVisibilityStateForAgent(ObserverAgent);
+			EVisibilityState VisState;
 			UTexture2D* IconToUse = nullptr;
-            
-			// 상태에 따라 아이콘 선택
-			if (VisState == EVisibilityState::Visible)
+			if (ObserverAgent == Agent || ObserverAgent->IsInFrustum(Agent))
+			{
+				VisState = EVisibilityState::Visible;
 				IconToUse = Agent->GetMinimapIcon();
-			else if (VisState == EVisibilityState::QuestionMark)
+			}
+			else
+			{
+				VisState = EVisibilityState::QuestionMark;
 				IconToUse = Agent->GetQuestionMarkIcon();
-
-			UE_LOG(LogTemp, Warning, TEXT("아이콘 생성 시도: 상태=%d, 텍스처=%s"),
-				(int32)VisState, IconToUse ? TEXT("있음") : TEXT("NULL"));
-            
-			// 블루프린트 함수 호출하여 아이콘 생성
-			CreateAgentIcon(Agent, MinimapPosition, IconToUse, VisState);
-			UE_LOG(LogTemp, Warning, TEXT("CreateAgentIcon 함수 호출 완료"));
+			}
+			CreateAgentIcon(Agent, ConvertedMinimapPosition, IconToUse, VisState);
 		}
 		else
 		{
@@ -170,41 +178,15 @@ void UMiniMapWidget::SetMinimapScale(float NewScale)
 
 
 // 월드 좌표를 미니맵 좌표로 변환하는 함수
-FVector2D UMiniMapWidget::WorldToMinimapPosition(const FVector& WorldLocation)
+FVector2D UMiniMapWidget::WorldToMinimapPosition(const FVector& TargetActorLocation)
 {
 	if (!IsValid(ObserverAgent)) // 관찰자 에이전트가 유효하지 않은 경우
 		return MinimapCenter; // 기본값으로 미니맵 중앙 반환
-
-	const auto& Position = Cast<UCanvasPanelSlot>(CanvasPanel->GetSlots()[0])->GetPosition();
-	// NET_LOG(LogTemp, Warning, TEXT("%hs Called, Position: %s"), __FUNCTION__, *Position.ToString());
-	
-	// 관찰자 위치와 회전
-	FVector ObserverLocation = ObserverAgent->GetActorLocation(); // 관찰자의 월드 위치 가져오기
-	float ObserverYaw = ObserverAgent->GetActorRotation().Yaw; // 관찰자의 Yaw 회전값 가져오기 (수평 회전)
-    
-	// 월드 좌표의 X, Y 차이 계산
-	float DeltaX = WorldLocation.X - ObserverLocation.X; // X축 방향 거리 차이
-	float DeltaY = WorldLocation.Y - ObserverLocation.Y; // Y축 방향 거리 차이
-    
-	// 관찰자 회전에 맞게 회전 변환 (관찰자 기준으로 미니맵 회전)
-	float RotationRadians = FMath::DegreesToRadians(ObserverYaw); // 회전값을 라디안으로 변환
-	// float RotatedX = DeltaX * FMath::Cos(RotationRadians) + DeltaY * FMath::Sin(RotationRadians); // 회전 변환된 X 좌표
-	// float RotatedY = -DeltaX * FMath::Sin(RotationRadians) + DeltaY * FMath::Cos(RotationRadians); // 회전 변환된 Y 좌표
     
 	// 미니맵 스케일 적용하여 미니맵 좌표 계산
 	FVector2D MinimapPos; // 미니맵 좌표 변수
-
-	MinimapPos.X = (WorldLocation.Y + 10000) / 20000.0f * 256.0f;
-	MinimapPos.Y = 256 - (WorldLocation.X + 10000) / 20000.0f * 256.0f;
-	// MinimapPos.X = 128 + DeltaX * 1; // X 좌표 계산 (중앙에서의 오프셋)
-	// MinimapPos.Y = 128 + DeltaY * 1; // Y 좌표 계산 (중앙에서의 오프셋)
-	// NET_LOG(LogTemp, Warning, TEXT("%hs Called, %s"), __FUNCTION__, *MinimapPos.ToString());
-	// MinimapPos.X = MinimapCenter.X + DeltaX * MapScale; // X 좌표 계산 (중앙에서의 오프셋)
-	// MinimapPos.Y = MinimapCenter.Y + DeltaY * MapScale; // Y 좌표 계산 (중앙에서의 오프셋)
-
-	// TODO: 미니맵 돌리기 한 다음에 아래 공식 쓰셈
-	// MinimapPos.X = MinimapCenter.X + RotatedX * MapScale; // X 좌표 계산 (중앙에서의 오프셋)
-	// MinimapPos.Y = MinimapCenter.Y + RotatedY * MapScale; // Y 좌표 계산 (중앙에서의 오프셋)
+	MinimapPos.X = (TargetActorLocation.Y + 10000.f) / 20000.f * 500.0f;
+	MinimapPos.Y = (10000.f - TargetActorLocation.X) / 20000.f * 500.0f;
     
 	return MinimapPos; // 계산된 미니맵 좌표 반환
 }
@@ -219,28 +201,40 @@ void UMiniMapWidget::UpdateAgentIcons()
 	for (ABaseAgent* Agent : MappedAgents) // 미니맵에 표시될 모든 에이전트에 대해 반복
 	{
 		if (!IsValid(Agent)) continue;
-        
-		// 월드 위치를 미니맵 좌표로 변환
+		
 		FVector TargetActorLocation = Agent->GetActorLocation(); // 에이전트의 월드 위치 가져오기
 		FVector2D ConvertedMinimapPosition = WorldToMinimapPosition(TargetActorLocation); // 월드 위치를 미니맵 좌표로 변환
         
-		// 에이전트 가시성 상태 확인
-		EVisibilityState VisState = Agent->GetVisibilityStateForAgent(ObserverAgent); // 현재 관찰자에게 보이는 상태 확인
-        
-		// 적절한 아이콘 선택
-		UTexture2D* IconToUse = nullptr; // 사용할 아이콘 텍스처
-        
-		switch (VisState) // 가시성 상태에 따라 다른 아이콘 선택
+		// // 에이전트 가시성 상태 확인
+		// EVisibilityState VisState = Agent->GetVisibilityStateForAgent(ObserverAgent); // 현재 관찰자에게 보이는 상태 확인
+  //       
+		// // 적절한 아이콘 선택
+		// UTexture2D* IconToUse = nullptr; // 사용할 아이콘 텍스처
+  //       
+		// switch (VisState) // 가시성 상태에 따라 다른 아이콘 선택
+		// {
+		// case EVisibilityState::Visible: // 보이는 상태인 경우
+		// 	IconToUse = Agent->GetMinimapIcon(); // 에이전트의 기본 아이콘 사용
+		// 	break;
+		// case EVisibilityState::QuestionMark: // 물음표 상태인 경우
+		// 	IconToUse = Agent->GetQuestionMarkIcon(); // 물음표 아이콘 사용
+		// 	break;
+		// case EVisibilityState::Hidden: // 숨김 상태인 경우
+		// 	IconToUse = nullptr; // 아이콘 없음 (null)
+		// 	break;
+		// }
+
+		EVisibilityState VisState;
+		UTexture2D* IconToUse = nullptr;
+		if (ObserverAgent == Agent || ObserverAgent->IsInFrustum(Agent))
 		{
-		case EVisibilityState::Visible: // 보이는 상태인 경우
-			IconToUse = Agent->GetMinimapIcon(); // 에이전트의 기본 아이콘 사용
-			break;
-		case EVisibilityState::QuestionMark: // 물음표 상태인 경우
-			IconToUse = Agent->GetQuestionMarkIcon(); // 물음표 아이콘 사용
-			break;
-		case EVisibilityState::Hidden: // 숨김 상태인 경우
-			IconToUse = nullptr; // 아이콘 없음 (null)
-			break;
+			IconToUse = Agent->GetMinimapIcon();
+			VisState = EVisibilityState::Visible;
+		}
+		else
+		{
+			IconToUse = Agent->GetQuestionMarkIcon();
+			VisState = EVisibilityState::QuestionMark;
 		}
         
 		// 아이콘 업데이트 (블루프린트에서 구현)
@@ -248,4 +242,3 @@ void UMiniMapWidget::UpdateAgentIcons()
 		// NET_LOG(LogTemp, Warning, TEXT("%hs Called, 아이콘 업데이트 함수 호출 "), __FUNCTION__);
 	}
 }
-

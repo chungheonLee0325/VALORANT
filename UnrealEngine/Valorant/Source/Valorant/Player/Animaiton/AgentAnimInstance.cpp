@@ -16,6 +16,8 @@ void UAgentAnimInstance::NativeBeginPlay()
 		OwnerAgent->OnAgentEquip.AddDynamic(this, &UAgentAnimInstance::OnEquip);
 		OwnerAgent->OnAgentFire.AddDynamic(this, &UAgentAnimInstance::OnFire);
 		OwnerAgent->OnAgentReload.AddDynamic(this, &UAgentAnimInstance::OnReload);
+		OwnerAgent->OnSpikeActive.AddDynamic(this, &UAgentAnimInstance::OnSpikeActive);
+		OwnerAgent->OnSpikeCancel.AddDynamic(this, &UAgentAnimInstance::OnSpikeCancel);
 	}
 }
 
@@ -34,10 +36,14 @@ void UAgentAnimInstance::UpdateState()
 		Speed = FVector::DotProduct(velocity, forward);
 		FVector right = OwnerAgent->GetActorRightVector();
 		Direction = FVector::DotProduct(velocity, right);
+
+		Pitch = FRotator::NormalizeAxis(OwnerAgent->ReplicatedControlRotation.Pitch);
+		// Yaw = FRotator::NormalizeAxis(OwnerAgent->ReplicatedControlRotation.Yaw);
+		// NET_LOG(LogTemp, Warning, TEXT("Pitch : %f, Yaw : %f"), Pitch, Yaw);
 		
 		bIsCrouch = OwnerAgent->bIsCrouched;
 		bIsInAir = OwnerAgent->GetCharacterMovement()->IsFalling();
-		bIsDead = OwnerAgent->GetIsDead();
+		bIsDead = OwnerAgent->IsDead();
 		InteractorPoseIdx = OwnerAgent->GetPoseIdx();
 		
 		if (InteractorState != OwnerAgent->GetInteractorState())
