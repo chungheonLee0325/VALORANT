@@ -58,7 +58,7 @@ enum class EPlayerRole : uint8
 };
 
 UENUM(BlueprintType)
-enum class EEquipmentType : uint8
+enum class EInteractorType : uint8
 {
 	None UMETA(DisplayName = "None"),
 	MainWeapon UMETA(DisplayName = "MainWeapon"),
