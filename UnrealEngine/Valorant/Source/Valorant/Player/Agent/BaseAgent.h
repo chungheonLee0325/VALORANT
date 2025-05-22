@@ -250,7 +250,7 @@ public:
 	void ResetFindInteractorActor() { FindInteractActor = nullptr; }
 
 	UFUNCTION(BlueprintCallable)
-	EInteractorType GetInteractorState() const { return CurrentInteractorState; }
+	EInteractorType GetInteractorState() const { return CurrentEquipmentState; }
 
 	UFUNCTION(BlueprintCallable)
 	ABaseInteractor* GetCurrentInterator() const { return CurrentInteractor; }
@@ -274,7 +274,7 @@ public:
 
 	/** 해당 슬롯의 인터랙터를 손에 들고자 할 때 */
 	UFUNCTION(BlueprintCallable, Category = "Weapon")
-	void SwitchInteractor(EInteractorType InteractorType);
+	void SwitchEquipment(EInteractorType EquipmentType);
 
 	void ActivateSpike();
 	void CancelSpike(ASpike* CancelObject);
@@ -286,7 +286,7 @@ public:
 	UFUNCTION(Server, Reliable, Category = "Weapon")
 	void Server_AcquireInteractor(ABaseInteractor* Interactor);
 	UFUNCTION(Server, Reliable, Category = "Weapon")
-	void ServerRPC_SwitchInteractor(EInteractorType InteractorType);
+	void ServerRPC_SwitchEquipment(EInteractorType InteractorType);
 
 	UFUNCTION(BlueprintCallable, Category = "GAS")
 	float GetEffectSpeedMulitiplier() const { return EffectSpeedMultiplier; }
@@ -326,6 +326,24 @@ public:
 	// 현재 팀이 공격팀인지 반환
 	UFUNCTION(BlueprintCallable, Category = "Team")
 	bool IsAttacker() const;
+
+	EInteractorType GetPrevEquipmentType() const;
+
+	// 1인칭 애니메이션 몽타주 재생
+	UFUNCTION(BlueprintCallable, Category = "Animation")
+	void PlayFirstPersonMontage(UAnimMontage* MontageToPlay, float PlayRate = 1.0f, FName StartSectionName = NAME_None);
+
+	// 3인칭 애니메이션 몽타주 재생
+	UFUNCTION(BlueprintCallable, Category = "Animation")
+	void PlayThirdPersonMontage(UAnimMontage* MontageToPlay, float PlayRate = 1.0f, FName StartSectionName = NAME_None);
+
+	// 1인칭 애니메이션 몽타주 정지
+	UFUNCTION(BlueprintCallable, Category = "Animation")
+	void StopFirstPersonMontage(float BlendOutTime = 0.25f);
+
+	// 3인칭 애니메이션 몽타주 정지
+	UFUNCTION(BlueprintCallable, Category = "Animation")
+	void StopThirdPersonMontage(float BlendOutTime = 0.25f);
 
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
@@ -393,7 +411,10 @@ protected:
 	ABaseInteractor* CurrentInteractor = nullptr;
 
 	UPROPERTY(Replicated, ReplicatedUsing = OnRep_CurrentInteractorState)
-	EInteractorType CurrentInteractorState = EInteractorType::None;
+	EInteractorType CurrentEquipmentState = EInteractorType::None;
+
+	UPROPERTY(Replicated)
+	EInteractorType PrevEquipmentState = EInteractorType::None;
 	
 	UFUNCTION()
 	void OnRep_CurrentInteractorState();

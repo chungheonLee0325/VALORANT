@@ -234,7 +234,6 @@ void ABaseWeapon::ServerRPC_Fire_Implementation(const FVector& Location, const F
 	const FVector& Dir = GetSpreadDirection(Direction);
 	const FVector& Start = Location;
 	const FVector End = Start + Dir * 99999;
-	// NET_LOG(LogTemp, Warning, TEXT("ServerRPC_Fire_Implementation, Start : %s, End : %s"), *Start.ToString(), *End.ToString());
 
 	// 궤적, 탄착군 디버깅
 	TArray<AActor*> ActorsToIgnore;
@@ -257,37 +256,49 @@ void ABaseWeapon::ServerRPC_Fire_Implementation(const FVector& Location, const F
 	);
 	if (bHit)
 	{
-		int FinalDamage = WeaponData->BaseDamage;
-		switch (const EAgentDamagedPart DamagedPart = ABaseAgent::GetHitDamagedPart(OutHit.BoneName))
-		{
-		case EAgentDamagedPart::None:
-			break;
-		case EAgentDamagedPart::Head:
-			FinalDamage *= WeaponData->HeadshotMultiplier;
-			break;
-		case EAgentDamagedPart::Body:
-			break;
-		case EAgentDamagedPart::Legs:
-			FinalDamage *= WeaponData->LegshotMultiplier;
-			break;
-		}
-
-		const auto& FalloffArray = WeaponData->GunDamageFalloffArray;
-		for (int i = FalloffArray.Num() - 1; i >= 0; i--)
-		{
-			const auto& FalloffData = FalloffArray[i];
-			if (OutHit.Distance >= FalloffData.RangeStart)
-			{
-				FinalDamage *= FalloffData.DamageMultiplier;
-				break;
-			}
-		}
-		FinalDamage = FMath::Clamp(FinalDamage, 1, 9999);
-
-		NET_LOG(LogTemp, Warning, TEXT("LineTraceSingle Hit: %s, BoneName: %s, Distance: %f, FinalDamage: %d"),
-		        *OutHit.GetActor()->GetName(), *OutHit.BoneName.ToString(), OutHit.Distance, FinalDamage);
+		// 팀킬 방지 로직 추가
 		if (ABaseAgent* HitAgent = Cast<ABaseAgent>(OutHit.GetActor()))
 		{
+			// 공격자와 피격자가 같은 팀인지 확인
+			if (OwnerAgent && HitAgent->IsBlueTeam() == OwnerAgent->IsBlueTeam())
+			{
+				// 같은 팀이면 데미지를 주지 않고 임팩트 효과만 재생
+				Multicast_SpawnImpactEffect(OutHit.ImpactPoint, OutHit.ImpactNormal.Rotation());
+				Multicast_PlayImpactSound(OutHit.ImpactPoint);
+				Multicast_SpawnTracer(Start, OutHit.ImpactPoint);
+				return;
+			}
+
+			int FinalDamage = WeaponData->BaseDamage;
+			switch (const EAgentDamagedPart DamagedPart = ABaseAgent::GetHitDamagedPart(OutHit.BoneName))
+			{
+			case EAgentDamagedPart::None:
+				break;
+			case EAgentDamagedPart::Head:
+				FinalDamage *= WeaponData->HeadshotMultiplier;
+				break;
+			case EAgentDamagedPart::Body:
+				break;
+			case EAgentDamagedPart::Legs:
+				FinalDamage *= WeaponData->LegshotMultiplier;
+				break;
+			}
+
+			const auto& FalloffArray = WeaponData->GunDamageFalloffArray;
+			for (int i = FalloffArray.Num() - 1; i >= 0; i--)
+			{
+				const auto& FalloffData = FalloffArray[i];
+				if (OutHit.Distance >= FalloffData.RangeStart)
+				{
+					FinalDamage *= FalloffData.DamageMultiplier;
+					break;
+				}
+			}
+			FinalDamage = FMath::Clamp(FinalDamage, 1, 9999);
+
+			NET_LOG(LogTemp, Warning, TEXT("LineTraceSingle Hit: %s, BoneName: %s, Distance: %f, FinalDamage: %d"),
+			        *OutHit.GetActor()->GetName(), *OutHit.BoneName.ToString(), OutHit.Distance, FinalDamage);
+			
 			// 공격자 정보 전달
 			HitAgent->ServerApplyHitScanGE(NewDamageEffectClass, FinalDamage, OwnerAgent);
 		}

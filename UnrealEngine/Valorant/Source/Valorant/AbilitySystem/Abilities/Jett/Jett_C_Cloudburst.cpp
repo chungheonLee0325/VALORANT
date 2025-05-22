@@ -18,5 +18,5 @@ void UJett_C_Cloudburst::ActivateAbility(const FGameplayAbilitySpecHandle Handle
 	ActorInfo->GetAnimInstance()->Montage_Play(AbilityMontage);
 
 	// 타이머 할지 시간 보기
-	SpawnProjectile(m_ActorInfo);
+	SpawnProjectile(CachedActorInfo);
 }

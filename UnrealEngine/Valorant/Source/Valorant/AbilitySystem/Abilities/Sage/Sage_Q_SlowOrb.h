@@ -7,12 +7,12 @@
 class ABaseProjectile;
 
 UCLASS()
-class VALORANT_API USage_Q_SlowOrb : public UGA_LeftRight
+class VALORANT_API USage_Q_SlowOrb : public UBaseGameplayAbility
 {
     GENERATED_BODY()
 
     USage_Q_SlowOrb();
 
 protected:
-    virtual void Active_Left_Click(FGameplayEventData data) override;
+    virtual void HandleLeftClick(FGameplayEventData data) override;
 }; 

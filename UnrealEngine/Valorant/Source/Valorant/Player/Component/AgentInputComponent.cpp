@@ -232,7 +232,7 @@ void UAgentInputComponent::Weapon1(const FInputActionValue& InputActionValue)
 {
 	if (Agent)
 	{
-		Agent->SwitchInteractor(EInteractorType::MainWeapon);
+		Agent->SwitchEquipment(EInteractorType::MainWeapon);
 	}
 }
 
@@ -240,7 +240,7 @@ void UAgentInputComponent::Weapon2(const FInputActionValue& InputActionValue)
 {
 	if (Agent)
 	{
-		Agent->SwitchInteractor(EInteractorType::SubWeapon);
+		Agent->SwitchEquipment(EInteractorType::SubWeapon);
 	}
 }
 
@@ -248,7 +248,7 @@ void UAgentInputComponent::Weapon3(const FInputActionValue& InputActionValue)
 {
 	if (Agent)
 	{
-		Agent->SwitchInteractor(EInteractorType::Melee);
+		Agent->SwitchEquipment(EInteractorType::Melee);
 	}
 }
 

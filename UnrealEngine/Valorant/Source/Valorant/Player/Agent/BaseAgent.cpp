@@ -146,7 +146,7 @@ ABaseAgent::ABaseAgent()
 
 void ABaseAgent::OnRep_CurrentInteractorState()
 {
-	if (CurrentInteractorState != EInteractorType::None)
+	if (CurrentInteractor && CurrentEquipmentState != EInteractorType::None)
 	{
 		CurrentInteractor->PlayEquipAnimation();
 	}
@@ -557,8 +557,7 @@ void ABaseAgent::ServerRPC_DropCurrentInteractor_Implementation()
 void ABaseAgent::ServerRPC_SetCurrentInteractor_Implementation(ABaseInteractor* interactor)
 {
 	CurrentInteractor = interactor;
-	CurrentInteractorState = CurrentInteractor ? CurrentInteractor->GetInteractorType() : EInteractorType::None;
-	
+	CurrentEquipmentState = CurrentInteractor ? CurrentInteractor->GetInteractorType() : EInteractorType::None;
 	OnRep_CurrentInteractorState();
 	
 	if (CurrentInteractor)
@@ -636,14 +635,14 @@ void ABaseAgent::AcquireInteractor(ABaseInteractor* Interactor)
 	}
 	
 	// 무기를 얻으면, 해당 무기의 타입의 슬롯으로 전환해 바로 장착하도록
-	SwitchInteractor(Interactor->GetInteractorType());
+	SwitchEquipment(Interactor->GetInteractorType());
 }
 
-void ABaseAgent::SwitchInteractor(EInteractorType InteractorType)
+void ABaseAgent::SwitchEquipment(EInteractorType EquipmentType)
 {
 	if (HasAuthority())
 	{
-		if (InteractorType == CurrentInteractorState)
+		if (EquipmentType == CurrentEquipmentState)
 		{
 			return;
 		}
@@ -651,32 +650,50 @@ void ABaseAgent::SwitchInteractor(EInteractorType InteractorType)
 		if (CurrentInteractor)
 		{
 			CurrentInteractor->SetActive(false);
+			PrevEquipmentState = CurrentEquipmentState;
+			ASC->ClearFollowUpInputs();
 		}
 
-		if (InteractorType == EInteractorType::MainWeapon)
+		if (EquipmentType == EInteractorType::Ability)
 		{
-			EquipInteractor(MainWeapon);
-			UpdateEquipSpeedMultiplier();
+			EquipInteractor(nullptr);
+			// EqupInteractor 에서 Current를 Set 하므로 메뉴얼릭하게 설정
+			CurrentEquipmentState = EInteractorType::Ability;
 		}
-		else if (InteractorType == EInteractorType::SubWeapon)
+		else if (EquipmentType == EInteractorType::MainWeapon)
 		{
-			EquipInteractor(SubWeapon);
-			UpdateEquipSpeedMultiplier();
+			if (MainWeapon)
+			{
+				EquipInteractor(MainWeapon);
+			}
 		}
-		else if (InteractorType == EInteractorType::Melee)
+		else if (EquipmentType == EInteractorType::SubWeapon)
 		{
-			EquipInteractor(MeleeKnife);
-			UpdateEquipSpeedMultiplier();
+			if (SubWeapon)
+			{
+				EquipInteractor(SubWeapon);
+			}
 		}
-		else if (InteractorType == EInteractorType::Spike)
+		else if (EquipmentType == EInteractorType::Melee)
 		{
-			EquipInteractor(Spike);
-			UpdateEquipSpeedMultiplier();
+			if (MeleeKnife)
+			{
+				EquipInteractor(MeleeKnife);
+			}
 		}
+		else if (EquipmentType == EInteractorType::Spike)
+		{
+			if (Spike)
+			{
+				EquipInteractor(Spike);
+			}
+		}
+
+		UpdateEquipSpeedMultiplier();
 	}
 	else
 	{
-		ServerRPC_SwitchInteractor(InteractorType);
+		ServerRPC_SwitchEquipment(EquipmentType);
 	}
 }
 
@@ -710,7 +727,7 @@ void ABaseAgent::ActivateSpike()
 		{
 			return;
 		}
-		SwitchInteractor(EInteractorType::Spike);
+		SwitchEquipment(EInteractorType::Spike);
 	}
 }
 
@@ -752,9 +769,9 @@ void ABaseAgent::Server_AcquireInteractor_Implementation(ABaseInteractor* Intera
 	AcquireInteractor(Interactor);
 }
 
-void ABaseAgent::ServerRPC_SwitchInteractor_Implementation(EInteractorType InteractorType)
+void ABaseAgent::ServerRPC_SwitchEquipment_Implementation(EInteractorType InteractorType)
 {
-	SwitchInteractor(InteractorType);
+	SwitchEquipment(InteractorType);
 }
 
 void ABaseAgent::SetShopUI()
@@ -1393,7 +1410,8 @@ void ABaseAgent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifeti
 	DOREPLIFETIME(ABaseAgent, SubWeapon);
 	DOREPLIFETIME(ABaseAgent, Spike);
 	DOREPLIFETIME(ABaseAgent, CurrentInteractor);
-	DOREPLIFETIME(ABaseAgent, CurrentInteractorState);
+	DOREPLIFETIME(ABaseAgent, CurrentEquipmentState);
+	DOREPLIFETIME(ABaseAgent, PrevEquipmentState);
 	DOREPLIFETIME(ABaseAgent, PoseIdx);
 	DOREPLIFETIME(ABaseAgent, IsInPlantZone);
 	DOREPLIFETIME(ABaseAgent, ReplicatedControlRotation);
@@ -1488,7 +1506,7 @@ void ABaseAgent::OnSpikeStartPlant()
 void ABaseAgent::OnSpikeCancelPlant()
 {
 	// NET_LOG(LogTemp,Warning,TEXT("baseAgent:: OnSpikeCancelPlant"));
-	SwitchInteractor(EInteractorType::Spike);
+	SwitchEquipment(EInteractorType::Spike);
 	bCanMove = true;
 	OnSpikeCancel.Broadcast();
 }
@@ -1503,7 +1521,7 @@ void ABaseAgent::OnSpikeFinishPlant()
 	}
 	
 	Spike = nullptr;
-	SwitchInteractor(EInteractorType::MainWeapon);
+	SwitchEquipment(EInteractorType::MainWeapon);
 }
 
 void ABaseAgent::OnRep_Controller()
@@ -1561,4 +1579,49 @@ bool ABaseAgent::IsInFrustum(const AActor* Actor) const
 		}
 	}
 	return false;
+}
+
+EInteractorType ABaseAgent::GetPrevEquipmentType() const
+{
+	return PrevEquipmentState;
+}
+
+void ABaseAgent::PlayFirstPersonMontage(UAnimMontage* MontageToPlay, float PlayRate, FName StartSectionName)
+{
+	if (ABP_1P && MontageToPlay)
+	{
+		ABP_1P->Montage_Play(MontageToPlay, PlayRate);
+		if (StartSectionName != NAME_None)
+		{
+			ABP_1P->Montage_JumpToSection(StartSectionName, MontageToPlay);
+		}
+	}
+}
+
+void ABaseAgent::PlayThirdPersonMontage(UAnimMontage* MontageToPlay, float PlayRate, FName StartSectionName)
+{
+	if (ABP_3P && MontageToPlay)
+	{
+		ABP_3P->Montage_Play(MontageToPlay, PlayRate);
+		if (StartSectionName != NAME_None)
+		{
+			ABP_3P->Montage_JumpToSection(StartSectionName, MontageToPlay);
+		}
+	}
+}
+
+void ABaseAgent::StopFirstPersonMontage(float BlendOutTime)
+{
+	if (ABP_1P)
+	{
+		ABP_1P->Montage_Stop(BlendOutTime);
+	}
+}
+
+void ABaseAgent::StopThirdPersonMontage(float BlendOutTime)
+{
+	if (ABP_3P)
+	{
+		ABP_3P->Montage_Stop(BlendOutTime);
+	}
 }

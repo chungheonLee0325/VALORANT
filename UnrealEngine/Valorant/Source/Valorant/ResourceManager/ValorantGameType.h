@@ -64,7 +64,8 @@ enum class EInteractorType : uint8
 	MainWeapon UMETA(DisplayName = "MainWeapon"),
 	SubWeapon UMETA(DisplayName = "SubWeapon"),
 	Melee UMETA(DisplayName = "Melee"),
-	Spike UMETA(DisplayName = "Spike")
+	Spike UMETA(DisplayName = "Spike"),
+	Ability UMETA(DisplayName = "Ability"),
 };
 
 // 무기 카테고리
