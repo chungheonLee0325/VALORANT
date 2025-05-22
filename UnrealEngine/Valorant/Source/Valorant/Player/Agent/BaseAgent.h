@@ -2,11 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
-#include "Player/AgentPlayerController.h"
-#include "Player/Animaiton/AgentAnimInstance.h"
 #include "Valorant/ResourceManager/ValorantGameType.h"
-#include "Weapon/BaseWeapon.h"
-#include "ValorantObject/Spike/Spike.h"
 #include "BaseAgent.generated.h"
 
 class UAgentAnimInstance;
@@ -34,6 +30,7 @@ enum class EVisibilityState  : uint8
 	Hidden,
 	QuestionMark,
 };
+
 UENUM(BlueprintType)
 enum class EAgentDamagedPart : uint8
 {
@@ -43,6 +40,14 @@ enum class EAgentDamagedPart : uint8
 	Legs
 };
 
+UENUM(BlueprintType)
+enum class EAgentDamagedDirection : uint8
+{
+	Front,
+	Back,
+	Left,
+	Right
+};
 
 //ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ
 //             CYT             ♣

@@ -17,6 +17,7 @@
 #include "Player/MatchPlayerState.h"
 #include "Player/Agent/BaseAgent.h"
 #include "Player/Component/CreditComponent.h"
+#include "ValorantObject/Spike/Spike.h"
 #include "Weapon/BaseWeapon.h"
 
 static int CurrentRound = 0;

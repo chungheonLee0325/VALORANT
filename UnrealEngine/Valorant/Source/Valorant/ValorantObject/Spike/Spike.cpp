@@ -10,6 +10,8 @@
 #include "Net/UnrealNetwork.h"
 #include "Kismet/GameplayStatics.h"
 #include "GameManager/MatchGameState.h"
+#include "Player/AgentPlayerState.h"
+#include "Player/MatchPlayerController.h"
 #include "Weapon/ThirdPersonInteractor.h"
 
 

@@ -3,11 +3,13 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "GameFramework/Actor.h"
 #include "ResourceManager/ValorantGameType.h"
 #include "ValorantObject/BaseInteractor.h"
 #include "BaseWeapon.generated.h"
 
+class UGameplayEffect;
+struct FGunRecoilData;
+struct FWeaponData;
 class UInputMappingContext;
 class UInputAction;
 
