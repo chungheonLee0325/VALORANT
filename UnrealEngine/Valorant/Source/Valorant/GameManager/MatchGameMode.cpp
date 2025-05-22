@@ -513,6 +513,13 @@ void AMatchGameMode::ClearObjects()
 		{
 			Interactor->Destroy();
 		}
+		else
+		{
+			if (auto* Weapon = Cast<ABaseWeapon>(Interactor))
+			{
+				Weapon->ServerOnly_ClearAmmo();
+			}
+		}
 	}
 }
 

@@ -620,6 +620,14 @@ void ABaseWeapon::UpdateVisualState()
 	// }
 }
 
+void ABaseWeapon::ServerOnly_ClearAmmo()
+{
+	MagazineAmmo = MagazineSize;
+	// TODO: 총기별 여분탄약 데이터 추가 필요
+	SpareAmmo = MagazineSize * 5;
+	OnRep_Ammo();
+}
+
 // 무기 사용 여부 설정시 시각적 상태도 업데이트하도록 수정
 void ABaseWeapon::SetWasUsed(bool bNewWasUsed)
 {
