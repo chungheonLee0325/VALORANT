@@ -358,6 +358,18 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Animation")
 	void StopThirdPersonMontage(float BlendOutTime = 0.25f);
 
+	// 현재 체력 반환
+	UFUNCTION(BlueprintCallable, Category = "Agent|Status")
+	float GetCurrentHealth() const;
+
+	// 최대 체력 반환
+	UFUNCTION(BlueprintCallable, Category = "Agent|Status")
+	float GetMaxHealth() const;
+
+	// 체력이 가득 찼는지 확인
+	UFUNCTION(BlueprintCallable, Category = "Agent|Status")
+	bool IsFullHealth() const;
+	
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	UValorantGameInstance* m_GameInstance;

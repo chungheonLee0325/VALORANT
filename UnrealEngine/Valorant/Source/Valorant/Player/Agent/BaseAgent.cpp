@@ -5,6 +5,7 @@
 #include "AbilitySystemComponent.h"
 #include "Engine/World.h"
 #include "Valorant.h"
+#include "AbilitySystem/Attributes/BaseAttributeSet.h"
 #include "AbilitySystem/Context/HitScanGameplayEffectContext.h"
 #include "Camera/CameraComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
@@ -1692,4 +1693,35 @@ void ABaseAgent::StopThirdPersonMontage(float BlendOutTime)
 	{
 		ABP_3P->Montage_Stop(BlendOutTime);
 	}
+}
+
+float ABaseAgent::GetCurrentHealth() const
+{
+	if (ASC.IsValid())
+	{
+		const UBaseAttributeSet* Attributes = Cast<UBaseAttributeSet>(ASC->GetSet<UBaseAttributeSet>());
+		if (Attributes)
+		{
+			return Attributes->GetHealth();
+		}
+	}
+	return 0.f;
+}
+
+float ABaseAgent::GetMaxHealth() const
+{
+	if (ASC.IsValid())
+	{
+		const UBaseAttributeSet* Attributes = Cast<UBaseAttributeSet>(ASC->GetSet<UBaseAttributeSet>());
+		if (Attributes)
+		{
+			return Attributes->GetMaxHealth();
+		}
+	}
+	return 0.f;
+}
+
+bool ABaseAgent::IsFullHealth() const
+{
+	return FMath::IsNearlyEqual(GetCurrentHealth(), GetMaxHealth());
 }
