@@ -44,7 +44,7 @@ void ABaseWeapon::BeginPlay()
 	}
 	if (const auto* DetectWidget = Cast<UDetectWidget>(DetectWidgetComponent->GetUserWidgetObject()))
 	{
-		DetectWidget->SetName(TEXT("획득 ") + WeaponData->LocalName);
+		// DetectWidget->SetName(TEXT("획득 ") + WeaponData->LocalName);
 	}
 
 	// 무기 사용 여부에 따른 시각적 효과 적용
@@ -60,10 +60,10 @@ void ABaseWeapon::BeginPlay()
 	Mesh->SetSkeletalMeshAsset(WeaponMeshAsset);
 	Mesh->SetRelativeScale3D(FVector(0.34f));
 
-	NET_LOG(LogTemp, Warning, TEXT("%hs Called, WeaponId: %d"), __FUNCTION__, WeaponData->WeaponID);
+	// NET_LOG(LogTemp, Warning, TEXT("%hs Called, WeaponId: %d"), __FUNCTION__, WeaponData->WeaponID);
 	if (WeaponData->GunABPClass)
 	{
-		NET_LOG(LogTemp, Warning, TEXT("%hs Called, WeaponData->GunABPClass, %s"), __FUNCTION__, *GetName());
+		// NET_LOG(LogTemp, Warning, TEXT("%hs Called, WeaponData->GunABPClass, %s"), __FUNCTION__, *GetName());
 		Mesh->SetAnimInstanceClass(WeaponData->GunABPClass);
 	}
 
@@ -490,7 +490,7 @@ void ABaseWeapon::ServerOnly_AttachWeapon(ABaseAgent* Agent)
 		EAttachmentRule::SnapToTarget,
 		EAttachmentRule::KeepRelative,
 		true
-	);
+		);
 	Mesh->AttachToComponent(Agent->GetMesh1P(), AttachmentRules, FName(TEXT("R_WeaponSocket")));
 	if (nullptr != ThirdPersonInteractor)
 	{
