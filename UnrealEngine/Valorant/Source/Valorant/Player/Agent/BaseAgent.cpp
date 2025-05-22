@@ -1551,8 +1551,6 @@ void ABaseAgent::OnSpikeFinishPlant()
 void ABaseAgent::OnSpikeStartDefuse()
 {
 	DefusalMesh->SetVisibility(true);
-	ABP_1P->SetIsDefuse(true);
-	ABP_3P->SetIsDefuse(true);
 	
 	bCanMove = false;
 	OnSpikeDeactive.Broadcast();
@@ -1561,8 +1559,6 @@ void ABaseAgent::OnSpikeStartDefuse()
 void ABaseAgent::OnSpikeCancelDefuse()
 {
 	DefusalMesh->SetVisibility(false);
-	ABP_1P->SetIsDefuse(false);
-	ABP_3P->SetIsDefuse(false);
 	
 	bCanMove = true;
 	OnSpikeCancel.Broadcast();
@@ -1571,8 +1567,6 @@ void ABaseAgent::OnSpikeCancelDefuse()
 void ABaseAgent::OnSpikeFinishDefuse()
 {
 	DefusalMesh->SetVisibility(false);
-	ABP_1P->SetIsDefuse(false);
-	ABP_3P->SetIsDefuse(false);
 	
 	bCanMove = true;
 	OnSpikeDefuseFinish.Broadcast();
