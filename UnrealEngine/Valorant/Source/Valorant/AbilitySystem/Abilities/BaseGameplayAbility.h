@@ -1,6 +1,4 @@
-﻿// Fill out your copyright notice in the Description page of Project Settings.
-
-#pragma once
+﻿#pragma once
 
 #include "CoreMinimal.h"
 #include "Abilities/GameplayAbility.h"
@@ -9,183 +7,282 @@
 
 class ABaseProjectile;
 
-// 스킬 입력 유형 정의
+// 스킬 입력 유형 (에디터 편의성을 위해 enum 유지)
 UENUM(BlueprintType)
 enum class EAbilityInputType : uint8
 {
-    Instant,            // 즉시 실행 (예: 제트 대쉬)
-    Hold,               // 홀드 (예: 소바 화살 차징)
-    Toggle,             // 토글 (예: 오멘 텔레포트 모드)
-    Sequence,           // 시퀀스 입력 (예: 레이즈 궁극기)
-    MultiPhase,         // 다단계 (예: 제트 스모크)
-    Repeatable          // 반복 가능 (예: 피닉스 불꽃 벽)
+	Instant,
+	Hold,
+	Toggle,
+	Sequence,
+	MultiPhase,
+	Repeatable
 };
 
-// 스킬 단계 정의
+// 스킬 단계 (태그와 병행 사용)
 UENUM(BlueprintType)
 enum class EAbilityPhase : uint8
 {
-    None,
-    Ready,              // 준비 단계
-    Aiming,             // 조준 단계
-    Charging,           // 차징 단계
-    Executing,          // 실행 단계
-    Cooldown            // 쿨다운 단계
+	None,
+	Ready,
+	Aiming,
+	Charging,
+	Executing,
+	Cooldown
 };
 
-/**
- * 발로란트 스타일 게임의 기본 어빌리티 클래스
- */
 UCLASS()
 class VALORANT_API UBaseGameplayAbility : public UGameplayAbility
 {
-    GENERATED_BODY()
+	GENERATED_BODY()
 
 public:
-    UBaseGameplayAbility();
+	UBaseGameplayAbility();
 
-    // 어빌리티 ID 설정
-    UFUNCTION(BlueprintCallable)
-    void SetAbilityID(int32 AbilityID);
+	// === 어빌리티 설정 ===
+	UFUNCTION(BlueprintCallable)
+	void SetAbilityID(int32 AbilityID) { m_AbilityID = AbilityID; };
 
-    // 후속 입력 태그 관리
-    UFUNCTION(BlueprintCallable)
-    void SetFollowUpInputTag(FGameplayTag inputTag) { FollowUpInputTags.Add(inputTag); }
-    
-    UFUNCTION(BlueprintCallable)
-    void ClearFollowUpInputTag() { FollowUpInputTags.Empty(); }
-    
-    // 어빌리티 스택 관리
-    UFUNCTION(BlueprintCallable, Category = "Ability|Stack")
-    bool ConsumeAbilityStack(const APlayerController* PlayerController);
-    
-    UFUNCTION(BlueprintCallable, Category = "Ability|Stack")
-    int32 GetAbilityStack(const APlayerController* PlayerController) const;
+	// === 태그 기반 상태 관리 ===
+	UFUNCTION(BlueprintCallable, Category = "Ability|Tags")
+	bool HasAbilityState(FGameplayTag StateTag) const;
 
-    // 현재 스킬 단계 가져오기
-    UFUNCTION(BlueprintCallable, Category = "Ability|Phases")
-    EAbilityPhase GetCurrentPhase() const { return CurrentPhase; }
+	UFUNCTION(BlueprintCallable, Category = "Ability|Tags")
+	void AddAbilityState(FGameplayTag StateTag);
 
-    // 스킬 단계 설정
-    UFUNCTION(BlueprintCallable, Category = "Ability|Phases")
-    virtual void SetupPhase(EAbilityPhase NewPhase);
+	UFUNCTION(BlueprintCallable, Category = "Ability|Tags")
+	void RemoveAbilityState(FGameplayTag StateTag);
 
-    // 다음 단계로 진행
-    UFUNCTION(BlueprintCallable, Category = "Ability|Phases")
-    virtual void AdvanceToNextPhase();
-        
-    UFUNCTION()
-    virtual void Active_Left_Click(FGameplayEventData data);
-    
-    UFUNCTION()
-    virtual void Active_Right_Click(FGameplayEventData data);
-    
+	// === 후속 입력 관리 (개선된 버전) ===
+	UFUNCTION(BlueprintCallable, Category = "Ability|Input")
+	void RegisterFollowUpInput(FGameplayTag InputTag);
+
+	UFUNCTION(BlueprintCallable, Category = "Ability|Input")
+	void RegisterFollowUpInputs(const TArray<FGameplayTag>& InputTags);
+
+	UFUNCTION(BlueprintCallable, Category = "Ability|Input")
+	void ClearFollowUpInputs();
+
+	UFUNCTION(BlueprintCallable, Category = "Ability|Input")
+	bool IsValidFollowUpInput(FGameplayTag InputTag) const;
+
+	// === 어빌리티 스택 관리 ===
+	UFUNCTION(BlueprintCallable, Category = "Ability|Stack")
+	bool ConsumeAbilityStack(const APlayerController* PlayerController);
+
+	UFUNCTION(BlueprintCallable, Category = "Ability|Stack")
+	int32 GetAbilityStack(const APlayerController* PlayerController) const;
+
+	// === 어빌리티 단계 관리 (개선된 버전) ===
+	UFUNCTION(BlueprintCallable, Category = "Ability|Phases")
+	EAbilityPhase GetCurrentPhase() const { return CurrentPhase; }
+
+	UFUNCTION(BlueprintCallable, Category = "Ability|Phases")
+	FGameplayTag GetCurrentPhaseTag() const;
+
+	UFUNCTION(BlueprintCallable, Category = "Ability|Phases")
+	virtual void SetupPhase(EAbilityPhase NewPhase);
+
+	UFUNCTION(BlueprintCallable, Category = "Ability|Phases")
+	virtual void SetupPhaseByTag(FGameplayTag PhaseTag);
+
+	UFUNCTION(BlueprintCallable, Category = "Ability|Phases")
+	virtual void AdvanceToNextPhase();
+
+	// === 입력 처리 (개선된 버전) ===
+	UFUNCTION()
+	virtual void HandleLeftClick(FGameplayEventData EventData);
+
+	UFUNCTION()
+	virtual void HandleRightClick(FGameplayEventData EventData);
+
+	UFUNCTION()
+	virtual void HandleFollowUpInput(FGameplayTag InputTag, FGameplayEventData EventData);
+
+	// === 기존 함수들 (하위 호환성) ===
+	UFUNCTION(BlueprintCallable)
+	void SetFollowUpInputTag(FGameplayTag inputTag) { ValidFollowUpInputs.Add(inputTag); }
+
+	UFUNCTION(BlueprintCallable)
+	void ClearFollowUpInputTag() { ValidFollowUpInputs.Empty(); }
+
+	UFUNCTION()
+	virtual void Active_Left_Click(FGameplayEventData data) { HandleLeftClick(data); }
+
+	UFUNCTION()
+	virtual void Active_Right_Click(FGameplayEventData data) { HandleRightClick(data); }
+
 protected:
-    // 어빌리티 ID (스택 관리용)
-    UPROPERTY(EditAnywhere)
-    int32 m_AbilityID = 0;
-    
-    // 후속 입력 태그 (좌클릭/우클릭 등)
-    UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Input")
-    TSet<FGameplayTag> FollowUpInputTags;
+	// === 어빌리티 설정 ===
+	UPROPERTY(EditAnywhere, Category = "Ability Config")
+	int32 m_AbilityID = 0;
 
-    // 투사체 클래스
-    UPROPERTY(EditDefaultsOnly)
-    TSubclassOf<ABaseProjectile> ProjectileClass;
+	UPROPERTY(EditDefaultsOnly, Category = "Ability Config")
+	EAbilityInputType InputType = EAbilityInputType::Instant;
 
-    // 어빌리티 정보 캐시
-    UPROPERTY()
-    FGameplayAbilityActorInfo m_ActorInfo;
-    
-    // 어빌리티 입력 설정
-    UPROPERTY(EditDefaultsOnly, Category = "Ability Config")
-    EAbilityInputType InputType = EAbilityInputType::Instant;
-    
-    // 현재 어빌리티 단계
-    UPROPERTY(BlueprintReadOnly, Category = "Ability State")
-    EAbilityPhase CurrentPhase = EAbilityPhase::None;
-    
-    // 현재 반복 횟수 (반복형 스킬용)
-    UPROPERTY(BlueprintReadOnly, Category = "Ability State")
-    int32 CurrentRepeatCount = 0;
-    
-    // 최대 반복 횟수 (반복형 스킬용)
-    UPROPERTY(EditDefaultsOnly, Category = "Ability Config")
-    int32 MaxRepeatCount = 1;
-    
-    // 홀드 시간 관련 변수
-    float HoldStartTime = 0.0f;
-    
-    UPROPERTY(EditDefaultsOnly, Category = "Ability Config")
-    float MinHoldDuration = 0.2f;
-    
-    UPROPERTY(EditDefaultsOnly, Category = "Ability Config")
-    float MaxHoldDuration = 2.0f;
+	// === 태그 설정 ===
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Ability Tags")
+	FGameplayTagContainer AbilityStateTags;
 
-    // 타임아웃 설정
-    UPROPERTY(EditDefaultsOnly, Category = "Ability Config")
-    float PhaseTimeoutDuration = 0.0f;
-    
-    // GameplayAbility 오버라이드
-    virtual bool CanActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayTagContainer* SourceTags = nullptr, const FGameplayTagContainer* TargetTags = nullptr, FGameplayTagContainer* OptionalRelevantTags = nullptr) const override;
-    virtual void ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData) override;
-    
-    virtual void InputPressed(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo) override;
-    virtual void InputReleased(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo) override;
-    
-    virtual void EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility, bool bWasCancelled) override;
-    virtual void CancelAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateCancelAbility) override;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Ability Tags")
+	TArray<FGameplayTag> ValidFollowUpInputs;
 
-    // 에이전트 스킬 정리
-    void ClearAgentSkill(const FGameplayAbilityActorInfo* ActorInfo);
-    
-    // 입력 처리 메서드
-    virtual void Active_General();
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Ability Tags")
+	FGameplayTagContainer BlockedTags;
 
-    // 투사체 생성
-    UFUNCTION()
-    virtual bool SpawnProjectile(const FGameplayAbilityActorInfo& ActorInfo);
-    
-    // 타임아웃 처리
-    UFUNCTION()
-    virtual void OnPhaseTimeout();
-    // 종료 처리
-    UFUNCTION()
-    void OnPhaseComplete();
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Ability Tags")
+	FGameplayTagContainer RequiredTags;
 
-    // 애니메이션 몽타주
-    UPROPERTY(EditDefaultsOnly, Category = "Animation")
-    UAnimMontage* ReadyMontage;
+	// === 기존 후속 입력 태그 (하위 호환성) ===
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Input")
+	TSet<FGameplayTag> FollowUpInputTags;
 
-    UFUNCTION(BlueprintCallable, Category = "Animation")
-    void PlayReadyAnimation();
+	// === 투사체 및 애니메이션 ===
+	UPROPERTY(EditDefaultsOnly, Category = "Ability Assets")
+	TSubclassOf<ABaseProjectile> ProjectileClass;
 
-    UFUNCTION(BlueprintCallable, Category = "Animation")
-    void OnReadyAnimationCompleted();
+	UPROPERTY(EditDefaultsOnly, Category = "Ability Assets")
+	UAnimMontage* Ready1pMontage;
+	UPROPERTY(EditDefaultsOnly, Category = "Ability Assets")
+	UAnimMontage* Ready3pMontage;
 
-    // 단계별 이펙트 재생
-    UFUNCTION(BlueprintImplementableEvent, Category = "Ability|Effects")
-    void PlayReadyEffects();
-    
-    UFUNCTION(BlueprintImplementableEvent, Category = "Ability|Effects")
-    void PlayAimingEffects();
-    
-    UFUNCTION(BlueprintImplementableEvent, Category = "Ability|Effects")
-    void PlayChargingEffects();
-    
-    UFUNCTION(BlueprintImplementableEvent, Category = "Ability|Effects")
-    void PlayExecuteEffects();
-    
-    UFUNCTION(BlueprintImplementableEvent, Category = "Ability|Effects")
-    void PlayCooldownEffects();
-    
-    // 단계별 액션 실행
-    UFUNCTION(BlueprintImplementableEvent, Category = "Ability|Actions")
-    void ExecutePhaseAction(float HoldTime = 0.0f);
-    
-    // 타임아웃 설정
-    virtual void SetupPhaseTimeout();
-    
-    // 입력 컨텍스트 설정
-    virtual void SetInputContext(bool bToAbilityContext);
+	UPROPERTY(EditDefaultsOnly, Category = "Ability Assets")
+	UAnimMontage* Execute1pMontage;
+	UPROPERTY(EditDefaultsOnly, Category = "Ability Assets")
+	UAnimMontage* Execute3pMontage;
+
+	// === 상태 변수들 ===
+	UPROPERTY(BlueprintReadOnly, Category = "Ability State")
+	EAbilityPhase CurrentPhase = EAbilityPhase::None;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Ability State")
+	int32 CurrentRepeatCount = 0;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Ability State")
+	float HoldStartTime = 0.0f;
+
+	// === 설정 변수들 ===
+	UPROPERTY(EditDefaultsOnly, Category = "Ability Config")
+	int32 MaxRepeatCount = 1;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Ability Config")
+	float MinHoldDuration = 0.2f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Ability Config")
+	float MaxHoldDuration = 2.0f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Ability Config")
+	float PhaseTimeoutDuration = 10.0f;
+
+	// === 캐시된 정보 ===
+	UPROPERTY()
+	FGameplayAbilityActorInfo CachedActorInfo;
+
+	// 기존 변수 (하위 호환성)
+	UPROPERTY()
+	FGameplayAbilityActorInfo m_ActorInfo;
+
+	// === GameplayAbility 오버라이드 ===
+	virtual bool CanActivateAbility(const FGameplayAbilitySpecHandle Handle,
+	                                const FGameplayAbilityActorInfo* ActorInfo,
+	                                const FGameplayTagContainer* SourceTags = nullptr,
+	                                const FGameplayTagContainer* TargetTags = nullptr,
+	                                FGameplayTagContainer* OptionalRelevantTags = nullptr) const override;
+
+	virtual void ActivateAbility(const FGameplayAbilitySpecHandle Handle,
+	                             const FGameplayAbilityActorInfo* ActorInfo,
+	                             const FGameplayAbilityActivationInfo ActivationInfo,
+	                             const FGameplayEventData* TriggerEventData) override;
+
+	virtual void InputPressed(const FGameplayAbilitySpecHandle Handle,
+	                          const FGameplayAbilityActorInfo* ActorInfo,
+	                          const FGameplayAbilityActivationInfo ActivationInfo) override;
+
+	virtual void InputReleased(const FGameplayAbilitySpecHandle Handle,
+	                           const FGameplayAbilityActorInfo* ActorInfo,
+	                           const FGameplayAbilityActivationInfo ActivationInfo) override;
+
+	virtual void EndAbility(const FGameplayAbilitySpecHandle Handle,
+	                        const FGameplayAbilityActorInfo* ActorInfo,
+	                        const FGameplayAbilityActivationInfo ActivationInfo,
+	                        bool bReplicateEndAbility, bool bWasCancelled) override;
+
+	virtual void CancelAbility(const FGameplayAbilitySpecHandle Handle,
+	                           const FGameplayAbilityActorInfo* ActorInfo,
+	                           const FGameplayAbilityActivationInfo ActivationInfo,
+	                           bool bReplicateCancelAbility) override;
+
+	// === 내부 처리 함수들 ===
+	virtual void InitializeAbility();
+	virtual void CleanupAbility();
+
+	// 어빌리티 타입별 처리
+	virtual void HandleInstantAbility();
+	virtual void HandleHoldAbility();
+	virtual void HandleToggleAbility();
+	virtual void HandleSequenceAbility();
+	virtual void HandleMultiPhaseAbility();
+	virtual void HandleRepeatableAbility();
+
+	// 단계별 처리
+	UFUNCTION(BlueprintImplementableEvent, Category = "Ability|Phases")
+	void OnPhaseEntered(FGameplayTag PhaseTag);
+
+	UFUNCTION(BlueprintImplementableEvent, Category = "Ability|Phases")
+	void OnPhaseExited(FGameplayTag PhaseTag);
+
+	// 유틸리티 함수들
+	UFUNCTION(BlueprintCallable, Category = "Ability|Utility")
+	bool SpawnProjectile(const FGameplayAbilityActorInfo& ActorInfo);
+
+	UFUNCTION(BlueprintCallable, Category = "Ability|Utility")
+	void BroadcastAbilityEvent(FGameplayTag EventTag, const FGameplayEventData& EventData);
+
+	// 타이머 관리
+	UFUNCTION()
+	void OnPhaseTimeout();
+
+	UFUNCTION()
+	void OnAbilityComplete();
+
+	UFUNCTION()
+	void OnPhaseComplete();
+
+	UFUNCTION()
+	void OnReadyAnimationCompleted();
+
+	FTimerHandle PhaseTimeoutHandle;
+	FTimerHandle AbilityCompleteHandle;
+
+	// === 기존 함수들 (하위 호환성) ===
+	virtual void Active_General();
+	void ClearAgentSkill(const FGameplayAbilityActorInfo* ActorInfo);
+	virtual void SetupPhaseTimeout();
+	virtual void SetInputContext(bool bToAbilityContext);
+
+	UFUNCTION(BlueprintCallable, Category = "Animation")
+	void PlayReadyAnimation();
+
+	UFUNCTION(BlueprintCallable, Category = "Animation")
+	void Play1pAnimation(UAnimMontage* AnimMontage);
+
+	// 단계별 이펙트 재생
+	UFUNCTION(BlueprintImplementableEvent, Category = "Ability|Effects")
+	void PlayReadyEffects();
+
+	UFUNCTION(BlueprintImplementableEvent, Category = "Ability|Effects")
+	void PlayAimingEffects();
+
+	UFUNCTION(BlueprintImplementableEvent, Category = "Ability|Effects")
+	void PlayChargingEffects();
+
+	UFUNCTION(BlueprintImplementableEvent, Category = "Ability|Effects")
+	void PlayExecuteEffects();
+
+	UFUNCTION(BlueprintImplementableEvent, Category = "Ability|Effects")
+	void PlayCooldownEffects();
+
+	// 단계별 액션 실행
+	UFUNCTION(BlueprintImplementableEvent, Category = "Ability|Actions")
+	void ExecutePhaseAction(float HoldTime = 0.0f);
 };

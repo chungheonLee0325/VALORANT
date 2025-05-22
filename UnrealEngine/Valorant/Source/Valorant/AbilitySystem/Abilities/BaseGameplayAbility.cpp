@@ -1,6 +1,4 @@
-﻿// Fill out your copyright notice in the Description page of Project Settings.
-
-#include "BaseGameplayAbility.h"
+﻿#include "BaseGameplayAbility.h"
 
 #include <GameManager/SubsystemSteamManager.h>
 
@@ -24,27 +22,56 @@ bool UBaseGameplayAbility::CanActivateAbility(const FGameplayAbilitySpecHandle H
                                               const FGameplayTagContainer* TargetTags,
                                               FGameplayTagContainer* OptionalRelevantTags) const
 {
-    // 기본 활성화 조건 확인
     if (!Super::CanActivateAbility(Handle, ActorInfo, SourceTags, TargetTags, OptionalRelevantTags))
     {
         return false;
     }
 
-    // 어빌리티 ID가 유효하고 스택 소비가 필요한 경우
+    // 어빌리티 시스템 컴포넌트 가져오기
+    UAgentAbilitySystemComponent* ASC = Cast<UAgentAbilitySystemComponent>(ActorInfo->AbilitySystemComponent.Get());
+    if (!ASC)
+    {
+        return false;
+    }
+
+    // 태그 기반 활성화 조건 확인
+    if (!ASC->CanActivateAbilities())
+    {
+        UE_LOG(LogTemp, Warning, TEXT("어빌리티 활성화가 차단된 상태입니다."));
+        return false;
+    }
+
+    // 필요한 태그 확인
+    if (!RequiredTags.IsEmpty())
+    {
+        if (!ASC->HasAllMatchingGameplayTags(RequiredTags))
+        {
+            UE_LOG(LogTemp, Warning, TEXT("필요한 태그가 부족하여 어빌리티를 활성화할 수 없습니다."));
+            return false;
+        }
+    }
+
+    // 차단 태그 확인
+    if (!BlockedTags.IsEmpty())
+    {
+        if (ASC->HasAnyMatchingGameplayTags(BlockedTags))
+        {
+            UE_LOG(LogTemp, Warning, TEXT("차단 태그로 인해 어빌리티를 활성화할 수 없습니다."));
+            return false;
+        }
+    }
+
+    // 스택 기반 어빌리티인 경우 스택 확인
     if (m_AbilityID > 0)
     {
-        // 플레이어 스테이트 가져오기
         AAgentPlayerState* PS = Cast<AAgentPlayerState>(ActorInfo->PlayerController->PlayerState);
-        if (PS == nullptr)
+        if (!PS)
         {
             UE_LOG(LogTemp, Error, TEXT("어빌리티 활성화 확인 실패: PlayerState가 NULL입니다."));
             return false;
         }
 
-        // 현재 스택 확인
         int32 CurrentStack = GetAbilityStack(ActorInfo->PlayerController.Get());
-
-        // 스택이 없으면 활성화 불가
         if (CurrentStack <= 0)
         {
             UE_LOG(LogTemp, Warning, TEXT("어빌리티 ID %d의 스택이 없어 활성화할 수 없습니다."), m_AbilityID);
@@ -62,49 +89,53 @@ void UBaseGameplayAbility::ActivateAbility(const FGameplayAbilitySpecHandle Hand
 {
     Super::ActivateAbility(Handle, ActorInfo, ActivationInfo, TriggerEventData);
 
-    m_ActorInfo = *ActorInfo;
+    CachedActorInfo = *ActorInfo;
+    m_ActorInfo = *ActorInfo;  // 하위 호환성
 
     SetInputContext(true);
 
-    UAgentAbilitySystemComponent* asc = Cast<UAgentAbilitySystemComponent>(GetAbilitySystemComponentFromActorInfo());
-    if (asc)
+    UAgentAbilitySystemComponent* ASC = Cast<UAgentAbilitySystemComponent>(GetAbilitySystemComponentFromActorInfo());
+    if (ASC)
     {
+        // 어빌리티 실행 상태로 설정
+        ASC->SetAbilityState(FValorantGameplayTags::Get().State_Ability_Executing, true);
+        
         // 입력 타입에 따라 다른 초기화 로직
         switch (InputType)
         {
             case EAbilityInputType::Instant:
-                // 즉시 실행 로직
-                Active_General();
+                HandleInstantAbility();
                 break;
                 
             case EAbilityInputType::Hold:
+                HandleHoldAbility();
+                break;
+                
             case EAbilityInputType::Toggle:
+                HandleToggleAbility();
+                break;
+                
             case EAbilityInputType::Sequence:
+                HandleSequenceAbility();
+                break;
+                
             case EAbilityInputType::MultiPhase:
+                HandleMultiPhaseAbility();
+                break;
+                
             case EAbilityInputType::Repeatable:
-                // 후속 입력이 필요한 스킬의 경우
-                if (FollowUpInputTags.IsEmpty() == false)
-                {
-                    asc->SetSkillReady(false);
-                    asc->SetSkillClear(false);
-                    asc->ResisterFollowUpInput(FollowUpInputTags);
-                    
-                    // 준비 단계 시작
-                    SetupPhase(EAbilityPhase::Ready);
-
-                    // 준비 애니메이션 재생 - 애니메이션 완료 이벤트를 설정하여 Ready 상태로 만듦
-                    PlayReadyAnimation();
-                }
-                else
-                {
-                    Active_General();
-                }
+                HandleRepeatableAbility();
                 break;
         }
+        
+        // 어빌리티 시작 이벤트 브로드캐스트
+        FGameplayEventData EventData;
+        EventData.EventTag = FValorantGameplayTags::Get().Event_Ability_Started;
+        BroadcastAbilityEvent(FValorantGameplayTags::Get().Event_Ability_Started, EventData);
     }
     else
     {
-        UE_LOG(LogTemp, Error, TEXT("GA, asc가 AgentAbilitySystemComponent를 상속받지 않았어요."));
+        UE_LOG(LogTemp, Error, TEXT("GA, ASC가 AgentAbilitySystemComponent를 상속받지 않았습니다."));
     }
 
     // 현재 상호작용 객체 비활성화 (무기 등)
@@ -147,7 +178,6 @@ void UBaseGameplayAbility::InputPressed(const FGameplayAbilitySpecHandle Handle,
             ExecutePhaseAction();
             CurrentRepeatCount++;
             
-            // 최대 반복 도달시 마무리
             if (CurrentRepeatCount >= MaxRepeatCount)
             {
                 SetupPhase(EAbilityPhase::Cooldown);
@@ -184,16 +214,12 @@ void UBaseGameplayAbility::InputReleased(const FGameplayAbilitySpecHandle Handle
         
         if (HoldTime >= MinHoldDuration)
         {
-            // 홀드 시간 제한
             HoldTime = FMath::Min(HoldTime, MaxHoldDuration);
-            
-            // 실행 단계로 전환
             SetupPhase(EAbilityPhase::Executing);
             ExecutePhaseAction(HoldTime);
         }
         else
         {
-            // 최소 홀드 시간 미달시 취소
             CancelAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true);
         }
     }
@@ -211,7 +237,12 @@ void UBaseGameplayAbility::EndAbility(const FGameplayAbilitySpecHandle Handle,
         ConsumeAbilityStack(ActorInfo->PlayerController.Get());
     }
 
-    ClearAgentSkill(ActorInfo);
+    CleanupAbility();
+    
+    // 어빌리티 종료 이벤트 브로드캐스트
+    FGameplayEventData EventData;
+    EventData.EventTag = FValorantGameplayTags::Get().Event_Ability_Ended;
+    BroadcastAbilityEvent(FValorantGameplayTags::Get().Event_Ability_Ended, EventData);
     
     Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
     NET_LOG(LogTemp, Warning, TEXT("스킬 EndAbility"));
@@ -222,20 +253,107 @@ void UBaseGameplayAbility::CancelAbility(const FGameplayAbilitySpecHandle Handle
                                          const FGameplayAbilityActivationInfo ActivationInfo,
                                          bool bReplicateCancelAbility)
 {
-    ClearAgentSkill(ActorInfo);
+    CleanupAbility();
+    
+    // 어빌리티 취소 이벤트 브로드캐스트
+    FGameplayEventData EventData;
+    EventData.EventTag = FValorantGameplayTags::Get().Event_Ability_Cancelled;
+    BroadcastAbilityEvent(FValorantGameplayTags::Get().Event_Ability_Cancelled, EventData);
     
     Super::CancelAbility(Handle, ActorInfo, ActivationInfo, bReplicateCancelAbility);
     NET_LOG(LogTemp, Warning, TEXT("스킬 CancelAbility"));
 }
 
-void UBaseGameplayAbility::Active_General()
+// === 태그 기반 상태 관리 함수들 ===
+
+bool UBaseGameplayAbility::HasAbilityState(FGameplayTag StateTag) const
 {
-    // 하위 클래스에서 구현
+    if (UAbilitySystemComponent* ASC = GetAbilitySystemComponentFromActorInfo())
+    {
+        return ASC->HasMatchingGameplayTag(StateTag);
+    }
+    return false;
 }
 
-void UBaseGameplayAbility::Active_Left_Click(FGameplayEventData data)
+void UBaseGameplayAbility::AddAbilityState(FGameplayTag StateTag)
 {
-    // MultiPhase 스킬 처리 (피닉스 핫핸즈 등)
+    if (UAgentAbilitySystemComponent* ASC = Cast<UAgentAbilitySystemComponent>(GetAbilitySystemComponentFromActorInfo()))
+    {
+        ASC->SetAbilityState(StateTag, true);
+    }
+}
+
+void UBaseGameplayAbility::RemoveAbilityState(FGameplayTag StateTag)
+{
+    if (UAgentAbilitySystemComponent* ASC = Cast<UAgentAbilitySystemComponent>(GetAbilitySystemComponentFromActorInfo()))
+    {
+        ASC->SetAbilityState(StateTag, false);
+    }
+}
+
+// === 후속 입력 관리 ===
+
+void UBaseGameplayAbility::RegisterFollowUpInput(FGameplayTag InputTag)
+{
+    ValidFollowUpInputs.AddUnique(InputTag);
+    FollowUpInputTags.Add(InputTag);  // 하위 호환성
+    
+    if (UAgentAbilitySystemComponent* ASC = Cast<UAgentAbilitySystemComponent>(GetAbilitySystemComponentFromActorInfo()))
+    {
+        TSet<FGameplayTag> InputSet;
+        for (const FGameplayTag& Tag : ValidFollowUpInputs)
+        {
+            InputSet.Add(Tag);
+        }
+        ASC->RegisterFollowUpInputs(InputSet, GetAssetTags().First());
+    }
+}
+
+void UBaseGameplayAbility::RegisterFollowUpInputs(const TArray<FGameplayTag>& InputTags)
+{
+    ValidFollowUpInputs = InputTags;
+    FollowUpInputTags.Empty();  // 하위 호환성
+    for (const FGameplayTag& Tag : InputTags)
+    {
+        FollowUpInputTags.Add(Tag);
+    }
+    
+    // 이미 활성화된 어빌리티라면 바로 등록
+    if (IsActive())
+    {
+        if (UAgentAbilitySystemComponent* ASC = Cast<UAgentAbilitySystemComponent>(GetAbilitySystemComponentFromActorInfo()))
+        {
+            TSet<FGameplayTag> InputSet;
+            for (const FGameplayTag& Tag : ValidFollowUpInputs)
+            {
+                InputSet.Add(Tag);
+            }
+            ASC->RegisterFollowUpInputs(InputSet, GetAssetTags().First());
+        }
+    }
+}
+
+void UBaseGameplayAbility::ClearFollowUpInputs()
+{
+    ValidFollowUpInputs.Empty();
+    FollowUpInputTags.Empty();  // 하위 호환성
+    
+    if (UAgentAbilitySystemComponent* ASC = Cast<UAgentAbilitySystemComponent>(GetAbilitySystemComponentFromActorInfo()))
+    {
+        ASC->ClearFollowUpInputs();
+    }
+}
+
+bool UBaseGameplayAbility::IsValidFollowUpInput(FGameplayTag InputTag) const
+{
+    return ValidFollowUpInputs.Contains(InputTag);
+}
+
+// === 개선된 입력 처리 ===
+
+void UBaseGameplayAbility::HandleLeftClick(FGameplayEventData EventData)
+{
+    // MultiPhase 스킬 처리
     if (InputType == EAbilityInputType::MultiPhase && CurrentPhase == EAbilityPhase::Ready)
     {
         SetupPhase(EAbilityPhase::Executing);
@@ -244,11 +362,14 @@ void UBaseGameplayAbility::Active_Left_Click(FGameplayEventData data)
     // 시퀀스 스킬 처리
     else if (InputType == EAbilityInputType::Sequence)
     {
-        // 시퀀스 진행 로직 (구체적인 시퀀스는 하위 클래스에서 구현)
+        HandleSequenceAbility();
     }
+    
+    // 하위 호환성
+    Active_Left_Click(EventData);
 }
 
-void UBaseGameplayAbility::Active_Right_Click(FGameplayEventData data)
+void UBaseGameplayAbility::HandleRightClick(FGameplayEventData EventData)
 {
     // MultiPhase 또는 다른 스킬 유형에서 우클릭은 보통 취소로 처리
     if (InputType == EAbilityInputType::MultiPhase || 
@@ -257,32 +378,313 @@ void UBaseGameplayAbility::Active_Right_Click(FGameplayEventData data)
     {
         CancelAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true);
     }
-    // 시퀀스 스킬에서는 시퀀스의 일부로 처리할 수도 있음
-    else if (InputType == EAbilityInputType::Sequence)
+    
+    // 하위 호환성
+    Active_Right_Click(EventData);
+}
+
+void UBaseGameplayAbility::HandleFollowUpInput(FGameplayTag InputTag, FGameplayEventData EventData)
+{
+    UE_LOG(LogTemp, Warning, TEXT("어빌리티 후속 입력 처리: %s"), *InputTag.ToString());
+    
+    if (!IsValidFollowUpInput(InputTag))
     {
-        // 시퀀스 진행 로직 (구체적인 시퀀스는 하위 클래스에서 구현)
+        UE_LOG(LogTemp, Warning, TEXT("유효하지 않은 후속 입력: %s"), *InputTag.ToString());
+        return;
+    }
+    
+    // 입력 태그에 따라 적절한 처리
+    if (InputTag == FGameplayTag::RequestGameplayTag(FName("Input.Default.LeftClick")))
+    {
+        HandleLeftClick(EventData);
+    }
+    else if (InputTag == FGameplayTag::RequestGameplayTag(FName("Input.Default.RightClick")))
+    {
+        HandleRightClick(EventData);
+    }
+    else
+    {
+        // 커스텀 후속 입력 처리 (하위 클래스에서 오버라이드 가능)
+        UE_LOG(LogTemp, Warning, TEXT("커스텀 후속 입력 처리 필요: %s"), *InputTag.ToString());
     }
 }
 
-void UBaseGameplayAbility::ClearAgentSkill(const FGameplayAbilityActorInfo* ActorInfo)
-{
-    if (auto* ps = Cast<AAgentPlayerState>(ActorInfo->OwnerActor))
-    {
-        auto* asc = Cast<UAgentAbilitySystemComponent>(ps->GetAbilitySystemComponent());
-        auto* agent = Cast<ABaseAgent>(ps->GetPawn());
-        
-        if (asc == nullptr || agent == nullptr)
-        {
-            UE_LOG(LogTemp, Error, TEXT("BaseGameplayAbility, ASC || Agent Null"));
-            return;
-        }
+// === 어빌리티 타입별 처리 함수들 ===
 
-        asc->SetSkillClear(true);
+void UBaseGameplayAbility::HandleInstantAbility()
+{
+    Active_General();
+}
+
+void UBaseGameplayAbility::HandleHoldAbility()
+{
+    if (!ValidFollowUpInputs.IsEmpty())
+    {
+        // 후속 입력 등록
+        if (UAgentAbilitySystemComponent* ASC = Cast<UAgentAbilitySystemComponent>(GetAbilitySystemComponentFromActorInfo()))
+        {
+            TSet<FGameplayTag> InputSet;
+            for (const FGameplayTag& Tag : ValidFollowUpInputs)
+            {
+                InputSet.Add(Tag);
+            }
+            ASC->RegisterFollowUpInputs(InputSet, GetAssetTags().First());
+        }
         
-        // 입력 컨텍스트 복원
-        //agent->SwitchEquipment(EEquipmentType::MainWeapon);
-        SetInputContext(false);
+        SetupPhase(EAbilityPhase::Ready);
+        PlayReadyAnimation();
     }
+    else
+    {
+        Active_General();
+    }
+}
+
+void UBaseGameplayAbility::HandleToggleAbility()
+{
+    // 토글 스킬도 후속 입력이 있을 수 있음 (온/오프 전환)
+    if (!ValidFollowUpInputs.IsEmpty())
+    {
+        if (UAgentAbilitySystemComponent* ASC = Cast<UAgentAbilitySystemComponent>(GetAbilitySystemComponentFromActorInfo()))
+        {
+            TSet<FGameplayTag> InputSet;
+            for (const FGameplayTag& Tag : ValidFollowUpInputs)
+            {
+                InputSet.Add(Tag);
+            }
+            ASC->RegisterFollowUpInputs(InputSet, GetAssetTags().First());
+        }
+    }
+    
+    SetupPhase(EAbilityPhase::Ready);
+    PlayReadyAnimation();
+}
+
+void UBaseGameplayAbility::HandleSequenceAbility()
+{
+    if (!ValidFollowUpInputs.IsEmpty())
+    {
+        // 후속 입력 등록
+        if (UAgentAbilitySystemComponent* ASC = Cast<UAgentAbilitySystemComponent>(GetAbilitySystemComponentFromActorInfo()))
+        {
+            TSet<FGameplayTag> InputSet;
+            for (const FGameplayTag& Tag : ValidFollowUpInputs)
+            {
+                InputSet.Add(Tag);
+            }
+            ASC->RegisterFollowUpInputs(InputSet, GetAssetTags().First());
+        }
+        
+        SetupPhase(EAbilityPhase::Ready);
+        PlayReadyAnimation();
+    }
+    else
+    {
+        Active_General();
+    }
+}
+
+void UBaseGameplayAbility::HandleMultiPhaseAbility()
+{
+    if (!ValidFollowUpInputs.IsEmpty())
+    {
+        // 후속 입력 등록 (자동으로 WaitingFollowUp 상태 설정됨)
+        if (UAgentAbilitySystemComponent* ASC = Cast<UAgentAbilitySystemComponent>(GetAbilitySystemComponentFromActorInfo()))
+        {
+            TSet<FGameplayTag> InputSet;
+            for (const FGameplayTag& Tag : ValidFollowUpInputs)
+            {
+                InputSet.Add(Tag);
+            }
+            ASC->RegisterFollowUpInputs(InputSet, GetAssetTags().First());
+        }
+        
+        SetupPhase(EAbilityPhase::Ready);
+        PlayReadyAnimation();
+    }
+    else
+    {
+        Active_General();
+    }
+}
+
+void UBaseGameplayAbility::HandleRepeatableAbility()
+{
+    SetupPhase(EAbilityPhase::Ready);
+    CurrentRepeatCount = 0;
+}
+
+// === 단계 관리 ===
+
+FGameplayTag UBaseGameplayAbility::GetCurrentPhaseTag() const
+{
+    switch (CurrentPhase)
+    {
+        case EAbilityPhase::Ready: return FValorantGameplayTags::Get().Phase_Ready;
+        case EAbilityPhase::Aiming: return FValorantGameplayTags::Get().Phase_Aiming;
+        case EAbilityPhase::Charging: return FValorantGameplayTags::Get().Phase_Charging;
+        case EAbilityPhase::Executing: return FValorantGameplayTags::Get().Phase_Executing;
+        case EAbilityPhase::Cooldown: return FValorantGameplayTags::Get().Phase_Cooldown;
+        default: return FGameplayTag();
+    }
+}
+
+void UBaseGameplayAbility::SetupPhase(EAbilityPhase NewPhase)
+{
+    EAbilityPhase OldPhase = CurrentPhase;
+    CurrentPhase = NewPhase;
+    
+    // 이전 단계 이벤트
+    if (OldPhase != EAbilityPhase::None)
+    {
+        OnPhaseExited(GetCurrentPhaseTag());
+    }
+    
+    UAgentAbilitySystemComponent* ASC = Cast<UAgentAbilitySystemComponent>(GetAbilitySystemComponentFromActorInfo());
+    
+    // 단계별 설정
+    switch (NewPhase)
+    {
+        case EAbilityPhase::Ready:
+            {
+                if (ASC) ASC->SetAbilityState(FValorantGameplayTags::Get().State_Ability_Ready, false);
+                PlayReadyEffects();
+                break;
+            }
+        case EAbilityPhase::Aiming:
+            {
+                if (ASC) ASC->SetAbilityState(FValorantGameplayTags::Get().State_Ability_Aiming, true);
+                PlayAimingEffects();
+                break;
+            }
+        case EAbilityPhase::Charging:
+            {
+                if (ASC) ASC->SetAbilityState(FValorantGameplayTags::Get().State_Ability_Charging, true);
+                PlayChargingEffects();
+                HoldStartTime = GetWorld()->GetTimeSeconds();
+                break;
+            }
+        case EAbilityPhase::Executing:
+            {
+                PlayExecuteEffects();
+                break;
+            }
+        case EAbilityPhase::Cooldown:
+            {
+                PlayCooldownEffects();
+                
+                UAbilityTask_WaitDelay* CooldownTask = UAbilityTask_WaitDelay::WaitDelay(this, 0.5f);
+                CooldownTask->OnFinish.AddDynamic(this, &UBaseGameplayAbility::OnPhaseComplete);
+                CooldownTask->ReadyForActivation();
+                break;
+            }
+    }
+    
+    // 새 단계 이벤트
+    OnPhaseEntered(GetCurrentPhaseTag());
+    
+    // 어빌리티 단계 변경 이벤트
+    FGameplayEventData EventData;
+    EventData.EventTag = FValorantGameplayTags::Get().Event_Ability_PhaseChanged;
+    BroadcastAbilityEvent(FValorantGameplayTags::Get().Event_Ability_PhaseChanged, EventData);
+    
+    SetupPhaseTimeout();
+}
+
+void UBaseGameplayAbility::SetupPhaseByTag(FGameplayTag PhaseTag)
+{
+    if (PhaseTag == FValorantGameplayTags::Get().Phase_Ready)
+        SetupPhase(EAbilityPhase::Ready);
+    else if (PhaseTag == FValorantGameplayTags::Get().Phase_Aiming)
+        SetupPhase(EAbilityPhase::Aiming);
+    else if (PhaseTag == FValorantGameplayTags::Get().Phase_Charging)
+        SetupPhase(EAbilityPhase::Charging);
+    else if (PhaseTag == FValorantGameplayTags::Get().Phase_Executing)
+        SetupPhase(EAbilityPhase::Executing);
+    else if (PhaseTag == FValorantGameplayTags::Get().Phase_Cooldown)
+        SetupPhase(EAbilityPhase::Cooldown);
+}
+
+void UBaseGameplayAbility::AdvanceToNextPhase()
+{
+    int32 NextPhaseIndex = static_cast<int32>(CurrentPhase) + 1;
+    
+    if (NextPhaseIndex > static_cast<int32>(EAbilityPhase::Cooldown))
+    {
+        EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
+        return;
+    }
+    
+    EAbilityPhase NextPhase = static_cast<EAbilityPhase>(NextPhaseIndex);
+    SetupPhase(NextPhase);
+}
+
+// === 초기화 및 정리 ===
+
+void UBaseGameplayAbility::InitializeAbility()
+{
+    // 초기화 로직
+}
+
+void UBaseGameplayAbility::CleanupAbility()
+{
+    ClearAgentSkill(&CachedActorInfo);
+    
+    UAgentAbilitySystemComponent* ASC = Cast<UAgentAbilitySystemComponent>(GetAbilitySystemComponentFromActorInfo());
+    if (ASC)
+    {
+        // 모든 어빌리티 상태 정리
+        ASC->SetAbilityState(FValorantGameplayTags::Get().State_Ability_Executing, false);
+        ASC->SetAbilityState(FValorantGameplayTags::Get().State_Ability_Ready, false);
+        ASC->SetAbilityState(FValorantGameplayTags::Get().State_Ability_WaitingFollowUp, false);
+        ASC->SetAbilityState(FValorantGameplayTags::Get().State_Ability_Charging, false);
+        ASC->SetAbilityState(FValorantGameplayTags::Get().State_Ability_Aiming, false);
+        
+        ASC->ClearFollowUpInputs();
+    }
+}
+
+// === 유틸리티 함수들 ===
+
+void UBaseGameplayAbility::BroadcastAbilityEvent(FGameplayTag EventTag, const FGameplayEventData& EventData)
+{
+    if (UAbilitySystemComponent* ASC = GetAbilitySystemComponentFromActorInfo())
+    {
+        ASC->HandleGameplayEvent(EventTag, &EventData);
+    }
+}
+
+bool UBaseGameplayAbility::ConsumeAbilityStack(const APlayerController* PlayerController)
+{
+    AAgentPlayerState* PS = Cast<AAgentPlayerState>(PlayerController->PlayerState);
+    if (PS == nullptr)
+    {
+        UE_LOG(LogTemp, Error, TEXT("어빌리티 스택 감소 실패: PlayerState가 NULL입니다."));
+        return false;
+    }
+
+    int32 CurrentStack = PS->GetAbilityStack(m_AbilityID);
+    if (CurrentStack > 0)
+    {
+        PS->ReduceAbilityStack(m_AbilityID);
+        UE_LOG(LogTemp, Warning, TEXT("어빌리티 ID %d의 스택이 감소됨. 남은 스택: %d"), m_AbilityID, CurrentStack - 1);
+        return true;
+    }
+
+    UE_LOG(LogTemp, Warning, TEXT("어빌리티 ID %d의 스택이 없습니다."), m_AbilityID);
+    return false;
+}
+
+int32 UBaseGameplayAbility::GetAbilityStack(const APlayerController* PlayerController) const
+{
+    AAgentPlayerState* PS = Cast<AAgentPlayerState>(PlayerController->PlayerState);
+    if (PS == nullptr)
+    {
+        UE_LOG(LogTemp, Error, TEXT("어빌리티 스택 확인 실패: PlayerState가 NULL입니다."));
+        return 0;
+    }
+
+    return PS->GetAbilityStack(m_AbilityID);
 }
 
 bool UBaseGameplayAbility::SpawnProjectile(const FGameplayAbilityActorInfo& ActorInfo)
@@ -292,11 +694,9 @@ bool UBaseGameplayAbility::SpawnProjectile(const FGameplayAbilityActorInfo& Acto
         return false;
     }
 
-    // Get the owning controller 
     AController* OwnerController = ActorInfo.PlayerController.Get();
     if (!OwnerController)
     {
-        // Try to get controller from pawn if player controller is not available
         if (ActorInfo.OwnerActor.IsValid())
         {
             APawn* OwnerPawn = Cast<APawn>(ActorInfo.OwnerActor.Get());
@@ -312,25 +712,18 @@ bool UBaseGameplayAbility::SpawnProjectile(const FGameplayAbilityActorInfo& Acto
         }
     }
 
-    // Get the player controller for screen-to-world projection
     APlayerController* PlayerController = Cast<APlayerController>(OwnerController);
     if (!PlayerController)
     {
         return false;
     }
 
-    // 카메라 위치와 회전 구하기
     FVector CameraLocation;
     FRotator CameraRotation;
     PlayerController->GetPlayerViewPoint(CameraLocation, CameraRotation);
 
-    // 카메라 전방 벡터 가져오기 (화면 중앙이 바라보는 방향)
     FVector CameraForward = CameraRotation.Vector();
-
-    // 발사 위치 계산 (카메라 위치)
     FVector SpawnLocation = CameraLocation;
-    
-    // 발사 회전 (카메라 회전과 동일)
     FRotator SpawnRotation = CameraRotation;
     
     FTransform SpawnTransform;
@@ -349,145 +742,12 @@ bool UBaseGameplayAbility::SpawnProjectile(const FGameplayAbilityActorInfo& Acto
         SpawnParams
     );
 
-    // 투사체 발사 후 어빌리티 종료
     EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
     return (SpawnedProjectile != nullptr);
 }
 
-void UBaseGameplayAbility::SetAbilityID(int32 AbilityID)
-{
-    m_AbilityID = AbilityID;
-}
-
-bool UBaseGameplayAbility::ConsumeAbilityStack(const APlayerController* PlayerController)
-{
-    // 플레이어 스테이트 가져오기
-    AAgentPlayerState* PS = Cast<AAgentPlayerState>(PlayerController->PlayerState);
-    if (PS == nullptr)
-    {
-        UE_LOG(LogTemp, Error, TEXT("어빌리티 스택 감소 실패: PlayerState가 NULL입니다."));
-        return false;
-    }
-
-    // 현재 스택 가져오기
-    int32 CurrentStack = PS->GetAbilityStack(m_AbilityID);
-
-    // 스택이 있으면 감소
-    if (CurrentStack > 0)
-    {
-        PS->ReduceAbilityStack(m_AbilityID);
-        UE_LOG(LogTemp, Warning, TEXT("어빌리티 ID %d의 스택이 감소됨. 남은 스택: %d"), m_AbilityID, CurrentStack - 1);
-        return true;
-    }
-
-    UE_LOG(LogTemp, Warning, TEXT("어빌리티 ID %d의 스택이 없습니다."), m_AbilityID);
-    return false;
-}
-
-int32 UBaseGameplayAbility::GetAbilityStack(const APlayerController* PlayerController) const
-{
-    // 플레이어 스테이트 가져오기
-    AAgentPlayerState* PS = Cast<AAgentPlayerState>(PlayerController->PlayerState);
-    if (PS == nullptr)
-    {
-        UE_LOG(LogTemp, Error, TEXT("어빌리티 스택 확인 실패: PlayerState가 NULL입니다."));
-        return 0;
-    }
-
-    // 현재 스택 반환
-    return PS->GetAbilityStack(m_AbilityID);
-}
-
-void UBaseGameplayAbility::SetupPhase(EAbilityPhase NewPhase)
-{
-    // 이전 단계 정리
-    UAbilityTask_WaitDelay* TimeoutTask = nullptr;
-    if (TimeoutTask)
-    {
-        TimeoutTask->EndTask();
-        TimeoutTask = nullptr;
-    }
-    
-    // 새 단계 설정
-    CurrentPhase = NewPhase;
-
-    UAgentAbilitySystemComponent* ASC = Cast<UAgentAbilitySystemComponent>(GetAbilitySystemComponentFromActorInfo());
-    
-    // 단계별 설정
-    switch (NewPhase)
-    {
-        case EAbilityPhase::Ready:
-            {
-                PlayReadyEffects();
-                break;
-            }
-        case EAbilityPhase::Aiming:
-            {
-                PlayAimingEffects();
-                break;
-            }
-        case EAbilityPhase::Charging:
-            {
-                PlayChargingEffects();
-                // 홀드 시간 기록
-                HoldStartTime = GetWorld()->GetTimeSeconds();
-                break;
-            }
-        case EAbilityPhase::Executing:
-            {
-                PlayExecuteEffects();
-                break;
-            }
-        case EAbilityPhase::Cooldown:
-            {
-                PlayCooldownEffects();
-            
-                // 일정 시간 후 어빌리티 완전히 종료
-                UAbilityTask_WaitDelay* CooldownTask = UAbilityTask_WaitDelay::WaitDelay(
-                    this, 0.5f);
-                CooldownTask->OnFinish.AddDynamic(this, &UBaseGameplayAbility::OnPhaseComplete);
-                CooldownTask->ReadyForActivation();
-                break;
-            }
-    }
-    
-    // 필요시 타임아웃 설정
-    SetupPhaseTimeout();
-}
-
-void UBaseGameplayAbility::AdvanceToNextPhase()
-{
-    // 다음 단계 계산
-    int32 NextPhaseIndex = static_cast<int32>(CurrentPhase) + 1;
-    
-    // 최대 단계 체크
-    if (NextPhaseIndex > static_cast<int32>(EAbilityPhase::Cooldown))
-    {
-        // 모든 단계 완료, 스킬 종료
-        EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
-        return;
-    }
-    
-    // 다음 단계로 설정
-    EAbilityPhase NextPhase = static_cast<EAbilityPhase>(NextPhaseIndex);
-    SetupPhase(NextPhase);
-}
-
-void UBaseGameplayAbility::SetupPhaseTimeout()
-{
-    // 타임아웃이 설정된 경우에만 처리
-    if (PhaseTimeoutDuration > 0.0f)
-    {
-        UAbilityTask_WaitDelay* TimeoutTask = UAbilityTask_WaitDelay::WaitDelay(
-            this, PhaseTimeoutDuration);
-        TimeoutTask->OnFinish.AddDynamic(this, &UBaseGameplayAbility::OnPhaseTimeout);
-        TimeoutTask->ReadyForActivation();
-    }
-}
-
 void UBaseGameplayAbility::OnPhaseTimeout()
 {
-    // 타임아웃 시 처리 (보통 스킬 취소)
     CancelAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true);
 }
 
@@ -496,15 +756,19 @@ void UBaseGameplayAbility::OnPhaseComplete()
     EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
 }
 
+void UBaseGameplayAbility::OnAbilityComplete()
+{
+    EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
+}
+
 void UBaseGameplayAbility::PlayReadyAnimation()
 {
-    // 애니메이션 몽타주 재생
-    if (ReadyMontage)
+    if (Ready3pMontage)
     {
         UAbilityTask_PlayMontageAndWait* Task = UAbilityTask_PlayMontageAndWait::CreatePlayMontageAndWaitProxy(
             this, 
             "ReadyAnimation", 
-            ReadyMontage, 
+            Ready3pMontage, 
             1.0f
         );
         
@@ -516,41 +780,89 @@ void UBaseGameplayAbility::PlayReadyAnimation()
             Task->OnCancelled.AddDynamic(this, &UBaseGameplayAbility::OnReadyAnimationCompleted);
             Task->ReadyForActivation();
         }
+        if (Ready1pMontage)
+        {
+            Play1pAnimation(Ready1pMontage);
+        }
     }
     else
     {
-        // 애니메이션이 없는 경우 바로 준비 완료 처리
         OnReadyAnimationCompleted();
+    }
+}
+
+void UBaseGameplayAbility::Play1pAnimation(UAnimMontage* AnimMontage)
+{
+    if (auto* ps = Cast<AAgentPlayerState>(CachedActorInfo.OwnerActor))
+    {
+        auto* agent = Cast<ABaseAgent>(ps->GetPawn());
+        if (agent)
+        {
+            agent->PlayFirstPersonMontage(AnimMontage);
+        }
     }
 }
 
 void UBaseGameplayAbility::OnReadyAnimationCompleted()
 {
-    // 준비 애니메이션 완료 후 스킬 준비 상태로 변경
     UAgentAbilitySystemComponent* ASC = Cast<UAgentAbilitySystemComponent>(GetAbilitySystemComponentFromActorInfo());
     if (ASC)
     {
-        ASC->SetSkillReady(true);
+        ASC->SetAbilityState(FValorantGameplayTags::Get().State_Ability_Ready, true);
         NET_LOG(LogTemp, Warning, TEXT("스킬 준비 완료 - 후속 입력 대기"));
+    }
+}
+
+void UBaseGameplayAbility::SetupPhaseTimeout()
+{
+    if (PhaseTimeoutDuration > 0.0f)
+    {
+        UAbilityTask_WaitDelay* TimeoutTask = UAbilityTask_WaitDelay::WaitDelay(
+            this, PhaseTimeoutDuration);
+        TimeoutTask->OnFinish.AddDynamic(this, &UBaseGameplayAbility::OnPhaseTimeout);
+        TimeoutTask->ReadyForActivation();
+    }
+}
+
+// === 기존 함수들 (하위 호환성) ===
+
+void UBaseGameplayAbility::Active_General()
+{
+    // 하위 클래스에서 구현
+}
+
+void UBaseGameplayAbility::ClearAgentSkill(const FGameplayAbilityActorInfo* ActorInfo)
+{
+    if (auto* ps = Cast<AAgentPlayerState>(ActorInfo->OwnerActor))
+    {
+        auto* asc = Cast<UAgentAbilitySystemComponent>(ps->GetAbilitySystemComponent());
+        auto* agent = Cast<ABaseAgent>(ps->GetPawn());
+        
+        if (asc == nullptr || agent == nullptr)
+        {
+            UE_LOG(LogTemp, Error, TEXT("BaseGameplayAbility, ASC || Agent Null"));
+            return;
+        }
+
+        asc->SetSkillClear(true);
+        SetInputContext(false);
     }
 }
 
 void UBaseGameplayAbility::SetInputContext(bool bToAbilityContext)
 {
-    // Agent에서 입력 컨텍스트 설정
-    if (auto* ps = Cast<AAgentPlayerState>(CurrentActorInfo->OwnerActor))
+    if (auto* ps = Cast<AAgentPlayerState>(CachedActorInfo.OwnerActor))
     {
         auto* agent = Cast<ABaseAgent>(ps->GetPawn());
         if (agent)
         {
-            // 어빌리티 모드로 전환 또는 무기 모드로 복원
             if (bToAbilityContext)
             {
-                agent->SwitchEquipment(EEquipmentType::Ability); // 스킬 모드
+                agent->SwitchEquipment(EInteractorType::Ability);
             }
             else
             {
-                agent->SwitchEquipment(agent->GetPrevEquipmentType()); // 무기 모드
+                agent->SwitchEquipment(agent->GetPrevEquipmentType());
             }
         }
     }
