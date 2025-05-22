@@ -273,8 +273,7 @@ public:
 	
 	ABaseWeapon* GetMeleeWeapon() const;
 	void SetMeleeWeapon(ABaseWeapon* knife) { MeleeKnife = knife; }
-
-	void SetSpike(ASpike* spike) { Spike = spike; }
+	
 	void ResetOwnSpike();
 
 	/** 장착 X, 획득하는 개념 (땅에 떨어진 무기 줍기, 상점에서 무기 구매) */

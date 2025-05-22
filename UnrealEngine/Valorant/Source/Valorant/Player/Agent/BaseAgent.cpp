@@ -497,7 +497,7 @@ void ABaseAgent::StartFire()
 
 	if (Spike && Spike->GetSpikeState() == ESpikeState::Carried)
 	{
-		ServerRPC_Interact(Spike);
+		Spike->ServerRPC_Interact(this);
 	}
 }
 
@@ -537,6 +537,12 @@ void ABaseAgent::Interact()
 {
 	if (FindInteractActor)
 	{
+		ASpike* spike = Cast<ASpike>(FindInteractActor);
+		if (spike && spike->GetSpikeState() == ESpikeState::Planted)
+		{
+			return;
+		}
+		
 		if (ABaseInteractor* Interactor = Cast<ABaseInteractor>(FindInteractActor))
 		{
 			ServerRPC_Interact(Interactor);
@@ -723,14 +729,14 @@ void ABaseAgent::ActivateSpike()
 {
 	if (IsInPlantZone)
 	{
-		if (CurrentInteractor)
-		{
-			CurrentInteractor->SetActive(false);
-		}
-		// UE_LOG(LogTemp,Warning,TEXT("액티배이트 스파이크"));
 		// 스파이크 소지자이고, 설치 상태이면 설치
 		if (Spike && Spike->GetSpikeState() == ESpikeState::Carried)
 		{
+			if (CurrentInteractor)
+			{
+				CurrentInteractor->SetActive(false);
+			}
+			
 			// 스파이크를 들지 않은 상태에서 설치하려 할 경우, 장착 로직 따로 실행
 			if (CurrentInteractor != Spike)
 			{
@@ -739,10 +745,14 @@ void ABaseAgent::ActivateSpike()
 			ServerRPC_Interact(Spike);
 		}
 		// 스파이크 해제 가능 상태이면 스파이크 해제
-		else if (Cast<ASpike>(FindInteractActor))
+		else if (auto* spike = Cast<ASpike>(FindInteractActor))
 		{
-			// UE_LOG(LogTemp,Warning,TEXT("파인드인터랙터가 스파이크임"));
-			ServerRPC_Interact(FindInteractActor);
+			if (CurrentInteractor)
+			{
+				CurrentInteractor->SetActive(false);
+			}
+			Spike = spike;
+			ServerRPC_Interact(spike);
 		}
 	}
 	else

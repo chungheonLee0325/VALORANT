@@ -1,10 +1,7 @@
-// Fill out your copyright notice in the Description page of Project Settings.
 
 
 #include "Spike.h"
 
-#include "Valorant.h"
-#include "Components/SphereComponent.h"
 #include "Components/WidgetComponent.h"
 #include "GameFramework/PawnMovementComponent.h"
 #include "GameManager/MatchGameMode.h"
@@ -13,7 +10,6 @@
 #include "Net/UnrealNetwork.h"
 #include "Kismet/GameplayStatics.h"
 #include "GameManager/MatchGameState.h"
-#include "GameManager/SubsystemSteamManager.h"
 #include "Weapon/ThirdPersonInteractor.h"
 
 
@@ -233,7 +229,6 @@ void ASpike::ServerRPC_Interact_Implementation(ABaseAgent* InteractAgent)
 	case ESpikeState::Carried:
 		// 이미 소지 중인 스파이크 - 공격팀은 설치 가능
 		// 현재 라운드가 InRound 상태인지 확인
-			// ServerRPC_StartPlanting(InteractAgent);
 		if (OwnerAgent == InteractAgent && AMatchGameMode::IsAttacker(PS->bIsBlueTeam) && 
 			IsInPlantZone() && IsGameStateInRound())
 		{
@@ -243,8 +238,8 @@ void ASpike::ServerRPC_Interact_Implementation(ABaseAgent* InteractAgent)
 		break;
 
 	case ESpikeState::Planted:
+		// NET_LOG(LogTemp, Warning, TEXT("스파이크 플랜트 상태"));
 		// 설치된 스파이크 - 수비팀만 해제 가능
-		// ServerRPC_StartDefusing(InteractAgent);
 		if (!AMatchGameMode::IsAttacker(PS->bIsBlueTeam))
 		{
 			// 스파이크 해제 시작
@@ -413,16 +408,13 @@ void ASpike::ServerRPC_StartDefusing_Implementation(ABaseAgent* Agent)
 	{
 		return;
 	}
-
+	
 	// 같은 에이전트가 다시 해제하는 경우 반 해제 적용
 	bool isHalfDefuse = bIsHalfDefused && LastDefusingAgent == Agent;
 
 	// 스파이크 해제 시작
 	SpikeState = ESpikeState::Defusing;
 	InteractingAgent = Agent;
-	
-	// 해체 캔슬할 때, 에이전트가 스파이크를 알고 있어야하기 때문에 설정
-	InteractingAgent->SetSpike(this);
 
 	// 에이전트에 해체 시작 알림
 	MulticastRPC_AgentStartDefuse(InteractingAgent);
