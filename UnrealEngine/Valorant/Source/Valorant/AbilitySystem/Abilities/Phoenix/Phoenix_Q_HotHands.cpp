@@ -21,30 +21,6 @@ UPhoenix_Q_HotHands::UPhoenix_Q_HotHands() : UBaseGameplayAbility()
 	// === 후속 입력 설정 (CDO에서 안전한 방식) ===
 	ValidFollowUpInputs.Add(FGameplayTag::RequestGameplayTag(FName("Input.Default.LeftClick")));
 	ValidFollowUpInputs.Add(FGameplayTag::RequestGameplayTag(FName("Input.Default.RightClick")));
-
-	// === 하위 호환성을 위한 기존 방식도 유지 ===
-	// FollowUpInputTags.Add(FGameplayTag::RequestGameplayTag(FName("Input.Default.LeftClick")));
-	// FollowUpInputTags.Add(FGameplayTag::RequestGameplayTag(FName("Input.Default.RightClick")));
-
-	// === 차단 태그 설정 - 스킬 사용 중 다른 행동 제한 ===
-	// BlockedTags.AddTag(FGameplayTag::RequestGameplayTag(FName("Block.Movement")));
-
-	// === 필요한 태그 설정 (예: 특정 상황에서만 사용 가능) ===
-	// RequiredTags.AddTag(FGameplayTag::RequestGameplayTag(FName("State.Alive")));
-
-	// === 어빌리티 상태 태그 초기화 ===
-	//AbilityStateTags.AddTag(FGameplayTag::RequestGameplayTag(FName("Ability.Phoenix.Q")));
-}
-
-void UPhoenix_Q_HotHands::ActivateAbility(const FGameplayAbilitySpecHandle Handle,
-                                          const FGameplayAbilityActorInfo* ActorInfo,
-                                          const FGameplayAbilityActivationInfo ActivationInfo,
-                                          const FGameplayEventData* TriggerEventData)
-{
-	// 부모 클래스에서 MultiPhase 타입 처리 (후속 입력 자동 등록됨)
-	Super::ActivateAbility(Handle, ActorInfo, ActivationInfo, TriggerEventData);
-
-	UE_LOG(LogTemp, Warning, TEXT("Phoenix Q 스킬 활성화됨"));
 }
 
 void UPhoenix_Q_HotHands::HandleLeftClick(FGameplayEventData EventData)
@@ -185,51 +161,6 @@ bool UPhoenix_Q_HotHands::SpawnProjectileByType(EPhoenixQThrowType ThrowType)
 	return bResult;
 }
 
-void UPhoenix_Q_HotHands::PlayReadyEffects()
-{
-	UE_LOG(LogTemp, Warning, TEXT("Phoenix Q - 준비 이펙트 재생"));
-
-	// 준비 사운드 재생
-	if (ReadySound)
-	{
-		UGameplayStatics::PlaySound2D(GetWorld(), ReadySound);
-	}
-
-	// 핸드 파이어 이펙트 시작
-	StartHandFireEffect();
-
-	// 이동 차단 적용
-	if (UAgentAbilitySystemComponent* ASC = Cast<
-		UAgentAbilitySystemComponent>(GetAbilitySystemComponentFromActorInfo()))
-	{
-		ASC->SetAbilityState(FGameplayTag::RequestGameplayTag(FName("Block.Movement")), true);
-	}
-
-	// 블루프린트 이벤트 호출
-	OnReadyEffectStarted();
-}
-
-void UPhoenix_Q_HotHands::PlayExecuteEffects()
-{
-	UE_LOG(LogTemp, Warning, TEXT("Phoenix Q - 실행 이펙트 재생"));
-
-	// 실행 관련 이펙트들은 각 던지기 타입에서 처리됨
-}
-
-void UPhoenix_Q_HotHands::PlayCooldownEffects()
-{
-	UE_LOG(LogTemp, Warning, TEXT("Phoenix Q - 쿨다운 이펙트 재생"));
-
-	// 이미 핸드 이펙트는 중지됨
-	// 추가적인 쿨다운 이펙트가 있다면 여기서 처리
-}
-
-void UPhoenix_Q_HotHands::ExecutePhaseAction(float HoldTime)
-{
-	// 블루프린트에서 호출 가능한 단계별 액션
-	UE_LOG(LogTemp, Warning, TEXT("Phoenix Q - 단계 액션 실행, HoldTime: %f"), HoldTime);
-}
-
 void UPhoenix_Q_HotHands::StartHandFireEffect()
 {
 	if (HandFireEffect && CachedActorInfo.OwnerActor.IsValid())
@@ -241,7 +172,7 @@ void UPhoenix_Q_HotHands::StartHandFireEffect()
 			HandFireComponent = UGameplayStatics::SpawnEmitterAttached(
 				HandFireEffect,
 				Agent->GetMesh(),
-				FName("hand_rSocket"), // 실제 손 소켓 이름으로 변경 필요
+				FName("hand_rSocket"), 
 				FVector::ZeroVector,
 				FRotator::ZeroRotator,
 				EAttachLocation::SnapToTarget,
@@ -285,13 +216,7 @@ void UPhoenix_Q_HotHands::CleanupAbility()
 
 	// 핸드 파이어 이펙트 정리
 	StopHandFireEffect();
-
-	// 차단 태그 제거
-	if (UAgentAbilitySystemComponent* ASC = Cast<
-		UAgentAbilitySystemComponent>(GetAbilitySystemComponentFromActorInfo()))
-	{
-	}
-
+	
 	// 던지기 타입 초기화
 	CurrentThrowType = EPhoenixQThrowType::None;
 
@@ -299,23 +224,3 @@ void UPhoenix_Q_HotHands::CleanupAbility()
 	Super::CleanupAbility();
 }
 
-void UPhoenix_Q_HotHands::CancelAbility(const FGameplayAbilitySpecHandle Handle,
-                                        const FGameplayAbilityActorInfo* ActorInfo,
-                                        const FGameplayAbilityActivationInfo ActivationInfo,
-                                        bool bReplicateCancelAbility)
-{
-	UE_LOG(LogTemp, Warning, TEXT("Phoenix Q - 스킬 취소"));
-
-	// 취소 애니메이션 재생
-	if (CancelMontage && CachedActorInfo.GetAnimInstance())
-	{
-		UAnimInstance* AnimInstance = CachedActorInfo.GetAnimInstance();
-		if (AnimInstance)
-		{
-			AnimInstance->Montage_Play(CancelMontage);
-		}
-	}
-
-	// 부모 클래스의 취소 처리
-	Super::CancelAbility(Handle, ActorInfo, ActivationInfo, bReplicateCancelAbility);
-}

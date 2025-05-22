@@ -37,30 +37,14 @@ protected:
     UPROPERTY(EditDefaultsOnly, Category = "Effects")
     USoundBase* ThrowSound;
     
-    // === 런타임 변수 ===
     UPROPERTY()
     UParticleSystemComponent* HandFireComponent;
     
     UPROPERTY(BlueprintReadOnly, Category = "State")
     EPhoenixQThrowType CurrentThrowType = EPhoenixQThrowType::None;
-    
-    // === 오버라이드 메서드 ===
-    virtual void ActivateAbility(const FGameplayAbilitySpecHandle Handle,
-                              const FGameplayAbilityActorInfo* ActorInfo,
-                              const FGameplayAbilityActivationInfo ActivationInfo,
-                              const FGameplayEventData* TriggerEventData) override;
-
-    // === 새로운 입력 처리 메서드 ===
+ 
     virtual void HandleLeftClick(FGameplayEventData EventData) override;
     virtual void HandleRightClick(FGameplayEventData EventData) override;
-    
-    // === 단계별 이펙트 처리 ===
-    virtual void PlayReadyEffects();
-    virtual void PlayExecuteEffects();
-    virtual void PlayCooldownEffects();
-    
-    // === 단계별 액션 실행 ===
-    virtual void ExecutePhaseAction(float HoldTime = 0.0f);
     
     // === 내부 처리 함수들 ===
     UFUNCTION()
@@ -81,10 +65,4 @@ protected:
     
     // === 정리 함수 ===
     virtual void CleanupAbility() override;
-    
-    // === 취소 처리 ===
-    virtual void CancelAbility(const FGameplayAbilitySpecHandle Handle,
-                              const FGameplayAbilityActorInfo* ActorInfo,
-                              const FGameplayAbilityActivationInfo ActivationInfo,
-                              bool bReplicateCancelAbility) override;
 };
