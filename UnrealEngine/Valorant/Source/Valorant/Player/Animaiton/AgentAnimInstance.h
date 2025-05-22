@@ -33,7 +33,7 @@ class VALORANT_API UAgentAnimInstance : public UAnimInstance
 	bool bIsCrouch = false;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category=State, meta=(AllowPrivateAccess = "true"))
 	bool bIsDead = false;
-	
+
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category=Interactor, meta=(AllowPrivateAccess = "true"))
 	EInteractorType InteractorState = EInteractorType::None;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category=Interactor, meta=(AllowPrivateAccess = "true"))
@@ -57,4 +57,8 @@ public:
 	void OnSpikeActive();
 	UFUNCTION(BlueprintImplementableEvent)
 	void OnSpikeCancel();
+	UFUNCTION(BlueprintImplementableEvent)
+	void OnSpikeDeactive();
+	UFUNCTION(BlueprintImplementableEvent)
+	void OnSpikeDefuseFinish();
 };

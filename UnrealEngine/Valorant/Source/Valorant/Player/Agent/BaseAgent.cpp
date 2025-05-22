@@ -94,6 +94,16 @@ ABaseAgent::ABaseAgent()
 	FirstPersonMesh->SetCanEverAffectNavigation(false);
 	FirstPersonMesh->SetOnlyOwnerSee(true);
 
+	// Defusal Mesh
+	DefusalMesh = CreateDefaultSubobject<USkeletalMeshComponent>("DefusalMesh");
+	DefusalMesh->SetupAttachment(GetRootComponent());
+	
+	ConstructorHelpers::FObjectFinder<USkeletalMesh> defusal(TEXT("'/Game/Resource/Props/Defuser/Defusal.Defusal'"));
+	DefusalMesh->SetSkeletalMesh(defusal.Object);
+	
+	DefusalMesh->SetCollisionProfileName(TEXT("NoCollision"));
+	DefusalMesh->SetVisibility(false);
+	
 	// Camera
 	Camera = CreateDefaultSubobject<UCameraComponent>("Camera");
 	Camera->SetupAttachment(FirstPersonMesh, TEXT("CameraSocket"));
@@ -195,6 +205,18 @@ void ABaseAgent::BeginPlay()
 
 	ABP_1P = Cast<UAgentAnimInstance>(FirstPersonMesh->GetAnimInstance());
 	ABP_3P = Cast<UAgentAnimInstance>(GetMesh()->GetAnimInstance());
+
+	if (IsLocallyControlled())
+	{
+		DefusalMesh->AttachToComponent(GetMesh1P(),FAttachmentTransformRules::SnapToTargetNotIncludingScale,FName(TEXT("L_SpikeSocket")));
+	}
+	else
+	{
+		DefusalMesh->AttachToComponent(GetMesh(),FAttachmentTransformRules::SnapToTargetNotIncludingScale,FName(TEXT("L_SpikeSocket")));
+	}
+	DefusalMesh->SetRelativeLocation(FVector::ZeroVector);
+	DefusalMesh->SetRelativeRotation(FRotator::ZeroRotator);
+	DefusalMesh->SetRelativeScale3D(FVector(.34f));
 
 	if (CrouchCurve)
 	{
@@ -475,7 +497,7 @@ void ABaseAgent::StartFire()
 
 	if (Spike && Spike->GetSpikeState() == ESpikeState::Carried)
 	{
-		ServerRPC_Interact(Spike);
+		Spike->ServerRPC_Interact(this);
 	}
 }
 
@@ -515,6 +537,12 @@ void ABaseAgent::Interact()
 {
 	if (FindInteractActor)
 	{
+		ASpike* spike = Cast<ASpike>(FindInteractActor);
+		if (spike && spike->GetSpikeState() == ESpikeState::Planted)
+		{
+			return;
+		}
+		
 		if (ABaseInteractor* Interactor = Cast<ABaseInteractor>(FindInteractActor))
 		{
 			ServerRPC_Interact(Interactor);
@@ -704,21 +732,27 @@ void ABaseAgent::ActivateSpike()
 		// 스파이크 소지자이고, 설치 상태이면 설치
 		if (Spike && Spike->GetSpikeState() == ESpikeState::Carried)
 		{
+			if (CurrentInteractor)
+			{
+				CurrentInteractor->SetActive(false);
+			}
+			
 			// 스파이크를 들지 않은 상태에서 설치하려 할 경우, 장착 로직 따로 실행
 			if (CurrentInteractor != Spike)
 			{
-				if (CurrentInteractor)
-				{
-					CurrentInteractor->SetActive(false);
-				}
 				CurrentInteractor = Spike;
 			}
 			ServerRPC_Interact(Spike);
 		}
 		// 스파이크 해제 가능 상태이면 스파이크 해제
-		else if (Cast<ASpike>(FindInteractActor))
+		else if (auto* spike = Cast<ASpike>(FindInteractActor))
 		{
-			ServerRPC_Interact(FindInteractActor);
+			if (CurrentInteractor)
+			{
+				CurrentInteractor->SetActive(false);
+			}
+			Spike = spike;
+			ServerRPC_Interact(spike);
 		}
 	}
 	else
@@ -1503,7 +1537,7 @@ void ABaseAgent::OnSpikeStartPlant()
 	OnSpikeActive.Broadcast();
 }
 
-void ABaseAgent::OnSpikeCancelPlant()
+void ABaseAgent::OnSpikeCancelInteract()
 {
 	// NET_LOG(LogTemp,Warning,TEXT("baseAgent:: OnSpikeCancelPlant"));
 	SwitchEquipment(EInteractorType::Spike);
@@ -1522,6 +1556,30 @@ void ABaseAgent::OnSpikeFinishPlant()
 	
 	Spike = nullptr;
 	SwitchEquipment(EInteractorType::MainWeapon);
+}
+
+void ABaseAgent::OnSpikeStartDefuse()
+{
+	DefusalMesh->SetVisibility(true);
+	
+	bCanMove = false;
+	OnSpikeDeactive.Broadcast();
+}
+
+void ABaseAgent::OnSpikeCancelDefuse()
+{
+	DefusalMesh->SetVisibility(false);
+	
+	bCanMove = true;
+	OnSpikeCancel.Broadcast();
+}
+
+void ABaseAgent::OnSpikeFinishDefuse()
+{
+	DefusalMesh->SetVisibility(false);
+	
+	bCanMove = true;
+	OnSpikeDefuseFinish.Broadcast();
 }
 
 void ABaseAgent::OnRep_Controller()

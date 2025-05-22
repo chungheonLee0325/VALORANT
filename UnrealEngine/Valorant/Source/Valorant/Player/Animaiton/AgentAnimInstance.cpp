@@ -18,6 +18,8 @@ void UAgentAnimInstance::NativeBeginPlay()
 		OwnerAgent->OnAgentReload.AddDynamic(this, &UAgentAnimInstance::OnReload);
 		OwnerAgent->OnSpikeActive.AddDynamic(this, &UAgentAnimInstance::OnSpikeActive);
 		OwnerAgent->OnSpikeCancel.AddDynamic(this, &UAgentAnimInstance::OnSpikeCancel);
+		OwnerAgent->OnSpikeDeactive.AddDynamic(this, &UAgentAnimInstance::OnSpikeDeactive);
+		OwnerAgent->OnSpikeDefuseFinish.AddDynamic(this, &UAgentAnimInstance::OnSpikeDefuseFinish);
 	}
 }
 
