@@ -30,9 +30,9 @@ AMatchGameMode::AMatchGameMode()
 	SelectAgentTime = 60.0f;
 	PreRoundTime = 15.0f; // org: 45.0f
 	BuyPhaseTime = 25.0f; // org: 30.0f
-	InRoundTime = 20.0f; // org: 100.0f
+	InRoundTime = 50.0f; // org: 100.0f
 	EndPhaseTime = 5.0f; // org: 10.0f
-	SpikeActiveTime = 15.0f; // org: 45.0f
+	SpikeActiveTime = 25.0f; // org: 45.0f
 	bReadyToEndMatch = false;
 	LeavingMatchTime = 10.0f;
 #endif
