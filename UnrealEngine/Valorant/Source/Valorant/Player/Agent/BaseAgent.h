@@ -217,6 +217,7 @@ public:
 	
 	bool IsDead() const { return bIsDead; }
 	bool CanMove() const { return bCanMove; }
+	void SetCanMove(bool canMove) { bCanMove = canMove; }
 	
 	int GetPoseIdx() const { return PoseIdx; }
 
