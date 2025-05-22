@@ -254,10 +254,7 @@ void UAgentInputComponent::Weapon3(const FInputActionValue& InputActionValue)
 
 void UAgentInputComponent::Weapon4(const FInputActionValue& InputActionValue)
 {
-	if (Agent)
-	{
-		Agent->ActivateSpike();
-	}
+	Agent->ActivateSpike();
 }
 
 void UAgentInputComponent::Weapon4Released(const FInputActionValue& InputActionValue)

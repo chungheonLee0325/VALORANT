@@ -56,14 +56,14 @@ void ASpike::Tick(float DeltaTime)
 		if (SpikeState == ESpikeState::Planting && InteractingAgent)
 		{
 			// 플레이어가 죽었는지 확인
-			if (InteractingAgent->IsDead() || !InteractingAgent->IsSpikePlanting())
+			if (InteractingAgent->IsDead())
 			{
 				ServerRPC_CancelPlanting();
 				return;
 			}
 
 			InteractProgress += DeltaTime;
-			AddActorWorldOffset(FVector(0, 0, 12.66f) * DeltaTime);
+			// AddActorWorldOffset(FVector(0, 0, 12.66f) * DeltaTime);
 			if (InteractProgress >= PlantTime)
 			{
 				ServerRPC_FinishPlanting();
@@ -160,10 +160,7 @@ void ASpike::ServerRPC_PickUp_Implementation(ABaseAgent* Agent)
 	Super::ServerRPC_PickUp_Implementation(Agent);
 	
 	Agent->AcquireInteractor(this);
-
-	// 스파이크 Mesh 숨기기
-	SetActive(false);
-
+	
 	// 스파이크 상태 업데이트
 	SpikeState = ESpikeState::Carried;
 
@@ -173,9 +170,8 @@ void ASpike::ServerRPC_PickUp_Implementation(ABaseAgent* Agent)
 		EAttachmentRule::KeepRelative,
 		true
 		);
-	Mesh->AttachToComponent(Agent->GetMesh1P(), AttachmentRules, FName(TEXT("R_WeaponSocket")));
-
-	Mesh->AttachToComponent(Agent->GetMesh1P(), AttachmentRules, FName(TEXT("R_WeaponSocket")));
+	Mesh->AttachToComponent(Agent->GetMesh1P(), AttachmentRules, FName(TEXT("L_SpikeSocket")));
+	
 	if (nullptr != ThirdPersonInteractor)
 	{
 		ThirdPersonInteractor->Destroy();
@@ -185,8 +181,11 @@ void ASpike::ServerRPC_PickUp_Implementation(ABaseAgent* Agent)
 	{
 		ThirdPersonInteractor->SetOwner(Agent);
 		ThirdPersonInteractor->MulticastRPC_InitSpike(this);
-		ThirdPersonInteractor->AttachToComponent(Agent->GetMesh(), AttachmentRules, FName(TEXT("R_WeaponSocket")));
+		ThirdPersonInteractor->AttachToComponent(Agent->GetMesh(), AttachmentRules, FName(TEXT("L_SpikeSocket")));
 	}
+	
+	// 스파이크 Mesh 숨기기
+	SetActive(false);
 }
 
 void ASpike::ServerRPC_Drop_Implementation()
@@ -234,6 +233,7 @@ void ASpike::ServerRPC_Interact_Implementation(ABaseAgent* InteractAgent)
 	case ESpikeState::Carried:
 		// 이미 소지 중인 스파이크 - 공격팀은 설치 가능
 		// 현재 라운드가 InRound 상태인지 확인
+		
 		if (OwnerAgent == InteractAgent && AMatchGameMode::IsAttacker(PS->bIsBlueTeam) && 
 			IsInPlantZone() && IsGameStateInRound())
 		{
@@ -314,9 +314,9 @@ void ASpike::ServerRPC_StartPlanting_Implementation(ABaseAgent* Agent)
 	InteractProgress = 0.0f;
 
 	// 스파이크 Mesh 보이기
-	PlantingLocation = OwnerAgent->GetMovementComponent()->GetActorFeetLocation() + OwnerAgent->GetActorForwardVector()
-		* 80 + FVector(0, 0, -50);
-	SetActorLocation(PlantingLocation);
+	// PlantingLocation = OwnerAgent->GetMovementComponent()->GetActorFeetLocation() + OwnerAgent->GetActorForwardVector()
+	// * 80 + FVector(0, 0, -50);
+	// SetActorLocation(PlantingLocation);
 	SetActive(true);
 
 	// 설치 시작 이벤트 발생
@@ -433,8 +433,8 @@ void ASpike::ServerRPC_CancelDefusing_Implementation()
 	InteractingAgent = nullptr;
 	InteractProgress = 0.0f;
 	
-	FVector location = bIsHalfDefused ? PlantingLocation + FVector(0, 0, -25) : PlantingLocation;
-	SetActorLocation(location);
+	// FVector location = bIsHalfDefused ? PlantingLocation + FVector(0, 0, -25) : PlantingLocation;
+	// SetActorLocation(location);
 
 	// 해제 취소 이벤트 발생
 	MulticastRPC_OnDefusingCancelled();

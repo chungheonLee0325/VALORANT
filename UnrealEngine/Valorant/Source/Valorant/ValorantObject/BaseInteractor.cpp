@@ -43,7 +43,7 @@ void ABaseInteractor::OnRep_OwnerAgent()
 {
 	if (OwnerAgent)
 	{
-		NET_LOG(LogTemp, Warning, TEXT("%hs Called, InteractorName: %s, AgentName: %s"), __FUNCTION__, *GetName(), *OwnerAgent->GetName());
+		// NET_LOG(LogTemp, Warning, TEXT("%hs Called, InteractorName: %s, AgentName: %s"), __FUNCTION__, *GetName(), *OwnerAgent->GetName());
 		SetOwner(OwnerAgent);
 		OnDetect(false);
 		Mesh->SetOnlyOwnerSee(true);
@@ -56,7 +56,7 @@ void ABaseInteractor::OnRep_OwnerAgent()
 	}
 	else
 	{
-		NET_LOG(LogTemp, Warning, TEXT("%hs Called, OwnerAgent is nullptr"), __FUNCTION__);
+		// NET_LOG(LogTemp, Warning, TEXT("%hs Called, OwnerAgent is nullptr"), __FUNCTION__);
 		SetOwner(nullptr);
 		OnDetect(false);
 		Mesh->SetOnlyOwnerSee(false);
@@ -79,7 +79,7 @@ void ABaseInteractor::BeginPlay()
 	Super::BeginPlay();
 	if (HasAuthority())
 	{
-		NET_LOG(LogTemp, Warning, TEXT("%hs Called"), __FUNCTION__);
+		// NET_LOG(LogTemp, Warning, TEXT("%hs Called"), __FUNCTION__);
 		Sphere->OnComponentBeginOverlap.AddDynamic(this, &ABaseInteractor::ServerOnly_OnSphereBeginOverlap);
 	}
 }
@@ -136,7 +136,7 @@ void ABaseInteractor::ServerOnly_OnSphereBeginOverlap(UPrimitiveComponent* Overl
 		return;
 	}
 
-	NET_LOG(LogTemp, Warning, TEXT("%hs Called, Interactor Name is %s, Interact with %s"), __FUNCTION__, *GetName(), *Agent->GetName());
+	// NET_LOG(LogTemp, Warning, TEXT("%hs Called, Interactor Name is %s, Interact with %s"), __FUNCTION__, *GetName(), *Agent->GetName());
 	ServerRPC_Interact(Agent);
 }
 
@@ -191,7 +191,7 @@ void ABaseInteractor::ServerRPC_PickUp_Implementation(ABaseAgent* Agent)
 		return;
 	}
 	
-	NET_LOG(LogTemp, Warning, TEXT("%hs Called, InteractorName: %s"), __FUNCTION__, *GetName());
+	// NET_LOG(LogTemp, Warning, TEXT("%hs Called, InteractorName: %s"), __FUNCTION__, *GetName());
 	SetOwnerAgent(Agent);
 	MulticastRPC_BroadcastOnPickUp();
 }
@@ -204,7 +204,7 @@ void ABaseInteractor::ServerRPC_Drop_Implementation()
 		return;
 	}
 
-	NET_LOG(LogTemp, Warning, TEXT("%hs Called, InteractorName: %s"), __FUNCTION__, *GetName());
+	// NET_LOG(LogTemp, Warning, TEXT("%hs Called, InteractorName: %s"), __FUNCTION__, *GetName());
 	
 	if (OwnerAgent->GetCurrentInterator() == this)
 	{
@@ -254,19 +254,19 @@ void ABaseInteractor::Multicast_SetActive_Implementation(bool bActive)
 
 void ABaseInteractor::MulticastRPC_BroadcastOnDrop_Implementation()
 {
-	NET_LOG(LogTemp, Warning, TEXT("%hs Called"), __FUNCTION__);
+	// NET_LOG(LogTemp, Warning, TEXT("%hs Called"), __FUNCTION__);
 	OnInteractorDrop.Broadcast();
 }
 
 void ABaseInteractor::MulticastRPC_BroadcastOnPickUp_Implementation()
 {
-	NET_LOG(LogTemp, Warning, TEXT("%hs Called"), __FUNCTION__);
+	// NET_LOG(LogTemp, Warning, TEXT("%hs Called"), __FUNCTION__);
 	OnPickUp.Broadcast();
 }
 
 void ABaseInteractor::PlayEquipAnimation()
 {
-	NET_LOG(LogTemp, Warning, TEXT("%hs Called"), __FUNCTION__);
+	// NET_LOG(LogTemp, Warning, TEXT("%hs Called"), __FUNCTION__);
 	OnEquip.Broadcast();
 	if (OwnerAgent)
 	{

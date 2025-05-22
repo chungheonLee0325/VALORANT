@@ -217,7 +217,6 @@ public:
 	
 	bool IsDead() const { return bIsDead; }
 	bool CanMove() const { return bCanMove; }
-	bool IsSpikePlanting() const { return bIsSpikePlanting; }
 	
 	int GetPoseIdx() const { return PoseIdx; }
 
@@ -358,10 +357,7 @@ protected:
 	bool bIsDead = false;
 	
 	bool bCanMove = true;
-
-	UPROPERTY(Replicated)
-	bool bIsSpikePlanting = false;
-
+	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	float BaseSpringArmHeight = 0.0f;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
@@ -454,9 +450,6 @@ protected:
 
 	// 무기 카테고리에 따른 이동 속도 멀티플라이어 업데이트
 	void UpdateEquipSpeedMultiplier();
-
-	UFUNCTION(Server, Reliable)
-	void ServerRPC_SetIsSpikePlanting(const bool isPlanting);
 
 private:
 	// ToDo : 수정
