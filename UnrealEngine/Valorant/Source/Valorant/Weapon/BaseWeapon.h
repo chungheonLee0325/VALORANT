@@ -125,9 +125,10 @@ protected:
 
 	UFUNCTION(BlueprintCallable, Category="Weapon")
 	void StopReload();
-
+	
 	UFUNCTION()
 	void OnRep_Ammo() const;
+	virtual void Multicast_SetActive_Implementation(bool bActive) override;
 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
