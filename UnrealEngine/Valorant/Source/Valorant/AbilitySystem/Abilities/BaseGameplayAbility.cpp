@@ -10,6 +10,7 @@
 #include "Player/AgentPlayerState.h"
 #include "Player/Agent/BaseAgent.h"
 #include "Abilities/Tasks/AbilityTask_WaitDelay.h"
+#include "ValorantObject/BaseInteractor.h"
 
 UBaseGameplayAbility::UBaseGameplayAbility()
 {

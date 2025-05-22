@@ -3,7 +3,6 @@
 #include <Engine/DataTable.h>
 #include "CoreMinimal.h"
 #include "GameplayAbilitySet.h"
-#include "Engine/DamageEvents.h"
 #include "UObject/ObjectMacros.h"
 #include "GameplayTagContainer.h"
 #include "ValorantGameType.generated.h"

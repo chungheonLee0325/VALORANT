@@ -4,12 +4,11 @@
 #include "ThirdPersonInteractor.h"
 
 #include "BaseWeaponAnim.h"
-#include "Valorant.h"
-#include "GameManager/SubsystemSteamManager.h"
 #include "GameManager/ValorantGameInstance.h"
 #include "Kismet/GameplayStatics.h"
-#include "Player/Agent/BaseAgent.h"
-
+#include "ValorantObject/BaseInteractor.h"
+#include "ValorantObject/Spike/Spike.h"
+#include "BaseWeapon.h"
 
 AThirdPersonInteractor::AThirdPersonInteractor()
 {
@@ -54,7 +53,10 @@ void AThirdPersonInteractor::MulticastRPC_InitWeapon_Implementation(ABaseWeapon*
 		return;
 	}
 
-	OwnerInteractor = Weapon;
+	if (Weapon)
+	{
+		OwnerInteractor = Weapon;
+	}
 
 	// NET_LOG(LogTemp, Warning, TEXT("%hs Called, WeaponId is %d"), __FUNCTION__, WeaponId);
 	Mesh->SetSkeletalMeshAsset(WeaponMeshAsset);

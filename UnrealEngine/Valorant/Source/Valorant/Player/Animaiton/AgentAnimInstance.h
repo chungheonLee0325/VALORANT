@@ -4,8 +4,12 @@
 
 #include "CoreMinimal.h"
 #include "Animation/AnimInstance.h"
-#include "ResourceManager/ValorantGameType.h"
 #include "AgentAnimInstance.generated.h"
+
+enum class EAgentDamagedDirection : uint8;
+enum class EAgentDamagedPart : uint8;
+class ABaseAgent;
+enum class EInteractorType : uint8;
 
 /**
  * 
@@ -35,7 +39,7 @@ class VALORANT_API UAgentAnimInstance : public UAnimInstance
 	bool bIsDead = false;
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category=Interactor, meta=(AllowPrivateAccess = "true"))
-	EInteractorType InteractorState = EInteractorType::None;
+	EInteractorType InteractorState;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category=Interactor, meta=(AllowPrivateAccess = "true"))
 	int InteractorPoseIdx = 0;
 	
@@ -57,4 +61,7 @@ public:
 	void OnSpikeActive();
 	UFUNCTION(BlueprintImplementableEvent)
 	void OnSpikeCancel();
+
+	UFUNCTION(BlueprintImplementableEvent)
+	void OnHit(EAgentDamagedPart DamagedPart, EAgentDamagedDirection DamagedDirection, const bool bDie, const bool bLarge);
 };

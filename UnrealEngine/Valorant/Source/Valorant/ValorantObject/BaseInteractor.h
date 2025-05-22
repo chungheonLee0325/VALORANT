@@ -4,9 +4,9 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
-#include "ResourceManager/ValorantGameType.h"
 #include "BaseInteractor.generated.h"
 
+enum class EInteractorType : uint8;
 class AThirdPersonInteractor;
 class UWidgetComponent;
 class USphereComponent;
@@ -43,7 +43,7 @@ protected:
 	void SetOwnerAgent(ABaseAgent* NewAgent);
 
 	UPROPERTY()
-	EInteractorType InteractorType = EInteractorType::None;
+	EInteractorType InteractorType;
 
 public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
