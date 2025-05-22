@@ -26,23 +26,33 @@
 #include "ValorantObject/BaseInteractor.h"
 #include "ValorantObject/Spike/Spike.h"
 #include "Player/Component/CreditComponent.h"
+#include "Weapon/BaseWeapon.h"
 
 /* static */ EAgentDamagedPart ABaseAgent::GetHitDamagedPart(const FName& BoneName)
 {
 	const FString& NameStr = BoneName.ToString();
 	if (NameStr.Contains(TEXT("Neck"), ESearchCase::IgnoreCase))
+	{
 		return EAgentDamagedPart::Head;
+	}
+		
 	if (NameStr.Contains(TEXT("Clavicle"), ESearchCase::IgnoreCase) ||
 		NameStr.Contains(TEXT("Shoulder"), ESearchCase::IgnoreCase) ||
 		NameStr.Contains(TEXT("Elbow"), ESearchCase::IgnoreCase) ||
 		NameStr.Contains(TEXT("Hand"), ESearchCase::IgnoreCase) ||
 		NameStr.Contains(TEXT("Spine"), ESearchCase::IgnoreCase))
+	{
 		return EAgentDamagedPart::Body;
+	}
+		
 	if (NameStr.Contains(TEXT("Hip"), ESearchCase::IgnoreCase) ||
 		NameStr.Contains(TEXT("Knee"), ESearchCase::IgnoreCase) ||
 		NameStr.Contains(TEXT("Foot"), ESearchCase::IgnoreCase) ||
 		NameStr.Contains(TEXT("Toe"), ESearchCase::IgnoreCase))
+	{
 		return EAgentDamagedPart::Legs;
+	}
+		
 	return EAgentDamagedPart::None;
 }
 
@@ -94,6 +104,16 @@ ABaseAgent::ABaseAgent()
 	FirstPersonMesh->SetCanEverAffectNavigation(false);
 	FirstPersonMesh->SetOnlyOwnerSee(true);
 
+	// Defusal Mesh
+	DefusalMesh = CreateDefaultSubobject<USkeletalMeshComponent>("DefusalMesh");
+	DefusalMesh->SetupAttachment(GetRootComponent());
+	
+	ConstructorHelpers::FObjectFinder<USkeletalMesh> defusal(TEXT("'/Game/Resource/Props/Defuser/Defusal.Defusal'"));
+	DefusalMesh->SetSkeletalMesh(defusal.Object);
+	
+	DefusalMesh->SetCollisionProfileName(TEXT("NoCollision"));
+	DefusalMesh->SetVisibility(false);
+	
 	// Camera
 	Camera = CreateDefaultSubobject<UCameraComponent>("Camera");
 	Camera->SetupAttachment(FirstPersonMesh, TEXT("CameraSocket"));
@@ -146,7 +166,7 @@ ABaseAgent::ABaseAgent()
 
 void ABaseAgent::OnRep_CurrentInteractorState()
 {
-	if (CurrentInteractorState != EInteractorType::None)
+	if (CurrentInteractor && CurrentEquipmentState != EInteractorType::None)
 	{
 		CurrentInteractor->PlayEquipAnimation();
 	}
@@ -195,6 +215,18 @@ void ABaseAgent::BeginPlay()
 
 	ABP_1P = Cast<UAgentAnimInstance>(FirstPersonMesh->GetAnimInstance());
 	ABP_3P = Cast<UAgentAnimInstance>(GetMesh()->GetAnimInstance());
+
+	if (IsLocallyControlled())
+	{
+		DefusalMesh->AttachToComponent(GetMesh1P(),FAttachmentTransformRules::SnapToTargetNotIncludingScale,FName(TEXT("L_SpikeSocket")));
+	}
+	else
+	{
+		DefusalMesh->AttachToComponent(GetMesh(),FAttachmentTransformRules::SnapToTargetNotIncludingScale,FName(TEXT("L_SpikeSocket")));
+	}
+	DefusalMesh->SetRelativeLocation(FVector::ZeroVector);
+	DefusalMesh->SetRelativeRotation(FRotator::ZeroRotator);
+	DefusalMesh->SetRelativeScale3D(FVector(.34f));
 
 	if (CrouchCurve)
 	{
@@ -475,7 +507,7 @@ void ABaseAgent::StartFire()
 
 	if (Spike && Spike->GetSpikeState() == ESpikeState::Carried)
 	{
-		ServerRPC_Interact(Spike);
+		Spike->ServerRPC_Interact(this);
 	}
 }
 
@@ -515,6 +547,12 @@ void ABaseAgent::Interact()
 {
 	if (FindInteractActor)
 	{
+		ASpike* spike = Cast<ASpike>(FindInteractActor);
+		if (spike && spike->GetSpikeState() == ESpikeState::Planted)
+		{
+			return;
+		}
+		
 		if (ABaseInteractor* Interactor = Cast<ABaseInteractor>(FindInteractActor))
 		{
 			ServerRPC_Interact(Interactor);
@@ -557,8 +595,7 @@ void ABaseAgent::ServerRPC_DropCurrentInteractor_Implementation()
 void ABaseAgent::ServerRPC_SetCurrentInteractor_Implementation(ABaseInteractor* interactor)
 {
 	CurrentInteractor = interactor;
-	CurrentInteractorState = CurrentInteractor ? CurrentInteractor->GetInteractorType() : EInteractorType::None;
-	
+	CurrentEquipmentState = CurrentInteractor ? CurrentInteractor->GetInteractorType() : EInteractorType::None;
 	OnRep_CurrentInteractorState();
 	
 	if (CurrentInteractor)
@@ -636,14 +673,14 @@ void ABaseAgent::AcquireInteractor(ABaseInteractor* Interactor)
 	}
 	
 	// 무기를 얻으면, 해당 무기의 타입의 슬롯으로 전환해 바로 장착하도록
-	SwitchInteractor(Interactor->GetInteractorType());
+	SwitchEquipment(Interactor->GetInteractorType());
 }
 
-void ABaseAgent::SwitchInteractor(EInteractorType InteractorType)
+void ABaseAgent::SwitchEquipment(EInteractorType EquipmentType)
 {
 	if (HasAuthority())
 	{
-		if (InteractorType == CurrentInteractorState)
+		if (EquipmentType == CurrentEquipmentState)
 		{
 			return;
 		}
@@ -651,32 +688,50 @@ void ABaseAgent::SwitchInteractor(EInteractorType InteractorType)
 		if (CurrentInteractor)
 		{
 			CurrentInteractor->SetActive(false);
+			PrevEquipmentState = CurrentEquipmentState;
+			ASC->ClearFollowUpInputs();
 		}
 
-		if (InteractorType == EInteractorType::MainWeapon)
+		if (EquipmentType == EInteractorType::Ability)
 		{
-			EquipInteractor(MainWeapon);
-			UpdateEquipSpeedMultiplier();
+			EquipInteractor(nullptr);
+			// EqupInteractor 에서 Current를 Set 하므로 메뉴얼릭하게 설정
+			CurrentEquipmentState = EInteractorType::Ability;
 		}
-		else if (InteractorType == EInteractorType::SubWeapon)
+		else if (EquipmentType == EInteractorType::MainWeapon)
 		{
-			EquipInteractor(SubWeapon);
-			UpdateEquipSpeedMultiplier();
+			if (MainWeapon)
+			{
+				EquipInteractor(MainWeapon);
+			}
 		}
-		else if (InteractorType == EInteractorType::Melee)
+		else if (EquipmentType == EInteractorType::SubWeapon)
 		{
-			EquipInteractor(MeleeKnife);
-			UpdateEquipSpeedMultiplier();
+			if (SubWeapon)
+			{
+				EquipInteractor(SubWeapon);
+			}
 		}
-		else if (InteractorType == EInteractorType::Spike)
+		else if (EquipmentType == EInteractorType::Melee)
 		{
-			EquipInteractor(Spike);
-			UpdateEquipSpeedMultiplier();
+			if (MeleeKnife)
+			{
+				EquipInteractor(MeleeKnife);
+			}
 		}
+		else if (EquipmentType == EInteractorType::Spike)
+		{
+			if (Spike)
+			{
+				EquipInteractor(Spike);
+			}
+		}
+
+		UpdateEquipSpeedMultiplier();
 	}
 	else
 	{
-		ServerRPC_SwitchInteractor(InteractorType);
+		ServerRPC_SwitchEquipment(EquipmentType);
 	}
 }
 
@@ -687,21 +742,27 @@ void ABaseAgent::ActivateSpike()
 		// 스파이크 소지자이고, 설치 상태이면 설치
 		if (Spike && Spike->GetSpikeState() == ESpikeState::Carried)
 		{
+			if (CurrentInteractor)
+			{
+				CurrentInteractor->SetActive(false);
+			}
+			
 			// 스파이크를 들지 않은 상태에서 설치하려 할 경우, 장착 로직 따로 실행
 			if (CurrentInteractor != Spike)
 			{
-				if (CurrentInteractor)
-				{
-					CurrentInteractor->SetActive(false);
-				}
 				CurrentInteractor = Spike;
 			}
 			ServerRPC_Interact(Spike);
 		}
 		// 스파이크 해제 가능 상태이면 스파이크 해제
-		else if (Cast<ASpike>(FindInteractActor))
+		else if (auto* spike = Cast<ASpike>(FindInteractActor))
 		{
-			ServerRPC_Interact(FindInteractActor);
+			if (CurrentInteractor)
+			{
+				CurrentInteractor->SetActive(false);
+			}
+			Spike = spike;
+			ServerRPC_Interact(spike);
 		}
 	}
 	else
@@ -710,7 +771,7 @@ void ABaseAgent::ActivateSpike()
 		{
 			return;
 		}
-		SwitchInteractor(EInteractorType::Spike);
+		SwitchEquipment(EInteractorType::Spike);
 	}
 }
 
@@ -752,9 +813,9 @@ void ABaseAgent::Server_AcquireInteractor_Implementation(ABaseInteractor* Intera
 	AcquireInteractor(Interactor);
 }
 
-void ABaseAgent::ServerRPC_SwitchInteractor_Implementation(EInteractorType InteractorType)
+void ABaseAgent::ServerRPC_SwitchEquipment_Implementation(EInteractorType InteractorType)
 {
-	SwitchInteractor(InteractorType);
+	SwitchEquipment(InteractorType);
 }
 
 void ABaseAgent::SetShopUI()
@@ -1393,7 +1454,8 @@ void ABaseAgent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifeti
 	DOREPLIFETIME(ABaseAgent, SubWeapon);
 	DOREPLIFETIME(ABaseAgent, Spike);
 	DOREPLIFETIME(ABaseAgent, CurrentInteractor);
-	DOREPLIFETIME(ABaseAgent, CurrentInteractorState);
+	DOREPLIFETIME(ABaseAgent, CurrentEquipmentState);
+	DOREPLIFETIME(ABaseAgent, PrevEquipmentState);
 	DOREPLIFETIME(ABaseAgent, PoseIdx);
 	DOREPLIFETIME(ABaseAgent, IsInPlantZone);
 	DOREPLIFETIME(ABaseAgent, ReplicatedControlRotation);
@@ -1485,10 +1547,10 @@ void ABaseAgent::OnSpikeStartPlant()
 	OnSpikeActive.Broadcast();
 }
 
-void ABaseAgent::OnSpikeCancelPlant()
+void ABaseAgent::OnSpikeCancelInteract()
 {
 	// NET_LOG(LogTemp,Warning,TEXT("baseAgent:: OnSpikeCancelPlant"));
-	SwitchInteractor(EInteractorType::Spike);
+	SwitchEquipment(EInteractorType::Spike);
 	bCanMove = true;
 	OnSpikeCancel.Broadcast();
 }
@@ -1503,7 +1565,31 @@ void ABaseAgent::OnSpikeFinishPlant()
 	}
 	
 	Spike = nullptr;
-	SwitchInteractor(EInteractorType::MainWeapon);
+	SwitchEquipment(EInteractorType::MainWeapon);
+}
+
+void ABaseAgent::OnSpikeStartDefuse()
+{
+	DefusalMesh->SetVisibility(true);
+	
+	bCanMove = false;
+	OnSpikeDeactive.Broadcast();
+}
+
+void ABaseAgent::OnSpikeCancelDefuse()
+{
+	DefusalMesh->SetVisibility(false);
+	
+	bCanMove = true;
+	OnSpikeCancel.Broadcast();
+}
+
+void ABaseAgent::OnSpikeFinishDefuse()
+{
+	DefusalMesh->SetVisibility(false);
+	
+	bCanMove = true;
+	OnSpikeDefuseFinish.Broadcast();
 }
 
 void ABaseAgent::OnRep_Controller()
@@ -1561,4 +1647,49 @@ bool ABaseAgent::IsInFrustum(const AActor* Actor) const
 		}
 	}
 	return false;
+}
+
+EInteractorType ABaseAgent::GetPrevEquipmentType() const
+{
+	return PrevEquipmentState;
+}
+
+void ABaseAgent::PlayFirstPersonMontage(UAnimMontage* MontageToPlay, float PlayRate, FName StartSectionName)
+{
+	if (ABP_1P && MontageToPlay)
+	{
+		ABP_1P->Montage_Play(MontageToPlay, PlayRate);
+		if (StartSectionName != NAME_None)
+		{
+			ABP_1P->Montage_JumpToSection(StartSectionName, MontageToPlay);
+		}
+	}
+}
+
+void ABaseAgent::PlayThirdPersonMontage(UAnimMontage* MontageToPlay, float PlayRate, FName StartSectionName)
+{
+	if (ABP_3P && MontageToPlay)
+	{
+		ABP_3P->Montage_Play(MontageToPlay, PlayRate);
+		if (StartSectionName != NAME_None)
+		{
+			ABP_3P->Montage_JumpToSection(StartSectionName, MontageToPlay);
+		}
+	}
+}
+
+void ABaseAgent::StopFirstPersonMontage(float BlendOutTime)
+{
+	if (ABP_1P)
+	{
+		ABP_1P->Montage_Stop(BlendOutTime);
+	}
+}
+
+void ABaseAgent::StopThirdPersonMontage(float BlendOutTime)
+{
+	if (ABP_3P)
+	{
+		ABP_3P->Montage_Stop(BlendOutTime);
+	}
 }

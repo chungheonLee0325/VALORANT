@@ -36,7 +36,7 @@ void UGA_LeftRight::OnPreMontageFinished()
 	UAgentAbilitySystemComponent* asc = Cast<UAgentAbilitySystemComponent>(GetAbilitySystemComponentFromActorInfo());
 	if (asc)
 	{
-		asc->SetSkillReady(true);
+		//asc->SetSkillReady(true);
 	}
 
 	// 실질 실행을 위한 후속 입력 대기 Task

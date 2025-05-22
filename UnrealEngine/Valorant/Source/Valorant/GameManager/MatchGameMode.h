@@ -4,10 +4,10 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/GameMode.h"
-#include "Player/AgentPlayerState.h"
-#include "ValorantObject/Spike/Spike.h"
 #include "MatchGameMode.generated.h"
 
+class AAgentPlayerState;
+class ASpike;
 class ABaseWeapon;
 class ABaseAgent;
 class AMatchPlayerController;

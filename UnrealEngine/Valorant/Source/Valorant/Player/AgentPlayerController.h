@@ -175,5 +175,7 @@ public:
 
 	UMiniMapWidget* GetMinimapWidget() const { return MinimapWidget; }
 	virtual void OnRep_Pawn() override;
-	
+
+	UFUNCTION()
+	void OnMatchEnd(const bool bBlueWin);
 };

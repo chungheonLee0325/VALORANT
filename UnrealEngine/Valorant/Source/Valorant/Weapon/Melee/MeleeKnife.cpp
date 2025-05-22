@@ -6,6 +6,7 @@
 #include "Valorant.h"
 #include "GameManager/SubsystemSteamManager.h"
 #include "Player/Agent/BaseAgent.h"
+#include "Player/Animaiton/AgentAnimInstance.h"
 
 
 // Sets default values

@@ -12,8 +12,8 @@ USage_E_HealingOrb::USage_E_HealingOrb()
 	Tags.AddTag(FGameplayTag::RequestGameplayTag(FName("Input.Skill.E")));
 	SetAssetTags(Tags);
 
-	FollowUpInputTags.Add(FGameplayTag::RequestGameplayTag(FName("Input.Default.LeftClick")));
-	FollowUpInputTags.Add(FGameplayTag::RequestGameplayTag(FName("Input.Default.RightClick")));
+	//FollowUpInputTags.Add(FGameplayTag::RequestGameplayTag(FName("Input.Default.LeftClick")));
+	//FollowUpInputTags.Add(FGameplayTag::RequestGameplayTag(FName("Input.Default.RightClick")));
 
 	m_AbilityID = 1003;
 }
@@ -21,7 +21,7 @@ USage_E_HealingOrb::USage_E_HealingOrb()
 void USage_E_HealingOrb::Active_Left_Click(FGameplayEventData data)
 {
 	// 라인트레이스로 아군 탐지
-	AActor* Owner = m_ActorInfo.AvatarActor.Get();
+	AActor* Owner = CachedActorInfo.AvatarActor.Get();
 	if (!Owner) return;
 	FVector Start = Owner->GetActorLocation();
 	FVector End = Start + Owner->GetActorForwardVector() * HealTraceDistance;
@@ -44,7 +44,7 @@ void USage_E_HealingOrb::Active_Left_Click(FGameplayEventData data)
 void USage_E_HealingOrb::Active_Right_Click(FGameplayEventData data)
 {
 	// 자신이 피해 입었을 때만 힐링
-	ABaseAgent* OwnerAgent = Cast<ABaseAgent>(m_ActorInfo.AvatarActor.Get());
+	ABaseAgent* OwnerAgent = Cast<ABaseAgent>(CachedActorInfo.AvatarActor.Get());
 	if (OwnerAgent /* && 체력 체크 */)
 	{
 		// 힐링 이펙트/지속힐 적용 (Tick마다 HealAmount/HealDuration)

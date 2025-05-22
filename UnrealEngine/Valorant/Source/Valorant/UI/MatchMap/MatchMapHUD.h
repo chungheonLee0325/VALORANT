@@ -200,6 +200,9 @@ public:
 	// 어빌리티 정보 업데이트 이벤트 (블루프린트에서 구현)
 	UFUNCTION(BlueprintImplementableEvent, Category = "Ability|Info")
 	void OnAbilityInfoUpdated(EAbilitySlotType SlotType, const FHUDAbilityInfo& AbilityInfo);
+
+	UFUNCTION(BlueprintImplementableEvent)
+	void OnMatchEnd(bool bWin);
 	
 public:
 	UPROPERTY(meta=(BindWidget))

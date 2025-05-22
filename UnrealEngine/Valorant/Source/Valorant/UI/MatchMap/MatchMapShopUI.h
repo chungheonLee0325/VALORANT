@@ -140,6 +140,16 @@ protected:
 	// 크레딧 텍스트 UI
 	UPROPERTY(BlueprintReadWrite, meta = (BindWidget), Category = "Shop|UI")
 	UTextBlock* CreditText;
+
+	// 어빌리티 이름 UI 
+	UPROPERTY(BlueprintReadWrite, meta = (BindWidget), Category = "Shop|UI")
+	UTextBlock* AbilityC_Text;
+	
+	UPROPERTY(BlueprintReadWrite, meta = (BindWidget), Category = "Shop|UI")
+	UTextBlock* AbilityQ_Text;
+	
+	UPROPERTY(BlueprintReadWrite, meta = (BindWidget), Category = "Shop|UI")
+	UTextBlock* AbilityE_Text;
 	
 	// 어빌리티 이미지 UI 
 	UPROPERTY(BlueprintReadWrite, meta = (BindWidget), Category = "Shop|UI")

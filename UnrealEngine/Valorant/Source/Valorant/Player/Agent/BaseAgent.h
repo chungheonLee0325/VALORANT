@@ -2,11 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
-#include "Player/AgentPlayerController.h"
-#include "Player/Animaiton/AgentAnimInstance.h"
 #include "Valorant/ResourceManager/ValorantGameType.h"
-#include "Weapon/BaseWeapon.h"
-#include "ValorantObject/Spike/Spike.h"
 #include "BaseAgent.generated.h"
 
 class UAgentAnimInstance;
@@ -34,6 +30,7 @@ enum class EVisibilityState  : uint8
 	Hidden,
 	QuestionMark,
 };
+
 UENUM(BlueprintType)
 enum class EAgentDamagedPart : uint8
 {
@@ -43,6 +40,14 @@ enum class EAgentDamagedPart : uint8
 	Legs
 };
 
+UENUM(BlueprintType)
+enum class EAgentDamagedDirection : uint8
+{
+	Front,
+	Back,
+	Left,
+	Right
+};
 
 //ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ
 //             CYT             ♣
@@ -67,8 +72,13 @@ struct FAgentVisibilityInfo
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnAgentEquip);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnAgentFire);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnAgentReload);
+
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnSpikeActive);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnSpikeCancel);
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnSpikeDeactive);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnSpikeDefuseFinish);
+
 
 UCLASS()
 class VALORANT_API ABaseAgent : public ACharacter
@@ -89,6 +99,9 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
 	USkeletalMeshComponent* FirstPersonMesh;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
+	USkeletalMeshComponent* DefusalMesh;
+	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
 	UAgentInputComponent* AgentInputComponent;
 
@@ -250,7 +263,7 @@ public:
 	void ResetFindInteractorActor() { FindInteractActor = nullptr; }
 
 	UFUNCTION(BlueprintCallable)
-	EInteractorType GetInteractorState() const { return CurrentInteractorState; }
+	EInteractorType GetInteractorState() const { return CurrentEquipmentState; }
 
 	UFUNCTION(BlueprintCallable)
 	ABaseInteractor* GetCurrentInterator() const { return CurrentInteractor; }
@@ -274,7 +287,7 @@ public:
 
 	/** 해당 슬롯의 인터랙터를 손에 들고자 할 때 */
 	UFUNCTION(BlueprintCallable, Category = "Weapon")
-	void SwitchInteractor(EInteractorType InteractorType);
+	void SwitchEquipment(EInteractorType EquipmentType);
 
 	void ActivateSpike();
 	void CancelSpike(ASpike* CancelObject);
@@ -286,7 +299,7 @@ public:
 	UFUNCTION(Server, Reliable, Category = "Weapon")
 	void Server_AcquireInteractor(ABaseInteractor* Interactor);
 	UFUNCTION(Server, Reliable, Category = "Weapon")
-	void ServerRPC_SwitchInteractor(EInteractorType InteractorType);
+	void ServerRPC_SwitchEquipment(EInteractorType InteractorType);
 
 	UFUNCTION(BlueprintCallable, Category = "GAS")
 	float GetEffectSpeedMulitiplier() const { return EffectSpeedMultiplier; }
@@ -326,6 +339,24 @@ public:
 	// 현재 팀이 공격팀인지 반환
 	UFUNCTION(BlueprintCallable, Category = "Team")
 	bool IsAttacker() const;
+
+	EInteractorType GetPrevEquipmentType() const;
+
+	// 1인칭 애니메이션 몽타주 재생
+	UFUNCTION(BlueprintCallable, Category = "Animation")
+	void PlayFirstPersonMontage(UAnimMontage* MontageToPlay, float PlayRate = 1.0f, FName StartSectionName = NAME_None);
+
+	// 3인칭 애니메이션 몽타주 재생
+	UFUNCTION(BlueprintCallable, Category = "Animation")
+	void PlayThirdPersonMontage(UAnimMontage* MontageToPlay, float PlayRate = 1.0f, FName StartSectionName = NAME_None);
+
+	// 1인칭 애니메이션 몽타주 정지
+	UFUNCTION(BlueprintCallable, Category = "Animation")
+	void StopFirstPersonMontage(float BlendOutTime = 0.25f);
+
+	// 3인칭 애니메이션 몽타주 정지
+	UFUNCTION(BlueprintCallable, Category = "Animation")
+	void StopThirdPersonMontage(float BlendOutTime = 0.25f);
 
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
@@ -393,7 +424,10 @@ protected:
 	ABaseInteractor* CurrentInteractor = nullptr;
 
 	UPROPERTY(Replicated, ReplicatedUsing = OnRep_CurrentInteractorState)
-	EInteractorType CurrentInteractorState = EInteractorType::None;
+	EInteractorType CurrentEquipmentState = EInteractorType::None;
+
+	UPROPERTY(Replicated)
+	EInteractorType PrevEquipmentState = EInteractorType::None;
 	
 	UFUNCTION()
 	void OnRep_CurrentInteractorState();
@@ -461,15 +495,24 @@ public:
 	FOnAgentEquip OnAgentEquip;
 	FOnAgentEquip OnAgentFire;
 	FOnAgentEquip OnAgentReload;
+	
 	FOnSpikeActive OnSpikeActive;
 	FOnSpikeCancel OnSpikeCancel;
+	
+	FOnSpikeDeactive OnSpikeDeactive;
+	FOnSpikeDefuseFinish OnSpikeDefuseFinish;
 	
 	void OnEquip();
 	void OnFire();
 	void OnReload();
+	
 	void OnSpikeStartPlant();
-	void OnSpikeCancelPlant();
+	void OnSpikeCancelInteract();
 	void OnSpikeFinishPlant();
+	
+	void OnSpikeStartDefuse();
+	void OnSpikeCancelDefuse();
+	void OnSpikeFinishDefuse();
 	
 	bool bInteractionCapsuleInit = false;
 	virtual void OnRep_Controller() override;
