@@ -98,6 +98,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category="Weapon")
 	void UpdateVisualState();
 
+	// 무기 탄약 리셋
+	void ServerOnly_ClearAmmo();
+
 protected:
 	// Called when the game starts
 	virtual void BeginPlay() override;
