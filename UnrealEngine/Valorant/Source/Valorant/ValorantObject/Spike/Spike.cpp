@@ -233,22 +233,23 @@ void ASpike::ServerRPC_Interact_Implementation(ABaseAgent* InteractAgent)
 	case ESpikeState::Carried:
 		// 이미 소지 중인 스파이크 - 공격팀은 설치 가능
 		// 현재 라운드가 InRound 상태인지 확인
-		
-		if (OwnerAgent == InteractAgent && AMatchGameMode::IsAttacker(PS->bIsBlueTeam) && 
-			IsInPlantZone() && IsGameStateInRound())
-		{
-			// 스파이크 설치 시작
 			ServerRPC_StartPlanting(InteractAgent);
-		}
+		// if (OwnerAgent == InteractAgent && AMatchGameMode::IsAttacker(PS->bIsBlueTeam) && 
+		// 	IsInPlantZone() && IsGameStateInRound())
+		// {
+		// 	// 스파이크 설치 시작
+		// 	ServerRPC_StartPlanting(InteractAgent);
+		// }
 		break;
 
 	case ESpikeState::Planted:
 		// 설치된 스파이크 - 수비팀만 해제 가능
-		if (!AMatchGameMode::IsAttacker(PS->bIsBlueTeam))
-		{
-			// 스파이크 해제 시작
-			ServerRPC_StartDefusing(InteractAgent);
-		}
+		ServerRPC_StartDefusing(InteractAgent);
+		// if (!AMatchGameMode::IsAttacker(PS->bIsBlueTeam))
+		// {
+		// 	// 스파이크 해제 시작
+		// 	ServerRPC_StartDefusing(InteractAgent);
+		// }
 		break;
 
 	default:
@@ -269,6 +270,7 @@ void ASpike::ServerRPC_Cancel_Implementation(ABaseAgent* InteractAgent)
 		return;
 	}
 
+	UE_LOG(LogTemp,Error,TEXT("스파이크 취소"));
 	// 상태에 따른 상호작용 처리
 	switch (SpikeState)
 	{
@@ -283,11 +285,12 @@ void ASpike::ServerRPC_Cancel_Implementation(ABaseAgent* InteractAgent)
 
 	case ESpikeState::Defusing:
 		// 해제 중인 스파이크
-		if (!AMatchGameMode::IsAttacker(PS->bIsBlueTeam))
-		{
-			// 스파이크 해제 취소
-			ServerRPC_CancelDefusing();
-		}
+		ServerRPC_CancelDefusing();
+		// if (!AMatchGameMode::IsAttacker(PS->bIsBlueTeam))
+		// {
+		// 	// 스파이크 해제 취소
+		// 	ServerRPC_CancelDefusing();
+		// }
 		break;
 
 	default:
@@ -303,10 +306,10 @@ void ASpike::ServerRPC_StartPlanting_Implementation(ABaseAgent* Agent)
 	}
 	
 	// 현재 라운드가 InRound 상태인지 확인
-	if (!IsGameStateInRound())
-	{
-		return;
-	}
+	// if (!IsGameStateInRound())
+	// {
+	// 	return;
+	// }
 	
 	// 스파이크 설치 시작
 	SpikeState = ESpikeState::Planting;
@@ -331,7 +334,8 @@ void ASpike::ServerRPC_CancelPlanting_Implementation()
 		return;
 	}
 	
-	MulticastRPC_AgentCancelPlant(InteractingAgent);
+	InteractingAgent->SwitchInteractor(EInteractorType::Spike);
+	MulticastRPC_AgentCancelSpike(InteractingAgent);
 
 	// 설치 취소
 	SpikeState = ESpikeState::Carried;
@@ -353,6 +357,11 @@ void ASpike::ServerRPC_FinishPlanting_Implementation()
 	SpikeState = ESpikeState::Planted;
 	InteractProgress = 0.0f;
 	RemainingDetonationTime = 45.0f; // 폭발까지 45초
+	
+	if (const auto* DetectWidget = Cast<UDetectWidget>(DetectWidgetComponent->GetUserWidgetObject()))
+	{
+		DetectWidget->SetName(TEXT("스파이크 해체"));
+	}
 	
 	// 게임 모드에 설치 완료 알림
 	AMatchGameMode* GameMode = Cast<AMatchGameMode>(UGameplayStatics::GetGameMode(GetWorld()));
@@ -378,7 +387,7 @@ void ASpike::ServerRPC_FinishPlanting_Implementation()
 	// 스파이크 위치 고정
 	const FVector& ForwardVector = OwnerAgent->GetActorForwardVector();
 	const FVector& FeetLocation = OwnerAgent->GetMovementComponent()->GetActorFeetLocation();
-	const FVector NewLocation = FeetLocation + ForwardVector * 50;
+	const FVector NewLocation = FeetLocation + ForwardVector * 100;
 	SetActorLocation(NewLocation);
 	SetActorRotation(FRotator(0, 0, 0));
 	
@@ -401,11 +410,11 @@ void ASpike::ServerRPC_StartDefusing_Implementation(ABaseAgent* Agent)
 	}
 
 	// 수비팀만 해제 가능
-	auto* PS = Agent->GetPlayerState<AAgentPlayerState>();
-	if (!PS || AMatchGameMode::IsAttacker(PS->bIsBlueTeam))
-	{
-		return;
-	}
+	// auto* PS = Agent->GetPlayerState<AAgentPlayerState>();
+	// if (!PS || AMatchGameMode::IsAttacker(PS->bIsBlueTeam))
+	// {
+	// 	return;
+	// }
 
 	// 같은 에이전트가 다시 해제하는 경우 반 해제 적용
 	// bool isHalfDefuse = bIsHalfDefused && LastDefusingAgent == Agent;
@@ -413,6 +422,7 @@ void ASpike::ServerRPC_StartDefusing_Implementation(ABaseAgent* Agent)
 	// 스파이크 해제 시작
 	SpikeState = ESpikeState::Defusing;
 	InteractingAgent = Agent;
+	MulticastRPC_AgentStartDefuse(InteractingAgent);
 
 	// 반 해제 상태라면 진행도를 절반으로 설정
 	InteractProgress = bIsHalfDefused ? HalfDefuseTime : 0.0f;
@@ -423,10 +433,15 @@ void ASpike::ServerRPC_StartDefusing_Implementation(ABaseAgent* Agent)
 
 void ASpike::ServerRPC_CancelDefusing_Implementation()
 {
+	UE_LOG(LogTemp,Error,TEXT("해체 취소"));
 	if (SpikeState != ESpikeState::Defusing)
 	{
 		return;
 	}
+
+	//TODO: 다른 슬롯으로 변경해줘야하는데, 임시로 4번으로 지정
+	InteractingAgent->SwitchInteractor(EInteractorType::Spike);
+	MulticastRPC_AgentCancelSpike(InteractingAgent);
 
 	// 해제 취소
 	SpikeState = ESpikeState::Planted;
@@ -452,6 +467,7 @@ void ASpike::ServerRPC_FinishDefusing_Implementation()
 
 	// 해제 완료
 	SpikeState = ESpikeState::Defused;
+	MulticastRPC_AgentFinishDefuse(InteractingAgent);
 
 	// 게임 모드에 해제 완료 알림
 	AMatchGameMode* GameMode = Cast<AMatchGameMode>(UGameplayStatics::GetGameMode(GetWorld()));
@@ -464,6 +480,7 @@ void ASpike::ServerRPC_FinishDefusing_Implementation()
 		}
 	}
 
+	
 	// 반 해제 상태 리셋
 	bIsHalfDefused = false;
 	LastDefusingAgent = nullptr;
@@ -503,6 +520,7 @@ void ASpike::ServerRPC_Detonate_Implementation()
 
 void ASpike::CheckHalfDefuse()
 {
+	UE_LOG(LogTemp,Warning,TEXT("반절 해제"));
 	if (SpikeState == ESpikeState::Defusing && InteractingAgent)
 	{
 		// 반 해제 상태 설정
@@ -630,12 +648,22 @@ void ASpike::MulticastRPC_AgentStartPlant_Implementation(ABaseAgent* Agent)
 	Agent->OnSpikeStartPlant();
 }
 
-void ASpike::MulticastRPC_AgentCancelPlant_Implementation(ABaseAgent* Agent)
+void ASpike::MulticastRPC_AgentCancelSpike_Implementation(ABaseAgent* Agent)
 {
-	Agent->OnSpikeCancelPlant();	
+	Agent->OnSpikeCancelInteract();	
 }
 
 void ASpike::MulticastRPC_AgentFinishPlant_Implementation(ABaseAgent* Agent)
 {
 	Agent->OnSpikeFinishPlant();
+}
+
+void ASpike::MulticastRPC_AgentStartDefuse_Implementation(ABaseAgent* Agent)
+{
+	Agent->OnSpikeStartDefuse();
+}
+
+void ASpike::MulticastRPC_AgentFinishDefuse_Implementation(ABaseAgent* Agent)
+{
+	Agent->OnSpikeFinishDefuse();
 }

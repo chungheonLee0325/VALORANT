@@ -202,7 +202,13 @@ protected:
 	UFUNCTION(NetMulticast, Reliable)
 	void MulticastRPC_AgentStartPlant(ABaseAgent* Agent);
 	UFUNCTION(NetMulticast, Reliable)
-	void MulticastRPC_AgentCancelPlant(ABaseAgent* Agent);
-	UFUNCTION(NetMulticast, Reliable)
 	void MulticastRPC_AgentFinishPlant(ABaseAgent* Agent);
+	
+	UFUNCTION(NetMulticast, Reliable)
+	void MulticastRPC_AgentCancelSpike(ABaseAgent* Agent);
+	
+	UFUNCTION(NetMulticast, Reliable)
+	void MulticastRPC_AgentStartDefuse(ABaseAgent* Agent);
+	UFUNCTION(NetMulticast, Reliable)
+	void MulticastRPC_AgentFinishDefuse(ABaseAgent* Agent);
 };
