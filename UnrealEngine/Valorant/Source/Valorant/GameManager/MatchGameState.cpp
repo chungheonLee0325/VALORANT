@@ -47,6 +47,11 @@ void AMatchGameState::HandleMatchHasEnded()
 	// InProgress 상태일 때 ReadyToEndMatch()가 True가 되면 호출된다 (Tick에서 매번 확인)
 	Super::HandleMatchHasEnded();
 	NET_LOG(LogTemp, Warning, TEXT("%hs Called"), __FUNCTION__);
+	// for (const auto PS : PlayerArray)
+	// {
+	// 	auto* PC = Cast<AAgentPlayerController>(PS->GetPlayerController());
+	// 	PC->OnMatchEnd(TeamBlueScore >= TeamRedScore);
+	// }
 }
 
 void AMatchGameState::HandleLeavingMap()
@@ -205,4 +210,10 @@ void AMatchGameState::MulticastRPC_OnShift_Implementation()
 {
 	NET_LOG(LogTemp, Warning, TEXT("%hs Called"), __FUNCTION__);
 	OnShift.Broadcast();
+}
+
+void AMatchGameState::MulticastRPC_OnMatchEnd_Implementation(const bool bBlueWin)
+{
+	NET_LOG(LogTemp, Warning, TEXT("%hs Called"), __FUNCTION__);
+	OnMatchEnd.Broadcast(bBlueWin);
 }

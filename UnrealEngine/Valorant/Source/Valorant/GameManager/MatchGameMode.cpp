@@ -266,6 +266,7 @@ bool AMatchGameMode::ReadyToEndMatch_Implementation()
 
 void AMatchGameMode::LeavingMatch()
 {
+	bReadyToEndMatch = true;
 	for (const auto& PlayerInfo : MatchPlayers)
 	{
 		PlayerInfo.Controller->ClientRPC_CleanUpSession();
@@ -277,7 +278,7 @@ void AMatchGameMode::HandleMatchHasEnded()
 {
 	Super::HandleMatchHasEnded();
 	// 일정 시간 이후 매치 완전 종료
-	GetWorld()->GetTimerManager().SetTimer(RoundTimerHandle, this, &AMatchGameMode::LeavingMatch, LeavingMatchTime);
+	// GetWorld()->GetTimerManager().SetTimer(RoundTimerHandle, this, &AMatchGameMode::LeavingMatch, LeavingMatchTime);
 }
 
 void AMatchGameMode::StartSelectAgent()
@@ -414,15 +415,12 @@ void AMatchGameMode::HandleRoundSubState_EndPhase()
 	if (RequiredScore <= TeamBlueScore || RequiredScore <= TeamRedScore)
 	{
 		NET_LOG(LogTemp, Warning, TEXT("ReadyToEndMatch"));
-		bReadyToEndMatch = true; // true가 되면 MatchState가 WaitingPostMatch로 전환되고 HandleMatchHasEnded 이벤트 발생
-		// TODO: 매치 승리/패배를 알림
-		if (RequiredScore <= TeamBlueScore)
+		// 일정 시간 후에 매치 세션 종료
+		GetWorld()->GetTimerManager().SetTimer(RoundTimerHandle, this, &AMatchGameMode::LeavingMatch, LeavingMatchTime);
+		AMatchGameState* MatchGameState = GetGameState<AMatchGameState>();
+		if (MatchGameState)
 		{
-			//
-		}
-		else
-		{
-			//
+			MatchGameState->MulticastRPC_OnMatchEnd(RequiredScore <= TeamBlueScore);
 		}
 		return;
 	}

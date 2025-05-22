@@ -12,10 +12,8 @@
 #include "Agent/BaseAgent.h"
 #include "UI/MatchMap/MatchMapHUD.h"
 #include "Widget/AgentBaseWidget.h"
-#include "Component/CreditComponent.h"
 #include "Valorant/Player/Widget/MiniMapWidget.h"
 #include "Component/ShopComponent.h"
-#include "Kismet/GameplayStatics.h"
 #include "Valorant/GameManager/ValorantGameInstance.h"
 #include "Valorant/UI/MatchMap/MatchMapShopUI.h"
 
@@ -47,6 +45,7 @@ void AAgentPlayerController::BeginPlay()
 	if (AMatchGameState* GameState = GetWorld()->GetGameState<AMatchGameState>())
 	{
 		GameState->OnShopClosed.AddDynamic(this, &AAgentPlayerController::CloseShopUI);
+		GameState->OnMatchEnd.AddDynamic(this, &AAgentPlayerController::OnMatchEnd);
 	}
 }
 
@@ -487,5 +486,31 @@ void AAgentPlayerController::OnRep_Pawn()
 	{
 		// 미니맵 초기화 함수 호출
 		InitializeMinimap();
+	}
+}
+
+void AAgentPlayerController::OnMatchEnd(const bool bBlueWin)
+{
+	if (auto* MatchMapHud = Cast<UMatchMapHUD>(GetMatchMapHud()))
+	{
+		const auto* PS = GetPlayerState<AAgentPlayerState>();
+		if (PS)
+		{
+			const bool bWin = !(PS->bIsBlueTeam ^ bBlueWin);
+			// NOT(XOR) 하면 아래 결과가 나옴
+			// True, True = Win
+			// True, False = False
+			// False, True = False
+			// False, False = True
+			MatchMapHud->OnMatchEnd(bWin);
+		}
+		else
+		{
+			NET_LOG(LogTemp, Error, TEXT("%hs Called, PS is nullptr"), __FUNCTION__);
+		}
+	}
+	else
+	{
+		NET_LOG(LogTemp, Error, TEXT("%hs Called, AgentWidget is nullptr"), __FUNCTION__);
 	}
 }
