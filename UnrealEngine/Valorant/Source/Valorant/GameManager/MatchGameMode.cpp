@@ -366,6 +366,9 @@ void AMatchGameMode::HandleRoundSubState_PreRound()
 	// 스파이크 관련 상태 초기화
 	bSpikePlanted = false;
 
+	// 배리어 활성화를 위한 브로드캐스트
+	OnStartPreRound.Broadcast();
+
 	// 일정 시간 후에 라운드 시작
 	MaxTime = PreRoundTime;
 	GetWorld()->GetTimerManager().ClearTimer(RoundTimerHandle);
@@ -380,6 +383,9 @@ void AMatchGameMode::HandleRoundSubState_BuyPhase()
 
 	// 스파이크 관련 상태 초기화
 	bSpikePlanted = false;
+
+	// 배리어 활성화를 위한 브로드캐스트
+	OnStartPreRound.Broadcast();
 
 	// 일정 시간 후에 라운드 시작
 	MaxTime = BuyPhaseTime;
@@ -398,6 +404,9 @@ void AMatchGameMode::HandleRoundSubState_InRound()
 	{
 		MatchGameState->MulticastRPC_CloseAllShops();
 	}
+
+	// 배리어 해제를 위한 브로드캐스트
+	OnStartInRound.Broadcast();
 
 	// 일정 시간 후에 라운드 종료
 	MaxTime = InRoundTime;

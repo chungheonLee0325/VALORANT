@@ -50,9 +50,9 @@ struct FMatchPlayer
 	bool bIsDead = false;
 };
 
-/**
- * 
- */
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnStartInRound);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnStartPreRound);
+
 UCLASS()
 class VALORANT_API AMatchGameMode : public AGameMode
 {
@@ -99,7 +99,6 @@ private:
 	UPROPERTY(EditDefaultsOnly, Category="Gameflow", meta=(AllowPrivateAccess))
 	TSubclassOf<ABaseWeapon> ClassicAsset;
 	
-
 	UPROPERTY()
 	ASpike* Spike;
 
@@ -192,4 +191,7 @@ public:
 
 	UPROPERTY(EditAnywhere)
 	TSubclassOf<ASpike> SpikeClass;
+
+	FOnStartPreRound OnStartPreRound;
+	FOnStartInRound OnStartInRound;
 };
