@@ -28,7 +28,7 @@ void FValorantGameplayTags::InitializeNativeTags()
     REGISTER_TAG(State_Ability_Aiming, "State.Ability.Aiming");
     REGISTER_TAG(State_Ability_Charging, "State.Ability.Charging");
     REGISTER_TAG(State_Ability_Executing, "State.Ability.Executing");
-    REGISTER_TAG(State_Ability_Cooldown, "State.Ability.Cooldown");
+    REGISTER_TAG(State_Ability_Ended, "State.Ability.Ended");
     REGISTER_TAG(State_Ability_WaitingFollowUp, "State.Ability.WaitingFollowUp");
     
     // 어빌리티 차단 태그들

@@ -284,7 +284,7 @@ void UAgentAbilitySystemComponent::CleanupAbilityState()
     SetAbilityState(FValorantGameplayTags::Get().State_Ability_WaitingFollowUp, false);
     SetAbilityState(FValorantGameplayTags::Get().State_Ability_Charging, false);
     SetAbilityState(FValorantGameplayTags::Get().State_Ability_Aiming, false);
-    SetAbilityState(FValorantGameplayTags::Get().State_Ability_Cooldown, false);
+    SetAbilityState(FValorantGameplayTags::Get().State_Ability_Ended, false);
     
     ClearFollowUpInputs();
 }
@@ -379,7 +379,7 @@ void UAgentAbilitySystemComponent::MulticastRPC_NotifyAnimationCompleted_Impleme
         UBaseGameplayAbility* AbilityInstance = Cast<UBaseGameplayAbility>(FoundSpec->GetPrimaryInstance());
         if (AbilityInstance)
         {
-            AbilityInstance->OnReadyAnimationCompleted();
+            AbilityInstance->OnPreparingAnimationCompleted();
         }
     }
 }

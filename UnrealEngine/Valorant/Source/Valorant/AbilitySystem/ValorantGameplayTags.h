@@ -18,11 +18,11 @@ struct FValorantGameplayTags
     
     // 어빌리티 상태 태그들 (State만 사용, Phase 제거)
     FGameplayTag State_Ability_Preparing;          // "State.Ability.Preparing" (애니메이션 재생 중)
-    FGameplayTag State_Ability_Ready;              // "State.Ability.Ready"
-    FGameplayTag State_Ability_Aiming;             // "State.Ability.Aiming"
-    FGameplayTag State_Ability_Charging;           // "State.Ability.Charging"
-    FGameplayTag State_Ability_Executing;          // "State.Ability.Executing"
-    FGameplayTag State_Ability_Cooldown;           // "State.Ability.Cooldown"
+    FGameplayTag State_Ability_Ready;              // "State.Ability.Ready"  (스킬 준비 완료)
+    FGameplayTag State_Ability_Aiming;             // "State.Ability.Aiming" (스킬 조준)
+    FGameplayTag State_Ability_Charging;           // "State.Ability.Charging" (스킬 차징)
+    FGameplayTag State_Ability_Executing;          // "State.Ability.Executing" (스킬 실행)
+    FGameplayTag State_Ability_Ended;              // "State.Ability.Ended"
     FGameplayTag State_Ability_WaitingFollowUp;    // "State.Ability.WaitingFollowUp"
     
     // 어빌리티 차단 태그들

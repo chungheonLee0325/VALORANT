@@ -80,8 +80,14 @@ public:
 	UFUNCTION()
 	virtual void HandleFollowUpInput(FGameplayTag InputTag, FGameplayEventData EventData);
 
+	// 어빌리티 phase 전환 
 	UFUNCTION()
-	void OnReadyAnimationCompleted();
+	void OnPreparingAnimationCompleted();
+	UFUNCTION()
+	void OnExecutingAnimationCompleted();
+	// 어빌리티 종료
+	UFUNCTION()
+	void OnAbilityComplete();
 protected:
 	// === 어빌리티 설정 ===
 	UPROPERTY(EditAnywhere, Category = "Ability Config")
@@ -110,9 +116,9 @@ protected:
 	UAnimMontage* Ready3pMontage;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Ability Assets")
-	UAnimMontage* Execute1pMontage;
+	UAnimMontage* Executing1pMontage;
 	UPROPERTY(EditDefaultsOnly, Category = "Ability Assets")
-	UAnimMontage* Execute3pMontage;
+	UAnimMontage* Executing3pMontage;
 
 	// === 상태 변수들 ===
 	UPROPERTY(BlueprintReadOnly, Category = "Ability State")
@@ -140,7 +146,7 @@ protected:
 	// === 캐시된 정보 ===
 	UPROPERTY()
 	FGameplayAbilityActorInfo CachedActorInfo;
-	
+
 	// === GameplayAbility 오버라이드 ===
 	virtual bool CanActivateAbility(const FGameplayAbilitySpecHandle Handle,
 	                                const FGameplayAbilityActorInfo* ActorInfo,
@@ -160,6 +166,11 @@ protected:
 	virtual void InputReleased(const FGameplayAbilitySpecHandle Handle,
 	                           const FGameplayAbilityActorInfo* ActorInfo,
 	                           const FGameplayAbilityActivationInfo ActivationInfo) override;
+
+	// Cost 소모
+	virtual bool CommitAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
+	                           const FGameplayAbilityActivationInfo ActivationInfo,
+	                           FGameplayTagContainer* OptionalRelevantTags = nullptr) override;
 
 	virtual void EndAbility(const FGameplayAbilitySpecHandle Handle,
 	                        const FGameplayAbilityActorInfo* ActorInfo,
@@ -183,6 +194,11 @@ protected:
 	virtual void HandleMultiPhaseAbility();
 	virtual void HandleRepeatableAbility();
 
+	// 어빌리티
+	virtual void HandlePreparingState();
+	virtual void HandleReadyState();
+	virtual void HandleExecutingState();
+	
 	// 상태별 처리
 	UFUNCTION(BlueprintImplementableEvent, Category = "Ability|State")
 	void OnStateEntered(FGameplayTag StateTag);
@@ -200,9 +216,6 @@ protected:
 	// 타이머 관리
 	UFUNCTION()
 	void OnStateTimeout();
-
-	UFUNCTION()
-	void OnAbilityComplete();
 
 	FTimerHandle StateTimeoutHandle;
 	FTimerHandle AbilityCompleteHandle;
@@ -229,10 +242,7 @@ protected:
 
 	UFUNCTION(BlueprintImplementableEvent, Category = "Ability|Effects")
 	void PlayExecuteEffects();
-
-	UFUNCTION(BlueprintImplementableEvent, Category = "Ability|Effects")
-	void PlayCooldownEffects();
-
+	
 	// 상태별 액션 실행
 	UFUNCTION(BlueprintImplementableEvent, Category = "Ability|Actions")
 	void ExecuteStateAction(float HoldTime = 0.0f);
