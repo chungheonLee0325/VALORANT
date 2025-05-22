@@ -530,18 +530,6 @@ void ABaseAgent::ServerRPC_Interact_Implementation(ABaseInteractor* Interactor)
 		NET_LOG(LogTemp, Error, TEXT("%hs Called, Interactor is nullptr"), __FUNCTION__);
 		return;
 	}
-
-	//TODO: 플랜트 존에서, 스파이크를 들고 있지 않다가 바로 설치를 하려할 경우, 스파이크를 장착을 따로 해줌
-	// if (Interactor == Spike && CurrentInteractor != Spike)
-	// {
-	// 	NET_LOG(LogTemp,Error,TEXT("스파이크 수동장착"));
-	// 	if (CurrentInteractor)
-	// 	{
-	// 		CurrentInteractor->SetActive(false);
-	// 	}
-	// 	CurrentInteractor = Spike;
-	// 	CurrentInteractorState = EInteractorType::Spike;
-	// }
 	
 	Interactor->ServerRPC_Interact(this);
 }
@@ -699,6 +687,15 @@ void ABaseAgent::ActivateSpike()
 		// 스파이크 소지자이고, 설치 상태이면 설치
 		if (Spike && Spike->GetSpikeState() == ESpikeState::Carried)
 		{
+			// 스파이크를 들지 않은 상태에서 설치하려 할 경우, 장착 로직 따로 실행
+			if (CurrentInteractor != Spike)
+			{
+				if (CurrentInteractor)
+				{
+					CurrentInteractor->SetActive(false);
+				}
+				CurrentInteractor = Spike;
+			}
 			ServerRPC_Interact(Spike);
 		}
 		// 스파이크 해제 가능 상태이면 스파이크 해제
@@ -1491,6 +1488,7 @@ void ABaseAgent::OnSpikeStartPlant()
 void ABaseAgent::OnSpikeCancelPlant()
 {
 	// NET_LOG(LogTemp,Warning,TEXT("baseAgent:: OnSpikeCancelPlant"));
+	SwitchInteractor(EInteractorType::Spike);
 	bCanMove = true;
 	OnSpikeCancel.Broadcast();
 }
