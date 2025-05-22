@@ -3,24 +3,57 @@
 
 #include "StartBarrier.h"
 
+#include "GameManager/MatchGameMode.h"
+#include "Kismet/GameplayStatics.h"
 
-// Sets default values
+
 AStartBarrier::AStartBarrier()
 {
-	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
+	bReplicates = true;
+
+	Root = CreateDefaultSubobject<USceneComponent>(TEXT("Root"));
+	SetRootComponent(Root);
+	
+	Mesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("WeaponMesh"));
+	Mesh->SetupAttachment(Root);
+	Mesh->SetCollisionObjectType(ECC_WorldStatic);
 }
 
-// Called when the game starts or when spawned
 void AStartBarrier::BeginPlay()
 {
 	Super::BeginPlay();
-	
+	AMatchGameMode* GameMode = Cast<AMatchGameMode>(UGameplayStatics::GetGameMode(GetWorld()));
+	if (GameMode)
+	{
+		GameMode->OnStartPreRound.AddDynamic(this,&AStartBarrier::ActiveBarrier);
+		GameMode->OnStartInRound.AddDynamic(this,&AStartBarrier::DeactiveBarrier);
+	}
 }
 
-// Called every frame
 void AStartBarrier::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 }
 
+void AStartBarrier::DeactiveBarrier()
+{
+	Multicast_DeactiveBarrier();
+}
+
+void AStartBarrier::ActiveBarrier()
+{
+	Multicast_ActiveBarrier();
+}
+
+void AStartBarrier::Multicast_ActiveBarrier_Implementation()
+{
+	Mesh->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+	Mesh->SetVisibility(true);
+}
+
+void AStartBarrier::Multicast_DeactiveBarrier_Implementation()
+{
+	Mesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	Mesh->SetVisibility(false);
+}

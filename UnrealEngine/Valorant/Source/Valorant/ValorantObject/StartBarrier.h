@@ -12,14 +12,26 @@ class VALORANT_API AStartBarrier : public AActor
 	GENERATED_BODY()
 
 public:
-	// Sets default values for this actor's properties
 	AStartBarrier();
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess = "true"))
+	TObjectPtr<USceneComponent> Root;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess = "true"))
+	TObjectPtr<UStaticMeshComponent> Mesh;
 
 protected:
-	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
+	
+	UFUNCTION()
+	void DeactiveBarrier();
+	UFUNCTION()
+	void ActiveBarrier();
+
+	UFUNCTION(NetMulticast, Reliable)
+	void Multicast_ActiveBarrier();
+	UFUNCTION(NetMulticast, Reliable)
+	void Multicast_DeactiveBarrier();
 
 public:
-	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 };
