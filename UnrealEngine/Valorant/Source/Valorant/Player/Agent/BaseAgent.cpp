@@ -1155,24 +1155,28 @@ void ABaseAgent::UpdateHealth(float newHealth)
 {
 	// 피격 방향 판정
 	const AActor* Attacker = GetInstigator();
-	const FVector Dir = (GetActorLocation() - Attacker->GetActorLocation()).GetSafeNormal();
-	const FVector Forward = GetActorForwardVector();
-	const float Dot = FVector::DotProduct(Forward, Dir); // Vector A와 B 사이의 코사인 각도 (앞뒤 판단)
-	const FVector Cross = FVector::CrossProduct(Forward, Dir); // 양쪽 벡터에 모두 수직인 벡터 (좌우 판단)
 	EAgentDamagedDirection DamagedDirection = EAgentDamagedDirection::Front;
-	// 0.707 : cos 45의 근사값
-	if (Dot > 0.707f)
+	if (Attacker)
 	{
-		DamagedDirection = EAgentDamagedDirection::Back;
-	}
-	else if (Dot < -0.707f)
-	{
-		DamagedDirection = EAgentDamagedDirection::Front;
-	}
-	else
-	{
-		// Cross.Z : Yaw 기준으로 좌우를 판단하겠다
-		DamagedDirection = (Cross.Z > 0) ? EAgentDamagedDirection::Left : EAgentDamagedDirection::Right;
+		const FVector Dir = (GetActorLocation() - Attacker->GetActorLocation()).GetSafeNormal();
+		const FVector Forward = GetActorForwardVector();
+		const float Dot = FVector::DotProduct(Forward, Dir); // Vector A와 B 사이의 코사인 각도 (앞뒤 판단)
+		const FVector Cross = FVector::CrossProduct(Forward, Dir); // 양쪽 벡터에 모두 수직인 벡터 (좌우 판단)
+	
+		// 0.707 : cos 45의 근사값
+		if (Dot > 0.707f)
+		{
+			DamagedDirection = EAgentDamagedDirection::Back;
+		}
+		else if (Dot < -0.707f)
+		{
+			DamagedDirection = EAgentDamagedDirection::Front;
+		}
+		else
+		{
+			// Cross.Z : Yaw 기준으로 좌우를 판단하겠다
+			DamagedDirection = (Cross.Z > 0) ? EAgentDamagedDirection::Left : EAgentDamagedDirection::Right;
+		}
 	}
 	
 	if (newHealth <= 0.f && bIsDead == false)
