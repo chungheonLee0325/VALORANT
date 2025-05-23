@@ -72,6 +72,7 @@ struct FAgentVisibilityInfo
 	
 };
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_FourParams(FOnAgentDamaged, const EAgentDamagedPart, DamagedPart, const EAgentDamagedDirection, DamagedDirection, const bool, bDie, const bool, bLarge);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnAgentEquip);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnAgentFire);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnAgentReload);
@@ -237,7 +238,7 @@ public:
 	
 	int GetPoseIdx() const { return PoseIdx; }
 
-	UFUNCTION(Server, Reliable)
+	UFUNCTION(Server, Reliable, BlueprintCallable)
 	void ServerApplyGE(TSubclassOf<UGameplayEffect> geClass);
 	UFUNCTION(Server, Reliable)
 	void ServerApplyHitScanGE(TSubclassOf<UGameplayEffect> GEClass, const int Damage,
@@ -476,6 +477,9 @@ protected:
 	virtual void OnStartCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust) override;
 	virtual void OnEndCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust) override;
 
+	UFUNCTION(BlueprintImplementableEvent)
+	void OnKill();
+	
 	virtual void InitAgentAbility();
 
 	UFUNCTION(BlueprintCallable)
@@ -505,6 +509,9 @@ protected:
 	UFUNCTION()
 	void UpdateEffectSpeed(float newEffectSpeed);
 
+	UFUNCTION(NetMulticast, Reliable)
+	void MulticastRPC_OnDamaged(const EAgentDamagedPart DamagedPart, const EAgentDamagedDirection DamagedDirection, const bool bDie, const bool bLarge = false);
+
 	// 무기 카테고리에 따른 이동 속도 멀티플라이어 업데이트
 	void UpdateEquipSpeedMultiplier();
 
@@ -514,6 +521,7 @@ private:
 	bool IsInPlantZone = false;
 
 public:
+	FOnAgentDamaged OnAgentDamaged;
 	FOnAgentEquip OnAgentEquip;
 	FOnAgentEquip OnAgentFire;
 	FOnAgentEquip OnAgentReload;
@@ -529,12 +537,13 @@ public:
 	void OnReload();
 	
 	void OnSpikeStartPlant();
-	void OnSpikeCancelInteract();
 	void OnSpikeFinishPlant();
 	
 	void OnSpikeStartDefuse();
-	void OnSpikeCancelDefuse();
 	void OnSpikeFinishDefuse();
+	// void OnSpikeCancelDefuse();
+	
+	void OnSpikeCancelInteract();
 	
 	bool bInteractionCapsuleInit = false;
 	virtual void OnRep_Controller() override;

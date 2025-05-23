@@ -18,6 +18,9 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnCreditChangedDelegate, int32, New
 // 어빌리티 스택 변경 델리게이트 선언
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnAbilityStackChangedDelegate, int32, AbilityID, int32, NewStack);
 
+// 킬 델리게이트, 에이전트 캐릭터가 구독 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnKill);
+
 /**
  * 
  */
@@ -116,6 +119,13 @@ public:
 	// 서버에서 모든 스택 정보 전송
 	UFUNCTION(Client, Reliable)
 	void Client_SyncAllAbilityStacks(const TArray<int32>& AbilityIDs, const TArray<int32>& Stacks);
+
+	UFUNCTION()
+	void OnKill();
+	UFUNCTION(NetMulticast, Reliable)
+	void Muticast_OnKill();
+
+	FOnKill OnKillDelegate;
 
 protected:
 	virtual void BeginPlay() override;

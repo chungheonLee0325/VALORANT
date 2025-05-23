@@ -128,17 +128,20 @@ void UMiniMapWidget::AddAgentToMinimap(ABaseAgent* Agent)
 			
 			EVisibilityState VisState;
 			UTexture2D* IconToUse = nullptr;
-			if (ObserverAgent == Agent || ObserverAgent->IsInFrustum(Agent))
+			const bool bIsMe = ObserverAgent == Agent;
+			const bool bSameTeam = ObserverAgent->IsAttacker() == Agent->IsAttacker();
+			const bool bIsDead = Agent->IsDead();
+			if ((bIsMe || bSameTeam || ObserverAgent->IsInFrustum(Agent)) && false == bIsDead)
 			{
 				VisState = EVisibilityState::Visible;
 				IconToUse = Agent->GetMinimapIcon();
 			}
 			else
 			{
-				VisState = EVisibilityState::QuestionMark;
-				IconToUse = Agent->GetQuestionMarkIcon();
+				VisState = EVisibilityState::Hidden;
+				IconToUse = nullptr;
 			}
-			CreateAgentIcon(Agent, ConvertedMinimapPosition, IconToUse, VisState);
+			CreateAgentIcon(Agent, ConvertedMinimapPosition, IconToUse, VisState, bIsMe ? 0 : bSameTeam ? 1 : 2);
 		}
 		else
 		{
@@ -155,7 +158,7 @@ void UMiniMapWidget::RemoveAgentFromMinimap(ABaseAgent* Agent)
 		MappedAgents.Remove(Agent); // 미니맵에 표시될 에이전트 목록에서 제거
 
 		// 해당 에이전트의 아이콘도 AgentIconMap에서 제거
-		if (UImage** FoundIcon = AgentIconMap.Find(Agent))
+		if (UUserWidget** FoundIcon = AgentIconMap.Find(Agent))
 		{
 			if (IsValid(*FoundIcon))
 			{
@@ -185,8 +188,8 @@ FVector2D UMiniMapWidget::WorldToMinimapPosition(const FVector& TargetActorLocat
     
 	// 미니맵 스케일 적용하여 미니맵 좌표 계산
 	FVector2D MinimapPos; // 미니맵 좌표 변수
-	MinimapPos.X = (TargetActorLocation.Y + 10000.f) / 20000.f * 500.0f;
-	MinimapPos.Y = (10000.f - TargetActorLocation.X) / 20000.f * 500.0f;
+	MinimapPos.X = (TargetActorLocation.Y + 10000.f) / 20000.f * 450.0f;
+	MinimapPos.Y = (10000.f - TargetActorLocation.X) / 20000.f * 450.0f;
     
 	return MinimapPos; // 계산된 미니맵 좌표 반환
 }
@@ -226,19 +229,22 @@ void UMiniMapWidget::UpdateAgentIcons()
 
 		EVisibilityState VisState;
 		UTexture2D* IconToUse = nullptr;
-		if (ObserverAgent == Agent || ObserverAgent->IsInFrustum(Agent))
+		const bool bIsMe = ObserverAgent == Agent;
+		const bool bSameTeam = ObserverAgent->IsAttacker() == Agent->IsAttacker();
+		const bool bIsDead = Agent->IsDead();
+		if ((bIsMe || bSameTeam || ObserverAgent->IsInFrustum(Agent)) && false == bIsDead)
 		{
 			IconToUse = Agent->GetMinimapIcon();
 			VisState = EVisibilityState::Visible;
 		}
 		else
 		{
-			IconToUse = Agent->GetQuestionMarkIcon();
-			VisState = EVisibilityState::QuestionMark;
+			IconToUse = nullptr;
+			VisState = EVisibilityState::Hidden;
 		}
         
 		// 아이콘 업데이트 (블루프린트에서 구현)
-		UpdateAgentIcon(Agent, ConvertedMinimapPosition, IconToUse, VisState); // 블루프린트에서 구현된 함수 호출하여 UI 업데이트
+		UpdateAgentIcon(Agent, ConvertedMinimapPosition, IconToUse, VisState, bIsMe ? 0 : bSameTeam ? 1 : 2); // 블루프린트에서 구현된 함수 호출하여 UI 업데이트
 		// NET_LOG(LogTemp, Warning, TEXT("%hs Called, 아이콘 업데이트 함수 호출 "), __FUNCTION__);
 	}
 }

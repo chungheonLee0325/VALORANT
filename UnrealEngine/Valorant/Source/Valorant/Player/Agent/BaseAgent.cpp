@@ -445,6 +445,8 @@ void ABaseAgent::InitAgentAbility()
 		return;
 	}
 
+	ps->OnKillDelegate.AddDynamic(this,&ABaseAgent::OnKill);
+
 	ASC = Cast<UAgentAbilitySystemComponent>(ps->GetAbilitySystemComponent());
 	ASC->InitAbilityActorInfo(ps, this);
 
@@ -624,6 +626,11 @@ void ABaseAgent::ServerRPC_DropCurrentInteractor_Implementation()
 
 void ABaseAgent::ServerRPC_SetCurrentInteractor_Implementation(ABaseInteractor* interactor)
 {
+	if (CurrentInteractor)
+	{
+		CurrentInteractor->SetActive(false);
+	}
+	
 	CurrentInteractor = interactor;
 	CurrentEquipmentState = CurrentInteractor ? CurrentInteractor->GetInteractorType() : EInteractorType::None;
 	OnRep_CurrentInteractorState();
@@ -717,7 +724,6 @@ void ABaseAgent::SwitchEquipment(EInteractorType EquipmentType)
 		
 		if (CurrentInteractor)
 		{
-			CurrentInteractor->SetActive(false);
 			PrevEquipmentState = CurrentEquipmentState;
 			ASC->ClearFollowUpInputs();
 		}
@@ -999,8 +1005,6 @@ void ABaseAgent::HandleDieCameraPitch(float newPitch)
 /** 서버에서만 호출됨*/
 void ABaseAgent::Die()
 {
-	//TODO: 클래식 / 나이프는 없애기
-	
 	if (MainWeapon)
 	{
 		MainWeapon->ServerRPC_Drop();
@@ -1009,7 +1013,7 @@ void ABaseAgent::Die()
 	{
 		SubWeapon->ServerRPC_Drop();
 	}
-	MeleeKnife->Destroy();
+	if (MeleeKnife) MeleeKnife->Destroy();
 	
 	Net_Die();
 	// 킬러 플레이어 컨트롤러 찾기
@@ -1060,7 +1064,7 @@ void ABaseAgent::Die()
 		OnDieCameraFinished();
 	}), DieCameraTimeRange, false);
 
-	FirstPersonMesh->SetOwnerNoSee(false);
+	GetMesh()->SetOwnerNoSee(false);
 }
 
 void ABaseAgent::OnDieCameraFinished()
@@ -1083,6 +1087,8 @@ void ABaseAgent::Net_Die_Implementation()
 {
 	if (IsLocallyControlled())
 	{
+		GetMesh()->SetOwnerNoSee(false);
+		
 		DisableInput(Cast<APlayerController>(GetController()));
 
 		FirstPersonMesh->SetOwnerNoSee(false);
@@ -1093,8 +1099,8 @@ void ABaseAgent::Net_Die_Implementation()
 	
 	bIsDead = true;
 
-	ABP_3P->Montage_Stop(0.1f);
-	ABP_3P->Montage_Play(AM_Die, 1.0f);
+	// ABP_3P->Montage_Stop(0.1f);
+	// ABP_3P->Montage_Play(AM_Die, 1.0f);
 }
 
 void ABaseAgent::ServerApplyGE_Implementation(TSubclassOf<UGameplayEffect> geClass)
@@ -1147,9 +1153,36 @@ void ABaseAgent::ServerApplyHitScanGE_Implementation(TSubclassOf<UGameplayEffect
 
 void ABaseAgent::UpdateHealth(float newHealth)
 {
+	// 피격 방향 판정
+	const AActor* Attacker = GetInstigator();
+	const FVector Dir = (GetActorLocation() - Attacker->GetActorLocation()).GetSafeNormal();
+	const FVector Forward = GetActorForwardVector();
+	const float Dot = FVector::DotProduct(Forward, Dir); // Vector A와 B 사이의 코사인 각도 (앞뒤 판단)
+	const FVector Cross = FVector::CrossProduct(Forward, Dir); // 양쪽 벡터에 모두 수직인 벡터 (좌우 판단)
+	EAgentDamagedDirection DamagedDirection = EAgentDamagedDirection::Front;
+	// 0.707 : cos 45의 근사값
+	if (Dot > 0.707f)
+	{
+		DamagedDirection = EAgentDamagedDirection::Back;
+	}
+	else if (Dot < -0.707f)
+	{
+		DamagedDirection = EAgentDamagedDirection::Front;
+	}
+	else
+	{
+		// Cross.Z : Yaw 기준으로 좌우를 판단하겠다
+		DamagedDirection = (Cross.Z > 0) ? EAgentDamagedDirection::Left : EAgentDamagedDirection::Right;
+	}
+	
 	if (newHealth <= 0.f && bIsDead == false)
 	{
+		MulticastRPC_OnDamaged(EAgentDamagedPart::Body, DamagedDirection, true, false);
 		Die();
+	}
+	else
+	{
+		MulticastRPC_OnDamaged(EAgentDamagedPart::Body, DamagedDirection, false, false);
 	}
 }
 
@@ -1165,6 +1198,12 @@ void ABaseAgent::UpdateEffectSpeed(float newSpeed)
 {
 	NET_LOG(LogTemp, Warning, TEXT("%f dp"), newSpeed);
 	EffectSpeedMultiplier = newSpeed;
+}
+
+void ABaseAgent::MulticastRPC_OnDamaged_Implementation(const EAgentDamagedPart DamagedPart,
+	const EAgentDamagedDirection DamagedDirection, const bool bDie, const bool bLarge)
+{
+	OnAgentDamaged.Broadcast(DamagedPart, DamagedDirection, bDie, bLarge);
 }
 
 // 무기 카테고리에 따른 이동 속도 멀티플라이어 업데이트
@@ -1606,13 +1645,13 @@ void ABaseAgent::OnSpikeStartDefuse()
 	OnSpikeDeactive.Broadcast();
 }
 
-void ABaseAgent::OnSpikeCancelDefuse()
-{
-	DefusalMesh->SetVisibility(false);
-	
-	bCanMove = true;
-	OnSpikeCancel.Broadcast();
-}
+// void ABaseAgent::OnSpikeCancelDefuse()
+// {
+// 	DefusalMesh->SetVisibility(false);
+// 	
+// 	bCanMove = true;
+// 	OnSpikeCancel.Broadcast();
+// }
 
 void ABaseAgent::OnSpikeFinishDefuse()
 {
@@ -1673,7 +1712,7 @@ bool ABaseAgent::IsInFrustum(const AActor* Actor) const
 		{
 			bool bIsInFrustum = SceneView->ViewFrustum.IntersectSphere(Actor->GetActorLocation(), Actor->GetSimpleCollisionRadius());
 			// 절두체 안에 있으면서 최근에 렌더링 된 적 있는 경우에만 true 반환
-			return bIsInFrustum && Actor->WasRecentlyRendered(0.1f);
+			return bIsInFrustum && Actor->WasRecentlyRendered(0.01f);
 		}
 	}
 	return false;
