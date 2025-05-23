@@ -37,7 +37,7 @@ protected:
 private:
     // 섬광 설정
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Flash Settings", meta = (AllowPrivateAccess = "true"))
-    float FlashRadius = 800.0f;
+    float FlashRadius = 2000.0f;
 
     // 최대/최소 완전 실명 시간
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Flash Settings", meta = (AllowPrivateAccess = "true"))

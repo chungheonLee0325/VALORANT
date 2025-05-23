@@ -59,6 +59,9 @@ void AFlashProjectile::ExplodeFlash()
     TArray<AActor*> FoundActors;
     UGameplayStatics::GetAllActorsOfClass(GetWorld(), ABaseAgent::StaticClass(), FoundActors);
 
+    bool bHasValidTargets = false;
+    float MaxBlindDurationFound = 0.0f;
+
     for (AActor* Actor : FoundActors)
     {
         if (ABaseAgent* Agent = Cast<ABaseAgent>(Actor))
@@ -71,10 +74,15 @@ void AFlashProjectile::ExplodeFlash()
             // 거리 기반으로 완전 실명 시간 계산
             if (IsPlayerInFlashRange(Agent, BlindDuration) && HasLineOfSight(Agent))
             {
-                // 각 클라이언트에서 시야 각도 체크 후 적용
-                MulticastApplyFlashEffect(BlindDuration);
+                bHasValidTargets = true;
+                MaxBlindDurationFound = FMath::Max(MaxBlindDurationFound, BlindDuration);
             }
         }
+    }
+    
+    if (bHasValidTargets)
+    {
+        MulticastApplyFlashEffect(MaxBlindDurationFound);
     }
 
     // 디버그 표시
@@ -128,21 +136,28 @@ bool AFlashProjectile::HasLineOfSight(ABaseAgent* Player)
 
 void AFlashProjectile::MulticastApplyFlashEffect_Implementation(float BlindDuration)
 {
-    // 모든 클라이언트에서 실행
-    TArray<AActor*> FoundActors;
-    UGameplayStatics::GetAllActorsOfClass(GetWorld(), ABaseAgent::StaticClass(), FoundActors);
-
-    for (AActor* Actor : FoundActors)
+    for (FConstPlayerControllerIterator Iterator = GetWorld()->GetPlayerControllerIterator(); Iterator; ++Iterator)
     {
-        if (ABaseAgent* Agent = Cast<ABaseAgent>(Actor))
+        if (APlayerController* PC = Iterator->Get())
         {
-            if (Agent->IsDead())
-                continue;
-
-            // 클라이언트별로 시야 각도 체크 후 적용
-            if (UFlashComponent* FlashComp = Agent->FindComponentByClass<UFlashComponent>())
+            if (ABaseAgent* LocalPlayer = Cast<ABaseAgent>(PC->GetPawn()))
             {
-                FlashComp->CheckViewAngleAndApplyFlash(GetActorLocation(), BlindDuration, RecoveryDuration);
+                // 로컬 플레이어가 아니면 건너뛰기
+                if (!LocalPlayer->IsLocallyControlled() || LocalPlayer->IsDead())
+                    continue;
+
+                float LocalBlindDuration = 0.0f;
+                if (!IsPlayerInFlashRange(LocalPlayer, LocalBlindDuration) || !HasLineOfSight(LocalPlayer))
+                    continue;
+
+                // 로컬 플레이어에 대해서만 섬광 적용
+                if (UFlashComponent* FlashComp = LocalPlayer->FindComponentByClass<UFlashComponent>())
+                {
+                    FlashComp->CheckViewAngleAndApplyFlash(GetActorLocation(), LocalBlindDuration, RecoveryDuration);
+                }
+                
+                // 로컬 플레이어를 찾았으므로 루프 종료
+                break;
             }
         }
     }
