@@ -27,6 +27,9 @@
 #include "ValorantObject/BaseInteractor.h"
 #include "ValorantObject/Spike/Spike.h"
 #include "Player/Component/CreditComponent.h"
+#include "Player/Component/FlashComponent.h"
+#include "Player/Component/FlashPostProcessComponent.h"
+#include "UI/FlashWidget.h"
 #include "Weapon/BaseWeapon.h"
 
 /* static */ EAgentDamagedPart ABaseAgent::GetHitDamagedPart(const FName& BoneName)
@@ -153,6 +156,17 @@ ABaseAgent::ABaseAgent()
 	TL_DieCamera = CreateDefaultSubobject<UTimelineComponent>("TL_DieCamera");
 
 	//ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ
+	//             LCH             ♣
+	//ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ
+	
+	// 섬광 컴포넌트 생성
+	FlashComponent = CreateDefaultSubobject<UFlashComponent>(TEXT("FlashComponent"));
+    
+	// 포스트 프로세스 컴포넌트 생성
+	PostProcessComponent = CreateDefaultSubobject<UFlashPostProcessComponent>(TEXT("PostProcessComponent"));
+
+
+	//ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ
 	//             CYT             ♣
 	//ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ
 
@@ -250,6 +264,22 @@ void ABaseAgent::BeginPlay()
 
 	TL_DieCamera->SetTimelineLength(DieCameraTimeRange);
 	TL_DieCamera->SetTimelineLengthMode(ETimelineLengthMode::TL_TimelineLength);
+
+	//ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ
+	//             LCH             ♣
+	//ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ
+
+	// 로컬 플레이어에게만 UI 생성
+	if (IsLocallyControlled())
+	{
+		CreateFlashWidget();
+	}
+    
+	// 섬광 강도 변경 델리게이트 바인딩
+	if (FlashComponent)
+	{
+		FlashComponent->OnFlashIntensityChanged.AddDynamic(this, &ABaseAgent::OnFlashIntensityChanged);
+	}
 
 	//ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ
 	//             CYT             ♣
@@ -1724,4 +1754,34 @@ float ABaseAgent::GetMaxHealth() const
 bool ABaseAgent::IsFullHealth() const
 {
 	return FMath::IsNearlyEqual(GetCurrentHealth(), GetMaxHealth());
+}
+
+void ABaseAgent::OnFlashIntensityChanged(float NewIntensity)
+{
+	UE_LOG(LogTemp, Warning, TEXT("Flash Intensity: %f"), NewIntensity);
+
+	// UI 위젯 업데이트
+	if (FlashWidget)
+	{
+		FlashWidget->UpdateFlashIntensity(NewIntensity);
+	}
+    
+	// 포스트 프로세스 업데이트
+	if (PostProcessComponent)
+	{
+		PostProcessComponent->UpdateFlashPostProcess(NewIntensity);
+	}
+}
+
+void ABaseAgent::CreateFlashWidget()
+{
+	if (FlashWidgetClass && !FlashWidget)
+	{
+		FlashWidget = CreateWidget<UFlashWidget>(GetWorld(), FlashWidgetClass);
+		if (FlashWidget)
+		{
+			FlashWidget->AddToViewport(100); // 높은 Z-Order로 최상단에 표시
+			FlashWidget->SetVisibility(ESlateVisibility::Collapsed); // 처음에는 숨김
+		}
+	}
 }

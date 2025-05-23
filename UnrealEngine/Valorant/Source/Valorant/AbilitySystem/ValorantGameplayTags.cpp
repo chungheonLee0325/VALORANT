@@ -36,6 +36,12 @@ void FValorantGameplayTags::InitializeNativeTags()
     REGISTER_TAG(Block_Ability_Activation, "Block.Ability.Activation");
     REGISTER_TAG(Block_Movement, "Block.Movement");
     REGISTER_TAG(Block_WeaponSwitch, "Block.WeaponSwitch");
+
+    // 섬광 관련 태그들 등록
+    REGISTER_TAG(Flash_Effect, "Flash.Effect");
+    REGISTER_TAG(Flash_Intensity, "Flash.Intensity");
+    REGISTER_TAG(Flash_Duration, "Flash.Duration");
+    REGISTER_TAG(State_Flash_Blinded, "State.Flash.Blinded");
     
     // 이벤트 태그들
     REGISTER_TAG(Event_Ability_Started, "Event.Ability.Started");

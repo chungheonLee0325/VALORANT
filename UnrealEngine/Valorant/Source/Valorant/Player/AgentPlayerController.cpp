@@ -59,6 +59,9 @@ void AAgentPlayerController::OnPossess(APawn* InPawn)
 	if (IsLocalController())
 	{
 		m_GameInstance = Cast<UValorantGameInstance>(GetGameInstance());
+
+		// 로컬 컨트롤러인 경우 섬광 UI 초기화
+		InitializeFlashUI();
 	}
 
 	// 에이전트 소유 시 ShopComponent 초기화
@@ -512,5 +515,14 @@ void AAgentPlayerController::OnMatchEnd(const bool bBlueWin)
 	else
 	{
 		NET_LOG(LogTemp, Error, TEXT("%hs Called, AgentWidget is nullptr"), __FUNCTION__);
+	}
+}
+
+void AAgentPlayerController::InitializeFlashUI()
+{
+	if (ABaseAgent* Agent = Cast<ABaseAgent>(GetPawn()))
+	{
+		// 에이전트의 섬광 UI 초기화
+		Agent->CreateFlashWidget();
 	}
 }

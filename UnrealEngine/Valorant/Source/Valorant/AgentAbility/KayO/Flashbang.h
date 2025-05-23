@@ -3,11 +3,11 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "AgentAbility/BaseProjectile.h"
+#include "AgentAbility/FlashProjectile.h"
 #include "Flashbang.generated.h"
 
 UCLASS()
-class VALORANT_API AFlashbang : public ABaseProjectile
+class VALORANT_API AFlashbang : public AFlashProjectile
 {
 	GENERATED_BODY()
 
