@@ -16,6 +16,7 @@ void UAgentAnimInstance::NativeBeginPlay()
 		OwnerAgent->OnAgentEquip.AddDynamic(this, &UAgentAnimInstance::OnEquip);
 		OwnerAgent->OnAgentFire.AddDynamic(this, &UAgentAnimInstance::OnFire);
 		OwnerAgent->OnAgentReload.AddDynamic(this, &UAgentAnimInstance::OnReload);
+		OwnerAgent->OnAgentDamaged.AddDynamic(this, &UAgentAnimInstance::OnDamaged);
 		OwnerAgent->OnSpikeActive.AddDynamic(this, &UAgentAnimInstance::OnSpikeActive);
 		OwnerAgent->OnSpikeCancel.AddDynamic(this, &UAgentAnimInstance::OnSpikeCancel);
 		OwnerAgent->OnSpikeDeactive.AddDynamic(this, &UAgentAnimInstance::OnSpikeDeactive);

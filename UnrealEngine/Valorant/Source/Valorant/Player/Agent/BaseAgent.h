@@ -69,6 +69,7 @@ struct FAgentVisibilityInfo
 	
 };
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_FourParams(FOnAgentDamaged, const EAgentDamagedPart, DamagedPart, const EAgentDamagedDirection, DamagedDirection, const bool, bDie, const bool, bLarge);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnAgentEquip);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnAgentFire);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnAgentReload);
@@ -483,6 +484,9 @@ protected:
 	UFUNCTION()
 	void UpdateEffectSpeed(float newEffectSpeed);
 
+	UFUNCTION(NetMulticast, Reliable)
+	void MulticastRPC_OnDamaged(const EAgentDamagedPart DamagedPart, const EAgentDamagedDirection DamagedDirection, const bool bDie, const bool bLarge = false);
+
 	// 무기 카테고리에 따른 이동 속도 멀티플라이어 업데이트
 	void UpdateEquipSpeedMultiplier();
 
@@ -492,6 +496,7 @@ private:
 	bool IsInPlantZone = false;
 
 public:
+	FOnAgentDamaged OnAgentDamaged;
 	FOnAgentEquip OnAgentEquip;
 	FOnAgentEquip OnAgentFire;
 	FOnAgentEquip OnAgentReload;
