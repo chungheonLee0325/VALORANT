@@ -5,7 +5,7 @@
 #include "Sage_E_HealingOrb.generated.h"
 
 UCLASS()
-class VALORANT_API USage_E_HealingOrb : public UGA_LeftRight
+class VALORANT_API USage_E_HealingOrb : public UBaseGameplayAbility
 {
     GENERATED_BODY()
 
@@ -25,6 +25,6 @@ protected:
     UPROPERTY(EditAnywhere)
     TSubclassOf<UGameplayEffect> GameplayEffect = nullptr;
 
-    virtual void Active_Left_Click(FGameplayEventData data) override;
-    virtual void Active_Right_Click(FGameplayEventData data) override;
+    virtual void HandleLeftClick(FGameplayEventData EventData) override;
+    virtual void HandleRightClick(FGameplayEventData EventData) override;
 }; 
