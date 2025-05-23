@@ -515,12 +515,13 @@ public:
 	void OnReload();
 	
 	void OnSpikeStartPlant();
-	void OnSpikeCancelInteract();
 	void OnSpikeFinishPlant();
 	
 	void OnSpikeStartDefuse();
-	void OnSpikeCancelDefuse();
 	void OnSpikeFinishDefuse();
+	// void OnSpikeCancelDefuse();
+	
+	void OnSpikeCancelInteract();
 	
 	bool bInteractionCapsuleInit = false;
 	virtual void OnRep_Controller() override;

@@ -596,6 +596,11 @@ void ABaseAgent::ServerRPC_DropCurrentInteractor_Implementation()
 
 void ABaseAgent::ServerRPC_SetCurrentInteractor_Implementation(ABaseInteractor* interactor)
 {
+	if (CurrentInteractor)
+	{
+		CurrentInteractor->SetActive(false);
+	}
+	
 	CurrentInteractor = interactor;
 	CurrentEquipmentState = CurrentInteractor ? CurrentInteractor->GetInteractorType() : EInteractorType::None;
 	OnRep_CurrentInteractorState();
@@ -689,7 +694,6 @@ void ABaseAgent::SwitchEquipment(EInteractorType EquipmentType)
 		
 		if (CurrentInteractor)
 		{
-			CurrentInteractor->SetActive(false);
 			PrevEquipmentState = CurrentEquipmentState;
 			ASC->ClearFollowUpInputs();
 		}
@@ -1611,13 +1615,13 @@ void ABaseAgent::OnSpikeStartDefuse()
 	OnSpikeDeactive.Broadcast();
 }
 
-void ABaseAgent::OnSpikeCancelDefuse()
-{
-	DefusalMesh->SetVisibility(false);
-	
-	bCanMove = true;
-	OnSpikeCancel.Broadcast();
-}
+// void ABaseAgent::OnSpikeCancelDefuse()
+// {
+// 	DefusalMesh->SetVisibility(false);
+// 	
+// 	bCanMove = true;
+// 	OnSpikeCancel.Broadcast();
+// }
 
 void ABaseAgent::OnSpikeFinishDefuse()
 {
