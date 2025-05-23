@@ -1522,6 +1522,7 @@ void ABaseAgent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifeti
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 	DOREPLIFETIME(ABaseAgent, VisibilityStateArray);
 	DOREPLIFETIME(ABaseAgent, bIsRun);
+	DOREPLIFETIME(ABaseAgent, bIsDead);
 	DOREPLIFETIME(ABaseAgent, MeleeKnife);
 	DOREPLIFETIME(ABaseAgent, MainWeapon);
 	DOREPLIFETIME(ABaseAgent, SubWeapon);

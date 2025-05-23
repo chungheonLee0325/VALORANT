@@ -408,7 +408,7 @@ protected:
 
 	UPROPERTY(Replicated)
 	bool bIsRun = true;
-	UPROPERTY()
+	UPROPERTY(Replicated)
 	bool bIsDead = false;
 	
 	bool bCanMove = true;
