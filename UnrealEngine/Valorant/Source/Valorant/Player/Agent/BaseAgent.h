@@ -235,7 +235,7 @@ public:
 	
 	int GetPoseIdx() const { return PoseIdx; }
 
-	UFUNCTION(Server, Reliable)
+	UFUNCTION(Server, Reliable, BlueprintCallable)
 	void ServerApplyGE(TSubclassOf<UGameplayEffect> geClass);
 	UFUNCTION(Server, Reliable)
 	void ServerApplyHitScanGE(TSubclassOf<UGameplayEffect> GEClass, const int Damage,

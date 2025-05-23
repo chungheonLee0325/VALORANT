@@ -969,8 +969,6 @@ void ABaseAgent::HandleDieCameraPitch(float newPitch)
 /** 서버에서만 호출됨*/
 void ABaseAgent::Die()
 {
-	//TODO: 클래식 / 나이프는 없애기
-	
 	if (MainWeapon)
 	{
 		MainWeapon->ServerRPC_Drop();
@@ -979,7 +977,7 @@ void ABaseAgent::Die()
 	{
 		SubWeapon->ServerRPC_Drop();
 	}
-	MeleeKnife->Destroy();
+	if (MeleeKnife) MeleeKnife->Destroy();
 	
 	Net_Die();
 	// 킬러 플레이어 컨트롤러 찾기
