@@ -376,13 +376,6 @@ void UBaseGameplayAbility::HandleLeftClick(FGameplayEventData EventData)
 
 void UBaseGameplayAbility::HandleRightClick(FGameplayEventData EventData)
 {
-	// MultiPhase 또는 다른 스킬 유형에서 우클릭은 보통 취소로 처리
-	if (InputType == EAbilityInputType::MultiPhase ||
-		InputType == EAbilityInputType::Hold ||
-		InputType == EAbilityInputType::Sequence)
-	{
-		CancelAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true);
-	}
 }
 
 void UBaseGameplayAbility::HandleFollowUpInput(FGameplayTag InputTag, FGameplayEventData EventData)
