@@ -82,7 +82,7 @@ protected:
     
     // 미니맵 아이콘 업데이트 함수 (블루프린트에서 구현)
     UFUNCTION(BlueprintImplementableEvent, BlueprintCallable, Category = "Minimap") 
-    void UpdateAgentIcon(ABaseAgent* Agent, FVector2D Position, UTexture2D* IconTexture, EVisibilityState VisState);
+    void UpdateAgentIcon(ABaseAgent* Agent, FVector2D Position, UTexture2D* IconTexture, EVisibilityState VisState, const int Flag);
 
 	// 에이전트 아이콘 맵 추가 (에이전트와 해당 이미지 위젯 매핑)
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Minimap")

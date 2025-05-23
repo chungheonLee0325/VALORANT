@@ -244,7 +244,7 @@ void UMiniMapWidget::UpdateAgentIcons()
 		}
         
 		// 아이콘 업데이트 (블루프린트에서 구현)
-		UpdateAgentIcon(Agent, ConvertedMinimapPosition, IconToUse, VisState); // 블루프린트에서 구현된 함수 호출하여 UI 업데이트
+		UpdateAgentIcon(Agent, ConvertedMinimapPosition, IconToUse, VisState, bIsMe ? 0 : bSameTeam ? 1 : 2); // 블루프린트에서 구현된 함수 호출하여 UI 업데이트
 		// NET_LOG(LogTemp, Warning, TEXT("%hs Called, 아이콘 업데이트 함수 호출 "), __FUNCTION__);
 	}
 }

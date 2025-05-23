@@ -1678,7 +1678,7 @@ bool ABaseAgent::IsInFrustum(const AActor* Actor) const
 		{
 			bool bIsInFrustum = SceneView->ViewFrustum.IntersectSphere(Actor->GetActorLocation(), Actor->GetSimpleCollisionRadius());
 			// 절두체 안에 있으면서 최근에 렌더링 된 적 있는 경우에만 true 반환
-			return bIsInFrustum && Actor->WasRecentlyRendered(0.1f);
+			return bIsInFrustum && Actor->WasRecentlyRendered(0.01f);
 		}
 	}
 	return false;
