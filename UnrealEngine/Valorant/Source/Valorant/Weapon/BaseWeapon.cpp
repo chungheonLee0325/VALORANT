@@ -270,7 +270,8 @@ void ABaseWeapon::ServerRPC_Fire_Implementation(const FVector& Location, const F
 			}
 
 			int FinalDamage = WeaponData->BaseDamage;
-			switch (const EAgentDamagedPart DamagedPart = ABaseAgent::GetHitDamagedPart(OutHit.BoneName))
+			const EAgentDamagedPart DamagedPart = ABaseAgent::GetHitDamagedPart(OutHit.BoneName);
+			switch (DamagedPart)
 			{
 			case EAgentDamagedPart::None:
 				break;
@@ -283,6 +284,27 @@ void ABaseWeapon::ServerRPC_Fire_Implementation(const FVector& Location, const F
 				FinalDamage *= WeaponData->LegshotMultiplier;
 				break;
 			}
+
+			// // 피격 방향 판정
+			// const FVector AttackDirection = -Dir;
+			// const FVector TargetForward = HitAgent->GetActorForwardVector();
+			// const float Dot = FVector::DotProduct(TargetForward, AttackDirection); // Vector A와 B 사이의 코사인 각도 (앞뒤 판단)
+			// const FVector Cross = FVector::CrossProduct(TargetForward, AttackDirection); // 양쪽 벡터에 모두 수직인 벡터 (좌우 판단)
+			// EAgentDamagedDirection DamagedDirection = EAgentDamagedDirection::Front;
+			// // 0.707 : cos 45의 근사값
+			// if (Dot > 0.707f)
+			// {
+			// 	DamagedDirection = EAgentDamagedDirection::Back;
+			// }
+			// else if (Dot < -0.707f)
+			// {
+			// 	DamagedDirection = EAgentDamagedDirection::Front;
+			// }
+			// else
+			// {
+			// 	// Cross.Z : Yaw 기준으로 좌우를 판단하겠다
+			// 	DamagedDirection = (Cross.Z > 0) ? EAgentDamagedDirection::Right : EAgentDamagedDirection::Left;
+			// }
 
 			const auto& FalloffArray = WeaponData->GunDamageFalloffArray;
 			for (int i = FalloffArray.Num() - 1; i >= 0; i--)

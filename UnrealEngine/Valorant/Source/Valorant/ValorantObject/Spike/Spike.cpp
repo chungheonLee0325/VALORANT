@@ -96,8 +96,10 @@ void ASpike::Tick(float DeltaTime)
 		else if (SpikeState == ESpikeState::Planted)
 		{
 			RemainingDetonationTime -= DeltaTime;
+			// UE_LOG(LogTemp, Log, TEXT("스파이크, %f"), RemainingDetonationTime);
 			if (RemainingDetonationTime <= 0)
 			{
+				// UE_LOG(LogTemp, Error, TEXT("스파이크 타임아웃"));
 				ServerRPC_Detonate();
 			}
 		}

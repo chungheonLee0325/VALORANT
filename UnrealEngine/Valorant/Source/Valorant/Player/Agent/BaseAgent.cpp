@@ -969,8 +969,6 @@ void ABaseAgent::HandleDieCameraPitch(float newPitch)
 /** 서버에서만 호출됨*/
 void ABaseAgent::Die()
 {
-	//TODO: 클래식 / 나이프는 없애기
-	
 	if (MainWeapon)
 	{
 		MainWeapon->ServerRPC_Drop();
@@ -979,7 +977,7 @@ void ABaseAgent::Die()
 	{
 		SubWeapon->ServerRPC_Drop();
 	}
-	MeleeKnife->Destroy();
+	if (MeleeKnife) MeleeKnife->Destroy();
 	
 	Net_Die();
 	// 킬러 플레이어 컨트롤러 찾기
@@ -1030,7 +1028,7 @@ void ABaseAgent::Die()
 		OnDieCameraFinished();
 	}), DieCameraTimeRange, false);
 
-	FirstPersonMesh->SetOwnerNoSee(false);
+	GetMesh()->SetOwnerNoSee(false);
 }
 
 void ABaseAgent::OnDieCameraFinished()
@@ -1053,6 +1051,8 @@ void ABaseAgent::Net_Die_Implementation()
 {
 	if (IsLocallyControlled())
 	{
+		GetMesh()->SetOwnerNoSee(false);
+		
 		DisableInput(Cast<APlayerController>(GetController()));
 
 		FirstPersonMesh->SetOwnerNoSee(false);
@@ -1063,8 +1063,8 @@ void ABaseAgent::Net_Die_Implementation()
 	
 	bIsDead = true;
 
-	ABP_3P->Montage_Stop(0.1f);
-	ABP_3P->Montage_Play(AM_Die, 1.0f);
+	// ABP_3P->Montage_Stop(0.1f);
+	// ABP_3P->Montage_Play(AM_Die, 1.0f);
 }
 
 void ABaseAgent::ServerApplyGE_Implementation(TSubclassOf<UGameplayEffect> geClass)
@@ -1117,9 +1117,36 @@ void ABaseAgent::ServerApplyHitScanGE_Implementation(TSubclassOf<UGameplayEffect
 
 void ABaseAgent::UpdateHealth(float newHealth)
 {
+	// 피격 방향 판정
+	const AActor* Attacker = GetInstigator();
+	const FVector Dir = (GetActorLocation() - Attacker->GetActorLocation()).GetSafeNormal();
+	const FVector Forward = GetActorForwardVector();
+	const float Dot = FVector::DotProduct(Forward, Dir); // Vector A와 B 사이의 코사인 각도 (앞뒤 판단)
+	const FVector Cross = FVector::CrossProduct(Forward, Dir); // 양쪽 벡터에 모두 수직인 벡터 (좌우 판단)
+	EAgentDamagedDirection DamagedDirection = EAgentDamagedDirection::Front;
+	// 0.707 : cos 45의 근사값
+	if (Dot > 0.707f)
+	{
+		DamagedDirection = EAgentDamagedDirection::Back;
+	}
+	else if (Dot < -0.707f)
+	{
+		DamagedDirection = EAgentDamagedDirection::Front;
+	}
+	else
+	{
+		// Cross.Z : Yaw 기준으로 좌우를 판단하겠다
+		DamagedDirection = (Cross.Z > 0) ? EAgentDamagedDirection::Left : EAgentDamagedDirection::Right;
+	}
+	
 	if (newHealth <= 0.f && bIsDead == false)
 	{
+		MulticastRPC_OnDamaged(EAgentDamagedPart::Body, DamagedDirection, true, false);
 		Die();
+	}
+	else
+	{
+		MulticastRPC_OnDamaged(EAgentDamagedPart::Body, DamagedDirection, false, false);
 	}
 }
 
@@ -1135,6 +1162,12 @@ void ABaseAgent::UpdateEffectSpeed(float newSpeed)
 {
 	NET_LOG(LogTemp, Warning, TEXT("%f dp"), newSpeed);
 	EffectSpeedMultiplier = newSpeed;
+}
+
+void ABaseAgent::MulticastRPC_OnDamaged_Implementation(const EAgentDamagedPart DamagedPart,
+	const EAgentDamagedDirection DamagedDirection, const bool bDie, const bool bLarge)
+{
+	OnAgentDamaged.Broadcast(DamagedPart, DamagedDirection, bDie, bLarge);
 }
 
 // 무기 카테고리에 따른 이동 속도 멀티플라이어 업데이트
