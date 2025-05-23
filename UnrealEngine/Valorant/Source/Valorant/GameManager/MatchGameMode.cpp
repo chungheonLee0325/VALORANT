@@ -320,6 +320,7 @@ void AMatchGameMode::StartEndPhaseByEliminated(const bool bBlueWin)
 void AMatchGameMode::StartEndPhaseBySpikeActive()
 {
 	bool bBlueWin = !IsShifted(); // Blue가 선공이니까 false라면 공격->이긴다, true라면 수비->진다
+	Spike->ServerRPC_Detonate();
 	HandleRoundEnd(bBlueWin, ERoundEndReason::ERER_SpikeActive);
 	SetRoundSubState(ERoundSubState::RSS_EndPhase);
 }
