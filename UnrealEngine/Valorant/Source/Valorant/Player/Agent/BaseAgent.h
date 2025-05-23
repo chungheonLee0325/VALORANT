@@ -454,6 +454,9 @@ protected:
 	virtual void OnStartCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust) override;
 	virtual void OnEndCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust) override;
 
+	UFUNCTION(BlueprintImplementableEvent)
+	void OnKill();
+	
 	virtual void InitAgentAbility();
 
 	UFUNCTION(BlueprintCallable)

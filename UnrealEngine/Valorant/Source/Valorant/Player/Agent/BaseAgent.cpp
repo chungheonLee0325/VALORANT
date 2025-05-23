@@ -415,6 +415,8 @@ void ABaseAgent::InitAgentAbility()
 		return;
 	}
 
+	ps->OnKillDelegate.AddDynamic(this,&ABaseAgent::OnKill);
+
 	ASC = Cast<UAgentAbilitySystemComponent>(ps->GetAbilitySystemComponent());
 	ASC->InitAbilityActorInfo(ps, this);
 
