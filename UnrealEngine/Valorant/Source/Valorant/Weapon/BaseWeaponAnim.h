@@ -6,6 +6,9 @@
 #include "Animation/AnimInstance.h"
 #include "BaseWeaponAnim.generated.h"
 
+class ABaseWeapon;
+class USkeletalMeshComponent;
+
 /**
  * 
  */
@@ -17,6 +20,8 @@ class VALORANT_API UBaseWeaponAnim : public UAnimInstance
 public:
 	UPROPERTY(BlueprintReadWrite, EditAnywhere)
 	TObjectPtr<AActor> Owner = nullptr;
+	UPROPERTY(BlueprintReadWrite, EditAnywhere)
+	TObjectPtr<ABaseWeapon> Weapon = nullptr;
 	UPROPERTY(BlueprintReadWrite, EditAnywhere)
 	TObjectPtr<USkeletalMeshComponent> Mesh = nullptr;
 	UPROPERTY(BlueprintReadWrite, EditAnywhere)
@@ -35,4 +40,6 @@ public:
 
 protected:
 	virtual void NativeBeginPlay() override;
+	UFUNCTION(BlueprintCallable)
+	void SomethingWrong();
 };
