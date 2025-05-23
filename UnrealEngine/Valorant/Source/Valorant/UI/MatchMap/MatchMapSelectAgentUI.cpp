@@ -33,10 +33,16 @@ void UMatchMapSelectAgentUI::NativeConstruct()
 	GetOwningPlayer()->SetShowMouseCursor(true);
 	FillAgentList();
 
-#ifdef DEBUGTEST 
-	FTimerHandle TimerHandle;
-	GetWorld()->GetTimerManager().SetTimer(TimerHandle, [this]()
-		{auto* Controller = Cast<AAgentPlayerController>(GetOwningPlayer());Controller->ServerRPC_LockIn(2);},1.0f,false);
+#ifdef DEBUGTEST
+	if (false == GetOwningPlayer()->HasAuthority())
+	{
+		FTimerHandle TimerHandle;
+		GetWorld()->GetTimerManager().SetTimer(TimerHandle, [this]()
+		{
+			auto* Controller = Cast<AAgentPlayerController>(GetOwningPlayer());
+			Controller->ServerRPC_LockIn(2);
+		},1.0f,false);
+	}
 #endif
 }
 
