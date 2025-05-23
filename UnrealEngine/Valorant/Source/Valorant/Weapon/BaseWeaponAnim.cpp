@@ -13,7 +13,7 @@ void UBaseWeaponAnim::NativeBeginPlay()
 {
 	Super::NativeBeginPlay();
 	Owner = GetOwningActor();
-	auto* Weapon = Cast<ABaseWeapon>(Owner);
+	Weapon = Cast<ABaseWeapon>(Owner);
 	auto* ThirdPersonWeapon = Cast<AThirdPersonInteractor>(Owner);
 	if (Weapon)
 	{
@@ -40,4 +40,19 @@ void UBaseWeaponAnim::NativeBeginPlay()
 	Weapon->OnReload.AddDynamic(this, &UBaseWeaponAnim::OnReload);
 	Weapon->OnPickUp.AddDynamic(this, &UBaseWeaponAnim::OnPickUp);
 	Weapon->OnInteractorDrop.AddDynamic(this, &UBaseWeaponAnim::OnDrop);
+}
+
+void UBaseWeaponAnim::SomethingWrong()
+{
+	if (Weapon)
+	{
+		Weapon->OnEquip.RemoveAll(this);
+		Weapon->OnFire.RemoveAll(this);
+		Weapon->OnReload.RemoveAll(this);
+		Weapon->OnPickUp.RemoveAll(this);
+		Weapon->OnInteractorDrop.RemoveAll(this);
+		Owner = nullptr;
+		Weapon = nullptr;
+		Mesh = nullptr;
+	}
 }
