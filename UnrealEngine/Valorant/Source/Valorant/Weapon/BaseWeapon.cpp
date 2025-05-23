@@ -247,7 +247,7 @@ void ABaseWeapon::ServerRPC_Fire_Implementation(const FVector& Location, const F
 		UEngineTypes::ConvertToTraceType(ECC_GameTraceChannel2), // TraceChannel: HitDetect
 		false,
 		ActorsToIgnore,
-		EDrawDebugTrace::ForDuration,
+		EDrawDebugTrace::None,
 		OutHit,
 		true,
 		FLinearColor::Red,
