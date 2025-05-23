@@ -21,7 +21,7 @@
 #include "Weapon/BaseWeapon.h"
 
 static int CurrentRound = 0;
-static int ShiftRound = 4;
+static int ShiftRound = 2;
 
 AMatchGameMode::AMatchGameMode()
 {

@@ -154,9 +154,9 @@ protected:
 	void SetRoundSubState(ERoundSubState NewRoundSubState);
 
 public:
-	int TotalRound = 6;
+	int TotalRound = 3;
 	// static int CurrentRound;
-	int RequiredScore = 4;
+	int RequiredScore = 2;
 	int TeamBlueScore = 0;
 	int TeamRedScore = 0;
 	// static int ShiftRound;
