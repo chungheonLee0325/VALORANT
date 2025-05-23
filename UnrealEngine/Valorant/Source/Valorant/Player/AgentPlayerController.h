@@ -117,13 +117,6 @@ public:
 	UFUNCTION(Client, Reliable)
 	void Client_ReceivePurchaseResult(bool bSuccess, int32 ItemID, EShopItemType ItemType, const FString& FailureReason);
 
-	// 섬광 UI 관련
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "UI")
-	TSubclassOf<UFlashWidget> FlashWidgetClass;
-
-	UFUNCTION(BlueprintCallable, Category = "Flash")
-	void InitializeFlashUI();
-	
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	class UValorantGameInstance* m_GameInstance;

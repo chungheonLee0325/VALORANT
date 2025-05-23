@@ -206,6 +206,8 @@ void ABaseAgent::PossessedBy(AController* NewController)
 		InteractionCapsule->OnComponentBeginOverlap.AddDynamic(this, &ABaseAgent::OnFindInteraction);
 		InteractionCapsule->OnComponentEndOverlap.AddDynamic(this, &ABaseAgent::OnInteractionCapsuleEndOverlap);
 	}
+
+	CreateFlashWidget();
 }
 
 // 클라이언트 전용. 서버로부터 PlayerState를 최초로 받을 때 호출됨
@@ -222,6 +224,9 @@ void ABaseAgent::OnRep_PlayerState()
 		// UE_LOG(LogTemp, Warning, TEXT("클라, 델리게이트 바인딩"));
 		BindToDelegatePC(pc);
 	}
+
+	// 로컬 플레이어에게만 UI 생성
+	CreateFlashWidget();
 }
 
 void ABaseAgent::BeginPlay()
@@ -268,12 +273,6 @@ void ABaseAgent::BeginPlay()
 	//ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ
 	//             LCH             ♣
 	//ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ
-
-	// 로컬 플레이어에게만 UI 생성
-	if (IsLocallyControlled())
-	{
-		CreateFlashWidget();
-	}
     
 	// 섬광 강도 변경 델리게이트 바인딩
 	if (FlashComponent)
@@ -1758,18 +1757,28 @@ bool ABaseAgent::IsFullHealth() const
 
 void ABaseAgent::OnFlashIntensityChanged(float NewIntensity)
 {
-	UE_LOG(LogTemp, Warning, TEXT("Flash Intensity: %f"), NewIntensity);
+	// 로컬 플레이어에게만 시각 효과 적용
+	if (!IsLocallyControlled())
+		return;
 
-	// UI 위젯 업데이트
 	if (FlashWidget)
 	{
 		FlashWidget->UpdateFlashIntensity(NewIntensity);
 	}
     
-	// 포스트 프로세스 업데이트
 	if (PostProcessComponent)
 	{
 		PostProcessComponent->UpdateFlashPostProcess(NewIntensity);
+	}
+    
+	// 디버그 로그 (완전 실명/회복 상태 표시)
+	if (UFlashComponent* FlashComp = FindComponentByClass<UFlashComponent>())
+	{
+		EFlashState State = FlashComp->GetFlashState();
+		FString StateStr = (State == EFlashState::CompleteBlind) ? TEXT("완전실명") :
+						  (State == EFlashState::Recovery) ? TEXT("회복중") : TEXT("정상");
+        
+		UE_LOG(LogTemp, VeryVerbose, TEXT("섬광 강도: %.2f, 상태: %s"), NewIntensity, *StateStr);
 	}
 }
 
@@ -1781,7 +1790,7 @@ void ABaseAgent::CreateFlashWidget()
 		if (FlashWidget)
 		{
 			FlashWidget->AddToViewport(100); // 높은 Z-Order로 최상단에 표시
-			FlashWidget->SetVisibility(ESlateVisibility::Collapsed); // 처음에는 숨김
+			//FlashWidget->SetVisibility(ESlateVisibility::Collapsed); // 처음에는 숨김
 		}
 	}
 }

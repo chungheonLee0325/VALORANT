@@ -8,7 +8,7 @@ void UFlashWidget::NativeConstruct()
 	if (FlashOverlay)
 	{
 		// 처음에는 투명하게
-		FlashOverlay->SetOpacity(0.0f);
+		FlashOverlay->SetRenderOpacity(0.0f);
 		FlashOverlay->SetColorAndOpacity(FLinearColor::White);
 	}
 }
@@ -20,7 +20,7 @@ void UFlashWidget::UpdateFlashIntensity(float Intensity)
 	if (FlashOverlay)
 	{
 		// 알파값으로 섬광 강도 조절
-		FlashOverlay->SetOpacity(CurrentFlashIntensity);
+		FlashOverlay->SetRenderOpacity(CurrentFlashIntensity);
 	}
 }
 
@@ -34,6 +34,6 @@ void UFlashWidget::StopFlashEffect()
 	SetVisibility(ESlateVisibility::Collapsed);
 	if (FlashOverlay)
 	{
-		FlashOverlay->SetOpacity(0.0f);
+		FlashOverlay->SetRenderOpacity(0.0f);
 	}
 }

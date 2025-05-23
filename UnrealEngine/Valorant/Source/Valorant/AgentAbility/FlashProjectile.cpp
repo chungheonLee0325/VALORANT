@@ -4,19 +4,17 @@
 #include "Kismet/GameplayStatics.h"
 #include "Engine/World.h"
 #include "DrawDebugHelpers.h"
-#include "Particles/ParticleSystemComponent.h"
 #include "Components/SphereComponent.h"
 #include "GameFramework/ProjectileMovementComponent.h"
+#include "Net/UnrealNetwork.h"
 
 AFlashProjectile::AFlashProjectile()
 {
-    // BaseProjectile 기본 설정 조정
     ProjectileMovement->InitialSpeed = 1000.0f;
     ProjectileMovement->MaxSpeed = 1000.0f;
     ProjectileMovement->ProjectileGravityScale = 1.5f;
     ProjectileMovement->Bounciness = 0.3f;
     
-    // 3초 후 자동 폭발
     SetLifeSpan(3.0f);
 }
 
@@ -32,16 +30,13 @@ void AFlashProjectile::OnProjectileBounced(const FHitResult& ImpactResult, const
 {
     Super::OnProjectileBounced(ImpactResult, ImpactVelocity);
     
-    // 이미 폭발 예약되었으면 무시
-    if (bIsScheduledToExplode)
-        return;
-    
-    // 폭발 예약
-    bIsScheduledToExplode = true;
-    
-    // 약간의 지연 후 폭발 (발로란트 스타일)
-    FTimerHandle TimerHandle;
-    GetWorld()->GetTimerManager().SetTimer(TimerHandle, this, &AFlashProjectile::ExplodeFlash, DetonationDelay, false);
+    // if (bIsScheduledToExplode)
+    //     return;
+    //
+    // bIsScheduledToExplode = true;
+    //
+    // FTimerHandle TimerHandle;
+    // GetWorld()->GetTimerManager().SetTimer(TimerHandle, this, &AFlashProjectile::ExplodeFlash, DetonationDelay, false);
 }
 
 void AFlashProjectile::ExplodeFlash()
@@ -55,13 +50,12 @@ void AFlashProjectile::ExplodeFlash()
         UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), ExplosionEffect, GetActorLocation());
     }
 
-    // 폭발 사운드 재생
     if (ExplosionSound)
     {
         UGameplayStatics::PlaySoundAtLocation(GetWorld(), ExplosionSound, GetActorLocation());
     }
 
-    // 주변 플레이어들에게 섬광 효과 적용
+    // 범위 내 플레이어들 확인
     TArray<AActor*> FoundActors;
     UGameplayStatics::GetAllActorsOfClass(GetWorld(), ABaseAgent::StaticClass(), FoundActors);
 
@@ -69,40 +63,48 @@ void AFlashProjectile::ExplodeFlash()
     {
         if (ABaseAgent* Agent = Cast<ABaseAgent>(Actor))
         {
-            float FlashIntensity = 0.0f;
-            if (IsPlayerInFlashRange(Agent, FlashIntensity) && HasLineOfSight(Agent))
+            if (Agent->IsDead())
+                continue;
+
+            float BlindDuration = 0.0f;
+            
+            // 거리 기반으로 완전 실명 시간 계산
+            if (IsPlayerInFlashRange(Agent, BlindDuration) && HasLineOfSight(Agent))
             {
-                ApplyFlashEffectToPlayer(Agent, FlashIntensity);
+                // 각 클라이언트에서 시야 각도 체크 후 적용
+                MulticastApplyFlashEffect(BlindDuration);
             }
         }
     }
 
-    // 디버그 구체 그리기
+    // 디버그 표시
     if (GEngine && GEngine->GetNetMode(GetWorld()) != NM_DedicatedServer)
     {
-        DrawDebugSphere(GetWorld(), GetActorLocation(), FlashRadius, 16, FColor::Yellow, false, 3.0f);
+        DrawDebugSphere(GetWorld(), GetActorLocation(), FlashRadius, 16, FColor::Yellow, false, 5.0f);
     }
 
-    // 투사체 제거
     Destroy();
 }
 
-bool AFlashProjectile::IsPlayerInFlashRange(ABaseAgent* Player, float& OutIntensity)
+bool AFlashProjectile::IsPlayerInFlashRange(ABaseAgent* Player, float& OutBlindDuration)
 {
-    if (!Player || Player->IsDead())
+    if (!Player)
         return false;
 
     float Distance = FVector::Dist(GetActorLocation(), Player->GetActorLocation());
     
     if (Distance <= FlashRadius)
     {
-        // 거리에 따른 강도 계산 (가까울수록 강함)
+        // 거리 비율 계산 (가까울수록 1.0에 가까움)
         float DistanceRatio = 1.0f - (Distance / FlashRadius);
-        OutIntensity = FMath::Clamp(DistanceRatio * MaxFlashIntensity, 0.0f, MaxFlashIntensity);
+        
+        // 거리에 따라 완전 실명 시간만 변경
+        OutBlindDuration = FMath::Lerp(MinBlindDuration, MaxBlindDuration, DistanceRatio);
+        
         return true;
     }
 
-    OutIntensity = 0.0f;
+    OutBlindDuration = 0.0f;
     return false;
 }
 
@@ -111,7 +113,6 @@ bool AFlashProjectile::HasLineOfSight(ABaseAgent* Player)
     if (!Player)
         return false;
 
-    // 레이캐스트로 시야 차단 체크
     FHitResult HitResult;
     FVector Start = GetActorLocation();
     FVector End = Player->GetActorLocation();
@@ -120,28 +121,29 @@ bool AFlashProjectile::HasLineOfSight(ABaseAgent* Player)
     QueryParams.AddIgnoredActor(this);
     QueryParams.AddIgnoredActor(Player);
 
-    // 벽이 있으면 섬광 효과 감소
     bool bHit = GetWorld()->LineTraceSingleByChannel(HitResult, Start, End, ECC_WorldStatic, QueryParams);
-
-    bHit = false;
-
-    return !bHit; // 벽이 없으면 true
+    
+    return !bHit;
 }
 
-void AFlashProjectile::ApplyFlashEffectToPlayer(ABaseAgent* Player, float Intensity)
+void AFlashProjectile::MulticastApplyFlashEffect_Implementation(float BlindDuration)
 {
-    if (!Player || !HasAuthority())
-        return;
+    // 모든 클라이언트에서 실행
+    TArray<AActor*> FoundActors;
+    UGameplayStatics::GetAllActorsOfClass(GetWorld(), ABaseAgent::StaticClass(), FoundActors);
 
-    // FlashComponent를 통해 시각 효과 적용
-    if (UFlashComponent* FlashComp = Player->FindComponentByClass<UFlashComponent>())
+    for (AActor* Actor : FoundActors)
     {
-        FlashComp->StartFlashEffect(Intensity, FlashDuration);
-    }
+        if (ABaseAgent* Agent = Cast<ABaseAgent>(Actor))
+        {
+            if (Agent->IsDead())
+                continue;
 
-    // GameplayEffect를 통해 게임플레이 효과 적용 (움직임 저해 등)
-    if (FlashGameplayEffect && Player->GetASC())
-    {
-        Player->ServerApplyGE(FlashGameplayEffect);
+            // 클라이언트별로 시야 각도 체크 후 적용
+            if (UFlashComponent* FlashComp = Agent->FindComponentByClass<UFlashComponent>())
+            {
+                FlashComp->CheckViewAngleAndApplyFlash(GetActorLocation(), BlindDuration, RecoveryDuration);
+            }
+        }
     }
 }

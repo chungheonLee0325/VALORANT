@@ -774,7 +774,7 @@ bool UBaseGameplayAbility::SpawnProjectile(const FGameplayAbilityActorInfo& Acto
 	SpawnParams.Instigator = Cast<APawn>(ActorInfo.OwnerActor.Get());
 	SpawnParams.Owner = ActorInfo.OwnerActor.Get();
 
-	AActor* SpawnedProjectile = GetWorld()->SpawnActor<AActor>(
+	SpawnedProjectile = GetWorld()->SpawnActor<ABaseProjectile>(
 		ProjectileClass,
 		SpawnTransform,
 		SpawnParams
