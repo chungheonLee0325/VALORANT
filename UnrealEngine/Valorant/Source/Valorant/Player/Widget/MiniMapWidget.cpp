@@ -185,8 +185,8 @@ FVector2D UMiniMapWidget::WorldToMinimapPosition(const FVector& TargetActorLocat
     
 	// 미니맵 스케일 적용하여 미니맵 좌표 계산
 	FVector2D MinimapPos; // 미니맵 좌표 변수
-	MinimapPos.X = (TargetActorLocation.Y + 10000.f) / 20000.f * 500.0f;
-	MinimapPos.Y = (10000.f - TargetActorLocation.X) / 20000.f * 500.0f;
+	MinimapPos.X = (TargetActorLocation.Y + 10000.f) / 20000.f * 450.0f;
+	MinimapPos.Y = (10000.f - TargetActorLocation.X) / 20000.f * 450.0f;
     
 	return MinimapPos; // 계산된 미니맵 좌표 반환
 }
