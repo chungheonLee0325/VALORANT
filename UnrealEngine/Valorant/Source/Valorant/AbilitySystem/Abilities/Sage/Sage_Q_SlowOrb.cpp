@@ -16,5 +16,8 @@ USage_Q_SlowOrb::USage_Q_SlowOrb()
 
 void USage_Q_SlowOrb::HandleLeftClick(FGameplayEventData data)
 {
+	CommitAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo);
+	TransitionToState(FValorantGameplayTags::Get().State_Ability_Executing);
+	
 	SpawnProjectile(CachedActorInfo);
 }

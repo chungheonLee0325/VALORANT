@@ -22,6 +22,11 @@ public:
 protected:
     UPROPERTY(BlueprintReadOnly, Category = "State")
     EPhoenixQThrowType CurrentThrowType = EPhoenixQThrowType::None;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Animation")
+    UAnimMontage* ExecutingUnderThrow3pMontage = nullptr;
+    UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Animation")
+    UAnimMontage* ExecutingUnderThrow1pMontage = nullptr;
  
     virtual void HandleLeftClick(FGameplayEventData EventData) override;
     virtual void HandleRightClick(FGameplayEventData EventData) override;

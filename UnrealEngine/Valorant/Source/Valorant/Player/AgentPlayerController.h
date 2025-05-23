@@ -7,6 +7,7 @@
 #include "Component/ShopComponent.h"
 #include "AgentPlayerController.generated.h"
 
+class UFlashWidget;
 class UBaseAttributeSet;
 class UAgentAbilitySystemComponent;
 class UMatchMapHUD;

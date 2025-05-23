@@ -35,7 +35,8 @@ void UMatchMapSelectAgentUI::NativeConstruct()
 
 #ifdef DEBUGTEST 
 	FTimerHandle TimerHandle;
-	GetWorld()->GetTimerManager().SetTimer(TimerHandle, [this](){auto* Controller = Cast<AAgentPlayerController>(GetOwningPlayer());Controller->ServerRPC_LockIn(1);},1.0f,false);
+	GetWorld()->GetTimerManager().SetTimer(TimerHandle, [this]()
+		{auto* Controller = Cast<AAgentPlayerController>(GetOwningPlayer());Controller->ServerRPC_LockIn(2);},1.0f,false);
 #endif
 }
 

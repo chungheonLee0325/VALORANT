@@ -30,6 +30,12 @@ struct FValorantGameplayTags
     FGameplayTag Block_Ability_Activation;         // "Block.Ability.Activation"
     FGameplayTag Block_Movement;                   // "Block.Movement"
     FGameplayTag Block_WeaponSwitch;               // "Block.WeaponSwitch"
+
+    // 섬광 관련 태그들
+    FGameplayTag Flash_Effect;                     // "Flash.Effect"
+    FGameplayTag Flash_Intensity;                  // "Flash.Intensity"
+    FGameplayTag Flash_Duration;                   // "Flash.Duration"
+    FGameplayTag State_Flash_Blinded;              // "State.Flash.Blinded"
     
     // 이벤트 태그들
     FGameplayTag Event_Ability_Started;            // "Event.Ability.Started"

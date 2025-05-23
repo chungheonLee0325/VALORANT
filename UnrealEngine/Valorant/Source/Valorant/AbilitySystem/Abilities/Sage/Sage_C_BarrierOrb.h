@@ -5,7 +5,7 @@
 #include "Sage_C_BarrierOrb.generated.h"
 
 UCLASS()
-class VALORANT_API USage_C_BarrierOrb : public UGA_LeftRight
+class VALORANT_API USage_C_BarrierOrb : public UBaseGameplayAbility
 {
     GENERATED_BODY()
 
@@ -20,9 +20,9 @@ protected:
     UPROPERTY(EditDefaultsOnly, Category="Barrier")
     float BarrierSpawnHeight = 0.f;
     UPROPERTY(EditDefaultsOnly, Category="Barrier")
-    float BarrierYawStep = 90.f;
+    float BarrierYawStep = 30.f;
     FRotator BarrierRotation;
 
-    virtual void Active_Left_Click(FGameplayEventData data) override;
-    virtual void Active_Right_Click(FGameplayEventData data) override;
+    virtual void HandleLeftClick(FGameplayEventData EventData) override;
+    virtual void HandleRightClick(FGameplayEventData EventData) override;
 }; 

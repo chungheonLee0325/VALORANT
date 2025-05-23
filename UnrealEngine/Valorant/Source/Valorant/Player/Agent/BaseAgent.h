@@ -3,8 +3,11 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
 #include "Valorant/ResourceManager/ValorantGameType.h"
+#include "Player/Component/FlashComponent.h"
+#include "Player/Component/FlashPostProcessComponent.h"
 #include "BaseAgent.generated.h"
 
+class UFlashWidget;
 class UAgentAnimInstance;
 class ABaseWeapon;
 class ASpike;
@@ -359,6 +362,25 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Animation")
 	void StopThirdPersonMontage(float BlendOutTime = 0.25f);
 
+	// 현재 체력 반환
+	UFUNCTION(BlueprintCallable, Category = "Agent|Status")
+	float GetCurrentHealth() const;
+
+	// 최대 체력 반환
+	UFUNCTION(BlueprintCallable, Category = "Agent|Status")
+	float GetMaxHealth() const;
+
+	// 체력이 가득 찼는지 확인
+	UFUNCTION(BlueprintCallable, Category = "Agent|Status")
+	bool IsFullHealth() const;
+
+	// 섬광 관련 함수들
+	UFUNCTION(BlueprintCallable, Category = "Flash")
+	void OnFlashIntensityChanged(float NewIntensity);
+    
+	UFUNCTION(BlueprintCallable, Category = "Flash")
+	void CreateFlashWidget();
+	
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	UValorantGameInstance* m_GameInstance;
@@ -530,4 +552,19 @@ public:
 
 	UPROPERTY(Replicated)
 	FRotator ReplicatedControlRotation = FRotator::ZeroRotator;
+
+private:
+	// 섬광 컴포넌트들
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Flash", meta = (AllowPrivateAccess = "true"))
+	UFlashComponent* FlashComponent;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Flash", meta = (AllowPrivateAccess = "true"))
+	UFlashPostProcessComponent* PostProcessComponent;
+
+	// UI 위젯
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI", meta = (AllowPrivateAccess = "true"))
+	TSubclassOf<UFlashWidget> FlashWidgetClass;
+
+	UPROPERTY()
+	UFlashWidget* FlashWidget;
 };

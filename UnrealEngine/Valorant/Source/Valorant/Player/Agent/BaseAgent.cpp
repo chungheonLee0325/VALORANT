@@ -5,6 +5,7 @@
 #include "AbilitySystemComponent.h"
 #include "Engine/World.h"
 #include "Valorant.h"
+#include "AbilitySystem/Attributes/BaseAttributeSet.h"
 #include "AbilitySystem/Context/HitScanGameplayEffectContext.h"
 #include "Camera/CameraComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
@@ -26,6 +27,9 @@
 #include "ValorantObject/BaseInteractor.h"
 #include "ValorantObject/Spike/Spike.h"
 #include "Player/Component/CreditComponent.h"
+#include "Player/Component/FlashComponent.h"
+#include "Player/Component/FlashPostProcessComponent.h"
+#include "UI/FlashWidget.h"
 #include "Weapon/BaseWeapon.h"
 
 /* static */ EAgentDamagedPart ABaseAgent::GetHitDamagedPart(const FName& BoneName)
@@ -152,6 +156,17 @@ ABaseAgent::ABaseAgent()
 	TL_DieCamera = CreateDefaultSubobject<UTimelineComponent>("TL_DieCamera");
 
 	//ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ
+	//             LCH             ♣
+	//ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ
+	
+	// 섬광 컴포넌트 생성
+	FlashComponent = CreateDefaultSubobject<UFlashComponent>(TEXT("FlashComponent"));
+    
+	// 포스트 프로세스 컴포넌트 생성
+	PostProcessComponent = CreateDefaultSubobject<UFlashPostProcessComponent>(TEXT("PostProcessComponent"));
+
+
+	//ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ
 	//             CYT             ♣
 	//ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ
 
@@ -191,6 +206,8 @@ void ABaseAgent::PossessedBy(AController* NewController)
 		InteractionCapsule->OnComponentBeginOverlap.AddDynamic(this, &ABaseAgent::OnFindInteraction);
 		InteractionCapsule->OnComponentEndOverlap.AddDynamic(this, &ABaseAgent::OnInteractionCapsuleEndOverlap);
 	}
+
+	CreateFlashWidget();
 }
 
 // 클라이언트 전용. 서버로부터 PlayerState를 최초로 받을 때 호출됨
@@ -207,6 +224,9 @@ void ABaseAgent::OnRep_PlayerState()
 		// UE_LOG(LogTemp, Warning, TEXT("클라, 델리게이트 바인딩"));
 		BindToDelegatePC(pc);
 	}
+
+	// 로컬 플레이어에게만 UI 생성
+	CreateFlashWidget();
 }
 
 void ABaseAgent::BeginPlay()
@@ -249,6 +269,16 @@ void ABaseAgent::BeginPlay()
 
 	TL_DieCamera->SetTimelineLength(DieCameraTimeRange);
 	TL_DieCamera->SetTimelineLengthMode(ETimelineLengthMode::TL_TimelineLength);
+
+	//ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ
+	//             LCH             ♣
+	//ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ
+    
+	// 섬광 강도 변경 델리게이트 바인딩
+	if (FlashComponent)
+	{
+		FlashComponent->OnFlashIntensityChanged.AddDynamic(this, &ABaseAgent::OnFlashIntensityChanged);
+	}
 
 	//ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ
 	//             CYT             ♣
@@ -1589,9 +1619,22 @@ void ABaseAgent::OnSpikeStartPlant()
 void ABaseAgent::OnSpikeCancelInteract()
 {
 	// NET_LOG(LogTemp,Warning,TEXT("baseAgent:: OnSpikeCancelPlant"));
-	SwitchEquipment(EInteractorType::Spike);
+	DefusalMesh->SetVisibility(false);
 	bCanMove = true;
 	OnSpikeCancel.Broadcast();
+
+	if (MainWeapon)
+	{
+		EquipInteractor(MainWeapon);
+	}
+	else if (SubWeapon)
+	{
+		EquipInteractor(SubWeapon);
+	}
+	else
+	{
+		EquipInteractor(MeleeKnife);
+	}
 }
 
 void ABaseAgent::OnSpikeFinishPlant()
@@ -1604,7 +1647,19 @@ void ABaseAgent::OnSpikeFinishPlant()
 	}
 	
 	Spike = nullptr;
-	SwitchEquipment(EInteractorType::MainWeapon);
+	
+	if (MainWeapon)
+	{
+		EquipInteractor(MainWeapon);
+	}
+	else if (SubWeapon)
+	{
+		EquipInteractor(SubWeapon);
+	}
+	else
+	{
+		EquipInteractor(MeleeKnife);
+	}
 }
 
 void ABaseAgent::OnSpikeStartDefuse()
@@ -1629,6 +1684,19 @@ void ABaseAgent::OnSpikeFinishDefuse()
 	
 	bCanMove = true;
 	OnSpikeDefuseFinish.Broadcast();
+
+	if (MainWeapon)
+	{
+		EquipInteractor(MainWeapon);
+	}
+	else if (SubWeapon)
+	{
+		EquipInteractor(SubWeapon);
+	}
+	else
+	{
+		EquipInteractor(MeleeKnife);
+	}
 }
 
 void ABaseAgent::OnRep_Controller()
@@ -1730,5 +1798,76 @@ void ABaseAgent::StopThirdPersonMontage(float BlendOutTime)
 	if (ABP_3P)
 	{
 		ABP_3P->Montage_Stop(BlendOutTime);
+	}
+}
+
+float ABaseAgent::GetCurrentHealth() const
+{
+	if (ASC.IsValid())
+	{
+		const UBaseAttributeSet* Attributes = Cast<UBaseAttributeSet>(ASC->GetSet<UBaseAttributeSet>());
+		if (Attributes)
+		{
+			return Attributes->GetHealth();
+		}
+	}
+	return 0.f;
+}
+
+float ABaseAgent::GetMaxHealth() const
+{
+	if (ASC.IsValid())
+	{
+		const UBaseAttributeSet* Attributes = Cast<UBaseAttributeSet>(ASC->GetSet<UBaseAttributeSet>());
+		if (Attributes)
+		{
+			return Attributes->GetMaxHealth();
+		}
+	}
+	return 0.f;
+}
+
+bool ABaseAgent::IsFullHealth() const
+{
+	return FMath::IsNearlyEqual(GetCurrentHealth(), GetMaxHealth());
+}
+
+void ABaseAgent::OnFlashIntensityChanged(float NewIntensity)
+{
+	// 로컬 플레이어에게만 시각 효과 적용
+	if (!IsLocallyControlled())
+		return;
+
+	if (FlashWidget)
+	{
+		FlashWidget->UpdateFlashIntensity(NewIntensity);
+	}
+    
+	if (PostProcessComponent)
+	{
+		PostProcessComponent->UpdateFlashPostProcess(NewIntensity);
+	}
+    
+	// 디버그 로그 (완전 실명/회복 상태 표시)
+	if (UFlashComponent* FlashComp = FindComponentByClass<UFlashComponent>())
+	{
+		EFlashState State = FlashComp->GetFlashState();
+		FString StateStr = (State == EFlashState::CompleteBlind) ? TEXT("완전실명") :
+						  (State == EFlashState::Recovery) ? TEXT("회복중") : TEXT("정상");
+        
+		UE_LOG(LogTemp, VeryVerbose, TEXT("섬광 강도: %.2f, 상태: %s"), NewIntensity, *StateStr);
+	}
+}
+
+void ABaseAgent::CreateFlashWidget()
+{
+	if (FlashWidgetClass && !FlashWidget)
+	{
+		FlashWidget = CreateWidget<UFlashWidget>(GetWorld(), FlashWidgetClass);
+		if (FlashWidget)
+		{
+			FlashWidget->AddToViewport(100); // 높은 Z-Order로 최상단에 표시
+			//FlashWidget->SetVisibility(ESlateVisibility::Collapsed); // 처음에는 숨김
+		}
 	}
 }

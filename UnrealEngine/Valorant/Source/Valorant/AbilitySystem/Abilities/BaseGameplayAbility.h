@@ -210,6 +210,9 @@ protected:
 	UFUNCTION(BlueprintCallable, Category = "Ability|Utility")
 	bool SpawnProjectile(const FGameplayAbilityActorInfo& ActorInfo);
 
+	UPROPERTY()
+	ABaseProjectile* SpawnedProjectile = nullptr;
+	
 	UFUNCTION(BlueprintCallable, Category = "Ability|Utility")
 	void BroadcastAbilityEvent(FGameplayTag EventTag, const FGameplayEventData& EventData);
 
