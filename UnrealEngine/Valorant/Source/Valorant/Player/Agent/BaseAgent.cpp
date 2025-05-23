@@ -1028,7 +1028,7 @@ void ABaseAgent::Die()
 		OnDieCameraFinished();
 	}), DieCameraTimeRange, false);
 
-	FirstPersonMesh->SetOwnerNoSee(false);
+	GetMesh()->SetOwnerNoSee(false);
 }
 
 void ABaseAgent::OnDieCameraFinished()
@@ -1051,6 +1051,8 @@ void ABaseAgent::Net_Die_Implementation()
 {
 	if (IsLocallyControlled())
 	{
+		GetMesh()->SetOwnerNoSee(false);
+		
 		DisableInput(Cast<APlayerController>(GetController()));
 
 		FirstPersonMesh->SetOwnerNoSee(false);
