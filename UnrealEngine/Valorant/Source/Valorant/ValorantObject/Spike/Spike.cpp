@@ -283,7 +283,6 @@ void ASpike::ServerRPC_Cancel_Implementation(ABaseAgent* InteractAgent)
 
 	case ESpikeState::Defusing:
 		// 해제 중인 스파이크
-		// ServerRPC_CancelDefusing();
 		if (!AMatchGameMode::IsAttacker(PS->bIsBlueTeam))
 		{
 			// 스파이크 해제 취소
@@ -437,13 +436,11 @@ void ASpike::ServerRPC_CancelDefusing_Implementation()
 		return;
 	}
 
-	//TODO: 다른 슬롯으로 변경해줘야하는데, 임시로 4번으로 지정
-	InteractingAgent->ResetOwnSpike();
-	InteractingAgent->SwitchEquipment(EInteractorType::Spike);
-
 	// 에이전트에 취소 알림
 	MulticastRPC_AgentCancelSpike(InteractingAgent);
-
+	
+	InteractingAgent->ResetOwnSpike();
+	
 	// 해제 취소
 	SpikeState = ESpikeState::Planted;
 	InteractingAgent = nullptr;
@@ -469,8 +466,9 @@ void ASpike::ServerRPC_FinishDefusing_Implementation()
 	// 해제 완료
 	SpikeState = ESpikeState::Defused;
 	
-	InteractingAgent->ResetOwnSpike();
 	MulticastRPC_AgentFinishDefuse(InteractingAgent);
+	
+	InteractingAgent->ResetOwnSpike();
 
 	// 게임 모드에 해제 완료 알림
 	AMatchGameMode* GameMode = Cast<AMatchGameMode>(UGameplayStatics::GetGameMode(GetWorld()));

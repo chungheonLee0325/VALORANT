@@ -1589,9 +1589,22 @@ void ABaseAgent::OnSpikeStartPlant()
 void ABaseAgent::OnSpikeCancelInteract()
 {
 	// NET_LOG(LogTemp,Warning,TEXT("baseAgent:: OnSpikeCancelPlant"));
-	SwitchEquipment(EInteractorType::Spike);
+	DefusalMesh->SetVisibility(false);
 	bCanMove = true;
 	OnSpikeCancel.Broadcast();
+
+	if (MainWeapon)
+	{
+		EquipInteractor(MainWeapon);
+	}
+	else if (SubWeapon)
+	{
+		EquipInteractor(SubWeapon);
+	}
+	else
+	{
+		EquipInteractor(MeleeKnife);
+	}
 }
 
 void ABaseAgent::OnSpikeFinishPlant()
@@ -1604,7 +1617,19 @@ void ABaseAgent::OnSpikeFinishPlant()
 	}
 	
 	Spike = nullptr;
-	SwitchEquipment(EInteractorType::MainWeapon);
+	
+	if (MainWeapon)
+	{
+		EquipInteractor(MainWeapon);
+	}
+	else if (SubWeapon)
+	{
+		EquipInteractor(SubWeapon);
+	}
+	else
+	{
+		EquipInteractor(MeleeKnife);
+	}
 }
 
 void ABaseAgent::OnSpikeStartDefuse()
@@ -1629,6 +1654,19 @@ void ABaseAgent::OnSpikeFinishDefuse()
 	
 	bCanMove = true;
 	OnSpikeDefuseFinish.Broadcast();
+
+	if (MainWeapon)
+	{
+		EquipInteractor(MainWeapon);
+	}
+	else if (SubWeapon)
+	{
+		EquipInteractor(SubWeapon);
+	}
+	else
+	{
+		EquipInteractor(MeleeKnife);
+	}
 }
 
 void ABaseAgent::OnRep_Controller()
