@@ -415,6 +415,8 @@ void ABaseAgent::InitAgentAbility()
 		return;
 	}
 
+	ps->OnKillDelegate.AddDynamic(this,&ABaseAgent::OnKill);
+
 	ASC = Cast<UAgentAbilitySystemComponent>(ps->GetAbilitySystemComponent());
 	ASC->InitAbilityActorInfo(ps, this);
 
@@ -594,6 +596,11 @@ void ABaseAgent::ServerRPC_DropCurrentInteractor_Implementation()
 
 void ABaseAgent::ServerRPC_SetCurrentInteractor_Implementation(ABaseInteractor* interactor)
 {
+	if (CurrentInteractor)
+	{
+		CurrentInteractor->SetActive(false);
+	}
+	
 	CurrentInteractor = interactor;
 	CurrentEquipmentState = CurrentInteractor ? CurrentInteractor->GetInteractorType() : EInteractorType::None;
 	OnRep_CurrentInteractorState();
@@ -687,7 +694,6 @@ void ABaseAgent::SwitchEquipment(EInteractorType EquipmentType)
 		
 		if (CurrentInteractor)
 		{
-			CurrentInteractor->SetActive(false);
 			PrevEquipmentState = CurrentEquipmentState;
 			ASC->ClearFollowUpInputs();
 		}
@@ -1609,13 +1615,13 @@ void ABaseAgent::OnSpikeStartDefuse()
 	OnSpikeDeactive.Broadcast();
 }
 
-void ABaseAgent::OnSpikeCancelDefuse()
-{
-	DefusalMesh->SetVisibility(false);
-	
-	bCanMove = true;
-	OnSpikeCancel.Broadcast();
-}
+// void ABaseAgent::OnSpikeCancelDefuse()
+// {
+// 	DefusalMesh->SetVisibility(false);
+// 	
+// 	bCanMove = true;
+// 	OnSpikeCancel.Broadcast();
+// }
 
 void ABaseAgent::OnSpikeFinishDefuse()
 {
@@ -1676,7 +1682,7 @@ bool ABaseAgent::IsInFrustum(const AActor* Actor) const
 		{
 			bool bIsInFrustum = SceneView->ViewFrustum.IntersectSphere(Actor->GetActorLocation(), Actor->GetSimpleCollisionRadius());
 			// 절두체 안에 있으면서 최근에 렌더링 된 적 있는 경우에만 true 반환
-			return bIsInFrustum && Actor->WasRecentlyRendered(0.1f);
+			return bIsInFrustum && Actor->WasRecentlyRendered(0.01f);
 		}
 	}
 	return false;

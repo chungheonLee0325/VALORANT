@@ -455,6 +455,9 @@ protected:
 	virtual void OnStartCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust) override;
 	virtual void OnEndCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust) override;
 
+	UFUNCTION(BlueprintImplementableEvent)
+	void OnKill();
+	
 	virtual void InitAgentAbility();
 
 	UFUNCTION(BlueprintCallable)
@@ -512,12 +515,13 @@ public:
 	void OnReload();
 	
 	void OnSpikeStartPlant();
-	void OnSpikeCancelInteract();
 	void OnSpikeFinishPlant();
 	
 	void OnSpikeStartDefuse();
-	void OnSpikeCancelDefuse();
 	void OnSpikeFinishDefuse();
+	// void OnSpikeCancelDefuse();
+	
+	void OnSpikeCancelInteract();
 	
 	bool bInteractionCapsuleInit = false;
 	virtual void OnRep_Controller() override;

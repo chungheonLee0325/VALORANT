@@ -104,6 +104,10 @@ class VALORANT_API UMatchMapHUD : public UUserWidget
 	bool bPlayed30SecLeftVo = true;
 	UPROPERTY(BlueprintReadWrite, meta=(AllowPrivateAccess))
 	bool bPlayed10SecLeftVo = true;
+
+	// 라운드 시작 3초전 카운트다운 음향을 위한 변수
+	bool bIsPreRound = false;
+	
 	void SetTrueVo();
 	void SetFalseVo();
 	

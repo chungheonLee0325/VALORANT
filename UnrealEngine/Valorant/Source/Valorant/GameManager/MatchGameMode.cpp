@@ -624,6 +624,8 @@ void AMatchGameMode::OnKill(AMatchPlayerController* Killer, AMatchPlayerControll
 
 				NET_LOG(LogTemp, Warning, TEXT("크레딧 보상 지급: %s가 킬 보상을 받았습니다."), *KillerName);
 			}
+
+			KillerPS->OnKill();
 		}
 	}
 
