@@ -19,11 +19,11 @@ void AMatchPlayerState::BeginPlay()
 	Super::BeginPlay();
 	if (auto* GameState = GetWorld()->GetGameState<AMatchGameState>())
 	{
-		GameState->OnShift.AddDynamic(this, &AMatchPlayerState::OnShift);
+		GameState->OnShift.AddDynamic(this, &AMatchPlayerState::ServerRPC_OnShift);
 	}
 }
 
-void AMatchPlayerState::OnShift()
+void AMatchPlayerState::ServerRPC_OnShift_Implementation()
 {
 	bIsAttacker = !bIsAttacker;
 }

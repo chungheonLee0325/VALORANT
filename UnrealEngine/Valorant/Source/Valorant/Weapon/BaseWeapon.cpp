@@ -4,7 +4,6 @@
 #include "BaseWeapon.h"
 
 #include "BaseWeaponAnim.h"
-#include "EnhancedInputSubsystems.h"
 #include "ThirdPersonInteractor.h"
 #include "Valorant.h"
 #include "Components/WidgetComponent.h"
@@ -16,6 +15,8 @@
 #include "Player/Agent/BaseAgent.h"
 #include "Net/UnrealNetwork.h"
 #include "UI/DetectWidget.h"
+#include "NiagaraFunctionLibrary.h"
+//#include "NiagaraCommon.h"
 
 ABaseWeapon::ABaseWeapon()
 {
@@ -25,7 +26,7 @@ ABaseWeapon::ABaseWeapon()
 void ABaseWeapon::BeginPlay()
 {
 	Super::BeginPlay();
-	
+
 	auto* GameInstance = Cast<UValorantGameInstance>(UGameplayStatics::GetGameInstance(GetWorld()));
 	if (nullptr == GameInstance)
 	{
@@ -41,26 +42,26 @@ void ABaseWeapon::BeginPlay()
 	}
 	if (const auto* DetectWidget = Cast<UDetectWidget>(DetectWidgetComponent->GetUserWidgetObject()))
 	{
-		DetectWidget->SetName(TEXT("획득 ") + WeaponData->LocalName);
+		// DetectWidget->SetName(TEXT("획득 ") + WeaponData->LocalName);
 	}
-	
+
 	// 무기 사용 여부에 따른 시각적 효과 적용
 	UpdateVisualState();
 	auto* WeaponMeshAsset = WeaponData->WeaponMesh;
-	
+
 	if (nullptr == WeaponMeshAsset || nullptr == Mesh)
 	{
 		UE_LOG(LogTemp, Error, TEXT("ABaseWeapon::BeginPlay: WeaponMeshAsset Load Fail (WeaponID : %d)"), WeaponID);
 		return;
 	}
-	
+
 	Mesh->SetSkeletalMeshAsset(WeaponMeshAsset);
 	Mesh->SetRelativeScale3D(FVector(0.34f));
 
-	NET_LOG(LogTemp, Warning, TEXT("%hs Called, WeaponId: %d"), __FUNCTION__, WeaponData->WeaponID);
+	// NET_LOG(LogTemp, Warning, TEXT("%hs Called, WeaponId: %d"), __FUNCTION__, WeaponData->WeaponID);
 	if (WeaponData->GunABPClass)
 	{
-		NET_LOG(LogTemp, Warning, TEXT("%hs Called, WeaponData->GunABPClass, %s"), __FUNCTION__, *GetName());
+		// NET_LOG(LogTemp, Warning, TEXT("%hs Called, WeaponData->GunABPClass, %s"), __FUNCTION__, *GetName());
 		Mesh->SetAnimInstanceClass(WeaponData->GunABPClass);
 	}
 
@@ -68,11 +69,11 @@ void ABaseWeapon::BeginPlay()
 	{
 		InteractorType = EInteractorType::SubWeapon;
 	}
-	else 
+	else
 	{
 		InteractorType = EInteractorType::MainWeapon;
 	}
-	
+
 	MagazineSize = WeaponData->MagazineSize;
 	MagazineAmmo = MagazineSize;
 	// TODO: 총기별 여분탄약 데이터 추가 필요
@@ -112,7 +113,7 @@ void ABaseWeapon::StartFire()
 		NET_LOG(LogTemp, Warning, TEXT("%hs Called, OwnerAgent or Controller is nullptr"), __FUNCTION__);
 		return;
 	}
-	
+
 	bIsFiring = true;
 	if (FMath::IsNearlyZero(FMath::Abs(TotalRecoilOffsetPitch) + FMath::Abs(TotalRecoilOffsetYaw), 0.05f))
 	{
@@ -133,7 +134,7 @@ void ABaseWeapon::Fire()
 	{
 		return;
 	}
-	
+
 	if (MagazineAmmo <= 0)
 	{
 		if (SpareAmmo > 0)
@@ -142,14 +143,14 @@ void ABaseWeapon::Fire()
 		}
 		return;
 	}
-	
+
 	const float CurrentTime = GetWorld()->GetTimeSeconds();
 	if (LastFireTime + FireInterval > CurrentTime)
 	{
 		return;
 	}
 	LastFireTime = CurrentTime;
-	
+
 	// KBD: 발사 시 캐릭터에 반동값 적용
 	if (RecoilData.Num() > 0)
 	{
@@ -160,7 +161,7 @@ void ABaseWeapon::Fire()
 		const float YawValue = RecoilData[RecoilLevel].OffsetYaw;
 		OwnerAgent->AddControllerYawInput(YawValue);
 		TotalRecoilOffsetYaw += YawValue;
-		
+
 		RecoilLevel = FMath::Clamp(RecoilLevel + 1, 0, RecoilData.Num() - 1);
 		// NET_LOG(LogTemp, Warning, TEXT("Ammo : %d, Total : (%f, %f), Add : (%f, %f)"), MagazineAmmo, TotalRecoilOffsetPitch, TotalRecoilOffsetYaw, PitchValue, YawValue);
 	}
@@ -197,9 +198,9 @@ FVector ABaseWeapon::GetSpreadDirection(const FVector& Direction)
 
 	// TODO: 무기 종류에 따라 탄퍼짐 계수 다르게
 	// if (WeaponData->WeaponCategory == EWeaponCategory::SMG)
-	
+
 	const float MaxAngleRad = FMath::DegreesToRadians(MaxAngleDeg);
-	
+
 	const float Yaw = FMath::RandRange(-MaxAngleRad, MaxAngleRad);
 	const float Pitch = FMath::RandRange(-MaxAngleRad, MaxAngleRad);
 	FRotator SpreadRot = Direction.Rotation();
@@ -216,18 +217,23 @@ void ABaseWeapon::ServerRPC_Fire_Implementation(const FVector& Location, const F
 		NET_LOG(LogTemp, Error, TEXT("%hs Called, World is nullptr"), __FUNCTION__);
 		return;
 	}
-	
+
 	MagazineAmmo--;
-	NET_LOG(LogTemp, Warning, TEXT("%hs Called, MagazineAmmo: %d, SpareAmmo: %d"), __FUNCTION__, MagazineAmmo, SpareAmmo);
+	OnRep_Ammo();
+	NET_LOG(LogTemp, Warning, TEXT("%hs Called, MagazineAmmo: %d, SpareAmmo: %d"), __FUNCTION__, MagazineAmmo,
+	        SpareAmmo);
 
 	// 무기를 사용한 것으로 표시
 	bWasUsed = true;
 	
+	Multicast_SpawnMuzzleFlash();
+	MulticastRPC_PlayFireSound();
+	MulticastRPC_PlayFireAnimation();
+	
 	const FVector& Dir = GetSpreadDirection(Direction);
 	const FVector& Start = Location;
 	const FVector End = Start + Dir * 99999;
-	// NET_LOG(LogTemp, Warning, TEXT("ServerRPC_Fire_Implementation, Start : %s, End : %s"), *Start.ToString(), *End.ToString());
-	
+
 	// 궤적, 탄착군 디버깅
 	TArray<AActor*> ActorsToIgnore;
 	ActorsToIgnore.Add(GetOwner());
@@ -240,7 +246,7 @@ void ABaseWeapon::ServerRPC_Fire_Implementation(const FVector& Location, const F
 		UEngineTypes::ConvertToTraceType(ECC_GameTraceChannel2), // TraceChannel: HitDetect
 		false,
 		ActorsToIgnore,
-		EDrawDebugTrace::ForDuration,
+		EDrawDebugTrace::None,
 		OutHit,
 		true,
 		FLinearColor::Red,
@@ -249,44 +255,70 @@ void ABaseWeapon::ServerRPC_Fire_Implementation(const FVector& Location, const F
 	);
 	if (bHit)
 	{
-		int FinalDamage = WeaponData->BaseDamage;
-		switch (const EAgentDamagedPart DamagedPart = ABaseAgent::GetHitDamagedPart(OutHit.BoneName))
-		{
-		case EAgentDamagedPart::None:
-			break;
-		case EAgentDamagedPart::Head:
-			FinalDamage *= WeaponData->HeadshotMultiplier;
-			break;
-		case EAgentDamagedPart::Body:
-			break;
-		case EAgentDamagedPart::Legs:
-			FinalDamage *= WeaponData->LegshotMultiplier;
-			break;
-		}
-
-		const auto& FalloffArray = WeaponData->GunDamageFalloffArray;
-		for (int i = FalloffArray.Num() - 1; i >= 0; i--)
-		{
-			const auto& FalloffData = FalloffArray[i];
-			if (OutHit.Distance >= FalloffData.RangeStart)
-			{
-				FinalDamage *= FalloffData.DamageMultiplier;
-				break;
-			}
-		}
-		FinalDamage = FMath::Clamp(FinalDamage, 1, 9999);
-		
-		NET_LOG(LogTemp, Warning, TEXT("LineTraceSingle Hit: %s, BoneName: %s, Distance: %f, FinalDamage: %d"), *OutHit.GetActor()->GetName(), *OutHit.BoneName.ToString(), OutHit.Distance, FinalDamage);
+		// 팀킬 방지 로직 추가
 		if (ABaseAgent* HitAgent = Cast<ABaseAgent>(OutHit.GetActor()))
 		{
-			// 공격자 정보 전달
-			HitAgent->ServerApplyHitScanGE(NewDamageEffectClass, FinalDamage, OwnerAgent);
+			// 공격자와 피격자가 같은 팀인지 확인
+			if (OwnerAgent && HitAgent->IsBlueTeam() == OwnerAgent->IsBlueTeam())
+			{
+				// 같은 팀이면 데미지를 주지 않고 임팩트 효과만 재생
+				// Multicast_SpawnImpactEffect(OutHit.ImpactPoint, OutHit.ImpactNormal.Rotation());
+				// Multicast_SpawnTracer(Start, OutHit.ImpactPoint);
+			}
+			else
+			{
+				int FinalDamage = WeaponData->BaseDamage;
+				const EAgentDamagedPart DamagedPart = ABaseAgent::GetHitDamagedPart(OutHit.BoneName);
+				switch (DamagedPart)
+				{
+				case EAgentDamagedPart::None:
+					break;
+				case EAgentDamagedPart::Head:
+					FinalDamage *= WeaponData->HeadshotMultiplier;
+					break;
+				case EAgentDamagedPart::Body:
+					break;
+				case EAgentDamagedPart::Legs:
+					FinalDamage *= WeaponData->LegshotMultiplier;
+					break;
+				}
+
+				const auto& FalloffArray = WeaponData->GunDamageFalloffArray;
+				for (int i = FalloffArray.Num() - 1; i >= 0; i--)
+				{
+					const auto& FalloffData = FalloffArray[i];
+					if (OutHit.Distance >= FalloffData.RangeStart)
+					{
+						FinalDamage *= FalloffData.DamageMultiplier;
+						break;
+					}
+				}
+				FinalDamage = FMath::Clamp(FinalDamage, 1, 9999);
+
+				// 피격 방향 판정
+				EAgentDamagedDirection DamagedDirection = EAgentDamagedDirection::Front;
+				const FVector HitDir = (OutHit.TraceStart - OutHit.TraceEnd).GetSafeNormal();
+				FVector Forward = HitAgent->GetActorForwardVector();
+				FVector Cross = FVector::CrossProduct(Forward, -HitDir);
+				const float Dot = FVector::DotProduct(Forward, -HitDir);
+				if (Dot > 0.5f) DamagedDirection = EAgentDamagedDirection::Back;
+				else if (Dot < -0.5f) DamagedDirection = EAgentDamagedDirection::Front;
+				else if (Cross.Z > 0) DamagedDirection = EAgentDamagedDirection::Left;
+				else DamagedDirection = EAgentDamagedDirection::Right;
+
+				NET_LOG(LogTemp, Warning, TEXT("LineTraceSingle Hit: %s, BoneName: %s, Distance: %f, FinalDamage: %d"),
+						*OutHit.GetActor()->GetName(), *OutHit.BoneName.ToString(), OutHit.Distance, FinalDamage);
+			
+				// 공격자 정보 전달
+				HitAgent->ServerApplyHitScanGE(NewDamageEffectClass, FinalDamage, OwnerAgent, DamagedPart, DamagedDirection);
+			}
 		}
-		DrawDebugPoint(WorldContext, OutHit.ImpactPoint, 5, FColor::Green, false, 30);
+		// DrawDebugPoint(WorldContext, OutHit.ImpactPoint, 5, FColor::Green, false, 30);
+
+		// 벽이든 캐릭터든 항상 임팩트 이펙트/사운드 호출
+		Multicast_SpawnImpactEffect(OutHit.ImpactPoint, OutHit.ImpactNormal.Rotation());
+		Multicast_SpawnTracer(Start, bHit ? OutHit.ImpactPoint : End);
 	}
-	
-	MulticastRPC_PlayFireSound();
-	MulticastRPC_PlayFireAnimation();
 }
 
 void ABaseWeapon::EndFire()
@@ -294,7 +326,8 @@ void ABaseWeapon::EndFire()
 	bIsFiring = false;
 
 	GetWorld()->GetTimerManager().ClearTimer(AutoFireHandle);
-	GetWorld()->GetTimerManager().SetTimer(RecoverRecoilLevelHandle, this, &ABaseWeapon::RecoverRecoilLevel, FireInterval / 2, true);
+	GetWorld()->GetTimerManager().SetTimer(RecoverRecoilLevelHandle, this, &ABaseWeapon::RecoverRecoilLevel,
+	                                       FireInterval / 2, true);
 }
 
 void ABaseWeapon::RecoverRecoilLevel()
@@ -313,20 +346,56 @@ void ABaseWeapon::ServerRPC_StartReload_Implementation()
 		NET_LOG(LogTemp, Warning, TEXT("%hs Called, Can't Reload"), __FUNCTION__);
 		return;
 	}
-	
+
 	if (false == GetWorld()->GetTimerManager().IsTimerActive(ReloadHandle))
 	{
 		NET_LOG(LogTemp, Warning, TEXT("%hs Called, Reload Start"), __FUNCTION__);
 		bIsFiring = false;
 		bIsReloading = true;
 		MulticastRPC_PlayReloadAnimation();
-		GetWorld()->GetTimerManager().SetTimer(ReloadHandle, this, &ABaseWeapon::Reload, 3, false, WeaponData->ReloadTime);
+		GetWorld()->GetTimerManager().SetTimer(ReloadHandle, this, &ABaseWeapon::Reload, 3, false,
+		                                       WeaponData->ReloadTime);
 	}
 }
 
 void ABaseWeapon::MulticastRPC_PlayFireSound_Implementation()
 {
-	PlayFireSound();
+	if (WeaponData && WeaponData->FireSound)
+	{
+		bool bIsFP = false;
+		bool bIsCU = false;
+		int Dir = 0;
+		const auto* LocallyPC = GetWorld()->GetFirstPlayerController<AAgentPlayerController>();
+		if (LocallyPC && LocallyPC->IsLocalController())
+		{
+			if (const auto* ViewTarget = LocallyPC->GetViewTarget())
+			{
+				if (OwnerAgent == ViewTarget)
+				{
+					bIsFP = true;
+				}
+				else
+				{
+					const auto& FireLocation = GetActorLocation();
+					const auto& MyLocation = ViewTarget->GetActorLocation();
+					const auto& MyForward = ViewTarget->GetActorForwardVector();
+					const auto ToFireLocation = (FireLocation - MyLocation).GetSafeNormal();
+					// 발사 지점과의 거리가 2000보다 작으면 근접 발사 사운드 출력
+					bIsCU = FVector::Dist(FireLocation, MyLocation) <= 2000.f;
+					// 내 전방 벡터를 기준으로 총소리가 어디서 들린 것인지 판단
+					const auto Dot = FVector::DotProduct(MyForward, ToFireLocation);
+					if (Dot > 0.7f)
+						Dir = 0; // 전방
+					else if (Dot < -0.7f)
+						Dir = 1; // 후방
+					else
+						Dir = 2; // 사이드
+				}
+			}
+		}
+		NET_LOG(LogTemp, Warning, TEXT("%hs Called, bIsFP: %hs, bIsCU: %hs, Dir: %d"), __FUNCTION__, bIsFP ? "True" : "False", bIsCU ? "True" : "False", Dir);
+		PlayFireSound(WeaponData->FireSound, true, true, 0, WeaponData->MuzzleSocketName);
+	}
 }
 
 void ABaseWeapon::MulticastRPC_PlayFireAnimation_Implementation()
@@ -343,23 +412,6 @@ void ABaseWeapon::MulticastRPC_PlayFireAnimation_Implementation()
 		return;
 	}
 	
-	// if (OwnerAgent->IsLocallyControlled())
-	// {
-	// 	if (OwnerAgent->GetABP_1P()->Montage_IsPlaying(AM_Fire))
-	// 	{
-	// 		OwnerAgent->GetABP_1P()->Montage_Stop(0.05f, AM_Fire);
-	// 	}
-	// 	OwnerAgent->GetABP_1P()->Montage_Play(AM_Fire, 1.0f);
-	// }
-	// else
-	// {
-	// 	if (OwnerAgent->GetABP_3P()->Montage_IsPlaying(AM_Fire))
-	// 	{
-	// 		OwnerAgent->GetABP_3P()->Montage_Stop(0.05f, AM_Fire);
-	// 	}
-	// 	OwnerAgent->GetABP_3P()->Montage_Play(AM_Fire, 1.0f);
-	// }
-
 	NET_LOG(LogTemp, Warning, TEXT("%hs Called"), __FUNCTION__);
 	OnFire.Broadcast();
 	if (OwnerAgent)
@@ -378,27 +430,21 @@ void ABaseWeapon::MulticastRPC_PlayReloadAnimation_Implementation()
 	}
 }
 
-void ABaseWeapon::MulticastRPC_PlayEquipAnimation_Implementation()
-{
-	NET_LOG(LogTemp, Warning, TEXT("%hs Called"), __FUNCTION__);
-	OnEquip.Broadcast();
-	if (OwnerAgent)
-	{
-		OwnerAgent->OnEquip();
-	}
-}
+
 
 void ABaseWeapon::Reload()
 {
 	const int Req = MagazineSize - MagazineAmmo;
 	const int D = FMath::Min(Req, SpareAmmo);
-	UE_LOG(LogTemp, Warning, TEXT("Reload Completed, MagazineAmmo : %d -> %d, SpareAmmo : %d -> %d"), MagazineAmmo, MagazineAmmo + D, SpareAmmo, SpareAmmo - D);
+	UE_LOG(LogTemp, Warning, TEXT("Reload Completed, MagazineAmmo : %d -> %d, SpareAmmo : %d -> %d"), MagazineAmmo,
+	       MagazineAmmo + D, SpareAmmo, SpareAmmo - D);
 	MagazineAmmo += D;
 	SpareAmmo -= D;
-	
+	OnRep_Ammo();
+
 	// 무기를 사용한 것으로 표시
 	bWasUsed = true;
-	
+
 	if (const auto* World = GetWorld())
 	{
 		if (World->GetTimerManager().IsTimerActive(AutoFireHandle))
@@ -419,35 +465,11 @@ void ABaseWeapon::StopReload()
 	}
 }
 
-// void ABaseWeapon::MulticastRPC_PlayReloadAnim_Implementation()
-// {
-// 	// if (AM_Reload == nullptr)
-// 	// {
-// 	// 	UE_LOG(LogTemp, Error, TEXT("총기에 장전 애니메이션이 없어요."));
-// 	// 	return;
-// 	// }
-// 	// if (OwnerAgent->IsLocallyControlled())
-// 	// {
-// 	// 	if (OwnerAgent->GetABP_1P()->Montage_IsPlaying(AM_Reload))
-// 	// 	{
-// 	// 		OwnerAgent->GetABP_1P()->Montage_Stop(0.05f, AM_Reload);
-// 	// 	}
-// 	// 	OwnerAgent->GetABP_1P()->Montage_Play(AM_Reload, 1.0f);
-// 	// }
-// 	// else
-// 	// {
-// 	// 	if (OwnerAgent->GetABP_3P()->Montage_IsPlaying(AM_Reload))
-// 	// 	{
-// 	// 		OwnerAgent->GetABP_3P()->Montage_Stop(0.05f, AM_Reload);
-// 	// 	}
-// 	// 	OwnerAgent->GetABP_3P()->Montage_Play(AM_Reload, 1.0f);
-// 	// }
-// }
-
 bool ABaseWeapon::ServerOnly_CanAutoPickUp(ABaseAgent* Agent) const
 {
 	// 요원이 현재 똑같은 종류의 무기를 들고 있을 경우 false 반환
-	switch (GetWeaponCategory()) {
+	switch (GetWeaponCategory())
+	{
 	case EWeaponCategory::None:
 		return false;
 	case EWeaponCategory::Sidearm:
@@ -468,7 +490,6 @@ bool ABaseWeapon::ServerOnly_CanAutoPickUp(ABaseAgent* Agent) const
 
 bool ABaseWeapon::ServerOnly_CanDrop() const
 {
-	// TODO: 근접무기인 경우 false
 	return Super::ServerOnly_CanDrop();
 }
 
@@ -486,21 +507,6 @@ void ABaseWeapon::ServerRPC_PickUp_Implementation(ABaseAgent* Agent)
 void ABaseWeapon::ServerRPC_Drop_Implementation()
 {
 	Super::ServerRPC_Drop_Implementation();
-
-	//TODO: 이미 Super에서 Onwer가 Null로 처리됨. 필요시 수정
-	if (nullptr == OwnerAgent)
-	{
-		return;
-	}
-	
-	if (const AAgentPlayerController* PlayerController = Cast<AAgentPlayerController>(OwnerAgent->GetController()))
-	{
-		if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PlayerController->GetLocalPlayer()))
-		{
-			// UE_LOG(LogTemp, Warning, TEXT("RemoveMappingContext"));
-			Subsystem->RemoveMappingContext(FireMappingContext);
-		}
-	}
 }
 
 void ABaseWeapon::ServerRPC_Interact_Implementation(ABaseAgent* InteractAgent)
@@ -525,7 +531,7 @@ void ABaseWeapon::ServerOnly_AttachWeapon(ABaseAgent* Agent)
 		NET_LOG(LogTemp, Error, TEXT("%hs Called, InteractAgent is nullptr"), __FUNCTION__);
 		return;
 	}
-	
+
 	FAttachmentTransformRules AttachmentRules(
 		EAttachmentRule::SnapToTarget,
 		EAttachmentRule::SnapToTarget,
@@ -541,17 +547,17 @@ void ABaseWeapon::ServerOnly_AttachWeapon(ABaseAgent* Agent)
 	if ((ThirdPersonInteractor = GetWorld()->SpawnActor<AThirdPersonInteractor>()))
 	{
 		ThirdPersonInteractor->SetOwner(Agent);
-		ThirdPersonInteractor->MulticastRPC_InitWeapon(WeaponID);
+		ThirdPersonInteractor->MulticastRPC_InitWeapon(this, WeaponID);
 		ThirdPersonInteractor->AttachToComponent(Agent->GetMesh(), AttachmentRules, FName(TEXT("R_WeaponSocket")));
 	}
-	
+
 	Agent->AcquireInteractor(this);
 }
 
 void ABaseWeapon::NetMulti_ReloadWeaponData_Implementation(int32 NewWeaponID)
 {
 	WeaponID = NewWeaponID;
-	
+
 	// 무기 ID가 변경되었으므로 무기 데이터 다시 로드
 	auto* GameInstance = Cast<UValorantGameInstance>(UGameplayStatics::GetGameInstance(GetWorld()));
 	if (GameInstance)
@@ -565,14 +571,14 @@ void ABaseWeapon::NetMulti_ReloadWeaponData_Implementation(int32 NewWeaponID)
 			// 여분 탄약 설정 (추후 데이터 추가 필요)
 			SpareAmmo = MagazineSize * 5;
 			FireInterval = 1.0f / WeaponData->FireRate;
-			
+
 			// 반동 데이터 갱신
 			RecoilData.Empty();
 			for (auto Element : WeaponData->GunRecoilMap)
 			{
 				RecoilData.Add(Element);
 			}
-			
+
 			// 메시 업데이트 (실제 구현에서는 무기 ID에 따라 다른 메시 적용)
 			if (WeaponData->WeaponMesh != nullptr)
 			{
@@ -598,6 +604,15 @@ void ABaseWeapon::OnRep_Ammo() const
 				Controller->NotifyChangedAmmo(false, MagazineAmmo, SpareAmmo);
 			}
 		}
+	}
+}
+
+void ABaseWeapon::Multicast_SetActive_Implementation(bool bActive)
+{
+	Super::Multicast_SetActive_Implementation(bActive);
+	if (bActive)
+	{
+		OnRep_Ammo();
 	}
 }
 
@@ -650,6 +665,14 @@ void ABaseWeapon::UpdateVisualState()
 	// }
 }
 
+void ABaseWeapon::ServerOnly_ClearAmmo()
+{
+	MagazineAmmo = MagazineSize;
+	// TODO: 총기별 여분탄약 데이터 추가 필요
+	SpareAmmo = MagazineSize * 5;
+	OnRep_Ammo();
+}
+
 // 무기 사용 여부 설정시 시각적 상태도 업데이트하도록 수정
 void ABaseWeapon::SetWasUsed(bool bNewWasUsed)
 {
@@ -657,5 +680,52 @@ void ABaseWeapon::SetWasUsed(bool bNewWasUsed)
 	{
 		bWasUsed = bNewWasUsed;
 		UpdateVisualState();
+	}
+}
+
+void ABaseWeapon::Multicast_SpawnMuzzleFlash_Implementation()
+{
+	if (WeaponData && WeaponData->MuzzleFlashEffect && Mesh)
+	{
+		UNiagaraFunctionLibrary::SpawnSystemAttached(
+			WeaponData->MuzzleFlashEffect,
+			Mesh,
+			WeaponData->MuzzleSocketName,
+			FVector::ZeroVector,
+			FRotator::ZeroRotator,
+			EAttachLocation::Type::SnapToTarget, true
+		);
+	}
+}
+
+void ABaseWeapon::Multicast_SpawnTracer_Implementation(const FVector& Start, const FVector& End)
+{
+	if (WeaponData && WeaponData->TracerEffect && Mesh)
+	{
+		// 머즐 소켓 위치에서 End를 향해 발사
+		FVector MuzzleLoc = Mesh->GetSocketLocation(WeaponData->MuzzleSocketName);
+		FVector Dir = End - MuzzleLoc;
+		float Length = Dir.Size();
+		FRotator Rot = Dir.Rotation();
+		
+		UNiagaraComponent* NiagaraComp = UNiagaraFunctionLibrary::SpawnSystemAtLocation(
+			GetWorld(),
+			WeaponData->TracerEffect,
+			MuzzleLoc,
+			Rot
+		);
+	}
+}
+
+void ABaseWeapon::Multicast_SpawnImpactEffect_Implementation(const FVector& Location, const FRotator& Rotation)
+{
+	if (WeaponData && WeaponData->ImpactEffect)
+	{
+		UNiagaraFunctionLibrary::SpawnSystemAtLocation(
+			GetWorld(),
+			WeaponData->ImpactEffect,
+			Location,
+			Rotation
+		);
 	}
 }

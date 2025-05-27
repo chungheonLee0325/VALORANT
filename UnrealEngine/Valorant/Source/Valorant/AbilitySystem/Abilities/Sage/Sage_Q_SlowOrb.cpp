@@ -7,12 +7,13 @@ USage_Q_SlowOrb::USage_Q_SlowOrb()
 	Tags.AddTag(FGameplayTag::RequestGameplayTag(FName("Input.Skill.Q")));
 	SetAssetTags(Tags);
 
-	FollowUpInputTags.Add(FGameplayTag::RequestGameplayTag(FName("Input.Default.LeftClick")));
-
 	m_AbilityID = 1002;
+	ActivationType = EAbilityActivationType::WithPrepare;
+	FollowUpInputType = EFollowUpInputType::LeftOrRight;
 }
 
-void USage_Q_SlowOrb::Active_Left_Click(FGameplayEventData data)
+bool USage_Q_SlowOrb::OnLeftClickInput()
 {
-	SpawnProjectile(m_ActorInfo);
+	SpawnProjectile();
+	return true;
 }

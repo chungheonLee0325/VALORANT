@@ -43,8 +43,8 @@ protected:
 	UFUNCTION()
 	void OnProcessMontageCancelled();
 
-	virtual void Active_Left_Click(FGameplayEventData data) override;
-	virtual void Active_Right_Click(FGameplayEventData data) override;
+	virtual void Active_Left_Click(FGameplayEventData data);
+	virtual void Active_Right_Click(FGameplayEventData data);
 	
 	void MainTask(UAbilityTask_PlayMontageAndWait* ThrowTask);
 

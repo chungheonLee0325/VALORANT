@@ -17,10 +17,11 @@
 #include "Player/MatchPlayerState.h"
 #include "Player/Agent/BaseAgent.h"
 #include "Player/Component/CreditComponent.h"
+#include "ValorantObject/Spike/Spike.h"
 #include "Weapon/BaseWeapon.h"
 
 static int CurrentRound = 0;
-static int ShiftRound = 4;
+static int ShiftRound = 2;
 
 AMatchGameMode::AMatchGameMode()
 {
@@ -30,9 +31,9 @@ AMatchGameMode::AMatchGameMode()
 	SelectAgentTime = 60.0f;
 	PreRoundTime = 15.0f; // org: 45.0f
 	BuyPhaseTime = 25.0f; // org: 30.0f
-	InRoundTime = 20.0f; // org: 100.0f
+	InRoundTime = 50.0f; // org: 100.0f
 	EndPhaseTime = 5.0f; // org: 10.0f
-	SpikeActiveTime = 15.0f; // org: 45.0f
+	SpikeActiveTime = 25.0f; // org: 45.0f
 	bReadyToEndMatch = false;
 	LeavingMatchTime = 10.0f;
 #endif
@@ -247,14 +248,14 @@ void AMatchGameMode::HandleMatchHasStarted()
 		}
 	}
 
-	for (const auto& PlayerInfo : MatchPlayers)
-	{
-		if (AgentSelectStartPoint)
-		{
-			const FViewTargetTransitionParams Params;
-			PlayerInfo.Controller->ClientSetViewTarget(AgentSelectStartPoint, Params);
-		}
-	}
+	// for (const auto& PlayerInfo : MatchPlayers)
+	// {
+	// 	if (AgentSelectStartPoint)
+	// 	{
+	// 		const FViewTargetTransitionParams Params;
+	// 		PlayerInfo.Controller->ClientSetViewTarget(AgentSelectStartPoint, Params);
+	// 	}
+	// }
 
 	StartSelectAgent();
 }
@@ -266,6 +267,7 @@ bool AMatchGameMode::ReadyToEndMatch_Implementation()
 
 void AMatchGameMode::LeavingMatch()
 {
+	bReadyToEndMatch = true;
 	for (const auto& PlayerInfo : MatchPlayers)
 	{
 		PlayerInfo.Controller->ClientRPC_CleanUpSession();
@@ -277,7 +279,7 @@ void AMatchGameMode::HandleMatchHasEnded()
 {
 	Super::HandleMatchHasEnded();
 	// 일정 시간 이후 매치 완전 종료
-	GetWorld()->GetTimerManager().SetTimer(RoundTimerHandle, this, &AMatchGameMode::LeavingMatch, LeavingMatchTime);
+	// GetWorld()->GetTimerManager().SetTimer(RoundTimerHandle, this, &AMatchGameMode::LeavingMatch, LeavingMatchTime);
 }
 
 void AMatchGameMode::StartSelectAgent()
@@ -318,6 +320,7 @@ void AMatchGameMode::StartEndPhaseByEliminated(const bool bBlueWin)
 void AMatchGameMode::StartEndPhaseBySpikeActive()
 {
 	bool bBlueWin = !IsShifted(); // Blue가 선공이니까 false라면 공격->이긴다, true라면 수비->진다
+	Spike->ServerRPC_Detonate();
 	HandleRoundEnd(bBlueWin, ERoundEndReason::ERER_SpikeActive);
 	SetRoundSubState(ERoundSubState::RSS_EndPhase);
 }
@@ -365,6 +368,9 @@ void AMatchGameMode::HandleRoundSubState_PreRound()
 	// 스파이크 관련 상태 초기화
 	bSpikePlanted = false;
 
+	// 배리어 활성화를 위한 브로드캐스트
+	OnStartPreRound.Broadcast();
+
 	// 일정 시간 후에 라운드 시작
 	MaxTime = PreRoundTime;
 	GetWorld()->GetTimerManager().ClearTimer(RoundTimerHandle);
@@ -379,6 +385,9 @@ void AMatchGameMode::HandleRoundSubState_BuyPhase()
 
 	// 스파이크 관련 상태 초기화
 	bSpikePlanted = false;
+
+	// 배리어 활성화를 위한 브로드캐스트
+	OnStartPreRound.Broadcast();
 
 	// 일정 시간 후에 라운드 시작
 	MaxTime = BuyPhaseTime;
@@ -398,6 +407,9 @@ void AMatchGameMode::HandleRoundSubState_InRound()
 		MatchGameState->MulticastRPC_CloseAllShops();
 	}
 
+	// 배리어 해제를 위한 브로드캐스트
+	OnStartInRound.Broadcast();
+
 	// 일정 시간 후에 라운드 종료
 	MaxTime = InRoundTime;
 	GetWorld()->GetTimerManager().ClearTimer(RoundTimerHandle);
@@ -414,15 +426,12 @@ void AMatchGameMode::HandleRoundSubState_EndPhase()
 	if (RequiredScore <= TeamBlueScore || RequiredScore <= TeamRedScore)
 	{
 		NET_LOG(LogTemp, Warning, TEXT("ReadyToEndMatch"));
-		bReadyToEndMatch = true; // true가 되면 MatchState가 WaitingPostMatch로 전환되고 HandleMatchHasEnded 이벤트 발생
-		// TODO: 매치 승리/패배를 알림
-		if (RequiredScore <= TeamBlueScore)
+		// 일정 시간 후에 매치 세션 종료
+		GetWorld()->GetTimerManager().SetTimer(RoundTimerHandle, this, &AMatchGameMode::LeavingMatch, LeavingMatchTime);
+		AMatchGameState* MatchGameState = GetGameState<AMatchGameState>();
+		if (MatchGameState)
 		{
-			//
-		}
-		else
-		{
-			//
+			MatchGameState->MulticastRPC_OnMatchEnd(RequiredScore <= TeamBlueScore);
 		}
 		return;
 	}
@@ -513,6 +522,13 @@ void AMatchGameMode::ClearObjects()
 		{
 			Interactor->Destroy();
 		}
+		else
+		{
+			if (auto* Weapon = Cast<ABaseWeapon>(Interactor))
+			{
+				Weapon->ServerOnly_ClearAmmo();
+			}
+		}
 	}
 }
 
@@ -553,29 +569,55 @@ void AMatchGameMode::RespawnPlayer(AAgentPlayerState* ps, AAgentPlayerController
 	FActorSpawnParameters SpawnParams;
 	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 
-	ABaseAgent* Agent = nullptr;
+	// ABaseAgent* Agent = nullptr;
 	
-	if (ps->IsSpectator() || ps->GetPawn() == nullptr)
+	// if (ps->IsSpectator() || ps->GetPawn() == nullptr)
+	// {
+	// 	FAgentData* agentData = Cast<UValorantGameInstance>(GetGameInstance())->GetAgentData(ps->GetAgentID());
+	// 	Agent = GetWorld()->SpawnActor<ABaseAgent>(agentData->AgentAsset, spawnTransform);
+	//
+	// 	ps->SetIsSpectator(false);
+	// 	ps->SetIsOnlyASpectator(false);
+	//
+	// 	APawn* oldPawn = pc->GetPawn();
+	//
+	// 	pc->Possess(Agent);
+	//
+	// 	if (oldPawn)
+	// 	{
+	// 		oldPawn->Destroy();
+	// 	}
+	// }
+	// else
+	// {
+	// 	Agent = Cast<ABaseAgent>(ps->GetPawn());
+	// 	Agent->SetActorTransform(spawnTransform);
+	// 	Agent->SetCanMove(true);
+	// 	Agent->SetIsDead(false);
+	// }
+
+	ABaseAgent* Agent = Cast<ABaseAgent>(ps->GetPawn());
+	
+	if (Agent != nullptr && !Agent->IsDead())
 	{
-		FAgentData* agentData = Cast<UValorantGameInstance>(GetGameInstance())->GetAgentData(ps->GetAgentID());
-		Agent = GetWorld()->SpawnActor<ABaseAgent>(agentData->AgentAsset, spawnTransform);
-
-		ps->SetIsSpectator(false);
-		ps->SetIsOnlyASpectator(false);
-
-		APawn* oldPawn = pc->GetPawn();
-
-		pc->Possess(Agent);
-
-		if (oldPawn)
-		{
-			oldPawn->Destroy();
-		}
-	}
-	else
-	{
-		Agent = Cast<ABaseAgent>(ps->GetPawn());
 		Agent->SetActorTransform(spawnTransform);
+		Agent->SetCanMove(true);
+		return;
+	}
+
+	FAgentData* agentData = Cast<UValorantGameInstance>(GetGameInstance())->GetAgentData(ps->GetAgentID());
+	Agent = GetWorld()->SpawnActor<ABaseAgent>(agentData->AgentAsset, spawnTransform);
+
+	ps->SetIsSpectator(false);
+	ps->SetIsOnlyASpectator(false);
+
+	APawn* oldPawn = pc->GetPawn();
+
+	pc->Possess(Agent);
+
+	if (oldPawn)
+	{
+		oldPawn->Destroy();
 	}
 }
 
@@ -608,6 +650,8 @@ void AMatchGameMode::OnKill(AMatchPlayerController* Killer, AMatchPlayerControll
 
 				NET_LOG(LogTemp, Warning, TEXT("크레딧 보상 지급: %s가 킬 보상을 받았습니다."), *KillerName);
 			}
+
+			KillerPS->OnKill();
 		}
 	}
 

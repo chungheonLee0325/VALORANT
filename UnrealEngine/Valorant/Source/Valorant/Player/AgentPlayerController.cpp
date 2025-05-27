@@ -12,10 +12,8 @@
 #include "Agent/BaseAgent.h"
 #include "UI/MatchMap/MatchMapHUD.h"
 #include "Widget/AgentBaseWidget.h"
-#include "Component/CreditComponent.h"
 #include "Valorant/Player/Widget/MiniMapWidget.h"
 #include "Component/ShopComponent.h"
-#include "Kismet/GameplayStatics.h"
 #include "Valorant/GameManager/ValorantGameInstance.h"
 #include "Valorant/UI/MatchMap/MatchMapShopUI.h"
 
@@ -47,28 +45,15 @@ void AAgentPlayerController::BeginPlay()
 	if (AMatchGameState* GameState = GetWorld()->GetGameState<AMatchGameState>())
 	{
 		GameState->OnShopClosed.AddDynamic(this, &AAgentPlayerController::CloseShopUI);
-	}
-
-	
-
-	//ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ
-	//             CYT             ♣
-	//ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ
-	
-	// 로컬 플레이어만 미니맵 생성 (멀티플레이어 최적화)
-	// 현재 컨트롤러가 로컬 플레이어의 것인지 확인
-	if (IsLocalPlayerController())
-	{
-		// 미니맵 초기화 함수 호출
-		InitializeMinimap();
-		UE_LOG(LogTemp, Warning, TEXT("로컬 컨트롤러에서 미니맵 초기화 완료"));
+		GameState->OnMatchEnd.AddDynamic(this, &AAgentPlayerController::OnMatchEnd);
 	}
 }
 
 void AAgentPlayerController::OnPossess(APawn* InPawn)
 {
 	Super::OnPossess(InPawn);
-
+	OnRep_Pawn();
+	
 	InitGAS();
 
 	if (IsLocalController())
@@ -472,17 +457,60 @@ void AAgentPlayerController::InitializeMinimap()
 			// 뷰포트에 위젯 추가
 			MinimapWidget->AddToViewport(1); // Z-Order 1로 설정 (UI 레이어)
             
-			UE_LOG(LogTemp, Warning, TEXT("미니맵 위젯이 생성되었습니다."));
+			NET_LOG(LogTemp, Warning, TEXT("%hs Called, 미니맵 위젯이 생성되었습니다."), __FUNCTION__);
             
 			// 미니맵 위젯 생성 후 에이전트 스캔은 위젯 내부에서 자동으로 수행됨
 		}
 		else
 		{
-			UE_LOG(LogTemp, Error, TEXT("미니맵 위젯 생성 실패!"));
+			NET_LOG(LogTemp, Error, TEXT("%hs Called, 미니맵 위젯 생성 실패!"), __FUNCTION__);
 		}
 	}
 	else
 	{
-		UE_LOG(LogTemp, Error, TEXT("MinimapWidgetClass가 설정되지 않았습니다!"));
+		NET_LOG(LogTemp, Error, TEXT("%hs Called, MinimapWidgetClass가 설정되지 않았습니다!"), __FUNCTION__);
+	}
+}
+
+void AAgentPlayerController::OnRep_Pawn()
+{
+	Super::OnRep_Pawn();
+	
+	//ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ
+	//             CYT             ♣
+	//ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ
+	
+	// 로컬 플레이어만 미니맵 생성 (멀티플레이어 최적화)
+	// 현재 컨트롤러가 로컬 플레이어의 것인지 확인
+	if (IsLocalPlayerController() && nullptr == MinimapWidget)
+	{
+		// 미니맵 초기화 함수 호출
+		InitializeMinimap();
+	}
+}
+
+void AAgentPlayerController::OnMatchEnd(const bool bBlueWin)
+{
+	if (auto* MatchMapHud = Cast<UMatchMapHUD>(GetMatchMapHud()))
+	{
+		const auto* PS = GetPlayerState<AAgentPlayerState>();
+		if (PS)
+		{
+			const bool bWin = !(PS->bIsBlueTeam ^ bBlueWin);
+			// NOT(XOR) 하면 아래 결과가 나옴
+			// True, True = Win
+			// True, False = False
+			// False, True = False
+			// False, False = True
+			MatchMapHud->OnMatchEnd(bWin);
+		}
+		else
+		{
+			NET_LOG(LogTemp, Error, TEXT("%hs Called, PS is nullptr"), __FUNCTION__);
+		}
+	}
+	else
+	{
+		NET_LOG(LogTemp, Error, TEXT("%hs Called, AgentWidget is nullptr"), __FUNCTION__);
 	}
 }

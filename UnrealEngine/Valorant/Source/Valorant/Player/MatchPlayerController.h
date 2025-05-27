@@ -39,6 +39,7 @@ private:
 	TObjectPtr<UUserWidget> Hud = nullptr;
 	
 public:
+	UUserWidget* GetMatchMapHud() const { return Hud; }
 	void SetGameMode(AMatchGameMode* MatchGameMode);
 	UFUNCTION(Server, Reliable)
 	void ServerRPC_NotifyBeginPlay(const FString& Name);

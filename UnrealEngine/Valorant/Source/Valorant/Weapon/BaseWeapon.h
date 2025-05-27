@@ -3,11 +3,13 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "GameFramework/Actor.h"
 #include "ResourceManager/ValorantGameType.h"
 #include "ValorantObject/BaseInteractor.h"
 #include "BaseWeapon.generated.h"
 
+class UGameplayEffect;
+struct FGunRecoilData;
+struct FWeaponData;
 class UInputMappingContext;
 class UInputAction;
 
@@ -98,6 +100,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category="Weapon")
 	void UpdateVisualState();
 
+	// 무기 탄약 리셋
+	void ServerOnly_ClearAmmo();
+
 protected:
 	// Called when the game starts
 	virtual void BeginPlay() override;
@@ -110,15 +115,14 @@ protected:
 	UFUNCTION(Server, Reliable)
 	void ServerRPC_Fire(const FVector& Location, const FVector& Direction);
 	UFUNCTION(NetMulticast, Reliable)
-	void MulticastRPC_PlayFireSound();
-	UFUNCTION(NetMulticast, Reliable)
 	void MulticastRPC_PlayFireAnimation();
 	UFUNCTION(BlueprintImplementableEvent)
-	void PlayFireSound();
+	void PlayFireSound(const USoundBase* Sound, const bool bIsFP, const bool bIsCU, const int Dir, const FName& MuzzleSocketName = FName(NAME_None));
 	UFUNCTION(NetMulticast, Reliable)
 	void MulticastRPC_PlayReloadAnimation();
-	UFUNCTION(NetMulticast, Reliable)
-	void MulticastRPC_PlayEquipAnimation();
+
+	UFUNCTION(NetMulticast, Unreliable)
+	void MulticastRPC_PlayFireSound();
 
 	UFUNCTION(BlueprintCallable, Category="Weapon")
 	void Reload();
@@ -127,9 +131,10 @@ protected:
 
 	UFUNCTION(BlueprintCallable, Category="Weapon")
 	void StopReload();
-
+	
 	UFUNCTION()
 	void OnRep_Ammo() const;
+	virtual void Multicast_SetActive_Implementation(bool bActive) override;
 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
@@ -144,7 +149,7 @@ public:
 
 	UFUNCTION(Server, Reliable, BlueprintCallable, Category="Weapon")
 	void ServerRPC_StartReload();
-
+	
 	UFUNCTION(BlueprintCallable)
 	EWeaponCategory GetWeaponCategory() const { return WeaponData->WeaponCategory; }
 
@@ -169,4 +174,11 @@ public:
 	UFUNCTION(BlueprintCallable, Category="Weapon")
 	void ResetUsedStatus();
 	void SetWeaponID(const int NewWeaponID);
+
+	UFUNCTION(NetMulticast, Unreliable)
+	void Multicast_SpawnMuzzleFlash();
+	UFUNCTION(NetMulticast, Unreliable)
+	void Multicast_SpawnTracer(const FVector& Start, const FVector& End);
+	UFUNCTION(NetMulticast, Unreliable)
+	void Multicast_SpawnImpactEffect(const FVector& Location, const FRotator& Rotation);
 };

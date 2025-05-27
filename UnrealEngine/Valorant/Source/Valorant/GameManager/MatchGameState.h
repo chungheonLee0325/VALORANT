@@ -17,6 +17,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnShopClosed);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnSpikePlanted, AMatchPlayerController*, Planter);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnSpikeDefused, AMatchPlayerController*, Defuser);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnShift);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnMatchEnd, const bool, bBlueWin);
 
 /**
  * 
@@ -52,6 +53,7 @@ public:
 	UPROPERTY(BlueprintAssignable, Category="Spike")
 	FOnSpikeDefused OnSpikeDefused;
 	FOnShift OnShift;
+	FOnMatchEnd OnMatchEnd;
 	
 protected:
 	virtual void BeginPlay() override;
@@ -112,4 +114,7 @@ public:
 
 	UFUNCTION(NetMultiCast, Reliable)
 	void MulticastRPC_OnShift();
+
+	UFUNCTION(NetMultiCast, Reliable)
+	void MulticastRPC_OnMatchEnd(const bool bBlueWin);
 };

@@ -1,20 +1,31 @@
-﻿// Fill out your copyright notice in the Description page of Project Settings.
-
-
-#include "BaseGameplayAbility.h"
+﻿#include "BaseGameplayAbility.h"
 
 #include <GameManager/SubsystemSteamManager.h>
 
 #include "Valorant.h"
+#include "Abilities/Tasks/AbilityTask_PlayMontageAndWait.h"
 #include "AbilitySystem/AgentAbilitySystemComponent.h"
 #include "AgentAbility/BaseProjectile.h"
 #include "Kismet/GameplayStatics.h"
 #include "Player/AgentPlayerState.h"
 #include "Player/Agent/BaseAgent.h"
+#include "Abilities/Tasks/AbilityTask_WaitDelay.h"
+#include "Net/UnrealNetwork.h"
+#include "ValorantObject/BaseInteractor.h"
 
 UBaseGameplayAbility::UBaseGameplayAbility()
 {
 	InstancingPolicy = EGameplayAbilityInstancingPolicy::InstancedPerActor;
+	bReplicateInputDirectly = true;
+
+	// 기본 태그 설정
+	ActivationBlockedTags.AddTag(FValorantGameplayTags::Get().Block_Ability_Activation);
+}
+
+void UBaseGameplayAbility::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+	DOREPLIFETIME(UBaseGameplayAbility, CurrentPhase);
 }
 
 bool UBaseGameplayAbility::CanActivateAbility(const FGameplayAbilitySpecHandle Handle,
@@ -23,36 +34,13 @@ bool UBaseGameplayAbility::CanActivateAbility(const FGameplayAbilitySpecHandle H
                                               const FGameplayTagContainer* TargetTags,
                                               FGameplayTagContainer* OptionalRelevantTags) const
 {
-	// 기본 활성화 조건 확인
 	if (!Super::CanActivateAbility(Handle, ActorInfo, SourceTags, TargetTags, OptionalRelevantTags))
 	{
 		return false;
 	}
 
-	//어빌리티 ID가 유효하고 스택 소비가 필요한 경우
-	if (m_AbilityID > 0)
-	{
-		// 플레이어 스테이트 가져오기
-		AAgentPlayerState* PS = Cast<AAgentPlayerState>(ActorInfo->PlayerController->PlayerState);
-		if (PS == nullptr)
-		{
-			UE_LOG(LogTemp, Error, TEXT("어빌리티 활성화 확인 실패: PlayerState가 NULL입니다."));
-			return false;
-		}
-
-		// 현재 스택 확인
-		int32 CurrentStack = PS->GetAbilityStack(m_AbilityID);
-		CurrentStack = GetAbilityStack(ActorInfo->PlayerController.Get());
-
-		// 스택이 없으면 활성화 불가
-		if (CurrentStack <= 0)
-		{
-			UE_LOG(LogTemp, Warning, TEXT("어빌리티 ID %d의 스택이 없어 활성화할 수 없습니다."), m_AbilityID);
-			return false;
-		}
-	}
-
-	return true;
+	// 차지 확인
+	return GetAbilityStack() > 0;
 }
 
 void UBaseGameplayAbility::ActivateAbility(const FGameplayAbilitySpecHandle Handle,
@@ -60,70 +48,399 @@ void UBaseGameplayAbility::ActivateAbility(const FGameplayAbilitySpecHandle Hand
                                            const FGameplayAbilityActivationInfo ActivationInfo,
                                            const FGameplayEventData* TriggerEventData)
 {
-	// 이미 스택 확인은 CanActivateAbility에서 했으므로 여기서 스택 소비
-	if (m_AbilityID > 0)
-	{
-		// 스택 소비 시도
-		// 참고: 직접 ConsumeAbilityStack을 호출하지 않고, 실제 로직에서 적절한 시점에 호출하도록 함
-	}
-
 	Super::ActivateAbility(Handle, ActorInfo, ActivationInfo, TriggerEventData);
 
-	// NET_LOG(LogTemp,Warning,TEXT("액티배이트 어빌리티"));
+	CachedActorInfo = *ActorInfo;
 
-	// ToDO : 삭제 고민 Test
-	m_ActorInfo = *ActorInfo;
+	StartAbilityExecution();
+}
 
-	UAgentAbilitySystemComponent* asc = Cast<UAgentAbilitySystemComponent>(GetAbilitySystemComponentFromActorInfo());
-	if (asc)
+void UBaseGameplayAbility::StartAbilityExecution()
+{
+	switch (ActivationType)
 	{
-		if (FollowUpInputTags.IsEmpty() == false)
+	case EAbilityActivationType::Instant:
+		// 즉시 실행
+		SetAbilityPhase(FValorantGameplayTags::Get().State_Ability_Executing);
+		HandleExecutePhase();
+		break;
+
+	case EAbilityActivationType::WithPrepare:
+		// 준비 단계부터 시작
+		SetAbilityPhase(FValorantGameplayTags::Get().State_Ability_Preparing);
+		HandlePreparePhase();
+		break;
+	}
+}
+
+void UBaseGameplayAbility::HandlePreparePhase()
+{
+	// 준비 애니메이션 재생
+	if (PrepareMontage_1P || PrepareMontage_3P)
+	{
+		PlayMontages(PrepareMontage_1P, PrepareMontage_3P);
+
+		// 몽타주 완료 대기
+		UAbilityTask_PlayMontageAndWait* Task = UAbilityTask_PlayMontageAndWait::CreatePlayMontageAndWaitProxy(
+			this, NAME_None, PrepareMontage_3P, 1.0f);
+
+		if (Task)
 		{
+<<<<<<< HEAD
 			asc->SetSkillReady(false);
 			asc->ResisterFollowUpInput(FollowUpInputTags);
+=======
+			Task->OnCompleted.AddDynamic(this, &UBaseGameplayAbility::OnMontageCompleted);
+			Task->OnBlendOut.AddDynamic(this, &UBaseGameplayAbility::OnMontageBlendOut);
+			Task->OnInterrupted.AddDynamic(this, &UBaseGameplayAbility::OnMontageBlendOut);
+			Task->OnCancelled.AddDynamic(this, &UBaseGameplayAbility::OnMontageBlendOut);
+			Task->ReadyForActivation();
+>>>>>>> GamePart
 		}
-		else
+		
+		ABaseAgent* Agent = Cast<ABaseAgent>(GetAvatarActorFromActorInfo());
+		if (!Agent)
 		{
-			Active_General();
+			return;
+		}
+		
+		// 1인칭 몽타주 재생
+		if (PrepareMontage_1P)
+		{
+			Agent->Client_PlayFirstPersonMontage(PrepareMontage_1P);
 		}
 	}
 	else
 	{
-		UE_LOG(LogTemp, Error, TEXT("GA, asc가 AgentAbilitySystemComponent를 상속받지 않았어요."));
+		// 애니메이션이 없으면 바로 대기 단계로
+		OnMontageCompleted();
 	}
+}
 
-	if (auto* ps = Cast<AAgentPlayerState>(ActorInfo->OwnerActor))
+void UBaseGameplayAbility::HandleWaitingPhase()
+{
+	// 대기 애니메이션 재생 (루프)
+	if (WaitingMontage_1P || WaitingMontage_3P)
 	{
-		auto* agent = Cast<ABaseAgent>(ps->GetPawn());
-		if (agent == nullptr)
+		PlayMontages(WaitingMontage_1P, WaitingMontage_3P, false);
+
+		ABaseAgent* Agent = Cast<ABaseAgent>(GetAvatarActorFromActorInfo());
+		if (!Agent)
 		{
-			UE_LOG(LogTemp,Error,TEXT("BaseGameplayAbility, Agent Null"));
+			return;
 		}
-        
-		auto* curInteractor = agent->GetCurrentInterator();
-		if (curInteractor)
+		
+		// 1인칭 몽타주 재생
+		if (WaitingMontage_1P)
 		{
-			NET_LOG(LogTemp,Warning,TEXT("인터랙터 숨기기 %s"), *curInteractor->GetActorNameOrLabel());
-			curInteractor->SetActive(false);
-			agent->ServerRPC_SetCurrentInteractor(nullptr);
+			Agent->Client_PlayFirstPersonMontage(WaitingMontage_1P);
+		}
+		// 1인칭 몽타주 재생
+		if (WaitingMontage_3P)
+		{
+			Agent->NetMulti_PlayThirdPersonMontage(WaitingMontage_3P);
+		}
+	}
+
+	// 후속 입력 등록
+	RegisterFollowUpInputs();
+
+	// 타임아웃 설정 (default : 10초)
+	GetWorld()->GetTimerManager().SetTimer(WaitingTimeoutHandle, this,
+	                                       &UBaseGameplayAbility::OnWaitingTimeout, FollowUpTime, false);
+}
+
+void UBaseGameplayAbility::HandleExecutePhase()
+{
+	// 서버에서만 스택 소모 실행
+	if (HasAuthority(&CurrentActivationInfo))
+	{
+		ReduceAbilityStack();
+	}
+
+	// 하위 클래서에서 정의될 어빌리티 실행 로직
+	ExecuteAbility();
+	
+	// 대기 타이머 정리
+	GetWorld()->GetTimerManager().ClearTimer(WaitingTimeoutHandle);
+
+	// 실행 애니메이션 재생
+	if (ExecuteMontage_1P || ExecuteMontage_3P)
+	{
+		ABaseAgent* Agent = Cast<ABaseAgent>(GetAvatarActorFromActorInfo());
+		if (!Agent)
+		{
+			return;
+		}
+		
+		// 1인칭 몽타주 재생
+		if (ExecuteMontage_1P)
+		{
+			Agent->Client_PlayFirstPersonMontage(ExecuteMontage_1P);
+		}
+
+		UAbilityTask_PlayMontageAndWait* Task = UAbilityTask_PlayMontageAndWait::CreatePlayMontageAndWaitProxy(
+			this, NAME_None, ExecuteMontage_3P, 1.0f);
+
+		if (Task)
+		{
+			Task->OnCompleted.AddDynamic(this, &UBaseGameplayAbility::OnMontageCompleted);
+			Task->OnBlendOut.AddDynamic(this, &UBaseGameplayAbility::OnMontageBlendOut);
+			Task->ReadyForActivation();
+		}
+	}
+	else
+	{
+		// 애니메이션이 없으면 바로 종료
+		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
+	}
+}
+
+bool UBaseGameplayAbility::OnLeftClickInput()
+{
+	return true;
+}
+
+bool UBaseGameplayAbility::OnRightClickInput()
+{
+	return true;
+}
+
+bool UBaseGameplayAbility::OnRepeatInput()
+{
+	return true;
+}
+
+void UBaseGameplayAbility::ExecuteAbility()
+{
+}
+
+void UBaseGameplayAbility::OnMontageCompleted()
+{
+	if (CurrentPhase == FValorantGameplayTags::Get().State_Ability_Preparing)
+	{
+		// 준비 완료 -> 대기 단계로
+		SetAbilityPhase(FValorantGameplayTags::Get().State_Ability_Waiting);
+		HandleWaitingPhase();
+	}
+	else if (CurrentPhase == FValorantGameplayTags::Get().State_Ability_Executing)
+	{
+		// 실행 완료 -> 어빌리티 종료
+		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
+	}
+}
+
+void UBaseGameplayAbility::OnMontageBlendOut()
+{
+	// 몽타주가 중단된 경우 처리
+	if (IsActive())
+	{
+		OnMontageCompleted();
+	}
+}
+
+void UBaseGameplayAbility::HandleFollowUpInput(FGameplayTag InputTag)
+{
+	if (CurrentPhase != FValorantGameplayTags::Get().State_Ability_Waiting)
+	{
+		return;
+	}
+
+	bool bShouldExecute = false;
+
+	// 입력 타입에 따라 처리
+	if (InputTag == FValorantGameplayTags::Get().InputTag_Default_LeftClick)
+	{
+		if (FollowUpInputType == EFollowUpInputType::LeftClick ||
+			FollowUpInputType == EFollowUpInputType::LeftOrRight ||
+			FollowUpInputType == EFollowUpInputType::Any)
+		{
+			bShouldExecute = OnLeftClickInput();
+		}
+	}
+	else if (InputTag == FValorantGameplayTags::Get().InputTag_Default_RightClick)
+	{
+		if (FollowUpInputType == EFollowUpInputType::RightClick ||
+			FollowUpInputType == EFollowUpInputType::LeftOrRight ||
+			FollowUpInputType == EFollowUpInputType::Any)
+		{
+			bShouldExecute = OnRightClickInput();
+		}
+	}
+	else if (InputTag == FValorantGameplayTags::Get().InputTag_Default_Repeat)
+	{
+		if (FollowUpInputType == EFollowUpInputType::RepeatKey ||
+			FollowUpInputType == EFollowUpInputType::Any)
+		{
+			bShouldExecute = OnRepeatInput();
+		}
+	}
+
+	if (bShouldExecute)
+	{
+		UnregisterFollowUpInputs();
+		SetAbilityPhase(FValorantGameplayTags::Get().State_Ability_Executing);
+		HandleExecutePhase();
+	}
+}
+
+void UBaseGameplayAbility::PlayMontages(UAnimMontage* Montage1P, UAnimMontage* Montage3P, bool bStopAllMontages)
+{
+	if (!HasAuthority(&CurrentActivationInfo))
+	{
+		return;
+	}
+
+	if (bStopAllMontages)
+	{
+		StopAllMontages();
+	}
+
+	// 멀티 캐스트로 부를지 고려하기!
+	ABaseAgent* Agent = Cast<ABaseAgent>(GetAvatarActorFromActorInfo());
+	if (!Agent)
+	{
+		return;
+	}
+	// 1인칭 몽타주
+	if (Montage1P)
+	{
+		Agent->Client_PlayFirstPersonMontage(Montage3P);
+	}
+	
+
+	// 1인칭 몽타주
+	if (Montage1P)
+	{
+		Agent->Client_PlayFirstPersonMontage(Montage3P);
+	}
+}
+
+void UBaseGameplayAbility::StopAllMontages()
+{
+	ABaseAgent* Agent = Cast<ABaseAgent>(GetAvatarActorFromActorInfo());
+	if (!Agent)
+	{
+		return;
+	}
+
+	// 3인칭 몽타주
+	Agent->StopThirdPersonMontage();
+
+	// 1인칭 몽타주
+	Agent->StopFirstPersonMontage();
+}
+
+bool UBaseGameplayAbility::SpawnProjectile(FVector LocationOffset, FRotator RotationOffset)
+{
+	if (!HasAuthority(&CurrentActivationInfo) || !ProjectileClass)
+	{
+		return false;
+	}
+
+	ACharacter* Character = Cast<ACharacter>(GetAvatarActorFromActorInfo());
+	if (!Character)
+	{
+		return false;
+	}
+
+	// 카메라 위치에서 스폰
+	FVector SpawnLocation = Character->GetActorLocation() + Character->GetActorForwardVector() * 100.0f +
+		LocationOffset;
+	FRotator SpawnRotation = Character->GetControlRotation() + RotationOffset;
+
+	FActorSpawnParameters SpawnParams;
+	SpawnParams.Owner = Character;
+	SpawnParams.Instigator = Character;
+	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+
+	SpawnedProjectile = GetWorld()->SpawnActor<ABaseProjectile>(ProjectileClass, SpawnLocation, SpawnRotation, SpawnParams);
+
+	return true;
+}
+
+void UBaseGameplayAbility::SetAbilityPhase(FGameplayTag NewPhase)
+{
+	if (CurrentPhase == NewPhase)
+	{
+		return;
+	}
+
+	CurrentPhase = NewPhase;
+	OnRep_CurrentPhase();
+}
+
+void UBaseGameplayAbility::OnRep_CurrentPhase()
+{
+	OnPhaseChanged.Broadcast(CurrentPhase);
+
+	// ASC에 상태 태그 업데이트
+	if (UAbilitySystemComponent* ASC = GetAbilitySystemComponentFromActorInfo())
+	{
+		// 모든 상태 태그 제거
+		ASC->RemoveLooseGameplayTag(FValorantGameplayTags::Get().State_Ability_Preparing);
+		ASC->RemoveLooseGameplayTag(FValorantGameplayTags::Get().State_Ability_Waiting);
+		ASC->RemoveLooseGameplayTag(FValorantGameplayTags::Get().State_Ability_Executing);
+
+		// 현재 상태 태그 추가
+		if (CurrentPhase.IsValid())
+		{
+			ASC->AddLooseGameplayTag(CurrentPhase);
 		}
 	}
 }
 
-void UBaseGameplayAbility::InputPressed(const FGameplayAbilitySpecHandle Handle,
-                                        const FGameplayAbilityActorInfo* ActorInfo,
-                                        const FGameplayAbilityActivationInfo ActivationInfo)
+void UBaseGameplayAbility::RegisterFollowUpInputs()
 {
-	Super::InputPressed(Handle, ActorInfo, ActivationInfo);
-	NET_LOG(LogTemp, Warning, TEXT("스킬 InputPressed"));
+	if (FollowUpInputType == EFollowUpInputType::None)
+	{
+		return;
+	}
+
+	// AgentAbilitySystemComponent에 후속 입력 등록
+	if (UAgentAbilitySystemComponent* ASC = Cast<
+		UAgentAbilitySystemComponent>(GetAbilitySystemComponentFromActorInfo()))
+	{
+		TSet<FGameplayTag> InputTags;
+
+		switch (FollowUpInputType)
+		{
+		case EFollowUpInputType::LeftClick:
+			InputTags.Add(FValorantGameplayTags::Get().InputTag_Default_LeftClick);
+			break;
+		case EFollowUpInputType::RightClick:
+			InputTags.Add(FValorantGameplayTags::Get().InputTag_Default_RightClick);
+			break;
+		case EFollowUpInputType::RepeatKey:
+			InputTags.Add(FValorantGameplayTags::Get().InputTag_Default_Repeat);
+			break;
+		case EFollowUpInputType::LeftOrRight:
+			InputTags.Add(FValorantGameplayTags::Get().InputTag_Default_LeftClick);
+			InputTags.Add(FValorantGameplayTags::Get().InputTag_Default_RightClick);
+			break;
+		case EFollowUpInputType::Any:
+			InputTags.Add(FValorantGameplayTags::Get().InputTag_Default_LeftClick);
+			InputTags.Add(FValorantGameplayTags::Get().InputTag_Default_RightClick);
+			InputTags.Add(FValorantGameplayTags::Get().InputTag_Default_Repeat);
+			break;
+		}
+
+		ASC->RegisterFollowUpInputs(InputTags, GetAssetTags().First());
+	}
 }
 
-void UBaseGameplayAbility::InputReleased(const FGameplayAbilitySpecHandle Handle,
-                                         const FGameplayAbilityActorInfo* ActorInfo,
-                                         const FGameplayAbilityActivationInfo ActivationInfo)
+void UBaseGameplayAbility::UnregisterFollowUpInputs()
 {
-	Super::InputReleased(Handle, ActorInfo, ActivationInfo);
-	NET_LOG(LogTemp, Warning, TEXT("스킬 InputReleased"));
+	if (UAgentAbilitySystemComponent* ASC = Cast<
+		UAgentAbilitySystemComponent>(GetAbilitySystemComponentFromActorInfo()))
+	{
+		ASC->ClearFollowUpInputs();
+	}
+}
+
+void UBaseGameplayAbility::OnWaitingTimeout()
+{
+	CancelAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true);
 }
 
 void UBaseGameplayAbility::EndAbility(const FGameplayAbilitySpecHandle Handle,
@@ -131,49 +448,25 @@ void UBaseGameplayAbility::EndAbility(const FGameplayAbilitySpecHandle Handle,
                                       const FGameplayAbilityActivationInfo ActivationInfo,
                                       bool bReplicateEndAbility, bool bWasCancelled)
 {
+	// 정리
+	UnregisterFollowUpInputs();
+	GetWorld()->GetTimerManager().ClearTimer(WaitingTimeoutHandle);
+	StopAllMontages();
+
+	// 상태 태그 정리
+	SetAbilityPhase(FGameplayTag());
+
 	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
-	NET_LOG(LogTemp, Warning, TEXT("스킬 EndAbility"));
-	
-	if (!bWasCancelled)
+}
+
+bool UBaseGameplayAbility::ReduceAbilityStack()
+{
+	// PlayerState에서 차지 소모
+	if (APlayerController* PC = Cast<APlayerController>(GetAvatarActorFromActorInfo()->GetInstigatorController()))
 	{
-		ConsumeAbilityStack(ActorInfo->PlayerController.Get());
-	}
-
-	ClearAgentSkill(ActorInfo);
-}
-
-void UBaseGameplayAbility::CancelAbility(const FGameplayAbilitySpecHandle Handle,
-                                         const FGameplayAbilityActorInfo* ActorInfo,
-                                         const FGameplayAbilityActivationInfo ActivationInfo,
-                                         bool bReplicateCancelAbility)
-{
-	Super::CancelAbility(Handle, ActorInfo, ActivationInfo, bReplicateCancelAbility);
-	NET_LOG(LogTemp, Warning, TEXT("스킬 CancelAbility"));
-
-	ClearAgentSkill(ActorInfo);
-}
-
-void UBaseGameplayAbility::Active_General()
-{
-}
-
-void UBaseGameplayAbility::Active_Left_Click(FGameplayEventData data)
-{
-}
-
-void UBaseGameplayAbility::Active_Right_Click(FGameplayEventData data)
-{
-}
-
-void UBaseGameplayAbility::ClearAgentSkill(const FGameplayAbilityActorInfo* ActorInfo)
-{
-	if (auto* ps = Cast<AAgentPlayerState>(ActorInfo->OwnerActor))
-	{
-		auto* asc = Cast<UAgentAbilitySystemComponent>(ps->GetAbilitySystemComponent());
-		auto* agent = Cast<ABaseAgent>(ps->GetPawn());
-        
-		if (asc == nullptr || agent == nullptr)
+		if (AAgentPlayerState* PS = PC->GetPlayerState<AAgentPlayerState>())
 		{
+<<<<<<< HEAD
 			UE_LOG(LogTemp,Error,TEXT("BaseGameplayAbility, ASC || Agent Null"));
 			return;
 		}
@@ -207,101 +500,22 @@ bool UBaseGameplayAbility::SpawnProjectile(const FGameplayAbilityActorInfo& Acto
 		if (!OwnerController)
 		{
 			return false;
+=======
+			return static_cast<bool>(PS->ReduceAbilityStack(m_AbilityID));
+>>>>>>> GamePart
 		}
 	}
-
-	// Get the player controller for screen-to-world projection
-	APlayerController* PlayerController = Cast<APlayerController>(OwnerController);
-	if (!PlayerController)
-	{
-		return false;
-	}
-
-	// 카메라 매니저 구하기
-	UGameplayStatics* GameplayStatics = nullptr;
-	AActor* CameraActor = nullptr;
-	FVector CameraLocation;
-	FRotator CameraRotation;
-
-	// 카메라 위치와 회전 구하기
-	PlayerController->GetPlayerViewPoint(CameraLocation, CameraRotation);
-
-	// 카메라 전방 벡터 가져오기 (화면 중앙이 바라보는 방향)
-	FVector CameraForward = CameraRotation.Vector();
-
-	// 발사 위치 계산 (카메라 위치 또는 폰 위치 + 약간의 오프셋)
-	FVector SpawnLocation = CameraLocation;
-
-	// 원하는 경우 특정 거리만큼 앞으로 이동
-	// FVector SpawnLocation = CameraLocation + (CameraForward * 100.0f);
-
-	// 발사 회전 (카메라 회전과 동일)
-	FRotator SpawnRotation = CameraRotation;
-	
-	FTransform SpawnTransform;
-	SpawnTransform.SetLocation(SpawnLocation);
-	SpawnTransform.SetRotation(SpawnRotation.Quaternion());
-	SpawnTransform.SetScale3D(FVector(1.0f, 1.0f, 1.0f));
-	
-	FActorSpawnParameters SpawnParams;
-	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-	SpawnParams.Instigator = Cast<APawn>(ActorInfo.OwnerActor.Get());
-	SpawnParams.Owner = ActorInfo.OwnerActor.Get();
-	
-	AActor* SpawnedProjectile = GetWorld()->SpawnActor<AActor>(
-		ProjectileClass,
-		SpawnTransform,
-		SpawnParams
-	);
-
-	EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
-	return (SpawnedProjectile != nullptr);
-
 	return false;
 }
 
-void UBaseGameplayAbility::SetAbilityID(int32 AbilityID)
+int32 UBaseGameplayAbility::GetAbilityStack() const
 {
-	m_AbilityID = AbilityID;
-}
-
-// 어빌리티 스택 감소 메서드 구현
-bool UBaseGameplayAbility::ConsumeAbilityStack(const APlayerController* PlayerController)
-{
-	// 플레이어 스테이트 가져오기
-	AAgentPlayerState* PS = Cast<AAgentPlayerState>(PlayerController->PlayerState);
-	if (PS == nullptr)
+	if (const APlayerController* PC = Cast<APlayerController>(GetAvatarActorFromActorInfo()->GetInstigatorController()))
 	{
-		UE_LOG(LogTemp, Error, TEXT("어빌리티 스택 감소 실패: PlayerState가 NULL입니다."));
-		return false;
+		if (const AAgentPlayerState* PS = PC->GetPlayerState<AAgentPlayerState>())
+		{
+			return PS->GetAbilityStack(m_AbilityID);
+		}
 	}
-
-	// 현재 스택 가져오기
-	int32 CurrentStack = PS->GetAbilityStack(m_AbilityID);
-
-	// 스택이 있으면 감소
-	if (CurrentStack > 0)
-	{
-		PS->ReduceAbilityStack(m_AbilityID);
-		UE_LOG(LogTemp, Warning, TEXT("어빌리티 ID %d의 스택이 감소됨. 남은 스택: %d"), m_AbilityID, CurrentStack - 1);
-		return true;
-	}
-
-	UE_LOG(LogTemp, Warning, TEXT("어빌리티 ID %d의 스택이 없습니다."), m_AbilityID);
-	return false;
-}
-
-// 어빌리티 스택 확인 메서드 구현
-int32 UBaseGameplayAbility::GetAbilityStack(const APlayerController* PlayerController) const
-{
-	// 플레이어 스테이트 가져오기
-	AAgentPlayerState* PS = Cast<AAgentPlayerState>(PlayerController->PlayerState);
-	if (PS == nullptr)
-	{
-		UE_LOG(LogTemp, Error, TEXT("어빌리티 스택 확인 실패: PlayerState가 NULL입니다."));
-		return 0;
-	}
-
-	// 현재 스택 반환
-	return PS->GetAbilityStack(m_AbilityID);
+	return 0;
 }

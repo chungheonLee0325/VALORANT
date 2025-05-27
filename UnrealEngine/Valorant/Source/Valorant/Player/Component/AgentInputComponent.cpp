@@ -5,10 +5,8 @@
 
 #include "EnhancedInputSubsystems.h"
 #include "EnhancedInputComponent.h"
-#include "Valorant.h"
 #include "AbilitySystem/AgentAbilitySystemComponent.h"
 #include "GameFramework/PlayerController.h"
-#include "GameManager/SubsystemSteamManager.h"
 #include "Player/Agent/BaseAgent.h"
 
 
@@ -113,7 +111,7 @@ void UAgentInputComponent::BindInput(UInputComponent* InputComponent)
 
 void UAgentInputComponent::OnMove(const FInputActionValue& value)
 {
-	if (Agent)
+	if (Agent->CanMove())
 	{
 		const FVector2D& moveVector = value.Get<FVector2D>();
 		Agent->AddMovementInput(Agent->GetActorForwardVector(), moveVector.Y);
@@ -234,7 +232,7 @@ void UAgentInputComponent::Weapon1(const FInputActionValue& InputActionValue)
 {
 	if (Agent)
 	{
-		Agent->SwitchInteractor(EInteractorType::MainWeapon);
+		Agent->SwitchEquipment(EInteractorType::MainWeapon);
 	}
 }
 
@@ -242,7 +240,7 @@ void UAgentInputComponent::Weapon2(const FInputActionValue& InputActionValue)
 {
 	if (Agent)
 	{
-		Agent->SwitchInteractor(EInteractorType::SubWeapon);
+		Agent->SwitchEquipment(EInteractorType::SubWeapon);
 	}
 }
 
@@ -250,16 +248,13 @@ void UAgentInputComponent::Weapon3(const FInputActionValue& InputActionValue)
 {
 	if (Agent)
 	{
-		Agent->SwitchInteractor(EInteractorType::Melee);
+		Agent->SwitchEquipment(EInteractorType::Melee);
 	}
 }
 
 void UAgentInputComponent::Weapon4(const FInputActionValue& InputActionValue)
 {
-	if (Agent)
-	{
-		Agent->ActivateSpike();
-	}
+	Agent->ActivateSpike();
 }
 
 void UAgentInputComponent::Weapon4Released(const FInputActionValue& InputActionValue)

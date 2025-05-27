@@ -2,13 +2,12 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
-#include "Player/AgentPlayerController.h"
-#include "Player/Animaiton/AgentAnimInstance.h"
 #include "Valorant/ResourceManager/ValorantGameType.h"
-#include "Weapon/BaseWeapon.h"
-#include "ValorantObject/Spike/Spike.h"
+#include "Player/Component/FlashComponent.h"
+#include "Player/Component/FlashPostProcessComponent.h"
 #include "BaseAgent.generated.h"
 
+class UFlashWidget;
 class UAgentAnimInstance;
 class ABaseWeapon;
 class ASpike;
@@ -34,6 +33,7 @@ enum class EVisibilityState  : uint8
 	Hidden,
 	QuestionMark,
 };
+
 UENUM(BlueprintType)
 enum class EAgentDamagedPart : uint8
 {
@@ -43,6 +43,14 @@ enum class EAgentDamagedPart : uint8
 	Legs
 };
 
+UENUM(BlueprintType)
+enum class EAgentDamagedDirection : uint8
+{
+	Front,
+	Back,
+	Left,
+	Right
+};
 
 //ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ
 //             CYT             ♣
@@ -64,9 +72,17 @@ struct FAgentVisibilityInfo
 	
 };
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_FourParams(FOnAgentDamaged, const EAgentDamagedPart, DamagedPart, const EAgentDamagedDirection, DamagedDirection, const bool, bDie, const bool, bLarge);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnAgentEquip);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnAgentFire);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnAgentReload);
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnSpikeActive);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnSpikeCancel);
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnSpikeDeactive);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnSpikeDefuseFinish);
+
 
 UCLASS()
 class VALORANT_API ABaseAgent : public ACharacter
@@ -88,6 +104,9 @@ public:
 	USkeletalMeshComponent* FirstPersonMesh;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
+	USkeletalMeshComponent* DefusalMesh;
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
 	UAgentInputComponent* AgentInputComponent;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
@@ -106,7 +125,7 @@ public:
 	UCurveFloat* CrouchCurve;
 
 	UPROPERTY(EditAnywhere, Category= "Die")
-	float DieCameraTimeRange = 3.0f;;
+	float DieCameraTimeRange = 3.0f;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category= "Die")
 	UTimelineComponent* TL_DieCamera;
@@ -211,14 +230,19 @@ public:
 
 	UAgentAnimInstance* GetABP_1P() const { return ABP_1P; }
 	UAgentAnimInstance* GetABP_3P() const { return ABP_3P; }
-
 	USkeletalMeshComponent* GetMesh1P() const { return FirstPersonMesh; }
+	
+	bool IsDead() const { return bIsDead; }
+	bool CanMove() const { return bCanMove; }
+	void SetCanMove(bool canMove) { bCanMove = canMove; }
+	
+	int GetPoseIdx() const { return PoseIdx; }
 
-	UFUNCTION(Server, Reliable)
+	UFUNCTION(Server, Reliable, BlueprintCallable)
 	void ServerApplyGE(TSubclassOf<UGameplayEffect> geClass);
 	UFUNCTION(Server, Reliable)
 	void ServerApplyHitScanGE(TSubclassOf<UGameplayEffect> GEClass, const int Damage,
-	                          ABaseAgent* DamageInstigator = nullptr);
+	                          ABaseAgent* DamageInstigator = nullptr, const EAgentDamagedPart DamagedPart = EAgentDamagedPart::Body, const EAgentDamagedDirection DamagedDirection = EAgentDamagedDirection::Front);
 
 	UFUNCTION(BlueprintCallable)
 	void SetIsRun(const bool _bIsRun);
@@ -243,7 +267,7 @@ public:
 	void ResetFindInteractorActor() { FindInteractActor = nullptr; }
 
 	UFUNCTION(BlueprintCallable)
-	EInteractorType GetInteractorState() const { return CurrentInteractorState; }
+	EInteractorType GetInteractorState() const { return CurrentEquipmentState; }
 
 	UFUNCTION(BlueprintCallable)
 	ABaseInteractor* GetCurrentInterator() const { return CurrentInteractor; }
@@ -267,22 +291,19 @@ public:
 
 	/** 해당 슬롯의 인터랙터를 손에 들고자 할 때 */
 	UFUNCTION(BlueprintCallable, Category = "Weapon")
-	void SwitchInteractor(EInteractorType InteractorType);
+	void SwitchEquipment(EInteractorType EquipmentType);
 
 	void ActivateSpike();
 	void CancelSpike(ASpike* CancelObject);
 	UFUNCTION(Server, Reliable)
 	void ServerRPC_CancelSpike(ASpike* CancelObject);
-	
-	UFUNCTION()
-	void OnRep_ChangePoseIdx();
 
 	UFUNCTION(Server, Reliable, Category = "Weapon")
 	void ServerRPC_Interact(ABaseInteractor* Interactor);
 	UFUNCTION(Server, Reliable, Category = "Weapon")
 	void Server_AcquireInteractor(ABaseInteractor* Interactor);
 	UFUNCTION(Server, Reliable, Category = "Weapon")
-	void ServerRPC_SwitchInteractor(EInteractorType InteractorType);
+	void ServerRPC_SwitchEquipment(EInteractorType InteractorType);
 
 	UFUNCTION(BlueprintCallable, Category = "GAS")
 	float GetEffectSpeedMulitiplier() const { return EffectSpeedMultiplier; }
@@ -316,8 +337,50 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void SetIsInPlantZone(bool IsInZone) { IsInPlantZone = IsInZone; }
 
-	bool IsDead() const { return bIsDead; }
+	// 현재 팀이 블루팀인지 반환
+	UFUNCTION(BlueprintCallable, Category = "Team")
+	bool IsBlueTeam() const;
+	// 현재 팀이 공격팀인지 반환
+	UFUNCTION(BlueprintCallable, Category = "Team")
+	bool IsAttacker() const;
 
+	EInteractorType GetPrevEquipmentType() const;
+
+	// 1인칭 애니메이션 몽타주 재생
+	UFUNCTION(Unreliable, Client, BlueprintCallable, Category = "Animation")
+	void Client_PlayFirstPersonMontage(UAnimMontage* MontageToPlay, float PlayRate = 1.0f, FName StartSectionName = NAME_None);
+
+	// 3인칭 애니메이션 몽타주 재생
+	UFUNCTION(Unreliable, NetMulticast, BlueprintCallable, Category = "Animation")
+	void NetMulti_PlayThirdPersonMontage(UAnimMontage* MontageToPlay, float PlayRate = 1.0f, FName StartSectionName = NAME_None);
+
+	// 1인칭 애니메이션 몽타주 정지
+	UFUNCTION(BlueprintCallable, Category = "Animation")
+	void StopFirstPersonMontage(float BlendOutTime = 0.25f);
+
+	// 3인칭 애니메이션 몽타주 정지
+	UFUNCTION(BlueprintCallable, Category = "Animation")
+	void StopThirdPersonMontage(float BlendOutTime = 0.25f);
+
+	// 현재 체력 반환
+	UFUNCTION(BlueprintCallable, Category = "Agent|Status")
+	float GetCurrentHealth() const;
+
+	// 최대 체력 반환
+	UFUNCTION(BlueprintCallable, Category = "Agent|Status")
+	float GetMaxHealth() const;
+
+	// 체력이 가득 찼는지 확인
+	UFUNCTION(BlueprintCallable, Category = "Agent|Status")
+	bool IsFullHealth() const;
+
+	// 섬광 관련 함수들
+	UFUNCTION(BlueprintCallable, Category = "Flash")
+	void OnFlashIntensityChanged(float NewIntensity);
+    
+	UFUNCTION(BlueprintCallable, Category = "Flash")
+	void CreateFlashWidget();
+	
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	UValorantGameInstance* m_GameInstance;
@@ -345,10 +408,11 @@ protected:
 
 	UPROPERTY(Replicated)
 	bool bIsRun = true;
-	UPROPERTY()
+	UPROPERTY(Replicated)
 	bool bIsDead = false;
-
-
+	
+	bool bCanMove = true;
+	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	float BaseSpringArmHeight = 0.0f;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
@@ -382,12 +446,21 @@ protected:
 	UPROPERTY(VisibleAnywhere, Replicated)
 	ABaseInteractor* CurrentInteractor = nullptr;
 
-	UPROPERTY(Replicated)
-	EInteractorType CurrentInteractorState = EInteractorType::None;
+	UPROPERTY(Replicated, ReplicatedUsing = OnRep_CurrentInteractorState)
+	EInteractorType CurrentEquipmentState = EInteractorType::None;
 
-	UPROPERTY(Replicated, ReplicatedUsing=OnRep_ChangePoseIdx)
+	UPROPERTY(Replicated)
+	EInteractorType PrevEquipmentState = EInteractorType::None;
+	
+	UFUNCTION()
+	void OnRep_CurrentInteractorState();
+
+	UPROPERTY(Replicated)
 	int PoseIdx = 0;
 	int PoseIdxOffset = 0;
+
+	EAgentDamagedPart LastDamagedPart;
+	EAgentDamagedDirection LastDamagedDirection;;
 
 protected:
 	virtual void PossessedBy(AController* NewController) override;
@@ -407,6 +480,9 @@ protected:
 	virtual void OnStartCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust) override;
 	virtual void OnEndCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust) override;
 
+	UFUNCTION(BlueprintImplementableEvent)
+	void OnKill();
+	
 	virtual void InitAgentAbility();
 
 	UFUNCTION(BlueprintCallable)
@@ -436,6 +512,9 @@ protected:
 	UFUNCTION()
 	void UpdateEffectSpeed(float newEffectSpeed);
 
+	UFUNCTION(NetMulticast, Reliable)
+	void MulticastRPC_OnDamaged(const EAgentDamagedPart DamagedPart, const EAgentDamagedDirection DamagedDirection, const bool bDie, const bool bLarge = false);
+
 	// 무기 카테고리에 따른 이동 속도 멀티플라이어 업데이트
 	void UpdateEquipSpeedMultiplier();
 
@@ -445,12 +524,52 @@ private:
 	bool IsInPlantZone = false;
 
 public:
+	FOnAgentDamaged OnAgentDamaged;
 	FOnAgentEquip OnAgentEquip;
 	FOnAgentEquip OnAgentFire;
 	FOnAgentEquip OnAgentReload;
+	
+	FOnSpikeActive OnSpikeActive;
+	FOnSpikeCancel OnSpikeCancel;
+	
+	FOnSpikeDeactive OnSpikeDeactive;
+	FOnSpikeDefuseFinish OnSpikeDefuseFinish;
+
+	FTimerHandle DeadTimerHandle;
+	
 	void OnEquip();
 	void OnFire();
 	void OnReload();
+	
+	void OnSpikeStartPlant();
+	void OnSpikeFinishPlant();
+	
+	void OnSpikeStartDefuse();
+	void OnSpikeFinishDefuse();
+	// void OnSpikeCancelDefuse();
+	
+	void OnSpikeCancelInteract();
+	
 	bool bInteractionCapsuleInit = false;
 	virtual void OnRep_Controller() override;
+
+	bool IsInFrustum(const AActor* Actor) const;
+
+	UPROPERTY(Replicated)
+	FRotator ReplicatedControlRotation = FRotator::ZeroRotator;
+
+private:
+	// 섬광 컴포넌트들
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Flash", meta = (AllowPrivateAccess = "true"))
+	UFlashComponent* FlashComponent;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Flash", meta = (AllowPrivateAccess = "true"))
+	UFlashPostProcessComponent* PostProcessComponent;
+
+	// UI 위젯
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI", meta = (AllowPrivateAccess = "true"))
+	TSubclassOf<UFlashWidget> FlashWidgetClass;
+
+	UPROPERTY()
+	UFlashWidget* FlashWidget;
 };

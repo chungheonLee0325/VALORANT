@@ -7,6 +7,7 @@
 #include "Component/ShopComponent.h"
 #include "AgentPlayerController.generated.h"
 
+class UFlashWidget;
 class UBaseAttributeSet;
 class UAgentAbilitySystemComponent;
 class UMatchMapHUD;
@@ -174,5 +175,8 @@ public:
 	void InitializeMinimap();
 
 	UMiniMapWidget* GetMinimapWidget() const { return MinimapWidget; }
-	
+	virtual void OnRep_Pawn() override;
+
+	UFUNCTION()
+	void OnMatchEnd(const bool bBlueWin);
 };

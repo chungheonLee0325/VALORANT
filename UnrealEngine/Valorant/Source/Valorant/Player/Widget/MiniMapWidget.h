@@ -7,15 +7,15 @@
 #include "MiniMapWidget.generated.h"
 
 class ABaseAgent;
+class UCanvasPanel;
 
 /**
  * 
  */
-UCLASS()
+UCLASS(meta = (DisableNativeTick))
 class VALORANT_API UMiniMapWidget : public UUserWidget
 {
 	GENERATED_BODY()
-
 
 public:
 	virtual void NativeConstruct() override; // 위젯이 생성될 때 호출되는 함수, 부모 클래스 함수 오버라이드
@@ -35,7 +35,7 @@ public:
     
     // 미니맵 업데이트 - 월드 좌표를 미니맵 좌표로 변환하는 함수 (월드 좌표 -> 미니맵 좌표 변환)
     UFUNCTION(BlueprintCallable, Category = "Minimap") 
-    FVector2D WorldToMinimapPosition(const FVector& WorldLocation); 
+    FVector2D WorldToMinimapPosition(const FVector& TargetActorLocation); 
 	// 주기적으로 모든 에이전트 검색하여 등록하는 함수 추가
 	UFUNCTION(BlueprintCallable, Category = "Minimap")
 	void ScanForAgents();
@@ -48,7 +48,10 @@ protected:
     // 현재 미니맵을 보고 있는 플레이어의 에이전트
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Minimap") 
     ABaseAgent* ObserverAgent; 
-    
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (BindWidget), Category = "Minimap") 
+	class UCanvasPanel* CanvasPanel; // 미니맵 배경 이미지 위젯
+	
     // 미니맵 배경 이미지
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (BindWidget), Category = "Minimap") 
     class UImage* MinimapBackground; // 미니맵 배경 이미지 위젯
@@ -75,23 +78,27 @@ protected:
     
     // 미니맵에 아이콘 생성 함수 (블루프린트에서 구현)
     UFUNCTION(BlueprintImplementableEvent, BlueprintCallable, Category = "Minimap") 
-    void CreateAgentIcon(ABaseAgent* Agent, FVector2D Position, UTexture2D* IconTexture, EVisibilityState VisState); 
+    void CreateAgentIcon(ABaseAgent* Agent, FVector2D Position, UTexture2D* IconTexture, EVisibilityState VisState, const int Flag); 
     
     // 미니맵 아이콘 업데이트 함수 (블루프린트에서 구현)
     UFUNCTION(BlueprintImplementableEvent, BlueprintCallable, Category = "Minimap") 
-    void UpdateAgentIcon(ABaseAgent* Agent, FVector2D Position, UTexture2D* IconTexture, EVisibilityState VisState);
+    void UpdateAgentIcon(ABaseAgent* Agent, FVector2D Position, UTexture2D* IconTexture, EVisibilityState VisState, const int Flag);
 
 	// 에이전트 아이콘 맵 추가 (에이전트와 해당 이미지 위젯 매핑)
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Minimap")
-	TMap<ABaseAgent*, UImage*> AgentIconMap;
+	TMap<ABaseAgent*, UUserWidget*> AgentIconMap;
     
 	// 아이콘 크기 변수 추가
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Minimap")
-	FVector2D IconSize = FVector2D(24.0f, 24.0f);
+	FVector2D IconSize = FVector2D(12.0f, 12.0f);
     
 	// 스캔 주기 타이머 추가
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Minimap")
-	float ScanInterval = 2.0f;
-    
+	float ScanInterval = 0.3f;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Minimap")
 	float TimeSinceLastScan = 0.0f;
+
+private:
+	FTimerHandle ScanTimerHandle;
+	void Scan();
 };

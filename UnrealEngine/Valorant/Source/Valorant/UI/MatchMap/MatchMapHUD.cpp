@@ -5,6 +5,7 @@
 
 #include "OnlineSubsystemUtils.h"
 #include "Valorant.h"
+#include "Components/HorizontalBox.h"
 #include "Components/TextBlock.h"
 #include "Components/WidgetSwitcher.h"
 #include "Components/Image.h"
@@ -81,6 +82,11 @@ void UMatchMapHUD::UpdateTime(float Time)
 	const int Seconds = static_cast<int>(Time) % 60;
 	const FString TimeStr = FString::Printf(TEXT("%d:%02d"), Minute, Seconds);
 	TextBlockTime->SetText(FText::FromString(TimeStr));
+	if (bIsPreRound && FMath::IsNearlyEqual(Time, 3.f, 0.5f))
+	{
+		PlayRemTimeVO(3);
+		bIsPreRound = false;
+	}
 	if (Time <= 60)
 	{
 		if (false == bPlayed60SecLeftVo && FMath::IsNearlyEqual(Time, 60.f, 0.5f))
@@ -193,6 +199,7 @@ void UMatchMapHUD::DisplayAnnouncement(EMatchAnnouncement MatchAnnouncement, flo
 	WidgetSwitcherAnnouncement->SetVisibility(ESlateVisibility::Visible);
 	WidgetSwitcherAnnouncement->SetActiveWidgetIndex(static_cast<int32>(MatchAnnouncement));
 	GetWorld()->GetTimerManager().SetTimer(AnnouncementTimerHandle, this, &UMatchMapHUD::HideAnnouncement, DisplayTime, false);
+	bIsPreRound = true;
 }
 
 void UMatchMapHUD::HideAnnouncement()
@@ -210,10 +217,25 @@ void UMatchMapHUD::UpdateDisplayArmor(const float armor)
 	txt_Armor->SetText(FText::AsNumber(armor));
 }
 
+void UMatchMapHUD::UpdateAmmo(bool bDisplayWidget, int MagazineAmmo, int SpareAmmo)
+{
+	if (bDisplayWidget)
+	{
+		HorizontalBoxAmmo->SetVisibility(ESlateVisibility::Visible);
+		TextBlockMagazineAmmo->SetText(FText::FromString(FString::Printf(TEXT("%d"), MagazineAmmo)));
+		TextBlockSpareAmmo->SetText(FText::FromString(FString::Printf(TEXT("%d"), SpareAmmo)));
+	}
+	else
+	{
+		HorizontalBoxAmmo->SetVisibility(ESlateVisibility::Hidden);
+	}
+}
+
 void UMatchMapHUD::BindToDelegatePC(UAgentAbilitySystemComponent* asc, AAgentPlayerController* pc)
 {
 	pc->OnHealthChanged_PC.AddDynamic(this, &UMatchMapHUD::UpdateDisplayHealth);
 	pc->OnArmorChanged_PC.AddDynamic(this, &UMatchMapHUD::UpdateDisplayArmor);
+	pc->OnChangedAmmo.AddDynamic(this, &UMatchMapHUD::UpdateAmmo);
 
 	if (asc == nullptr)
 	{

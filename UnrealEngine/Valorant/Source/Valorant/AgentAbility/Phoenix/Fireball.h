@@ -6,6 +6,7 @@
 #include "AgentAbility/BaseProjectile.h"
 #include "Fireball.generated.h"
 
+class ABaseGround;
 class AFireGround;
 
 UCLASS()
@@ -32,7 +33,7 @@ public:
 	UPROPERTY(BlueprintReadWrite, VisibleAnywhere)
 	TObjectPtr<UStaticMeshComponent> Mesh = nullptr;
 	UPROPERTY(EditAnywhere)
-	TSubclassOf<AFireGround> FireGroundClass = nullptr;
+	TSubclassOf<ABaseGround> FireGroundClass = nullptr;
 
 protected:
 	virtual void BeginPlay() override;

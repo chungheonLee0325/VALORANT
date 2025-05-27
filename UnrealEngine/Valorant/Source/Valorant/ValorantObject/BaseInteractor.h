@@ -4,9 +4,9 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
-#include "ResourceManager/ValorantGameType.h"
 #include "BaseInteractor.generated.h"
 
+enum class EInteractorType : uint8;
 class AThirdPersonInteractor;
 class UWidgetComponent;
 class USphereComponent;
@@ -36,18 +36,19 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess = "true"))
 	TObjectPtr<USphereComponent> Sphere = nullptr;
 
-	UPROPERTY(VisibleAnywhere, ReplicatedUsing=OnRep_OwnerAgent)
+	UPROPERTY(Replicated, ReplicatedUsing=OnRep_OwnerAgent, VisibleAnywhere)
 	TObjectPtr<ABaseAgent> OwnerAgent = nullptr;
 	UFUNCTION()
 	void OnRep_OwnerAgent();
 	void SetOwnerAgent(ABaseAgent* NewAgent);
 
 	UPROPERTY()
-	EInteractorType InteractorType = EInteractorType::None;
+	EInteractorType InteractorType;
 
 public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	TObjectPtr<UWidgetComponent> DetectWidgetComponent = nullptr;
+	ABaseAgent* GetOwnerAgent() const { return OwnerAgent; }
 
 protected:
 	virtual void BeginPlay() override;
@@ -84,7 +85,7 @@ public:
 	UFUNCTION(Server, Reliable)
 	void ServerRPC_SetActive(bool bActive);
 	UFUNCTION(NetMulticast, Reliable)
-	void Multicast_SetActive(bool bActive);
+	virtual void Multicast_SetActive(bool bActive);
 
 	UPROPERTY(BlueprintAssignable)
 	FOnEquip OnEquip;
@@ -100,4 +101,8 @@ public:
 	FOnInteractorDrop OnInteractorDrop;
 	UFUNCTION(NetMulticast, Reliable)
 	void MulticastRPC_BroadcastOnDrop();
+
+	virtual void PlayEquipAnimation();
+
+	USkeletalMeshComponent* GetMesh() { return Mesh; }
 };

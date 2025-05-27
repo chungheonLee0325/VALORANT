@@ -3,20 +3,25 @@
 #include "GameFramework/Character.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "TimerManager.h"
+#include "ResourceManager/ValorantGameType.h"
 
 UJett_E_Tailwind::UJett_E_Tailwind(): UBaseGameplayAbility()
 {
 	FGameplayTagContainer Tags;
 	Tags.AddTag(FGameplayTag::RequestGameplayTag(FName("Input.Skill.E")));
 	SetAssetTags(Tags);
+
 	m_AbilityID = 4003;
+	ActivationType = EAbilityActivationType::Instant;
+
+	// ToDo : 추후 구현
+	// ActivationType = EAbilityActivationType::WithPrepare;
+	// FollowUpInputType = EFollowUpInputType::RepeatKey;
 }
 
-void UJett_E_Tailwind::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData)
+void UJett_E_Tailwind::ExecuteAbility()
 {
-	Super::ActivateAbility(Handle, ActorInfo, ActivationInfo, TriggerEventData);
-
-	ACharacter* Character = Cast<ACharacter>(ActorInfo->AvatarActor.Get());
+	ACharacter* Character = Cast<ACharacter>(CachedActorInfo.AvatarActor.Get());
 	if (Character)
 	{
 		UCharacterMovementComponent* MoveComp = Character->GetCharacterMovement();
@@ -51,6 +56,4 @@ void UJett_E_Tailwind::ActivateAbility(const FGameplayAbilitySpecHandle Handle, 
 			}, 0.3f, false);
 		}
 	}
-
-	EndAbility(Handle, ActorInfo, ActivationInfo, true, false);
 }

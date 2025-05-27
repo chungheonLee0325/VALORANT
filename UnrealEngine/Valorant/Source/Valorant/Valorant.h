@@ -41,3 +41,9 @@
 	{ \
 		GEngine->AddOnScreenDebugMessage(-1, 1.0f, FColor::Red, *FString::Printf(Format, ##__VA_ARGS__)); \
 	}
+
+template <typename TEnum>
+static FString EnumToString(TEnum EnumValue)
+{
+	return StaticEnum<TEnum>()->GetNameStringByValue(static_cast<int8>(EnumValue));
+}

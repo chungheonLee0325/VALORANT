@@ -10,8 +10,5 @@ class VALORANT_API UJett_C_Cloudburst : public UBaseGameplayAbility
 
     UJett_C_Cloudburst();
 
-    virtual void ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData) override;
-
-    UPROPERTY(EditDefaultsOnly)
-    UAnimMontage* AbilityMontage = nullptr;
+    virtual void ExecuteAbility() override;
 }; 

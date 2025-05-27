@@ -4,6 +4,7 @@
 #include "Fireball.h"
 
 #include "FireGround.h"
+#include "AgentAbility/BaseGround.h"
 #include "Components/SphereComponent.h"
 #include "GameFramework/ProjectileMovementComponent.h"
 
@@ -46,7 +47,7 @@ void AFireball::OnProjectileBounced(const FHitResult& ImpactResult, const FVecto
 		FActorSpawnParameters SpawnParameters;
 		SpawnParameters.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 		SpawnParameters.Instigator = this->GetInstigator();
-		GetWorld()->SpawnActor<AFireGround>(FireGroundClass, ImpactResult.ImpactPoint, FRotator::ZeroRotator, SpawnParameters);
+		GetWorld()->SpawnActor<ABaseGround>(FireGroundClass, ImpactResult.ImpactPoint, FRotator::ZeroRotator, SpawnParameters);
 		Destroy();
 	}
 }

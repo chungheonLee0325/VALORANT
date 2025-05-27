@@ -3,10 +3,13 @@
 
 #include "MatchPlayerController.h"
 
+#include "MatchPlayerState.h"
 #include "Valorant.h"
 #include "Blueprint/UserWidget.h"
+#include "CharSelect/CharSelectCamera.h"
 #include "GameManager/MatchGameMode.h"
 #include "GameManager/SubsystemSteamManager.h"
+#include "Kismet/GameplayStatics.h"
 #include "UI/MatchMap/MatchMapSelectAgentUI.h"
 
 AMatchPlayerController::AMatchPlayerController()
@@ -20,6 +23,13 @@ void AMatchPlayerController::BeginPlay()
 	{
 		const FString& DisplayName = USubsystemSteamManager::GetDisplayName(GetWorld());
 		ServerRPC_NotifyBeginPlay(DisplayName);
+
+		const TSubclassOf<AActor> ActorClass = ACharSelectCamera::StaticClass();
+		if (auto* CharSelectCamera = Cast<ACharSelectCamera>(UGameplayStatics::GetActorOfClass(GetWorld(), ActorClass)))
+		{
+			const FViewTargetTransitionParams Params;
+			ClientSetViewTarget(CharSelectCamera, Params);
+		}
 	}
 }
 
@@ -67,6 +77,7 @@ void AMatchPlayerController::ClientRPC_OnLockIn_Implementation(const FString& Di
 		NET_LOG(LogTemp, Warning, TEXT("%hs Called, SelectUIWidget is nullptr"), __FUNCTION__);
 		return;
 	}
+	
 	SelectUIWidget->OnLockIn(DisplayName, AgentId);
 }
 
@@ -77,6 +88,21 @@ void AMatchPlayerController::ClientRPC_OnAgentSelected_Implementation(const FStr
 		NET_LOG(LogTemp, Warning, TEXT("%hs Called, SelectUIWidget is nullptr"), __FUNCTION__);
 		return;
 	}
+
+	if (const auto* PS = GetPlayerState<AMatchPlayerState>())
+	{
+		if (PS->DisplayName == DisplayName)
+		{
+			const TSubclassOf<AActor> ActorClass = ACharSelectCamera::StaticClass();
+			if (auto* CharSelectCamera = Cast<ACharSelectCamera>(UGameplayStatics::GetActorOfClass(GetWorld(), ActorClass)))
+			{
+				const FViewTargetTransitionParams Params;
+				ClientSetViewTarget(CharSelectCamera, Params);
+				CharSelectCamera->OnSelectedAgent(SelectedAgentID);
+			}
+		}
+	}
+	
 	SelectUIWidget->OnSelectedAgentChanged(DisplayName, SelectedAgentID);
 }
 

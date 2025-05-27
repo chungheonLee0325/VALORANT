@@ -4,10 +4,10 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/GameMode.h"
-#include "Player/AgentPlayerState.h"
-#include "ValorantObject/Spike/Spike.h"
 #include "MatchGameMode.generated.h"
 
+class AAgentPlayerState;
+class ASpike;
 class ABaseWeapon;
 class ABaseAgent;
 class AMatchPlayerController;
@@ -50,9 +50,9 @@ struct FMatchPlayer
 	bool bIsDead = false;
 };
 
-/**
- * 
- */
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnStartInRound);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnStartPreRound);
+
 UCLASS()
 class VALORANT_API AMatchGameMode : public AGameMode
 {
@@ -99,7 +99,6 @@ private:
 	UPROPERTY(EditDefaultsOnly, Category="Gameflow", meta=(AllowPrivateAccess))
 	TSubclassOf<ABaseWeapon> ClassicAsset;
 	
-
 	UPROPERTY()
 	ASpike* Spike;
 
@@ -155,9 +154,9 @@ protected:
 	void SetRoundSubState(ERoundSubState NewRoundSubState);
 
 public:
-	int TotalRound = 6;
+	int TotalRound = 3;
 	// static int CurrentRound;
-	int RequiredScore = 4;
+	int RequiredScore = 2;
 	int TeamBlueScore = 0;
 	int TeamRedScore = 0;
 	// static int ShiftRound;
@@ -192,4 +191,7 @@ public:
 
 	UPROPERTY(EditAnywhere)
 	TSubclassOf<ASpike> SpikeClass;
+
+	FOnStartPreRound OnStartPreRound;
+	FOnStartInRound OnStartInRound;
 };

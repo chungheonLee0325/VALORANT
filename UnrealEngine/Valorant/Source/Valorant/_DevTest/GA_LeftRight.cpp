@@ -19,6 +19,7 @@ void UGA_LeftRight::ActivateAbility(const FGameplayAbilitySpecHandle Handle, con
 
 	if (HasAuthority(&ActivationInfo))
 	{
+		MontageStop();
 		// 대기 동작을 위한 MontageTask
 		UAbilityTask_PlayMontageAndWait* PreTask = UAbilityTask_PlayMontageAndWait::CreatePlayMontageAndWaitProxy(this,NAME_None,ReadyAnim,1.f,NAME_None,true);
 	
@@ -35,7 +36,7 @@ void UGA_LeftRight::OnPreMontageFinished()
 	UAgentAbilitySystemComponent* asc = Cast<UAgentAbilitySystemComponent>(GetAbilitySystemComponentFromActorInfo());
 	if (asc)
 	{
-		asc->SetSkillReady(true);
+		//asc->SetSkillReady(true);
 	}
 
 	// 실질 실행을 위한 후속 입력 대기 Task

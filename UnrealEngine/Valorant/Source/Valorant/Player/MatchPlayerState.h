@@ -26,6 +26,6 @@ protected:
 	virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;
 	virtual void BeginPlay() override;
 
-	UFUNCTION()
-	void OnShift();
+	UFUNCTION(Server, Reliable)
+	void ServerRPC_OnShift();
 };

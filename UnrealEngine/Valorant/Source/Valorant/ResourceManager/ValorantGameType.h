@@ -3,11 +3,12 @@
 #include <Engine/DataTable.h>
 #include "CoreMinimal.h"
 #include "GameplayAbilitySet.h"
-#include "Engine/DamageEvents.h"
 #include "UObject/ObjectMacros.h"
 #include "GameplayTagContainer.h"
 #include "ValorantGameType.generated.h"
 
+class ACharSelectCharacterActor;
+class UNiagaraSystem;
 class UBaseWeaponAnim;
 class ABaseWeapon;
 class ABaseAgent;
@@ -63,7 +64,8 @@ enum class EInteractorType : uint8
 	MainWeapon UMETA(DisplayName = "MainWeapon"),
 	SubWeapon UMETA(DisplayName = "SubWeapon"),
 	Melee UMETA(DisplayName = "Melee"),
-	Spike UMETA(DisplayName = "Spike")
+	Spike UMETA(DisplayName = "Spike"),
+	Ability UMETA(DisplayName = "Ability"),
 };
 
 // 무기 카테고리
@@ -287,6 +289,14 @@ struct FAgentData : public FTableRowBase
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Data")
 	FString Description;
+
+	// 캐릭터 선택 연출
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Data")
+	TSubclassOf<ACharSelectCharacterActor> CharSelectCharacterActorClass = nullptr;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Data")
+	UAnimMontage* CharSelectCharacterMontage = nullptr;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Data")
+	UAnimMontage* CharSelectCameraMontage = nullptr;
 };
 
 USTRUCT(BlueprintType)
@@ -356,6 +366,21 @@ struct FWeaponData : public FTableRowBase
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Data")
 	TSubclassOf<UBaseWeaponAnim> GunABPClass = nullptr;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Effects")
+	UNiagaraSystem* MuzzleFlashEffect = nullptr;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Effects")
+	UNiagaraSystem* TracerEffect = nullptr;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Effects")
+	UNiagaraSystem* ImpactEffect = nullptr;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Effects")
+	FName MuzzleSocketName = "MuzzlePoint";
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Sound")
+	USoundBase* FireSound = nullptr;
 };
 
 // GameplayEffectData

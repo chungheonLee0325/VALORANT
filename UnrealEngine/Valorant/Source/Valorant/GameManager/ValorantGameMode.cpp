@@ -8,6 +8,7 @@
 #include "Player/AgentPlayerState.h"
 #include "Player/Agent/BaseAgent.h"
 #include "UObject/ConstructorHelpers.h"
+#include "Weapon/BaseWeapon.h"
 
 AValorantGameMode::AValorantGameMode()
 	: Super()

@@ -3,11 +3,13 @@
 
 #include "AgentPlayerState.h"
 
+#include "Valorant.h"
 #include "Valorant/AbilitySystem/AgentAbilitySystemComponent.h"
 #include "Valorant/Player/Agent/BaseAgent.h"
 #include "Valorant/AbilitySystem/Attributes/BaseAttributeSet.h"
 #include "Valorant/GameManager/ValorantGameInstance.h"
 #include "Component/CreditComponent.h"
+#include "GameManager/SubsystemSteamManager.h"
 #include "Net/UnrealNetwork.h"
 #include "Valorant/Player/AgentPlayerController.h"
 
@@ -163,6 +165,16 @@ int32 AAgentPlayerState::GetMaxAbilityStack(int32 AbilityID) const
 	// 만약 필드가 없거나 0이하면 기본값 사용
 	int32 MaxStack = AbilityData->MaxCharges;
 	return (MaxStack > 0) ? MaxStack : DefaultMaxStack;
+}
+
+void AAgentPlayerState::OnKill()
+{
+	Muticast_OnKill();
+}
+
+void AAgentPlayerState::Muticast_OnKill_Implementation()
+{
+	OnKillDelegate.Broadcast();
 }
 
 void AAgentPlayerState::BeginPlay()

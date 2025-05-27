@@ -616,6 +616,12 @@ void UMatchMapShopUI::UpdateAbilityUI()
 			{
 				AbilityC_Image->SetBrushFromTexture(AbilityInfo->AbilityIcon);
 			}
+
+			// Text UI 업데이트
+			if (AbilityC_Text)
+			{
+				AbilityC_Text->SetText(FText::FromString(AbilityInfo->AbilityName));
+			}
 			
 			// 가격 UI 업데이트
 			if (AbilityC_Cost)
@@ -638,6 +644,12 @@ void UMatchMapShopUI::UpdateAbilityUI()
 			{
 				AbilityQ_Image->SetBrushFromTexture(AbilityInfo->AbilityIcon);
 			}
+
+			// Text UI 업데이트
+			if (AbilityQ_Text)
+			{
+				AbilityQ_Text->SetText(FText::FromString(AbilityInfo->AbilityName));
+			}
 			
 			// 가격 UI 업데이트
 			if (AbilityQ_Cost)
@@ -659,6 +671,12 @@ void UMatchMapShopUI::UpdateAbilityUI()
 			if (AbilityE_Image && AbilityInfo->AbilityIcon)
 			{
 				AbilityE_Image->SetBrushFromTexture(AbilityInfo->AbilityIcon);
+			}
+
+			// Text UI 업데이트
+			if (AbilityE_Text)
+			{
+				AbilityE_Text->SetText(FText::FromString(AbilityInfo->AbilityName));
 			}
 			
 			// 가격 UI 업데이트

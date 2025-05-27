@@ -8,6 +8,7 @@
 #include "ResourceManager/ValorantGameType.h"
 #include "MatchMapHUD.generated.h"
 
+class UHorizontalBox;
 class UAgentAbilitySystemComponent;
 class AAgentPlayerState;
 class UWidgetSwitcher;
@@ -103,6 +104,10 @@ class VALORANT_API UMatchMapHUD : public UUserWidget
 	bool bPlayed30SecLeftVo = true;
 	UPROPERTY(BlueprintReadWrite, meta=(AllowPrivateAccess))
 	bool bPlayed10SecLeftVo = true;
+
+	// 라운드 시작 3초전 카운트다운 음향을 위한 변수
+	bool bIsPreRound = false;
+	
 	void SetTrueVo();
 	void SetFalseVo();
 	
@@ -131,6 +136,8 @@ protected:
 	void UpdateDisplayHealth(const float health);
 	UFUNCTION()
 	void UpdateDisplayArmor(const float armor);
+	UFUNCTION()
+	void UpdateAmmo(bool bDisplayWidget, int MagazineAmmo, int SpareAmmo);
 
 	// 어빌리티 스택 관련 함수들
 	UFUNCTION()
@@ -197,6 +204,9 @@ public:
 	// 어빌리티 정보 업데이트 이벤트 (블루프린트에서 구현)
 	UFUNCTION(BlueprintImplementableEvent, Category = "Ability|Info")
 	void OnAbilityInfoUpdated(EAbilitySlotType SlotType, const FHUDAbilityInfo& AbilityInfo);
+
+	UFUNCTION(BlueprintImplementableEvent)
+	void OnMatchEnd(bool bWin);
 	
 public:
 	UPROPERTY(meta=(BindWidget))
@@ -207,6 +217,12 @@ public:
 	TObjectPtr<UTextBlock> TextBlockRedScore = nullptr;
 	UPROPERTY(meta=(BindWidget))
 	TObjectPtr<UWidgetSwitcher> WidgetSwitcherAnnouncement = nullptr;
+	UPROPERTY(meta=(BindWidget))
+	TObjectPtr<UHorizontalBox> HorizontalBoxAmmo = nullptr;
+	UPROPERTY(meta=(BindWidget))
+	TObjectPtr<UTextBlock> TextBlockMagazineAmmo = nullptr;
+	UPROPERTY(meta=(BindWidget))
+	TObjectPtr<UTextBlock> TextBlockSpareAmmo = nullptr;
 
 	UPROPERTY(meta=(BindWidget))
 	UTextBlock* txt_Armor;
