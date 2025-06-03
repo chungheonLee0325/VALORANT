@@ -220,4 +220,8 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	void PrintAllPlayerLogs() const;
+
+	// 각 PC에게 게임 시작 알림 - 로딩 UI 제거용
+	UFUNCTION()
+	void NotifyGameStart();
 };

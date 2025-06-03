@@ -273,6 +273,8 @@ void AMatchGameMode::HandleMatchHasStarted()
 {
 	Super::HandleMatchHasStarted();
 
+	NotifyGameStart();
+
 	NET_LOG(LogTemp, Warning, TEXT("%hs Called"), __FUNCTION__);
 	ValorantGameInstance->OnMatchHasStarted();
 	
@@ -1186,6 +1188,11 @@ void AMatchGameMode::PrintAllPlayerLogs() const
 		// 구분선 출력 (푸터)
 		UE_LOG(LogTemp, Log, TEXT("=== PlayerLog End   [%s] ===\n"), *Data.player_id);
 	}
+}
+
+void AMatchGameMode::NotifyGameStart()
+{
+	
 }
 
 
