@@ -141,7 +141,7 @@ void UAgentInputComponent::StartFire(const FInputActionValue& InputActionValue)
 		}
 	}
 	
-	if (Agent)
+	if (!Agent->IsDead())
 	{
 		// 스킬을 실행했다면, 리턴
 		if (Agent->GetASC()->TryActivateAbilityByTag(LeftClickTag))
@@ -165,7 +165,7 @@ void UAgentInputComponent::EndFire(const FInputActionValue& InputActionValue)
 		}
 	}
 	
-	if (Agent)
+	if (!Agent->IsDead())
 	{
 		// NET_LOG(LogTemp, Warning, TEXT("파이어 종료"));
 		Agent->EndFire();
@@ -174,7 +174,7 @@ void UAgentInputComponent::EndFire(const FInputActionValue& InputActionValue)
 
 void UAgentInputComponent::JumpStart(const FInputActionValue& InputActionValue)
 {
-	if (Agent)
+	if (!Agent->IsDead())
 	{
 		if (Agent->bIsCrouched)
 		{
@@ -196,7 +196,7 @@ void UAgentInputComponent::JumpComplete(const FInputActionValue& InputActionValu
 
 void UAgentInputComponent::CrouchStart(const FInputActionValue& InputActionValue)
 {
-	if (Agent)
+	if (!Agent->IsDead())
 	{
 		Agent->Crouch();
 	}
@@ -204,7 +204,7 @@ void UAgentInputComponent::CrouchStart(const FInputActionValue& InputActionValue
 
 void UAgentInputComponent::CrouchComplete(const FInputActionValue& InputActionValue)
 {
-	if (Agent)
+	if (!Agent->IsDead())
 	{
 		Agent->UnCrouch();
 	}
@@ -212,7 +212,7 @@ void UAgentInputComponent::CrouchComplete(const FInputActionValue& InputActionVa
 
 void UAgentInputComponent::WalkStart(const FInputActionValue& InputActionValue)
 {
-	if (Agent)
+	if (!Agent->IsDead())
 	{
 		Agent->SetIsRun(false);
 	}
@@ -236,7 +236,7 @@ void UAgentInputComponent::Drop(const FInputActionValue& InputActionValue)
 
 void UAgentInputComponent::Interact(const FInputActionValue& InputActionValue)
 {
-	if (Agent)
+	if (!Agent->IsDead())
 	{
 		Agent->Interact();
 	}
@@ -249,7 +249,7 @@ void UAgentInputComponent::WeaponChange(const FInputActionValue& value)
 
 void UAgentInputComponent::Weapon1(const FInputActionValue& InputActionValue)
 {
-	if (Agent)
+	if (!Agent->IsDead())
 	{
 		Agent->SwitchEquipment(EInteractorType::MainWeapon);
 	}
@@ -257,7 +257,7 @@ void UAgentInputComponent::Weapon1(const FInputActionValue& InputActionValue)
 
 void UAgentInputComponent::Weapon2(const FInputActionValue& InputActionValue)
 {
-	if (Agent)
+	if (!Agent->IsDead())
 	{
 		Agent->SwitchEquipment(EInteractorType::SubWeapon);
 	}
@@ -265,7 +265,7 @@ void UAgentInputComponent::Weapon2(const FInputActionValue& InputActionValue)
 
 void UAgentInputComponent::Weapon3(const FInputActionValue& InputActionValue)
 {
-	if (Agent)
+	if (!Agent->IsDead())
 	{
 		Agent->SwitchEquipment(EInteractorType::Melee);
 	}
@@ -273,7 +273,10 @@ void UAgentInputComponent::Weapon3(const FInputActionValue& InputActionValue)
 
 void UAgentInputComponent::Weapon4(const FInputActionValue& InputActionValue)
 {
-	Agent->ActivateSpike();
+	if (!Agent->IsDead())
+	{
+		Agent->ActivateSpike();
+	}
 }
 
 void UAgentInputComponent::Weapon4Released(const FInputActionValue& InputActionValue)
@@ -286,7 +289,10 @@ void UAgentInputComponent::Weapon4Released(const FInputActionValue& InputActionV
 
 void UAgentInputComponent::StartReload(const FInputActionValue& InputActionValue)
 {
-	Agent->Reload();
+	if (!Agent->IsDead())
+	{
+		Agent->Reload();
+	}
 }
 
 void UAgentInputComponent::ShopUI(const FInputActionValue& InputActionValue)
