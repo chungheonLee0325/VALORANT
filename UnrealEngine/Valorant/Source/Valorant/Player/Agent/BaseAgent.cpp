@@ -2555,6 +2555,22 @@ void ABaseAgent::SendWavFileAsFormData(const TArray<uint8>& BinaryData)
 				UE_LOG(LogTemp, Error, TEXT("[Voice] JSON 파싱 실패"));
 				return;
 			}
+			
+			// "answer" 필드만 꺼내기
+		    if (JsonObject->HasField(TEXT("answer")))
+		    {
+		    	const FString AnswerText = JsonObject->GetStringField(TEXT("answer"));
+		    	
+		    	if (PC && PC->GetMatchMapHud())
+		    	{
+					auto* hud = Cast<UMatchMapHUD>(PC->GetMatchMapHud());
+		    		hud->UpdateAIAnswer(AnswerText);
+				}
+		    }
+		    else
+		    {
+		    	UE_LOG(LogTemp, Error, TEXT("[Voice] JSON에 'answer' 필드가 없습니다"));
+		    }
 
 			// JSON 안에 audio_file 필드가 존재하는지 확인
 			if (!JsonObject->HasField(TEXT("audio_file")))
@@ -2643,7 +2659,7 @@ void ABaseAgent::DownloadWavFile(const FString& AudioFileURL)
 			{
 				UE_LOG(LogTemp, Error, TEXT("[Voice] WAV 파일 저장 실패: %s"), *SavePath);
 			}
-
+			
 			OnGetAIAnswer();
 		}
 	);
