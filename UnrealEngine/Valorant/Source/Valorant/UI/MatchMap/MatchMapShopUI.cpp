@@ -488,21 +488,21 @@ void UMatchMapShopUI::HandleAbilityStackChanged(int32 AbilityID, int32 NewStack)
 		{
 			if (AbilityInfo->CurrentStack == 1)
 			{
-				C_Stack_1->SetColorAndOpacity(EquippedWeaponHighlightColor);
+				C_Stack_1->SetColorAndOpacity(PurchaseColor);
 				C_Stack_2->SetColorAndOpacity(DefaultColor);
 				C_Stack_3->SetColorAndOpacity(DefaultColor);
 			}
 			else if (AbilityInfo->CurrentStack == 2)
 			{
-				C_Stack_1->SetColorAndOpacity(EquippedWeaponHighlightColor);
-				C_Stack_2->SetColorAndOpacity(EquippedWeaponHighlightColor);
+				C_Stack_1->SetColorAndOpacity(PurchaseColor);
+				C_Stack_2->SetColorAndOpacity(PurchaseColor);
 				C_Stack_3->SetColorAndOpacity(DefaultColor);
 			}
 			else if (AbilityInfo->CurrentStack == 3)
 			{
-				C_Stack_1->SetColorAndOpacity(EquippedWeaponHighlightColor);
-				C_Stack_2->SetColorAndOpacity(EquippedWeaponHighlightColor);
-				C_Stack_3->SetColorAndOpacity(EquippedWeaponHighlightColor);
+				C_Stack_1->SetColorAndOpacity(PurchaseColor);
+				C_Stack_2->SetColorAndOpacity(PurchaseColor);
+				C_Stack_3->SetColorAndOpacity(PurchaseColor);
 			}
 			else if (AbilityInfo->CurrentStack == 0)
 			{
@@ -517,21 +517,21 @@ void UMatchMapShopUI::HandleAbilityStackChanged(int32 AbilityID, int32 NewStack)
 		{
 			if (AbilityInfo->CurrentStack == 1)
 			{
-				Q_Stack_1->SetColorAndOpacity(EquippedWeaponHighlightColor);
+				Q_Stack_1->SetColorAndOpacity(PurchaseColor);
 				Q_Stack_2->SetColorAndOpacity(DefaultColor);
 				Q_Stack_3->SetColorAndOpacity(DefaultColor);
 			}
 			else if (AbilityInfo->CurrentStack == 2)
 			{
-				Q_Stack_1->SetColorAndOpacity(EquippedWeaponHighlightColor);
-				Q_Stack_2->SetColorAndOpacity(EquippedWeaponHighlightColor);
+				Q_Stack_1->SetColorAndOpacity(PurchaseColor);
+				Q_Stack_2->SetColorAndOpacity(PurchaseColor);
 				Q_Stack_3->SetColorAndOpacity(DefaultColor);
 			}
 			else if (AbilityInfo->CurrentStack == 3)
 			{
-				Q_Stack_1->SetColorAndOpacity(EquippedWeaponHighlightColor);
-				Q_Stack_2->SetColorAndOpacity(EquippedWeaponHighlightColor);
-				Q_Stack_3->SetColorAndOpacity(EquippedWeaponHighlightColor);
+				Q_Stack_1->SetColorAndOpacity(PurchaseColor);
+				Q_Stack_2->SetColorAndOpacity(PurchaseColor);
+				Q_Stack_3->SetColorAndOpacity(PurchaseColor);
 			}
 			else if (AbilityInfo->CurrentStack == 0)
 			{
@@ -545,21 +545,21 @@ void UMatchMapShopUI::HandleAbilityStackChanged(int32 AbilityID, int32 NewStack)
 		{
 			if (AbilityInfo->CurrentStack == 1)
 			{
-				E_Stack_1->SetColorAndOpacity(EquippedWeaponHighlightColor);
+				E_Stack_1->SetColorAndOpacity(PurchaseColor);
 				E_Stack_2->SetColorAndOpacity(DefaultColor);
 				E_Stack_3->SetColorAndOpacity(DefaultColor);
 			}
 			else if (AbilityInfo->CurrentStack == 2)
 			{
-				E_Stack_1->SetColorAndOpacity(EquippedWeaponHighlightColor);
-				E_Stack_2->SetColorAndOpacity(EquippedWeaponHighlightColor);
+				E_Stack_1->SetColorAndOpacity(PurchaseColor);
+				E_Stack_2->SetColorAndOpacity(PurchaseColor);
 				E_Stack_3->SetColorAndOpacity(DefaultColor);
 			}
 			else if (AbilityInfo->CurrentStack == 3)
 			{
-				E_Stack_1->SetColorAndOpacity(EquippedWeaponHighlightColor);
-				E_Stack_2->SetColorAndOpacity(EquippedWeaponHighlightColor);
-				E_Stack_3->SetColorAndOpacity(EquippedWeaponHighlightColor);
+				E_Stack_1->SetColorAndOpacity(PurchaseColor);
+				E_Stack_2->SetColorAndOpacity(PurchaseColor);
+				E_Stack_3->SetColorAndOpacity(PurchaseColor);
 			}
 			else if (AbilityInfo->CurrentStack == 0)
 			{
@@ -723,14 +723,14 @@ void UMatchMapShopUI::UpdateAbilityUI()
 				if (AbilityInfo->MaxStack == 1)
 				{
 					C_Stack_1->SetVisibility(ESlateVisibility::Visible);
-					C_Stack_2->SetVisibility(ESlateVisibility::Hidden);
-					C_Stack_3->SetVisibility(ESlateVisibility::Hidden);
+					C_Stack_2->SetVisibility(ESlateVisibility::Collapsed);
+					C_Stack_3->SetVisibility(ESlateVisibility::Collapsed);
 				}
 				else if (AbilityInfo->MaxStack == 2)
 				{
 					C_Stack_1->SetVisibility(ESlateVisibility::Visible);
 					C_Stack_2->SetVisibility(ESlateVisibility::Visible);
-					C_Stack_3->SetVisibility(ESlateVisibility::Hidden);
+					C_Stack_3->SetVisibility(ESlateVisibility::Collapsed);
 				}
 				else if (AbilityInfo->MaxStack == 3)
 				{
@@ -772,14 +772,14 @@ void UMatchMapShopUI::UpdateAbilityUI()
 				if (AbilityInfo->MaxStack == 1)
 				{
 					Q_Stack_1->SetVisibility(ESlateVisibility::Visible);
-					Q_Stack_2->SetVisibility(ESlateVisibility::Hidden);
-					Q_Stack_3->SetVisibility(ESlateVisibility::Hidden);
+					Q_Stack_2->SetVisibility(ESlateVisibility::Collapsed);
+					Q_Stack_3->SetVisibility(ESlateVisibility::Collapsed);
 				}
 				else if (AbilityInfo->MaxStack == 2)
 				{
 					Q_Stack_1->SetVisibility(ESlateVisibility::Visible);
 					Q_Stack_2->SetVisibility(ESlateVisibility::Visible);
-					Q_Stack_3->SetVisibility(ESlateVisibility::Hidden);
+					Q_Stack_3->SetVisibility(ESlateVisibility::Collapsed);
 				}
 				else if (AbilityInfo->MaxStack == 3)
 				{
@@ -821,14 +821,14 @@ void UMatchMapShopUI::UpdateAbilityUI()
 				if (AbilityInfo->MaxStack == 1)
 				{
 					E_Stack_1->SetVisibility(ESlateVisibility::Visible);
-					E_Stack_2->SetVisibility(ESlateVisibility::Hidden);
-					E_Stack_3->SetVisibility(ESlateVisibility::Hidden);
+					E_Stack_2->SetVisibility(ESlateVisibility::Collapsed);
+					E_Stack_3->SetVisibility(ESlateVisibility::Collapsed);
 				}
 				else if (AbilityInfo->MaxStack == 2)
 				{
 					E_Stack_1->SetVisibility(ESlateVisibility::Visible);
 					E_Stack_2->SetVisibility(ESlateVisibility::Visible);
-					E_Stack_3->SetVisibility(ESlateVisibility::Hidden);
+					E_Stack_3->SetVisibility(ESlateVisibility::Collapsed);
 				}
 				else if (AbilityInfo->MaxStack == 3)
 				{
