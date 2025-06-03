@@ -14,6 +14,14 @@ class UImage;
 // 구매 결과 이벤트 선언
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnPurchaseResult, bool, bSuccess, int32, ItemID, EShopItemType, ItemType);
 
+UENUM(BlueprintType)
+enum class EAbilityVisualState : uint8
+{
+	Empty       UMETA(DisplayName = "Empty"),       // 스택 없음 (회색)
+	Partial     UMETA(DisplayName = "Partial"),     // 일부 보유 (테두리 강조)
+	Full        UMETA(DisplayName = "Full")         // 최대 보유 (밝은 색)
+};
+
 // 어빌리티 정보를 담는 구조체
 USTRUCT(BlueprintType)
 struct FUIAbilityInfo
@@ -135,6 +143,17 @@ public:
 	UFUNCTION(BlueprintImplementableEvent, Category = "Shop|Ability")
 	void OnAbilityInfoUpdated(EAbilitySlotType SlotType, const FUIAbilityInfo& AbilityInfo);
 
+	// 어빌리티 비주얼 상태 가져오기
+	UFUNCTION(BlueprintPure, Category = "Shop|Ability")
+	EAbilityVisualState GetAbilityVisualState(int32 AbilityID) const;
+    
+	// 슬롯별 어빌리티 비주얼 상태 가져오기
+	UFUNCTION(BlueprintPure, Category = "Shop|Ability")
+	EAbilityVisualState GetAbilityVisualStateBySlot(EAbilitySlotType SlotType) const;
+
+	// Blueprint에서 스택 UI를 동적으로 생성/업데이트할 때 호출
+	UFUNCTION(BlueprintImplementableEvent, Category = "Shop|Ability")
+	void UpdateAbilityStackVisual(EAbilitySlotType SlotType, int32 CurrentStack, int32 MaxStack, EAbilityVisualState VisualState);
 protected:
 	// 컨트롤러 참조
 	UPROPERTY(BlueprintReadOnly, Category = "Shop")
@@ -174,6 +193,27 @@ protected:
 	UPROPERTY(BlueprintReadWrite, meta = (BindWidget), Category = "Shop|UI")
 	UTextBlock* AbilityE_Cost;
 
+	UPROPERTY(BlueprintReadWrite, meta = (BindWidget), Category = "Shop|UI")
+	UImage* C_Stack_1;
+	UPROPERTY(BlueprintReadWrite, meta = (BindWidget), Category = "Shop|UI")
+	UImage* C_Stack_2;
+	UPROPERTY(BlueprintReadWrite, meta = (BindWidget), Category = "Shop|UI")
+	UImage* C_Stack_3;
+
+	UPROPERTY(BlueprintReadWrite, meta = (BindWidget), Category = "Shop|UI")
+	UImage* Q_Stack_1;
+	UPROPERTY(BlueprintReadWrite, meta = (BindWidget), Category = "Shop|UI")
+	UImage* Q_Stack_2;
+	UPROPERTY(BlueprintReadWrite, meta = (BindWidget), Category = "Shop|UI")
+	UImage* Q_Stack_3;
+
+	UPROPERTY(BlueprintReadWrite, meta = (BindWidget), Category = "Shop|UI")
+	UImage* E_Stack_1;
+	UPROPERTY(BlueprintReadWrite, meta = (BindWidget), Category = "Shop|UI")
+	UImage* E_Stack_2;
+	UPROPERTY(BlueprintReadWrite, meta = (BindWidget), Category = "Shop|UI")
+	UImage* E_Stack_3;
+	
 	// 현재 크레딧 값
 	UPROPERTY(BlueprintReadOnly, Category = "Shop")
 	int32 CurrentCredits = 0;
@@ -217,12 +257,19 @@ protected:
 	// 어빌리티 UI 업데이트
 	void UpdateAbilityUI();
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Shop|Ability")
+	FColor DefaultColor = FColor(155,155,255);
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Shop|Ability")
+	FColor PurchaseColor = FColor(0,255,156);
+
 private:
 	UPROPERTY()
 	UValorantGameInstance* GameInstance;
 
 	// 텍스트 색상 변경을 위한 타이머 핸들
 	FTimerHandle CreditTextColorTimerHandle;
+
 	
 	// 텍스트 원래 색상 캐싱
 	FSlateColor OriginalCreditTextColor;

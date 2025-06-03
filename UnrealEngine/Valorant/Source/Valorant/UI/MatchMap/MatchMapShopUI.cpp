@@ -486,14 +486,87 @@ void UMatchMapShopUI::HandleAbilityStackChanged(int32 AbilityID, int32 NewStack)
 		// 슬롯 타입 확인 및 UI 업데이트
 		if (AbilityID == SkillCID)
 		{
+			if (AbilityInfo->CurrentStack == 1)
+			{
+				C_Stack_1->SetColorAndOpacity(EquippedWeaponHighlightColor);
+				C_Stack_2->SetColorAndOpacity(DefaultColor);
+				C_Stack_3->SetColorAndOpacity(DefaultColor);
+			}
+			else if (AbilityInfo->CurrentStack == 2)
+			{
+				C_Stack_1->SetColorAndOpacity(EquippedWeaponHighlightColor);
+				C_Stack_2->SetColorAndOpacity(EquippedWeaponHighlightColor);
+				C_Stack_3->SetColorAndOpacity(DefaultColor);
+			}
+			else if (AbilityInfo->CurrentStack == 3)
+			{
+				C_Stack_1->SetColorAndOpacity(EquippedWeaponHighlightColor);
+				C_Stack_2->SetColorAndOpacity(EquippedWeaponHighlightColor);
+				C_Stack_3->SetColorAndOpacity(EquippedWeaponHighlightColor);
+			}
+			else if (AbilityInfo->CurrentStack == 0)
+			{
+				C_Stack_1->SetColorAndOpacity(DefaultColor);
+				C_Stack_2->SetColorAndOpacity(DefaultColor);
+				C_Stack_3->SetColorAndOpacity(DefaultColor);
+			}
+			
 			OnAbilityInfoUpdated(EAbilitySlotType::Slot_C, *AbilityInfo);
 		}
 		else if (AbilityID == SkillQID)
 		{
+			if (AbilityInfo->CurrentStack == 1)
+			{
+				Q_Stack_1->SetColorAndOpacity(EquippedWeaponHighlightColor);
+				Q_Stack_2->SetColorAndOpacity(DefaultColor);
+				Q_Stack_3->SetColorAndOpacity(DefaultColor);
+			}
+			else if (AbilityInfo->CurrentStack == 2)
+			{
+				Q_Stack_1->SetColorAndOpacity(EquippedWeaponHighlightColor);
+				Q_Stack_2->SetColorAndOpacity(EquippedWeaponHighlightColor);
+				Q_Stack_3->SetColorAndOpacity(DefaultColor);
+			}
+			else if (AbilityInfo->CurrentStack == 3)
+			{
+				Q_Stack_1->SetColorAndOpacity(EquippedWeaponHighlightColor);
+				Q_Stack_2->SetColorAndOpacity(EquippedWeaponHighlightColor);
+				Q_Stack_3->SetColorAndOpacity(EquippedWeaponHighlightColor);
+			}
+			else if (AbilityInfo->CurrentStack == 0)
+			{
+				Q_Stack_1->SetColorAndOpacity(DefaultColor);
+				Q_Stack_2->SetColorAndOpacity(DefaultColor);
+				Q_Stack_3->SetColorAndOpacity(DefaultColor);
+			}
 			OnAbilityInfoUpdated(EAbilitySlotType::Slot_Q, *AbilityInfo);
 		}
 		else if (AbilityID == SkillEID)
 		{
+			if (AbilityInfo->CurrentStack == 1)
+			{
+				E_Stack_1->SetColorAndOpacity(EquippedWeaponHighlightColor);
+				E_Stack_2->SetColorAndOpacity(DefaultColor);
+				E_Stack_3->SetColorAndOpacity(DefaultColor);
+			}
+			else if (AbilityInfo->CurrentStack == 2)
+			{
+				E_Stack_1->SetColorAndOpacity(EquippedWeaponHighlightColor);
+				E_Stack_2->SetColorAndOpacity(EquippedWeaponHighlightColor);
+				E_Stack_3->SetColorAndOpacity(DefaultColor);
+			}
+			else if (AbilityInfo->CurrentStack == 3)
+			{
+				E_Stack_1->SetColorAndOpacity(EquippedWeaponHighlightColor);
+				E_Stack_2->SetColorAndOpacity(EquippedWeaponHighlightColor);
+				E_Stack_3->SetColorAndOpacity(EquippedWeaponHighlightColor);
+			}
+			else if (AbilityInfo->CurrentStack == 0)
+			{
+				E_Stack_1->SetColorAndOpacity(DefaultColor);
+				E_Stack_2->SetColorAndOpacity(DefaultColor);
+				E_Stack_3->SetColorAndOpacity(DefaultColor);
+			}
 			OnAbilityInfoUpdated(EAbilitySlotType::Slot_E, *AbilityInfo);
 		}
 	}
@@ -645,6 +718,27 @@ void UMatchMapShopUI::UpdateAbilityUI()
 			{
 				AbilityC_Cost->SetText(FText::FromString(FString::Printf(TEXT("%d"), AbilityInfo->ChargeCost)));
 			}
+			if (C_Stack_1 && C_Stack_2 && C_Stack_3)
+			{
+				if (AbilityInfo->MaxStack == 1)
+				{
+					C_Stack_1->SetVisibility(ESlateVisibility::Visible);
+					C_Stack_2->SetVisibility(ESlateVisibility::Hidden);
+					C_Stack_3->SetVisibility(ESlateVisibility::Hidden);
+				}
+				else if (AbilityInfo->MaxStack == 2)
+				{
+					C_Stack_1->SetVisibility(ESlateVisibility::Visible);
+					C_Stack_2->SetVisibility(ESlateVisibility::Visible);
+					C_Stack_3->SetVisibility(ESlateVisibility::Hidden);
+				}
+				else if (AbilityInfo->MaxStack == 3)
+				{
+					C_Stack_1->SetVisibility(ESlateVisibility::Visible);
+					C_Stack_2->SetVisibility(ESlateVisibility::Visible);
+					C_Stack_3->SetVisibility(ESlateVisibility::Visible);
+				}
+			}
 			
 			// 블루프린트 이벤트 호출
 			OnAbilityInfoUpdated(EAbilitySlotType::Slot_C, *AbilityInfo);
@@ -673,6 +767,27 @@ void UMatchMapShopUI::UpdateAbilityUI()
 			{
 				AbilityQ_Cost->SetText(FText::FromString(FString::Printf(TEXT("%d"), AbilityInfo->ChargeCost)));
 			}
+			if (Q_Stack_1 && Q_Stack_2 && Q_Stack_3)
+			{
+				if (AbilityInfo->MaxStack == 1)
+				{
+					Q_Stack_1->SetVisibility(ESlateVisibility::Visible);
+					Q_Stack_2->SetVisibility(ESlateVisibility::Hidden);
+					Q_Stack_3->SetVisibility(ESlateVisibility::Hidden);
+				}
+				else if (AbilityInfo->MaxStack == 2)
+				{
+					Q_Stack_1->SetVisibility(ESlateVisibility::Visible);
+					Q_Stack_2->SetVisibility(ESlateVisibility::Visible);
+					Q_Stack_3->SetVisibility(ESlateVisibility::Hidden);
+				}
+				else if (AbilityInfo->MaxStack == 3)
+				{
+					Q_Stack_1->SetVisibility(ESlateVisibility::Visible);
+					Q_Stack_2->SetVisibility(ESlateVisibility::Visible);
+					Q_Stack_3->SetVisibility(ESlateVisibility::Visible);
+				}
+			}
 			
 			// 블루프린트 이벤트 호출
 			OnAbilityInfoUpdated(EAbilitySlotType::Slot_Q, *AbilityInfo);
@@ -700,6 +815,27 @@ void UMatchMapShopUI::UpdateAbilityUI()
 			if (AbilityE_Cost)
 			{
 				AbilityE_Cost->SetText(FText::FromString(FString::Printf(TEXT("%d"), AbilityInfo->ChargeCost)));
+			}
+			if (E_Stack_1 && E_Stack_2 && E_Stack_3)
+			{
+				if (AbilityInfo->MaxStack == 1)
+				{
+					E_Stack_1->SetVisibility(ESlateVisibility::Visible);
+					E_Stack_2->SetVisibility(ESlateVisibility::Hidden);
+					E_Stack_3->SetVisibility(ESlateVisibility::Hidden);
+				}
+				else if (AbilityInfo->MaxStack == 2)
+				{
+					E_Stack_1->SetVisibility(ESlateVisibility::Visible);
+					E_Stack_2->SetVisibility(ESlateVisibility::Visible);
+					E_Stack_3->SetVisibility(ESlateVisibility::Hidden);
+				}
+				else if (AbilityInfo->MaxStack == 3)
+				{
+					E_Stack_1->SetVisibility(ESlateVisibility::Visible);
+					E_Stack_2->SetVisibility(ESlateVisibility::Visible);
+					E_Stack_3->SetVisibility(ESlateVisibility::Visible);
+				}
 			}
 			
 			// 블루프린트 이벤트 호출
@@ -783,4 +919,52 @@ void UMatchMapShopUI::ResetCreditTextColor()
 	{
 		CreditText->SetColorAndOpacity(OriginalCreditTextColor);
 	}
+}
+
+// 어빌리티 비주얼 상태 가져오기
+EAbilityVisualState UMatchMapShopUI::GetAbilityVisualState(int32 AbilityID) const
+{
+    int32 CurrentStack = GetAbilityStack(AbilityID);
+    int32 MaxStack = GetMaxAbilityStack(AbilityID);
+    
+    if (CurrentStack == 0)
+    {
+        return EAbilityVisualState::Empty;
+    }
+    else if (CurrentStack < MaxStack)
+    {
+        return EAbilityVisualState::Partial;
+    }
+    else
+    {
+        return EAbilityVisualState::Full;
+    }
+}
+
+// 슬롯별 어빌리티 비주얼 상태 가져오기
+EAbilityVisualState UMatchMapShopUI::GetAbilityVisualStateBySlot(EAbilitySlotType SlotType) const
+{
+    int32 AbilityID = 0;
+    
+    switch (SlotType)
+    {
+    case EAbilitySlotType::Slot_C:
+        AbilityID = SkillCID;
+        break;
+    case EAbilitySlotType::Slot_Q:
+        AbilityID = SkillQID;
+        break;
+    case EAbilitySlotType::Slot_E:
+        AbilityID = SkillEID;
+        break;
+    default:
+        break;
+    }
+    
+    if (AbilityID > 0)
+    {
+        return GetAbilityVisualState(AbilityID);
+    }
+    
+    return EAbilityVisualState::Empty;
 }
