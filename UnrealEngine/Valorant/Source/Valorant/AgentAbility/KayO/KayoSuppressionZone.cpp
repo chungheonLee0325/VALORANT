@@ -65,7 +65,10 @@ void AKayoSuppressionZone::ApplySuppression(ABaseAgent* Agent)
 		return;
 	}
 
+	// 제압 효과 부여(새로운 스킬 사용불가)
 	Agent->ServerApplyGE(SuppressionEffect, Cast<ABaseAgent>(Owner));
+	// 시전 중인 스킬 취소
+	Agent->CancelActiveAbilities();
 
 	// 억제 적용 효과 재생 (모든 클라)
 	MulticastPlaySuppressionAppliedEffects(Agent);
