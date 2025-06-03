@@ -267,7 +267,21 @@ public:
 	void SetSpikeProgressTextToPlant();
 	UFUNCTION(BlueprintImplementableEvent)
 	void SetSpikeProgressTextToDefuse();
+
+	// 녹음 시작
+	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable)
+	void StartRecording();
 	
+	// 녹음 종료
+	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable)
+	void EndRecording();
+	
+	// ai 답변 받아서 업데이트
+	UFUNCTION(BlueprintImplementableEvent)
+	void UpdateAIAnswer(const FString& answer);
+	
+	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable)
+	void ResetRecordUI();
 	
 public:
 	UPROPERTY(meta=(BindWidget))
