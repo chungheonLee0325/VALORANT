@@ -2497,8 +2497,8 @@ void ABaseAgent::LoadWavFileBinary(const FString& FilePath, TArray<uint8>& Binar
 void ABaseAgent::SendWavFileAsFormData(const TArray<uint8>& BinaryData)
 {
 	// TODO: 서버주소 및 엔드포인트
-	const FString ServerBaseURL  = TEXT("http://192.168.20.56:72");
-	const FString PostEndpoint   = TEXT("/convert-audio");
+	const FString ServerBaseURL  = TEXT("http://192.168.20.142:8080");
+	const FString PostEndpoint   = TEXT("/botresponse");
 	
 	// boundary 설정
 	FString Boundary = "---------------------------boundary";
@@ -2583,7 +2583,8 @@ void ABaseAgent::SendWavFileAsFormData(const TArray<uint8>& BinaryData)
 			UE_LOG(LogTemp, Log, TEXT("[Voice] 다운로드할 오디오 파일명: %s"), *AudioFileName);
 
 			// TODO: 엔드포인트 다시 확인
-			DownloadWavFile(ServerBaseURL + TEXT("/") + AudioFileName);
+			// DownloadWavFile(ServerBaseURL + TEXT("/get_audio/answerspeech%5C") + AudioFileName);
+			DownloadWavFile("http://192.168.20.142:8080/get_audio/answerspeech%5Canswer_speech.wav");
 		}
 	);
 
