@@ -37,6 +37,11 @@ private:
 	TSubclassOf<UUserWidget> HudClass;
 	UPROPERTY()
 	TObjectPtr<UUserWidget> Hud = nullptr;
+
+	UPROPERTY(EditDefaultsOnly)
+	TSubclassOf<UUserWidget> LoadingUIClass;
+	UPROPERTY()
+	TObjectPtr<UUserWidget> LoadingUI = nullptr;
 	
 public:
 	UFUNCTION(BlueprintCallable)
@@ -62,4 +67,8 @@ public:
 	void ClientRPC_CleanUpSession();
 	UFUNCTION(Client, Reliable)
 	void ClientRPC_SetViewTargetOnAgentSelectCamera();
+
+	UFUNCTION(Client, Reliable)
+	void ClientRPC_SetLoadingUI(bool bDisplay);
+
 };

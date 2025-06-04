@@ -15,6 +15,11 @@
 
 AMatchPlayerController::AMatchPlayerController()
 {
+	ConstructorHelpers::FClassFinder<UUserWidget> loadingUI(TEXT("/Script/UMGEditor.WidgetBlueprint'/Game/BluePrint/UI/MatchMap/WBP_MatchMap_LoadingUI.WBP_MatchMap_LoadingUI_C'"));
+	if (loadingUI.Succeeded())
+	{
+		LoadingUIClass = loadingUI.Class;
+	}
 }
 
 void AMatchPlayerController::BeginPlay()
@@ -54,6 +59,35 @@ void AMatchPlayerController::OnRep_Pawn()
 void AMatchPlayerController::SetGameMode(AMatchGameMode* MatchGameMode)
 {
 	this->GameMode = MatchGameMode;
+}
+
+void AMatchPlayerController::ClientRPC_SetLoadingUI_Implementation(bool bDisplay)
+{
+	if (bDisplay)
+	{
+		if (LoadingUI)
+		{
+			// 이미 존재하면 굳이 또 생성하지 않는다
+			return;
+		}
+		LoadingUI = CreateWidget(this, LoadingUIClass);
+		if (nullptr == LoadingUI)
+		{
+			NET_LOG(LogTemp, Warning, TEXT("%hs Called, SelectUIWidget is nullptr"), __FUNCTION__);
+			return;
+		}
+
+		LoadingUI->AddToViewport();
+	}
+	else
+	{
+		// Pawn 생성하고 세팅하는 동안 로딩 화면 표시
+		if (LoadingUI)
+		{
+			LoadingUI->RemoveFromParent();
+			LoadingUI = nullptr;
+		}
+	}
 }
 
 void AMatchPlayerController::ClientRPC_CleanUpSession_Implementation()
