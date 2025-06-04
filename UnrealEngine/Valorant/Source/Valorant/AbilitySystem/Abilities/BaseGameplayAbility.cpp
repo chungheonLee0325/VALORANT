@@ -8,6 +8,7 @@
 #include "AgentAbility/BaseProjectile.h"
 #include "Kismet/GameplayStatics.h"
 #include "NiagaraFunctionLibrary.h"
+#include "GameManager/MatchGameState.h"
 #include "GameManager/SubsystemSteamManager.h"
 
 UBaseGameplayAbility::UBaseGameplayAbility()
@@ -689,6 +690,17 @@ void UBaseGameplayAbility::PlayCommonEffects(UNiagaraSystem* NiagaraEffect, USou
 
 bool UBaseGameplayAbility::ReduceAbilityStack()
 {
+    // PreRound나 BuyPhase가 아닐 때만 스택 소모
+    if (AMatchGameState* MatchGS = GetWorld()->GetGameState<AMatchGameState>())
+    {
+        ERoundSubState CurrentRoundState = MatchGS->GetRoundSubState();
+        if (CurrentRoundState == ERoundSubState::RSS_PreRound || 
+            CurrentRoundState == ERoundSubState::RSS_BuyPhase)
+        {
+            return false;
+        }
+    }
+    
     if (const APlayerController* PC = Cast<APlayerController>(GetActorInfo().PlayerController.Get()))
     {
         if (AAgentPlayerState* PS = PC->GetPlayerState<AAgentPlayerState>())
