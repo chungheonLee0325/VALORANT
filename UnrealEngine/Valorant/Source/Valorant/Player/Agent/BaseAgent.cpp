@@ -2280,28 +2280,28 @@ void ABaseAgent::CheckMinimapVisibility(const float DeltaTime)
 
 void ABaseAgent::DevCameraMode_Implementation(bool bIsActive)
 {
-	if (!bIsActive)
-	{
-		if (PC && PC->GetMinimapWidget())
-		{
-			PC->GetMinimapWidget()->SetVisibility(ESlateVisibility::Hidden);
-		}
-		if (PC && PC->GetMatchMapHud())
-		{
-			PC->GetMatchMapHud()->SetVisibility(ESlateVisibility::Hidden);
-		}
-	}
-	else
-	{
-		if (PC && PC->GetMinimapWidget())
-		{
-			PC->GetMinimapWidget()->SetVisibility(ESlateVisibility::Visible);
-		}
-		if (PC && PC->GetMatchMapHud())
-		{
-			PC->GetMatchMapHud()->SetVisibility(ESlateVisibility::Visible);
-		}
-	}
+	// if (!bIsActive)
+	// {
+	// 	if (PC && PC->GetMinimapWidget())
+	// 	{
+	// 		PC->GetMinimapWidget()->SetVisibility(ESlateVisibility::Hidden);
+	// 	}
+	// 	if (PC && PC->GetMatchMapHud())
+	// 	{
+	// 		PC->GetMatchMapHud()->SetVisibility(ESlateVisibility::Hidden);
+	// 	}
+	// }
+	// else
+	// {
+	// 	if (PC && PC->GetMinimapWidget())
+	// 	{
+	// 		PC->GetMinimapWidget()->SetVisibility(ESlateVisibility::Visible);
+	// 	}
+	// 	if (PC && PC->GetMatchMapHud())
+	// 	{
+	// 		PC->GetMatchMapHud()->SetVisibility(ESlateVisibility::Visible);
+	// 	}
+	// }
 }
 
 #pragma endregion "Minimap"
