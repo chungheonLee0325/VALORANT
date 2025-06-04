@@ -39,6 +39,7 @@ private:
 	TObjectPtr<UUserWidget> Hud = nullptr;
 	
 public:
+	UFUNCTION(BlueprintCallable)
 	UUserWidget* GetMatchMapHud() const { return Hud; }
 	void SetGameMode(AMatchGameMode* MatchGameMode);
 	UFUNCTION(Server, Reliable)

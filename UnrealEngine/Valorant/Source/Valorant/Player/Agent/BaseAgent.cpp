@@ -2496,6 +2496,10 @@ void ABaseAgent::LoadWavFileBinary(const FString& FilePath, TArray<uint8>& Binar
 
 void ABaseAgent::SendWavFileAsFormData(const TArray<uint8>& BinaryData)
 {
+	// TODO: 서버주소 및 엔드포인트
+	const FString ServerBaseURL  = TEXT("http://192.168.20.56:72");
+	const FString PostEndpoint   = TEXT("/convert-audio");
+	
 	// boundary 설정
 	FString Boundary = "---------------------------boundary";
 	FString FileName = TEXT("UserVoiceInput.wav"); // WAV 파일 이름
@@ -2515,30 +2519,73 @@ void ABaseAgent::SendWavFileAsFormData(const TArray<uint8>& BinaryData)
 	FullData.Append(BinaryData);
 
 	// boundary 끝 표시
-	FString EndBoundary = TEXT("\r\n--") + Boundary + TEXT("--\r\n");
+	const FString EndBoundary = TEXT("\r\n--") + Boundary + TEXT("--\r\n");
 	FullData.Append(FStringToUint8(EndBoundary));
 
 	// 요청 생성
 	FHttpRequestRef Request = FHttpModule::Get().CreateRequest();
-	// TODO: 서버 URL 설정
-	Request->SetURL(TEXT("192.168.20.56:72/convert-audio"));
+	Request->SetURL(ServerBaseURL + PostEndpoint);
 	Request->SetVerb(TEXT("POST"));
 	Request->SetHeader(TEXT("Content-Type"), TEXT("multipart/form-data; boundary=") + Boundary);
 	Request->SetContent(FullData);
 
 	// 요청 완료 콜백 설정
 	Request->OnProcessRequestComplete().BindLambda(
-		[](FHttpRequestPtr Req, FHttpResponsePtr Res, bool bWasSuccessful)
+		[this, ServerBaseURL](FHttpRequestPtr Req, FHttpResponsePtr Res, bool bWasSuccessful)
 		{
-			if (bWasSuccessful && Res.IsValid())
+			if (!bWasSuccessful || !Res.IsValid())
 			{
-				UE_LOG(LogTemp, Log, TEXT("Wav 파일 전송 성공"));
+				UE_LOG(LogTemp, Error,
+					TEXT("[Voice] POST 요청 실패 or 응답 무효. ResponseCode=%d"),
+					Res.IsValid() ? Res->GetResponseCode() : -1
+				);
+				return;
 			}
-			else
+
+			// (6) POST 응답 JSON 문자열 읽기
+			FString JsonString = Res->GetContentAsString();
+			UE_LOG(LogTemp, Log, TEXT("[Voice] POST 응답 JSON: %s"), *JsonString);
+
+			// (7) JSON 파싱: "audio_file" 필드 추출
+			TSharedPtr<FJsonObject> JsonObject;
+			TSharedRef<TJsonReader<>> Reader = TJsonReaderFactory<>::Create(JsonString);
+
+			if (!FJsonSerializer::Deserialize(Reader, JsonObject) || !JsonObject.IsValid())
 			{
-				UE_LOG(LogTemp, Error, TEXT("Wav 파일 전송 실패 Response Code: %d"), Res.IsValid() ? Res->GetResponseCode() : -1);
+				UE_LOG(LogTemp, Error, TEXT("[Voice] JSON 파싱 실패"));
+				return;
 			}
-		});
+			
+			// "answer" 필드만 꺼내기
+		    if (JsonObject->HasField(TEXT("answer")))
+		    {
+		    	const FString AnswerText = JsonObject->GetStringField(TEXT("answer"));
+		    	
+		    	if (PC && PC->GetMatchMapHud())
+		    	{
+					auto* hud = Cast<UMatchMapHUD>(PC->GetMatchMapHud());
+		    		hud->UpdateAIAnswer(AnswerText);
+				}
+		    }
+		    else
+		    {
+		    	UE_LOG(LogTemp, Error, TEXT("[Voice] JSON에 'answer' 필드가 없습니다"));
+		    }
+
+			// JSON 안에 audio_file 필드가 존재하는지 확인
+			if (!JsonObject->HasField(TEXT("audio_file")))
+			{
+				UE_LOG(LogTemp, Error, TEXT("[Voice] JSON에 'audio_file' 필드가 없습니다"));
+				return;
+			}
+
+			const FString AudioFileName = JsonObject->GetStringField(TEXT("audio_file"));
+			UE_LOG(LogTemp, Log, TEXT("[Voice] 다운로드할 오디오 파일명: %s"), *AudioFileName);
+
+			// TODO: 엔드포인트 다시 확인
+			DownloadWavFile(ServerBaseURL + TEXT("/") + AudioFileName);
+		}
+	);
 
 	// 요청 실행
 	Request->ProcessRequest();
@@ -2563,6 +2610,62 @@ void ABaseAgent::SendWavFileDirectly()
 	{
 		SendWavFileAsFormData(BinaryData);
 	}
+}
+
+void ABaseAgent::DownloadWavFile(const FString& AudioFileURL)
+{
+	// (10) GET 요청 생성
+	FHttpRequestRef GetRequest = FHttpModule::Get().CreateRequest();
+	GetRequest->SetURL(AudioFileURL);
+	GetRequest->SetVerb(TEXT("GET"));
+	// WAV 파일을 받을 땐 따로 Content-Type 지정할 필요 없음. 서버가 application/octet-stream 등으로 보내 줄 것.
+
+	// (11) GET 응답 콜백 바인딩
+	GetRequest->OnProcessRequestComplete().BindLambda(
+		[this, AudioFileURL](FHttpRequestPtr Req, FHttpResponsePtr Res, bool bWasSuccessful)
+		{
+			if (!bWasSuccessful || !Res.IsValid())
+			{
+				UE_LOG(LogTemp, Error,
+					TEXT("[Voice] WAV GET 요청 실패 or 응답 무효. URL=%s, ResponseCode=%d"),
+					*AudioFileURL, Res.IsValid() ? Res->GetResponseCode() : -1
+				);
+				return;
+			}
+
+			// (12) 응답 바디로부터 WAV 바이너리 받아서 파일로 저장
+			const TArray<uint8>& WavData = Res->GetContent();
+			if (WavData.Num() == 0)
+			{
+				UE_LOG(LogTemp, Error, TEXT("[Voice] WAV 데이터가 비어 있습니다."));
+				return;
+			}
+
+			//TODO: 답변 파일 경로 및 파일명
+			FString SubFolder = TEXT("AiVoiceOutput");
+			FString FileName = TEXT("answer_speech.wav");
+			
+			const FString SaveDir   = FPaths::Combine(FPaths::ProjectSavedDir(), SubFolder);
+
+			IFileManager::Get().MakeDirectory(*SaveDir, true);
+			
+			const FString SavePath = FPaths::Combine(SaveDir,FileName);
+			
+			if (FFileHelper::SaveArrayToFile(WavData, *SavePath))
+			{
+				UE_LOG(LogTemp, Log, TEXT("[Voice] WAV 파일 저장 성공: %s"), *SavePath);
+			}
+			else
+			{
+				UE_LOG(LogTemp, Error, TEXT("[Voice] WAV 파일 저장 실패: %s"), *SavePath);
+			}
+			
+			OnGetAIAnswer();
+		}
+	);
+
+	// (14) GET 요청 실행
+	GetRequest->ProcessRequest();
 }
 
 TArray<uint8> ABaseAgent::FStringToUint8(FString str)

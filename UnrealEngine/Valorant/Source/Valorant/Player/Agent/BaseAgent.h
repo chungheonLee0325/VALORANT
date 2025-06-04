@@ -454,6 +454,19 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Log")
 	void SendWavFileDirectly();
 
+	// WAV 파일 다운로드 함수
+	void DownloadWavFile(const FString& AudioFileURL);
+
+	//
+	UFUNCTION(BlueprintImplementableEvent, Category = "Log")
+	void OnGetAIAnswer();
+	
+	TArray<uint8> FStringToUtf8Bytes(const FString& InString) const
+	{
+		FTCHARToUTF8 Converter(*InString);
+		return TArray<uint8>((uint8*)Converter.Get(), Converter.Length());
+	}
+
 private:
 	TArray<uint8> FStringToUint8(FString str);
 	
