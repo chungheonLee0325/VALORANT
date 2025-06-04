@@ -115,6 +115,7 @@ void AMatchGameState::HandleRoundSubState_PreRound()
 	NET_LOG(LogTemp, Warning, TEXT("%hs Called"), __FUNCTION__);
 	PC->ClientRPC_HideSelectUI();
 	PC->ClientRPC_DisplayHud(true);
+	PC->ClientRPC_PlayTutorialSound();
 }
 
 void AMatchGameState::HandleRoundSubState_BuyPhase()
@@ -127,6 +128,7 @@ void AMatchGameState::HandleRoundSubState_BuyPhase()
 	}
 	NET_LOG(LogTemp, Warning, TEXT("%hs Called"), __FUNCTION__);
 	PC->ClientRPC_DisplayHud(true);
+	PC->ClientRPC_PlayTutorialSound();
 }
 
 void AMatchGameState::HandleRoundSubState_InRound()

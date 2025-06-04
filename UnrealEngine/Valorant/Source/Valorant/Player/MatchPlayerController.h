@@ -71,4 +71,8 @@ public:
 	UFUNCTION(Client, Reliable)
 	void ClientRPC_SetLoadingUI(bool bDisplay);
 
+	UFUNCTION(Client, Reliable)
+	void ClientRPC_PlayTutorialSound();
+	UFUNCTION(BlueprintImplementableEvent)
+	void PlayTutorialSound();
 };

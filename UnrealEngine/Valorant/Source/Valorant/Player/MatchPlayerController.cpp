@@ -215,3 +215,8 @@ void AMatchPlayerController::ClientRPC_SetViewTargetOnAgentSelectCamera_Implemen
 		SetViewTarget(CharSelectCamera);
 	}
 }
+
+void AMatchPlayerController::ClientRPC_PlayTutorialSound_Implementation()
+{
+	PlayTutorialSound();
+}
