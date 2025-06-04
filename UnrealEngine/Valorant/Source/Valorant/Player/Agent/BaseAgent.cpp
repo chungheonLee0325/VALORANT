@@ -2601,17 +2601,15 @@ void ABaseAgent::SendWavFileDirectly()
 
 	FString SubFolder = TEXT("UserVoiceInput");
 	FString FileName = TEXT("UserVoiceInput.wav");
-
+			
 	const FString SaveDir   = FPaths::Combine(FPaths::ProjectSavedDir(), SubFolder);
 
 	IFileManager::Get().MakeDirectory(*SaveDir, true);
 			
 	const FString SavePath = FPaths::Combine(SaveDir,FileName);
-
-	FString FilePath = FPaths::Combine(BaseSavedDir, SubFolder, FileName);
 	
 	TArray<uint8> BinaryData;
-	LoadWavFileBinary(FilePath, BinaryData);
+	LoadWavFileBinary(SavePath, BinaryData);
 
 	if (BinaryData.Num() > 0)
 	{
@@ -2648,7 +2646,7 @@ void ABaseAgent::DownloadWavFile(const FString& AudioFileURL)
 				return;
 			}
 
-			//TODO: 답변 파일 경로 및 파일명
+			// 답변 파일 경로 및 파일명
 			FString SubFolder = TEXT("AiVoiceOutput");
 			FString FileName = TEXT("answer_speech.wav");
 			
