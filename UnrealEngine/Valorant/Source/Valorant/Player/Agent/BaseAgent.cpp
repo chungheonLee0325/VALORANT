@@ -2602,6 +2602,12 @@ void ABaseAgent::SendWavFileDirectly()
 	FString SubFolder = TEXT("UserVoiceInput");
 	FString FileName = TEXT("UserVoiceInput.wav");
 
+	const FString SaveDir   = FPaths::Combine(FPaths::ProjectSavedDir(), SubFolder);
+
+	IFileManager::Get().MakeDirectory(*SaveDir, true);
+			
+	const FString SavePath = FPaths::Combine(SaveDir,FileName);
+
 	FString FilePath = FPaths::Combine(BaseSavedDir, SubFolder, FileName);
 	
 	TArray<uint8> BinaryData;
