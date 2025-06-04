@@ -73,6 +73,11 @@ void UMatchMapSelectAgentUI::OnClickedButtonLockIn()
 
 void UMatchMapSelectAgentUI::OnClickedAgentSelectButton(int AgentId)
 {
+	if (AgentId == 5)
+	{
+		return;
+	}
+	
 	NET_LOG(LogTemp, Warning, TEXT("%hs Called, AgentId: %d"), __FUNCTION__, AgentId);
 	CurrentSelectedAgentID = AgentId;
 	auto NewStyle = ButtonLockIn->GetStyle();
