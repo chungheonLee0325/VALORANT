@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include "CoreMinimal.h"
+#include "AbilitySystemInterface.h"
 #include "GameFramework/Character.h"
 #include "Valorant/ResourceManager/ValorantGameType.h"
 #include "Player/Component/FlashComponent.h"
@@ -132,7 +133,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnSpikeDefuseFinish);
 
 
 UCLASS()
-class VALORANT_API ABaseAgent : public ACharacter
+class VALORANT_API ABaseAgent : public ACharacter, public IAbilitySystemInterface
 {
 	GENERATED_BODY()
 
@@ -466,6 +467,8 @@ public:
 		FTCHARToUTF8 Converter(*InString);
 		return TArray<uint8>((uint8*)Converter.Get(), Converter.Length());
 	}
+
+	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override;
 
 private:
 	TArray<uint8> FStringToUint8(FString str);

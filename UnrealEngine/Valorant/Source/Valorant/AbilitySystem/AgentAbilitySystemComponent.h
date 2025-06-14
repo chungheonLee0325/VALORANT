@@ -3,12 +3,13 @@
 #include "CoreMinimal.h"
 #include "AbilitySystemComponent.h"
 #include "ValorantGameplayTags.h"
+#include "Abilities/BaseGameplayAbility.h"
 #include "Valorant/ResourceManager/ValorantGameType.h"
 #include "AgentAbilitySystemComponent.generated.h"
 
 class UValorantGameInstance;
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnAbilityStateChanged, FGameplayTag, StateTag);
+//DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnAbilityStateChanged, FGameplayTag, StateTag);
 
 UCLASS()
 class VALORANT_API UAgentAbilitySystemComponent : public UAbilitySystemComponent
@@ -28,22 +29,23 @@ public:
     UFUNCTION(BlueprintCallable)
     void ResetAgentAbilities();
     
-    // 어빌리티 정보 접근
+    // 어빌리티 정보 조회 - FGameplayAbilitySpec에서 직접 가져옴
     UFUNCTION(BlueprintCallable)
-    FAbilityData GetAbility_C() const { return m_Ability_C; }
+    FAbilityData GetAbilityDataBySlot(const FGameplayTag& SlotTag) const;
     
     UFUNCTION(BlueprintCallable)
-    FAbilityData GetAbility_E() const { return m_Ability_E; }
+    FAbilityData GetAbility_C() const;
     
     UFUNCTION(BlueprintCallable)
-    FAbilityData GetAbility_Q() const { return m_Ability_Q; }
+    FAbilityData GetAbility_E() const;
     
     UFUNCTION(BlueprintCallable)
-    FAbilityData GetAbility_X() const { return m_Ability_X; }
+    FAbilityData GetAbility_Q() const;
     
-    // 스킬 입력 처리
     UFUNCTION(BlueprintCallable)
-    bool TrySkillInput(const FGameplayTag& InputTag);
+    FAbilityData GetAbility_X() const;
+    
+    // 스킬 활성화
     UFUNCTION(BlueprintCallable)
     bool TryActivateAbilityByTag(const FGameplayTag& InputTag);
     
@@ -59,22 +61,16 @@ public:
     UFUNCTION(BlueprintCallable)
     void ForceCleanupAllAbilities();
 
-    // 네트워크 동기화 개선
+    // 네트워크 동기화 - 시각적 피드백용
     UFUNCTION(NetMulticast, Reliable)
     void MulticastRPC_OnAbilityExecuted(FGameplayTag AbilityTag, bool bSuccess);
 
     UFUNCTION(Server, Reliable)
-    void ServerRPC_HandleGameplayEvent(const FGameplayTag& inputTag);
-    
-    UFUNCTION(Client,Reliable)
-    virtual void Client_HandleGameplayEvent(FGameplayTag EventTag);
+    void ServerRPC_SendGameplayEvent(FGameplayTag EventTag, const FGameplayEventData Payload);
     
 protected:
     virtual void BeginPlay() override;
     virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
-    
-    // GameplayEvent 처리 오버라이드 - 후속 입력 처리용
-    virtual int32 HandleGameplayEvent(FGameplayTag EventTag, const FGameplayEventData* Payload) override;
     
 private:
     UPROPERTY()
@@ -88,23 +84,14 @@ private:
         FValorantGameplayTags::Get().InputTag_Ability_X
     };
     
-    // 어빌리티 데이터
+    // 에이전트 ID만 저장
     UPROPERTY(Replicated)
     int32 m_AgentID;
-    
-    UPROPERTY(Replicated)
-    FAbilityData m_Ability_C;
-    
-    UPROPERTY(Replicated)
-    FAbilityData m_Ability_E;
-    
-    UPROPERTY(Replicated)
-    FAbilityData m_Ability_Q;
-    
-    UPROPERTY(Replicated)
-    FAbilityData m_Ability_X;
     
     // 초기화 헬퍼
     void InitializeAttribute(const FAgentData* agentData);
     void RegisterAgentAbilities(const FAgentData* agentData);
+    
+    // 어빌리티 스펙 조회 헬퍼
+    const FGameplayAbilitySpec* GetAbilitySpecByTag(const FGameplayTag& SlotTag) const;
 };

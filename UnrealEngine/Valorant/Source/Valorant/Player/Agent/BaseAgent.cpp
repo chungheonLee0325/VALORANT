@@ -799,10 +799,13 @@ void ABaseAgent::SwitchEquipment(EInteractorType EquipmentType)
 			return;
 		}
 
-		// 어빌리티 강제 취소
-		NET_LOG(LogTemp, Display, TEXT("무기 전환을 위해 활성 어빌리티 취소"));
-		ASC->ForceCleanupAllAbilities();
-		PC->HideFollowUpInputUI();
+		if (EquipmentType != EInteractorType::Ability)
+		{
+			// 어빌리티 강제 취소
+			NET_LOG(LogTemp, Display, TEXT("무기 전환을 위해 활성 어빌리티 취소"));
+			ASC->ForceCleanupAllAbilities();
+			PC->HideFollowUpInputUI();
+		}
 		
 		// 약간의 딜레이 후 무기 전환
 		FTimerHandle DelayedSwitchTimer;
@@ -2671,6 +2674,11 @@ void ABaseAgent::DownloadWavFile(const FString& AudioFileURL)
 
 	// (14) GET 요청 실행
 	GetRequest->ProcessRequest();
+}
+
+UAbilitySystemComponent* ABaseAgent::GetAbilitySystemComponent() const
+{
+	return GetPlayerState<AAgentPlayerState>()->GetAbilitySystemComponent();
 }
 
 TArray<uint8> ABaseAgent::FStringToUint8(FString str)

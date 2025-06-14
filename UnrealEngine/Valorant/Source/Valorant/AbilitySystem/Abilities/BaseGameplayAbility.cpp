@@ -4,6 +4,7 @@
 #include "Player/Agent/BaseAgent.h"
 #include "Player/AgentPlayerState.h"
 #include "Abilities/Tasks/AbilityTask_PlayMontageAndWait.h"
+#include "Abilities/Tasks/AbilityTask_WaitGameplayEvent.h"
 #include "Abilities/Tasks/AbilityTask_WaitDelay.h"
 #include "AgentAbility/BaseProjectile.h"
 #include "Kismet/GameplayStatics.h"
@@ -59,116 +60,68 @@ void UBaseGameplayAbility::ActivateAbility(const FGameplayAbilitySpecHandle Hand
         }
     }
     
-    // 활성화 타입에 따른 시작 상태 결정
+    // 활성화 타입에 따른 시작
     switch (ActivationType)
     {
     case EAbilityActivationType::Instant:
-        TransitionToState(EAbilityState::Executing);
+        StartExecutePhase();
         break;
         
     case EAbilityActivationType::WithPrepare:
-        TransitionToState(EAbilityState::Preparing);
+        StartPreparePhase();
         break;
     }
 }
 
-void UBaseGameplayAbility::TransitionToState(EAbilityState NewState)
+void UBaseGameplayAbility::StartPreparePhase()
 {
-    if (CurrentState == NewState)
-    {
-        return;
-    }
+    // 상태 설정
+    SetAbilityState(FValorantGameplayTags::Get().State_Ability_Preparing);
     
-    EAbilityState OldState = CurrentState;
-    
-    // 이전 상태 종료
-    ExitCurrentState();
-    
-    // 상태 변경
-    CurrentState = NewState;
-    
-    // 태그 업데이트
-    UpdateAbilityTags(NewState);
-    
-    // 새 상태 진입
-    switch (NewState)
-    {
-    case EAbilityState::Preparing:
-        EnterState_Preparing();
-        break;
-        
-    case EAbilityState::Waiting:
-        EnterState_Waiting();
-        break;
-        
-    case EAbilityState::Executing:
-        EnterState_Executing();
-        break;
-        
-    case EAbilityState::Completed:
-    case EAbilityState::Cancelled:
-        CleanupAbility();
-        break;
-    }
-    
-    // 상태 변경 알림 (서버에서 클라이언트로)
-    if (HasAuthority(&CurrentActivationInfo))
-    {
-        NotifyStateChanged(NewState);
-    }
-    
-    // 델리게이트 브로드캐스트
-    OnStateChanged.Broadcast(ConvertStateToTag(NewState));
-    
-    NET_LOG(LogTemp, Display, TEXT("어빌리티 상태 전환: %s -> %s"),
-            *UEnum::GetValueAsString(OldState),
-            *UEnum::GetValueAsString(NewState));
-}
-
-void UBaseGameplayAbility::EnterState_Preparing()
-{
+    // 준비 동작 실행
     PrepareAbility();
     
-    // 준비 VFX / SFX 재생
+    // 효과 재생
     if (HasAuthority(&CurrentActivationInfo))
     {
         PlayCommonEffects(PrepareEffect, nullptr, FVector(0));
     }
-    if (IsLocallyControlled())
+    if (IsLocallyControlled() && PrepareSound)
     {
-        if (PrepareSound)
-        {
-            UGameplayStatics::PlaySound2D(GetWorld(), PrepareSound);
-        }
+        UGameplayStatics::PlaySound2D(GetWorld(), PrepareSound);
     }
     
-    // 준비 애니메이션 재생
+    // 애니메이션 재생
     if (PrepareMontage_1P || PrepareMontage_3P)
     {
         PlayMontages(PrepareMontage_1P, nullptr);
         
-        // 몽타주 완료 대기
-        UAbilityTask_PlayMontageAndWait* Task = UAbilityTask_PlayMontageAndWait::CreatePlayMontageAndWaitProxy(
+        // 몽타주 태스크 생성
+        ActiveMontageTask = UAbilityTask_PlayMontageAndWait::CreatePlayMontageAndWaitProxy(
             this, NAME_None, PrepareMontage_3P, 1.0f);
         
-        if (Task)
+        if (ActiveMontageTask)
         {
-            Task->OnCompleted.AddDynamic(this, &UBaseGameplayAbility::OnMontageCompleted);
-            Task->OnBlendOut.AddDynamic(this, &UBaseGameplayAbility::OnMontageBlendOut);
-            Task->OnInterrupted.AddDynamic(this, &UBaseGameplayAbility::OnMontageBlendOut);
-            Task->OnCancelled.AddDynamic(this, &UBaseGameplayAbility::OnMontageBlendOut);
-            Task->ReadyForActivation();
+            ActiveMontageTask->OnCompleted.AddDynamic(this, &UBaseGameplayAbility::OnPrepareMontageCompleted);
+            ActiveMontageTask->OnBlendOut.AddDynamic(this, &UBaseGameplayAbility::OnPrepareMontageBlendOut);
+            ActiveMontageTask->OnInterrupted.AddDynamic(this, &UBaseGameplayAbility::OnPrepareMontageBlendOut);
+            ActiveMontageTask->OnCancelled.AddDynamic(this, &UBaseGameplayAbility::OnPrepareMontageBlendOut);
+            ActiveMontageTask->ReadyForActivation();
         }
     }
     else
     {
-        // 애니메이션이 없으면 바로 대기 상태로
-        TransitionToState(EAbilityState::Waiting);
+        // 애니메이션이 없으면 바로 대기 단계로
+        StartWaitingPhase();
     }
 }
 
-void UBaseGameplayAbility::EnterState_Waiting()
+void UBaseGameplayAbility::StartWaitingPhase()
 {
+    // 상태 설정
+    SetAbilityState(FValorantGameplayTags::Get().State_Ability_Waiting);
+    
+    // UI 알림을 위한 입력 태그 찾기
     FGameplayTag inputTag;
     for (const FGameplayTag& Tag : AbilityTags)
     {
@@ -180,26 +133,66 @@ void UBaseGameplayAbility::EnterState_Waiting()
     }
     
     OnWaitAbility.Broadcast(inputTag, FollowUpInputType);
-    
     WaitAbility();
     
+    // 효과 재생
     if (HasAuthority(&CurrentActivationInfo))
     {
-        // 대기 VFX / SFX 재생
         PlayCommonEffects(WaitEffect, nullptr, FVector(0));
     }
-    if (IsLocallyControlled())
+    if (IsLocallyControlled() && WaitSound)
     {
-        if (WaitSound)
-        {
-            UGameplayStatics::PlaySound2D(GetWorld(), WaitSound);
-        }
+        UGameplayStatics::PlaySound2D(GetWorld(), WaitSound);
     }
     
-    // 대기 애니메이션 재생 (루프)
+    // 대기 애니메이션 재생
     if (WaitingMontage_1P || WaitingMontage_3P)
     {
         PlayMontages(WaitingMontage_1P, WaitingMontage_3P, false);
+    }
+
+    // 후속 입력 대기 태스크를 생성합니다.
+    if (FollowUpInputType != EFollowUpInputType::None)
+    {
+        // 람다 함수를 사용하여 WaitGameplayEvent 태스크 생성 및 활성화를 캡슐화합니다.
+        // 코드 중복을 줄이고 올바른 함수 시그니처 사용을 명확히 합니다.
+        auto CreateAndWaitTask = [this](FGameplayTag EventTag)
+        {
+            // 지정된 EventTag를 기다리는 태스크를 생성합니다.
+            UAbilityTask_WaitGameplayEvent* WaitEventTask = UAbilityTask_WaitGameplayEvent::WaitGameplayEvent(this, EventTag);
+            if (WaitEventTask)
+            {
+                WaitEventTask->EventReceived.AddDynamic(this, &UBaseGameplayAbility::OnFollowUpEventReceived);
+            
+                // 태스크를 활성화 준비 상태로 만듭니다.
+                WaitEventTask->ReadyForActivation();
+            }
+        };
+
+        // FollowUpInputType에 따라 적절한 입력 이벤트를 대기합니다.
+        switch (FollowUpInputType)
+        {
+        case EFollowUpInputType::LeftClick:
+            CreateAndWaitTask(FValorantGameplayTags::Get().InputTag_Default_LeftClick);
+            break;
+
+        case EFollowUpInputType::RightClick:
+            CreateAndWaitTask(FValorantGameplayTags::Get().InputTag_Default_RightClick);
+            break;
+
+        case EFollowUpInputType::LeftOrRight:
+            // 좌클릭과 우클릭 이벤트에 대해 각각 별도의 태스크를 생성하여 둘 중 하나라도 들어오면 처리되도록 합니다.
+            CreateAndWaitTask(FValorantGameplayTags::Get().InputTag_Default_LeftClick);
+            CreateAndWaitTask(FValorantGameplayTags::Get().InputTag_Default_RightClick);
+            break;
+
+        default:
+            // 처리되지 않은 EFollowUpInputType 값에 대한 경고 로그입니다.
+            UE_LOG(LogTemp, Warning, TEXT("UBaseGameplayAbility::ActivateAbility - Unhandled EFollowUpInputType in ability %s"), *GetName());
+            // 의도치 않은 타입이므로 함수를 종료합니다.
+            EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);
+            return;
+        }
     }
     
     // 타임아웃 설정
@@ -210,37 +203,47 @@ void UBaseGameplayAbility::EnterState_Waiting()
     }
 }
 
-void UBaseGameplayAbility::EnterState_Executing()
+void UBaseGameplayAbility::StartExecutePhase(EFollowUpInputType InputType)
 {
-    // 서버에서만 스택 소모
+    // 대기 관련 정리
+    GetWorld()->GetTimerManager().ClearTimer(WaitingTimeoutHandle);
+    if (WaitEventTask)
+    {
+        WaitEventTask->EndTask();
+        WaitEventTask = nullptr;
+    }
+    
+    // 상태 설정
+    SetAbilityState(FValorantGameplayTags::Get().State_Ability_Executing);
+    
+    // 스택 소모 및 실행
     if (HasAuthority(&CurrentActivationInfo))
     {
         ReduceAbilityStack();
-        // 실행 VFX / SFX 재생
         PlayCommonEffects(ExecuteEffect, ExecuteSound, FVector(0));
-        // 실행 결과를 클라이언트에 알림
-        NotifyAbilityExecuted(true);
-        // ASC에 실행 알림
+        
         if (CachedASC)
         {
             CachedASC->MulticastRPC_OnAbilityExecuted(GetAssetTags().First(), true);
         }
     }
 
-    // 후속 입력 UI 숨김 처리
+    // UI 숨김 처리
     OnFollowUpInput.Broadcast();
     
+    LastInputType = InputType;
     ExecuteAbility();
 
-    // 입력 타입에 따라 몽타주 재생
+    // 입력 타입에 따라 몽타주 선택
     UAnimMontage* Montage1P = nullptr;
     UAnimMontage* Montage3P = nullptr;
-    if (LastExecuteInputType == EFollowUpInputType::LeftClick)
+    
+    if (InputType == EFollowUpInputType::LeftClick)
     {
         Montage1P = ExecuteLeftMouseButtonMontage_1P ? ExecuteLeftMouseButtonMontage_1P : ExecuteMontage_1P;
         Montage3P = ExecuteLeftMouseButtonMontage_3P ? ExecuteLeftMouseButtonMontage_3P : ExecuteMontage_3P;
     }
-    else if (LastExecuteInputType == EFollowUpInputType::RightClick)
+    else if (InputType == EFollowUpInputType::RightClick)
     {
         Montage1P = ExecuteRightMouseButtonMontage_1P ? ExecuteRightMouseButtonMontage_1P : ExecuteMontage_1P;
         Montage3P = ExecuteRightMouseButtonMontage_3P ? ExecuteRightMouseButtonMontage_3P : ExecuteMontage_3P;
@@ -251,86 +254,50 @@ void UBaseGameplayAbility::EnterState_Executing()
         Montage3P = ExecuteMontage_3P;
     }
 
-    LastExecuteInputType = EFollowUpInputType::None;
-
     if (Montage1P || Montage3P)
     {
         PlayMontages(Montage1P, nullptr);
-        UAbilityTask_PlayMontageAndWait* Task = UAbilityTask_PlayMontageAndWait::CreatePlayMontageAndWaitProxy(
+        
+        ActiveMontageTask = UAbilityTask_PlayMontageAndWait::CreatePlayMontageAndWaitProxy(
             this, NAME_None, Montage3P, 1.0f);
-        if (Task)
+            
+        if (ActiveMontageTask)
         {
-            Task->OnCompleted.AddDynamic(this, &UBaseGameplayAbility::OnMontageCompleted);
-            Task->OnBlendOut.AddDynamic(this, &UBaseGameplayAbility::OnMontageBlendOut);
-            Task->ReadyForActivation();
+            ActiveMontageTask->OnCompleted.AddDynamic(this, &UBaseGameplayAbility::OnExecuteMontageCompleted);
+            ActiveMontageTask->OnBlendOut.AddDynamic(this, &UBaseGameplayAbility::OnExecuteMontageBlendOut);
+            ActiveMontageTask->ReadyForActivation();
         }
     }
     else
     {
-        // 애니메이션이 없으면 바로 완료
-        TransitionToState(EAbilityState::Completed);
+        CompleteAbility();
     }
 }
 
-void UBaseGameplayAbility::ExitCurrentState()
+void UBaseGameplayAbility::CompleteAbility()
 {
-    switch (CurrentState)
+    // 모든 태스크 정리
+    if (ActiveMontageTask)
     {
-    case EAbilityState::Waiting:
-        // 타이머 정리
-        GetWorld()->GetTimerManager().ClearTimer(WaitingTimeoutHandle);
-        break;
+        ActiveMontageTask->EndTask();
+        ActiveMontageTask = nullptr;
     }
-}
-
-void UBaseGameplayAbility::HandleFollowUpInput(FGameplayTag InputTag)
-{
-    if (CurrentState != EAbilityState::Waiting)
+    if (WaitEventTask)
     {
-        return;
+        WaitEventTask->EndTask();
+        WaitEventTask = nullptr;
     }
     
-    if (!IsValidFollowUpInput(InputTag))
-    {
-        return;
-    }
-    
-    bool bShouldExecute = false;
-    
-    // 입력 타입에 따라 처리
-    if (InputTag == FValorantGameplayTags::Get().InputTag_Default_LeftClick)
-    {
-        bShouldExecute = OnLeftClickInput();
-        if (bShouldExecute)
-        {
-            LastExecuteInputType = EFollowUpInputType::LeftClick;
-        }
-    }
-    else if (InputTag == FValorantGameplayTags::Get().InputTag_Default_RightClick)
-    {
-        bShouldExecute = OnRightClickInput();
-        if (bShouldExecute)
-        {
-            LastExecuteInputType = EFollowUpInputType::RightClick;
-        }
-    }
-    
-    if (bShouldExecute)
-    {
-        TransitionToState(EAbilityState::Executing);
-    }
-}
-
-void UBaseGameplayAbility::CleanupAbility()
-{
-    // 모든 타이머 정리
+    // 타이머 정리
     GetWorld()->GetTimerManager().ClearTimer(WaitingTimeoutHandle);
-    GetWorld()->GetTimerManager().ClearTimer(CleanupDelayHandle);
     
     // 몽타주 정지
     StopAllMontages();
     
-    // 약간의 딜레이 후 최종 정리 (무기 전환 등)
+    // 상태 정리
+    ClearAllAbilityStates();
+    
+    // 약간의 딜레이 후 최종 정리
     GetWorld()->GetTimerManager().SetTimer(CleanupDelayHandle, this,
                                           &UBaseGameplayAbility::PerformFinalCleanup, 0.1f, false);
 }
@@ -348,8 +315,7 @@ void UBaseGameplayAbility::PerformFinalCleanup()
     }
     
     // 어빌리티 종료
-    bool bWasCancelled = (CurrentState == EAbilityState::Cancelled);
-    EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, bWasCancelled);
+    EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
 }
 
 void UBaseGameplayAbility::EndAbility(const FGameplayAbilitySpecHandle Handle,
@@ -357,21 +323,25 @@ void UBaseGameplayAbility::EndAbility(const FGameplayAbilitySpecHandle Handle,
                                     const FGameplayAbilityActivationInfo ActivationInfo,
                                     bool bReplicateEndAbility, bool bWasCancelled)
 {
-    // 중복 호출 방지
-    if (CurrentState == EAbilityState::None)
-    {
-        return;
-    }
-    
     // 타이머 정리
     GetWorld()->GetTimerManager().ClearAllTimersForObject(this);
     
-    CurrentState = EAbilityState::None;
+    // 태스크 정리
+    if (ActiveMontageTask)
+    {
+        ActiveMontageTask->EndTask();
+        ActiveMontageTask = nullptr;
+    }
+    if (WaitEventTask)
+    {
+        WaitEventTask->EndTask();
+        WaitEventTask = nullptr;
+    }
     
-    // 모든 태그 정리
-    UpdateAbilityTags(EAbilityState::None);
-
-    // 캐시된 정보 정리
+    // 상태 정리
+    ClearAllAbilityStates();
+    
+    // 캐시 정리
     CachedActorInfo = FGameplayAbilityActorInfo();
     CachedASC = nullptr;
     SpawnedProjectile = nullptr;
@@ -384,20 +354,14 @@ void UBaseGameplayAbility::CancelAbility(const FGameplayAbilitySpecHandle Handle
                                        const FGameplayAbilityActivationInfo ActivationInfo,
                                        bool bReplicateCancelAbility)
 {
-    if (CurrentState == EAbilityState::None || 
-        CurrentState == EAbilityState::Cancelled ||
-        CurrentState == EAbilityState::Completed)
-    {
-        return;
-    }
-    
     // 실행 중 취소 가능 여부 확인
-    if (CurrentState == EAbilityState::Executing && !bAllowCancelDuringExecution)
+    if (IsInExecutingState() && !bAllowCancelDuringExecution)
     {
         return;
     }
     
-    TransitionToState(EAbilityState::Cancelled);
+    CompleteAbility();
+    Super::CancelAbility(Handle, ActorInfo, ActivationInfo, bReplicateCancelAbility);
 }
 
 bool UBaseGameplayAbility::CanActivateAbility(const FGameplayAbilitySpecHandle Handle,
@@ -425,95 +389,30 @@ bool UBaseGameplayAbility::CanActivateAbility(const FGameplayAbilitySpecHandle H
     return GetAbilityStack() > 0;
 }
 
-// 유틸리티 함수들
-void UBaseGameplayAbility::UpdateAbilityTags(EAbilityState NewState)
+// 태스크 콜백들
+void UBaseGameplayAbility::OnPrepareMontageCompleted()
 {
-    if (!CachedASC)
-    {
-        return;
-    }
-    
-    // 모든 상태 태그 제거
-    CachedASC->RemoveLooseGameplayTag(FValorantGameplayTags::Get().State_Ability_Preparing);
-    CachedASC->RemoveLooseGameplayTag(FValorantGameplayTags::Get().State_Ability_Waiting);
-    CachedASC->RemoveLooseGameplayTag(FValorantGameplayTags::Get().State_Ability_Executing);
-    CachedASC->RemoveLooseGameplayTag(FValorantGameplayTags::Get().Block_WeaponSwitch);
-    
-    // 새 상태에 따른 태그 추가
-    switch (NewState)
-    {
-    case EAbilityState::Preparing:
-        CachedASC->AddLooseGameplayTag(FValorantGameplayTags::Get().State_Ability_Preparing);
-        //CachedASC->AddLooseGameplayTag(FValorantGameplayTags::Get().Block_WeaponSwitch);
-        break;
-        
-    case EAbilityState::Waiting:
-        CachedASC->AddLooseGameplayTag(FValorantGameplayTags::Get().State_Ability_Waiting);
-        //CachedASC->AddLooseGameplayTag(FValorantGameplayTags::Get().Block_WeaponSwitch);
-        break;
-        
-    case EAbilityState::Executing:
-        CachedASC->AddLooseGameplayTag(FValorantGameplayTags::Get().State_Ability_Executing);
-        CachedASC->AddLooseGameplayTag(FValorantGameplayTags::Get().Block_WeaponSwitch);
-        break;
-    }
+    StartWaitingPhase();
 }
 
-bool UBaseGameplayAbility::IsValidFollowUpInput(FGameplayTag InputTag) const
+void UBaseGameplayAbility::OnPrepareMontageBlendOut()
 {
-    switch (FollowUpInputType)
-    {
-    case EFollowUpInputType::LeftClick:
-        return InputTag == FValorantGameplayTags::Get().InputTag_Default_LeftClick;
-        
-    case EFollowUpInputType::RightClick:
-        return InputTag == FValorantGameplayTags::Get().InputTag_Default_RightClick;
-        
-    case EFollowUpInputType::LeftOrRight:
-        return InputTag == FValorantGameplayTags::Get().InputTag_Default_LeftClick ||
-               InputTag == FValorantGameplayTags::Get().InputTag_Default_RightClick;
-        
-    default:
-        return false;
-    }
-}
-
-FGameplayTag UBaseGameplayAbility::ConvertStateToTag(EAbilityState State) const
-{
-    switch (State)
-    {
-    case EAbilityState::Preparing:
-        return FValorantGameplayTags::Get().State_Ability_Preparing;
-    case EAbilityState::Waiting:
-        return FValorantGameplayTags::Get().State_Ability_Waiting;
-    case EAbilityState::Executing:
-        return FValorantGameplayTags::Get().State_Ability_Executing;
-    default:
-        return FGameplayTag();
-    }
-}
-
-// 몽타주 관련
-void UBaseGameplayAbility::OnMontageCompleted()
-{
-    switch (CurrentState)
-    {
-    case EAbilityState::Preparing:
-        TransitionToState(EAbilityState::Waiting);
-        break;
-        
-    case EAbilityState::Executing:
-        TransitionToState(EAbilityState::Completed);
-        break;
-    }
-}
-
-void UBaseGameplayAbility::OnMontageBlendOut()
-{
-    // 몽타주가 중단된 경우
     if (IsActive())
     {
-        OnMontageCompleted();
+        OnPrepareMontageCompleted();
+    }
+}
+
+void UBaseGameplayAbility::OnExecuteMontageCompleted()
+{
+    CompleteAbility();
+}
+
+void UBaseGameplayAbility::OnExecuteMontageBlendOut()
+{
+    if (IsActive())
+    {
+        OnExecuteMontageCompleted();
     }
 }
 
@@ -523,49 +422,108 @@ void UBaseGameplayAbility::OnWaitingTimeout()
     CancelAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true);
 }
 
-// 네트워크 동기화 - Actor를 통한 간접 호출
-void UBaseGameplayAbility::NotifyStateChanged(EAbilityState NewState)
+void UBaseGameplayAbility::OnFollowUpEventReceived(FGameplayEventData Payload)
 {
-    // ASC를 통한 상태 동기화
-    if (CachedASC)
+    if (!CachedASC->HasMatchingGameplayTag(FValorantGameplayTags::Get().State_Ability_Waiting))
     {
-        FGameplayTag StateTag = ConvertStateToTag(NewState);
-        CachedASC->MulticastRPC_OnAbilityExecuted(GetAssetTags().First(), true);
-    }
-}
-
-void UBaseGameplayAbility::NotifyAbilityExecuted(bool bSuccess)
-{
-    // ASC를 통한 실행 결과 동기화
-    if (CachedASC)
-    {
-        CachedASC->MulticastRPC_OnAbilityExecuted(GetAssetTags().First(), bSuccess);
+        return;
     }
     
-    // 추가로 GameplayCue를 통한 시각적 피드백
-    if (bSuccess)
+    FGameplayTag EventTag;
+    EventTag = Payload.EventTag;
+    NET_LOG(LogTemp, Warning, TEXT("후속 입력 이벤트 수신: %s"), *EventTag.ToString());
+    
+    // 입력 타입 결정
+    EFollowUpInputType InputType = EFollowUpInputType::None;
+    bool bShouldExecute = false;
+    
+    if (EventTag == FValorantGameplayTags::Get().InputTag_Default_LeftClick)
     {
-        // FGameplayCueParameters CueParams;
-        // CueParams.SourceObject = GetAvatarActorFromActorInfo();
-        //
-        // // 어빌리티별 Cue 태그 (예: GameplayCue.Ability.SlowOrb.Execute)
-        // FGameplayTag CueTag = FGameplayTag::RequestGameplayTag(
-        //     FName(FString::Printf(TEXT("GameplayCue.Ability.%s.Execute"), 
-        //         *GetAssetTags().First().GetTagName().ToString())));
-        //
-        // CachedASC->ExecuteGameplayCue(CueTag, CueParams);
+        InputType = EFollowUpInputType::LeftClick;
+        bShouldExecute = OnLeftClickInput();
+    }
+    else if (EventTag == FValorantGameplayTags::Get().InputTag_Default_RightClick)
+    {
+        InputType = EFollowUpInputType::RightClick;
+        bShouldExecute = OnRightClickInput();
+    }
+    
+    if (bShouldExecute)
+    {
+        StartExecutePhase(InputType);
     }
 }
 
-void UBaseGameplayAbility::PrepareAbility()
+// 상태 관리 헬퍼
+void UBaseGameplayAbility::SetAbilityState(const FGameplayTag& StateTag)
 {
+    if (!CachedASC)
+    {
+        return;
+    }
+    
+    // 이전 상태 태그 제거
+    ClearAllAbilityStates();
+    
+    // 새 상태 태그 추가
+    CachedASC->AddLooseGameplayTag(StateTag);
+    
+    // 무기 전환 차단 태그는 실행 중에만
+    if (StateTag == FValorantGameplayTags::Get().State_Ability_Executing)
+    {
+        CachedASC->AddLooseGameplayTag(FValorantGameplayTags::Get().Block_WeaponSwitch);
+    }
+    
+    // 상태 변경 알림
+    OnStateChanged.Broadcast(StateTag);
 }
 
-void UBaseGameplayAbility::WaitAbility() {}
-void UBaseGameplayAbility::ExecuteAbility() {}
-bool UBaseGameplayAbility::OnLeftClickInput() { return false; }
-bool UBaseGameplayAbility::OnRightClickInput() { return false; }
+void UBaseGameplayAbility::ClearAllAbilityStates()
+{
+    if (!CachedASC)
+    {
+        return;
+    }
+    
+    CachedASC->RemoveLooseGameplayTag(FValorantGameplayTags::Get().State_Ability_Preparing);
+    CachedASC->RemoveLooseGameplayTag(FValorantGameplayTags::Get().State_Ability_Waiting);
+    CachedASC->RemoveLooseGameplayTag(FValorantGameplayTags::Get().State_Ability_Executing);
+    CachedASC->RemoveLooseGameplayTag(FValorantGameplayTags::Get().Block_WeaponSwitch);
+}
 
+FGameplayTag UBaseGameplayAbility::GetCurrentStateTag() const
+{
+    if (!CachedASC)
+    {
+        return FGameplayTag();
+    }
+    
+    if (CachedASC->HasMatchingGameplayTag(FValorantGameplayTags::Get().State_Ability_Preparing))
+        return FValorantGameplayTags::Get().State_Ability_Preparing;
+    if (CachedASC->HasMatchingGameplayTag(FValorantGameplayTags::Get().State_Ability_Waiting))
+        return FValorantGameplayTags::Get().State_Ability_Waiting;
+    if (CachedASC->HasMatchingGameplayTag(FValorantGameplayTags::Get().State_Ability_Executing))
+        return FValorantGameplayTags::Get().State_Ability_Executing;
+    
+    return FGameplayTag();
+}
+
+bool UBaseGameplayAbility::IsInPreparingState() const
+{
+    return CachedASC && CachedASC->HasMatchingGameplayTag(FValorantGameplayTags::Get().State_Ability_Preparing);
+}
+
+bool UBaseGameplayAbility::IsInWaitingState() const
+{
+    return CachedASC && CachedASC->HasMatchingGameplayTag(FValorantGameplayTags::Get().State_Ability_Waiting);
+}
+
+bool UBaseGameplayAbility::IsInExecutingState() const
+{
+    return CachedASC && CachedASC->HasMatchingGameplayTag(FValorantGameplayTags::Get().State_Ability_Executing);
+}
+
+// 유틸리티 함수들
 void UBaseGameplayAbility::PlayMontages(UAnimMontage* Montage1P, UAnimMontage* Montage3P, bool bStopAllMontages)
 {
     if (!HasAuthority(&CurrentActivationInfo))
@@ -584,13 +542,11 @@ void UBaseGameplayAbility::PlayMontages(UAnimMontage* Montage1P, UAnimMontage* M
         return;
     }
     
-    // 1인칭 몽타주
     if (Montage1P)
     {
         Agent->Client_PlayFirstPersonMontage(Montage1P);
     }
     
-    // 3인칭 몽타주
     if (Montage3P)
     {
         Agent->NetMulti_PlayThirdPersonMontage(Montage3P);
@@ -622,7 +578,6 @@ bool UBaseGameplayAbility::SpawnProjectile(FVector LocationOffset, FRotator Rota
         return false;
     }
     
-    // 카메라 위치에서 스폰
     UCameraComponent* CameraComp = Character->FindComponentByClass<UCameraComponent>();
     FVector SpawnLocation;
     FRotator SpawnRotation;

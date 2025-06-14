@@ -5,11 +5,12 @@
 #include "AbilitySystem/ValorantGameplayTags.h"
 #include "ResourceManager/ValorantGameType.h"
 #include "NiagaraSystem.h"
-#include "AbilitySystem/AgentAbilitySystemComponent.h"
 #include "BaseGameplayAbility.generated.h"
 
 class ABaseProjectile;
 class UAgentAbilitySystemComponent;
+class UAbilityTask_WaitGameplayEvent;
+class UAbilityTask_PlayMontageAndWait;
 
 UENUM(BlueprintType)
 enum class EAbilityActivationType : uint8
@@ -27,22 +28,10 @@ enum class EFollowUpInputType : uint8
     LeftOrRight
 };
 
-UENUM(BlueprintType)
-enum class EAbilityState : uint8
-{
-    None,
-    Preparing,
-    Waiting,
-    Executing,
-    Completed,
-    Cancelled
-};
-
-//DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnAbilityStateChanged, FGameplayTag, StateTag);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnAbilityStateChanged, FGameplayTag, StateTag);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnPrepareAbility, FGameplayTag, SlotTag, EFollowUpInputType, InputType);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnFollowUpInput);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnEndAbility, EFollowUpInputType, InputType);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnCancelAbility ,EFollowUpInputType, InputType);
 
 UCLASS()
 class VALORANT_API UBaseGameplayAbility : public UGameplayAbility
@@ -52,16 +41,15 @@ class VALORANT_API UBaseGameplayAbility : public UGameplayAbility
 public:
     UBaseGameplayAbility();
 
-    // 상태 관리
+    // 상태 조회 (태그 기반)
     UFUNCTION(BlueprintPure, Category = "Ability|State")
-    EAbilityState GetCurrentState() const { return CurrentState; }
-
+    bool IsInPreparingState() const;
+    
     UFUNCTION(BlueprintPure, Category = "Ability|State")
-    bool IsInState(EAbilityState State) const { return CurrentState == State; }
-
-    // 후속 입력 처리
-    UFUNCTION(BlueprintCallable, Category = "Ability")
-    virtual void HandleFollowUpInput(FGameplayTag InputTag);
+    bool IsInWaitingState() const;
+    
+    UFUNCTION(BlueprintPure, Category = "Ability|State")
+    bool IsInExecutingState() const;
 
     // 설정
     UPROPERTY(EditDefaultsOnly, Category = "Ability Config")
@@ -142,13 +130,15 @@ public:
     
     UPROPERTY()
     FOnEndAbility OnEndAbility;
-    UPROPERTY()
-    FOnCancelAbility OnCancelAbility;
     
     UPROPERTY()
     FOnFollowUpInput OnFollowUpInput;
 
+    UPROPERTY(BlueprintReadWrite, Category = "Ability", EditAnywhere)
+    UNiagaraSystem* ProjectileLaunchEffect;
     
+    UPROPERTY(BlueprintReadWrite, Category = "Ability", EditAnywhere)
+    USoundBase* ProjectileLaunchSound;
 
 protected:
     // GameplayAbility 오버라이드
@@ -175,26 +165,20 @@ protected:
                               const FGameplayAbilityActivationInfo ActivationInfo,
                               bool bReplicateCancelAbility) override;
 
-    // 상태 전환
-    UFUNCTION(BlueprintCallable, Category = "Ability|State")
-    void TransitionToState(EAbilityState NewState);
+    // 어빌리티 플로우 함수들
+    void StartPreparePhase();
+    void StartWaitingPhase();
+    void StartExecutePhase(EFollowUpInputType InputType = EFollowUpInputType::None);
+    void CompleteAbility();
 
     // 어빌리티 동작 - 서브클래스에서 오버라이드
-    UFUNCTION(BlueprintCallable, Category = "Ability")
-    virtual void PrepareAbility();
-    
-    UFUNCTION(BlueprintCallable, Category = "Ability")
-    virtual void WaitAbility();
-    
-    UFUNCTION(BlueprintCallable, Category = "Ability")
-    virtual void ExecuteAbility();
+    virtual void PrepareAbility() {}
+    virtual void WaitAbility() {}
+    virtual void ExecuteAbility() {}
 
     // 후속 입력 핸들러 - 서브클래스에서 오버라이드
-    UFUNCTION(BlueprintCallable, Category = "Ability")
-    virtual bool OnLeftClickInput();
-
-    UFUNCTION(BlueprintCallable, Category = "Ability")
-    virtual bool OnRightClickInput();
+    virtual bool OnLeftClickInput() { return true; }
+    virtual bool OnRightClickInput() { return true; }
 
     // 유틸리티
     UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category = "Ability")
@@ -209,25 +193,33 @@ protected:
     UFUNCTION(BlueprintPure, Category = "Ability")
     int32 GetAbilityStack() const;
 
-    UPROPERTY(BlueprintReadWrite, Category = "Ability", EditAnywhere)
-    UNiagaraSystem* ProjectileLaunchEffect;
-    UPROPERTY(BlueprintReadWrite, Category = "Ability", EditAnywhere)
-    USoundBase* ProjectileLaunchSound;
-
     // 애니메이션
     void PlayMontages(UAnimMontage* Montage1P, UAnimMontage* Montage3P, bool bStopAllMontages = true);
     void StopAllMontages();
 
-    // 몽타주 콜백
+    // 태스크 콜백
     UFUNCTION()
-    void OnMontageCompleted();
+    void OnPrepareMontageCompleted();
 
     UFUNCTION()
-    void OnMontageBlendOut();
+    void OnPrepareMontageBlendOut();
 
-    // Actor를 통한 네트워크 동기화
-    void NotifyStateChanged(EAbilityState NewState);
-    void NotifyAbilityExecuted(bool bSuccess);
+    UFUNCTION()
+    void OnExecuteMontageCompleted();
+
+    UFUNCTION()
+    void OnExecuteMontageBlendOut();
+
+    UFUNCTION()
+    void OnWaitingTimeout();
+
+    UFUNCTION()
+    void OnFollowUpEventReceived(FGameplayEventData Payload);
+
+    // 상태 관리 헬퍼
+    void SetAbilityState(const FGameplayTag& StateTag);
+    void ClearAllAbilityStates();
+    FGameplayTag GetCurrentStateTag() const;
 
     // 캐시된 정보
     UPROPERTY()
@@ -240,37 +232,24 @@ protected:
     ABaseProjectile* SpawnedProjectile = nullptr;
 
 private:
-    // 현재 상태
-    UPROPERTY()
-    EAbilityState CurrentState = EAbilityState::None;
-
-    // 마지막 실행 입력 타입
-    EFollowUpInputType LastExecuteInputType = EFollowUpInputType::None;
-
     // 이전 장비 상태
     UPROPERTY()
     EInteractorType PreviousEquipmentState = EInteractorType::None;
+
+    // 활성 태스크들
+    UPROPERTY()
+    UAbilityTask_PlayMontageAndWait* ActiveMontageTask = nullptr;
+
+    UPROPERTY()
+    UAbilityTask_WaitGameplayEvent* WaitEventTask = nullptr;
 
     // 타이머
     FTimerHandle WaitingTimeoutHandle;
     FTimerHandle CleanupDelayHandle;
 
-    // 상태별 처리 함수
-    void EnterState_Preparing();
-    void EnterState_Waiting();
-    void EnterState_Executing();
-    void ExitCurrentState();
+    // 마지막 입력 타입
+    EFollowUpInputType LastInputType = EFollowUpInputType::None;
 
     // 정리 함수
-    void CleanupAbility();
     void PerformFinalCleanup();
-
-    // 타임아웃 핸들러
-    UFUNCTION()
-    void OnWaitingTimeout();
-
-    // 헬퍼 함수
-    FGameplayTag ConvertStateToTag(EAbilityState State) const;
-    void UpdateAbilityTags(EAbilityState NewState);
-    bool IsValidFollowUpInput(FGameplayTag InputTag) const;
 };

@@ -6,7 +6,9 @@
 #include "EnhancedInputSubsystems.h"
 #include "EnhancedInputComponent.h"
 #include "AbilitySystem/AgentAbilitySystemComponent.h"
+#include "AbilitySystemBlueprintLibrary.h"
 #include "GameFramework/PlayerController.h"
+#include "GameFramework/PlayerState.h"
 #include "Player/AgentPlayerController.h"
 #include "Player/Agent/BaseAgent.h"
 
@@ -107,6 +109,23 @@ void UAgentInputComponent::BindInput(UInputComponent* InputComponent)
 		{
 			eic->BindAction(ShopUIAction, ETriggerEvent::Started, this, &UAgentInputComponent::ShopUI);
 		}
+
+		if (CAction)
+		{
+			eic->BindAction(CAction, ETriggerEvent::Started, this, &UAgentInputComponent::AbilityCInput);
+		}
+		if (QAction)
+		{
+			eic->BindAction(QAction, ETriggerEvent::Started, this, &UAgentInputComponent::AbilityQInput);
+		}
+		if (EAction)
+		{
+			eic->BindAction(EAction, ETriggerEvent::Started, this, &UAgentInputComponent::AbilityEInput);
+		}
+		if (XAction)
+		{
+			eic->BindAction(XAction, ETriggerEvent::Started, this, &UAgentInputComponent::AbilityXInput);
+		}
 	}
 }
 
@@ -132,24 +151,46 @@ void UAgentInputComponent::OnLook(const FInputActionValue& value)
 
 void UAgentInputComponent::StartFire(const FInputActionValue& InputActionValue)
 {
+	// 상점 UI가 열려있으면 무시
 	if (const auto* PC = GetWorld()->GetFirstPlayerController<AAgentPlayerController>())
 	{
 		if (PC->ShopUI)
 		{
-			// 상점 열려있으면 쏘지마라
 			return;
 		}
 	}
 	
-	if (!Agent->IsDead())
+	if (Agent->IsDead())
 	{
-		// 스킬을 실행했다면, 리턴
-		if (Agent->GetASC()->TryActivateAbilityByTag(LeftClickTag))
+		return;
+	}
+
+	// ASC 가져오기
+	UAgentAbilitySystemComponent* ASC = Agent->GetASC();
+	if (!ASC)
+	{
+		return;
+	}
+
+	// 어빌리티가 대기 중이면 GameplayEvent 전송
+	if (ASC->HasMatchingGameplayTag(FValorantGameplayTags::Get().State_Ability_Waiting))
+	{
+		FGameplayEventData EventData;
+		EventData.EventTag = FValorantGameplayTags::Get().InputTag_Default_LeftClick;
+		// GameplayEvent를 통해 입력 전달
+		if (!GetOwner()->HasAuthority())
 		{
-			return;
+			ASC->ServerRPC_SendGameplayEvent(FValorantGameplayTags::Get().InputTag_Default_LeftClick, EventData);
 		}
+		ASC->HandleGameplayEvent(FValorantGameplayTags::Get().InputTag_Default_LeftClick, &EventData);
 		
-		// NET_LOG(LogTemp, Warning, TEXT("파이어 시도"));
+		return;
+	}
+
+	// 기본 좌클릭 어빌리티 시도 (일반적으로 무기 발사)
+	if (!ASC->TryActivateAbilityByTag(LeftClickTag))
+	{
+		// 어빌리티가 없으면 일반 발사
 		Agent->StartFire();
 	}
 }
@@ -160,14 +201,12 @@ void UAgentInputComponent::EndFire(const FInputActionValue& InputActionValue)
 	{
 		if (PC->ShopUI)
 		{
-			// 상점 열려있으면 쏘지마라
 			return;
 		}
 	}
 	
 	if (!Agent->IsDead())
 	{
-		// NET_LOG(LogTemp, Warning, TEXT("파이어 종료"));
 		Agent->EndFire();
 	}
 }
@@ -179,7 +218,6 @@ void UAgentInputComponent::JumpStart(const FInputActionValue& InputActionValue)
 		if (Agent->bIsCrouched)
 		{
 			Agent->UnCrouch();
-			// UE_LOG(LogTemp, Warning, TEXT("앉기 중 점프"));
 		}
 		
 		Agent->Jump();
@@ -301,4 +339,24 @@ void UAgentInputComponent::ShopUI(const FInputActionValue& InputActionValue)
 	{
 		Agent->SetShopUI();
 	}
+}
+
+void UAgentInputComponent::AbilityCInput(const FInputActionValue& InputActionValue)
+{
+	Agent->GetASC()->TryActivateAbilityByTag(FGameplayTag::RequestGameplayTag(FName("Input.Skill.C")));
+}
+
+void UAgentInputComponent::AbilityQInput(const FInputActionValue& InputActionValue)
+{
+	Agent->GetASC()->TryActivateAbilityByTag(FGameplayTag::RequestGameplayTag(FName("Input.Skill.Q")));
+}
+
+void UAgentInputComponent::AbilityEInput(const FInputActionValue& InputActionValue)
+{
+	Agent->GetASC()->TryActivateAbilityByTag(FGameplayTag::RequestGameplayTag(FName("Input.Skill.E")));
+}
+
+void UAgentInputComponent::AbilityXInput(const FInputActionValue& InputActionValue)
+{
+	Agent->GetASC()->TryActivateAbilityByTag(FGameplayTag::RequestGameplayTag(FName("Input.Skill.X")));
 }

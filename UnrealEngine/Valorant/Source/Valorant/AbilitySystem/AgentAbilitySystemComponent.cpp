@@ -10,8 +10,14 @@
 
 UAgentAbilitySystemComponent::UAgentAbilitySystemComponent()
 {
-    PrimaryComponentTick.bCanEverTick = false; // Tick 불필요
+    PrimaryComponentTick.bCanEverTick = false;
     SetIsReplicated(true);
+}
+
+void UAgentAbilitySystemComponent::ServerRPC_SendGameplayEvent_Implementation(FGameplayTag EventTag,
+    const FGameplayEventData Payload)
+{
+    HandleGameplayEvent(EventTag, &Payload);
 }
 
 void UAgentAbilitySystemComponent::BeginPlay()
@@ -31,10 +37,6 @@ void UAgentAbilitySystemComponent::GetLifetimeReplicatedProps(TArray<FLifetimePr
     Super::GetLifetimeReplicatedProps(OutLifetimeProps);
     
     DOREPLIFETIME(UAgentAbilitySystemComponent, m_AgentID);
-    DOREPLIFETIME(UAgentAbilitySystemComponent, m_Ability_C);
-    DOREPLIFETIME(UAgentAbilitySystemComponent, m_Ability_E);
-    DOREPLIFETIME(UAgentAbilitySystemComponent, m_Ability_Q);
-    DOREPLIFETIME(UAgentAbilitySystemComponent, m_Ability_X);
 }
 
 void UAgentAbilitySystemComponent::InitializeByAgentData(int32 agentID)
@@ -45,6 +47,7 @@ void UAgentAbilitySystemComponent::InitializeByAgentData(int32 agentID)
         return;
     }
     
+    m_AgentID = agentID;
     m_GameInstance = Cast<UValorantGameInstance>(GetWorld()->GetGameInstance());
     FAgentData* data = m_GameInstance->GetAgentData(agentID);
     
@@ -110,7 +113,7 @@ void UAgentAbilitySystemComponent::SetAgentAbility(int32 abilityID, int32 level)
         return;
     }
     
-    // 스킬 슬롯 확인 및 데이터 저장
+    // 스킬 슬롯 확인
     bool bIsSkill = false;
     FGameplayTag skillTag;
     
@@ -131,16 +134,6 @@ void UAgentAbilitySystemComponent::SetAgentAbility(int32 abilityID, int32 level)
                 }
             }
             
-            // 데이터 저장
-            if (tag == FValorantGameplayTags::Get().InputTag_Ability_C)
-                m_Ability_C = *abilityData;
-            else if (tag == FValorantGameplayTags::Get().InputTag_Ability_E)
-                m_Ability_E = *abilityData;
-            else if (tag == FValorantGameplayTags::Get().InputTag_Ability_Q)
-                m_Ability_Q = *abilityData;
-            else if (tag == FValorantGameplayTags::Get().InputTag_Ability_X)
-                m_Ability_X = *abilityData;
-            
             break;
         }
     }
@@ -154,6 +147,10 @@ void UAgentAbilitySystemComponent::SetAgentAbility(int32 abilityID, int32 level)
     // 어빌리티 부여
     FGameplayAbilitySpec spec(abilityClass, level);
     spec.GetDynamicSpecSourceTags().AddTag(skillTag);
+    
+    // 어빌리티 ID를 스펙에 저장 (나중에 조회할 때 사용)
+    spec.SetByCallerTagMagnitudes.Add(FGameplayTag::RequestGameplayTag("Data.AbilityID"), abilityID);
+    
     GiveAbility(spec);
     
     NET_LOG(LogTemp, Warning, TEXT("%s 스킬 등록 완료"), *skillTag.ToString());
@@ -178,27 +175,17 @@ void UAgentAbilitySystemComponent::ResetAgentAbilities()
     {
         ClearAbility(Handle);
     }
-    
-    // 어빌리티 데이터 초기화
-    m_Ability_C = FAbilityData();
-    m_Ability_E = FAbilityData();
-    m_Ability_Q = FAbilityData();
-    m_Ability_X = FAbilityData();
-}
-
-bool UAgentAbilitySystemComponent::TrySkillInput(const FGameplayTag& InputTag)
-{
-    return TryActivateAbilityByTag(InputTag);
 }
 
 bool UAgentAbilitySystemComponent::TryActivateAbilityByTag(const FGameplayTag& InputTag)
 {
-    // 활성 어빌리티가 있는지 확인
+    // 활성 어빌리티가 있고 대기 상태인 경우, 해당 어빌리티에 이벤트 전송
     if (HasMatchingGameplayTag(FValorantGameplayTags::Get().State_Ability_Waiting))
     {
-        // 후속 입력 처리를 위해 GameplayEvent 전송
-        ServerRPC_HandleGameplayEvent(InputTag);
-        //HandleGameplayEvent(InputTag, &EventData);
+        // GameplayEvent를 통해 입력 전달
+        FGameplayEventData EventData;
+        EventData.EventTag = InputTag;
+        HandleGameplayEvent(InputTag, &EventData);
         return true;
     }
 
@@ -258,27 +245,6 @@ void UAgentAbilitySystemComponent::ForceCleanupAllAbilities()
     OnAbilityStateChanged.Broadcast(FGameplayTag());
 }
 
-int32 UAgentAbilitySystemComponent::HandleGameplayEvent(FGameplayTag EventTag, const FGameplayEventData* Payload)
-{
-    int32 Result = Super::HandleGameplayEvent(EventTag, Payload);
-    
-    // 활성 어빌리티에 이벤트 전달
-    for (FGameplayAbilitySpec& Spec : GetActivatableAbilities())
-    {
-        if (Spec.IsActive())
-        {
-            if (UBaseGameplayAbility* Ability = Cast<UBaseGameplayAbility>(Spec.GetPrimaryInstance()))
-            {
-                // 후속 입력 처리
-                Client_HandleGameplayEvent(EventTag);
-                Ability->HandleFollowUpInput(EventTag);
-            }
-        }
-    }
-    
-    return Result;
-}
-
 void UAgentAbilitySystemComponent::MulticastRPC_OnAbilityExecuted_Implementation(FGameplayTag AbilityTag, bool bSuccess)
 {
     // 클라이언트에서 어빌리티 실행 결과 처리
@@ -297,28 +263,63 @@ void UAgentAbilitySystemComponent::MulticastRPC_OnAbilityExecuted_Implementation
     }
 }
 
-void UAgentAbilitySystemComponent::ServerRPC_HandleGameplayEvent_Implementation(const FGameplayTag& inputTag)
+// 어빌리티 정보 조회 함수들
+const FGameplayAbilitySpec* UAgentAbilitySystemComponent::GetAbilitySpecByTag(const FGameplayTag& SlotTag) const
 {
-    FGameplayEventData data;
-    data.EventTag = inputTag;
-    HandleGameplayEvent(inputTag, &data);
-}
-
-void UAgentAbilitySystemComponent::Client_HandleGameplayEvent_Implementation(FGameplayTag EventTag)
-{
-    if (1)
+    for (const FGameplayAbilitySpec& Spec : GetActivatableAbilities())
     {
-        // 활성 어빌리티 찾기
-        for (FGameplayAbilitySpec& Spec : GetActivatableAbilities())
+        if (Spec.GetDynamicSpecSourceTags().HasTag(SlotTag))
         {
-            if (Spec.IsActive())
-            {
-                if (UBaseGameplayAbility* Ability = Cast<UBaseGameplayAbility>(Spec.GetPrimaryInstance()))
-                {
-                    Ability->HandleFollowUpInput(EventTag);
-                    break;
-                }
-            }
+            return &Spec;
         }
     }
+    return nullptr;
+}
+
+FAbilityData UAgentAbilitySystemComponent::GetAbilityDataBySlot(const FGameplayTag& SlotTag) const
+{
+    FAbilityData ResultData;
+    
+    const FGameplayAbilitySpec* Spec = GetAbilitySpecByTag(SlotTag);
+    if (!Spec || !m_GameInstance)
+    {
+        return ResultData;
+    }
+    
+    // SetByCallerTagMagnitudes에서 AbilityID 가져오기
+    const float* AbilityIDPtr = Spec->SetByCallerTagMagnitudes.Find(FGameplayTag::RequestGameplayTag("Data.AbilityID"));
+    if (!AbilityIDPtr)
+    {
+        return ResultData;
+    }
+    
+    int32 AbilityID = FMath::RoundToInt(*AbilityIDPtr);
+    FAbilityData* FoundData = m_GameInstance->GetAbilityData(AbilityID);
+    
+    if (FoundData)
+    {
+        ResultData = *FoundData;
+    }
+    
+    return ResultData;
+}
+
+FAbilityData UAgentAbilitySystemComponent::GetAbility_C() const
+{
+    return GetAbilityDataBySlot(FValorantGameplayTags::Get().InputTag_Ability_C);
+}
+
+FAbilityData UAgentAbilitySystemComponent::GetAbility_E() const
+{
+    return GetAbilityDataBySlot(FValorantGameplayTags::Get().InputTag_Ability_E);
+}
+
+FAbilityData UAgentAbilitySystemComponent::GetAbility_Q() const
+{
+    return GetAbilityDataBySlot(FValorantGameplayTags::Get().InputTag_Ability_Q);
+}
+
+FAbilityData UAgentAbilitySystemComponent::GetAbility_X() const
+{
+    return GetAbilityDataBySlot(FValorantGameplayTags::Get().InputTag_Ability_X);
 }

@@ -132,5 +132,10 @@ public:
 	
 	void StartReload(const FInputActionValue& InputActionValue);
 
-	void ShopUI(const FInputActionValue& InputActionValue); 
+	void ShopUI(const FInputActionValue& InputActionValue);
+
+	void AbilityCInput(const FInputActionValue& InputActionValue);
+	void AbilityQInput(const FInputActionValue& InputActionValue);
+	void AbilityEInput(const FInputActionValue& InputActionValue);
+	void AbilityXInput(const FInputActionValue& InputActionValue);
 };
