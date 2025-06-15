@@ -59,6 +59,14 @@ void UAgentInputComponent::BindInput(UInputComponent* InputComponent)
 			eic->BindAction(LeftMouseStartAction,ETriggerEvent::Triggered, this, &UAgentInputComponent::StartFire);
 			eic->BindAction(LeftMouseEndAction,ETriggerEvent::Triggered, this, &UAgentInputComponent::EndFire);
 		}
+		
+		// 우클릭 바인딩 추가
+		if (RightMouseAction)
+		{
+			eic->BindAction(RightMouseAction, ETriggerEvent::Started, this, &UAgentInputComponent::StartRightClick);
+			eic->BindAction(RightMouseAction, ETriggerEvent::Completed, this, &UAgentInputComponent::EndRightClick);
+		}
+		
 		if (MoveAction)
 			eic->BindAction(MoveAction,ETriggerEvent::Triggered, this, &UAgentInputComponent::OnMove);
 
@@ -208,6 +216,69 @@ void UAgentInputComponent::EndFire(const FInputActionValue& InputActionValue)
 	if (!Agent->IsDead())
 	{
 		Agent->EndFire();
+	}
+}
+
+void UAgentInputComponent::StartRightClick(const FInputActionValue& InputActionValue)
+{
+	// 상점 UI가 열려있으면 무시
+	if (const auto* PC = GetWorld()->GetFirstPlayerController<AAgentPlayerController>())
+	{
+		if (PC->ShopUI)
+		{
+			return;
+		}
+	}
+	
+	if (Agent->IsDead())
+	{
+		return;
+	}
+
+	// ASC 가져오기
+	UAgentAbilitySystemComponent* ASC = Agent->GetASC();
+	if (!ASC)
+	{
+		return;
+	}
+
+	// 어빌리티가 대기 중이면 GameplayEvent 전송
+	if (ASC->HasMatchingGameplayTag(FValorantGameplayTags::Get().State_Ability_Waiting))
+	{
+		FGameplayEventData EventData;
+		EventData.EventTag = FValorantGameplayTags::Get().InputTag_Default_RightClick;
+		
+		// GameplayEvent를 통해 입력 전달
+		if (!GetOwner()->HasAuthority())
+		{
+			ASC->ServerRPC_SendGameplayEvent(FValorantGameplayTags::Get().InputTag_Default_RightClick, EventData);
+		}
+		ASC->HandleGameplayEvent(FValorantGameplayTags::Get().InputTag_Default_RightClick, &EventData);
+		
+		return;
+	}
+
+	// 기본 우클릭 시도
+	if (!ASC->TryActivateAbilityByTag(RightClickTag))
+	{
+		// 어빌리티가 없으면 Agent의 기본 우클릭 동작 실행
+	}
+}
+
+void UAgentInputComponent::EndRightClick(const FInputActionValue& InputActionValue)
+{
+	if (const auto* PC = GetWorld()->GetFirstPlayerController<AAgentPlayerController>())
+	{
+		if (PC->ShopUI)
+		{
+			return;
+		}
+	}
+	
+	if (!Agent->IsDead())
+	{
+		// Agent에 우클릭 종료 처리 함수가 있다면 호출
+		// 예: Agent->EndAiming();
 	}
 }
 

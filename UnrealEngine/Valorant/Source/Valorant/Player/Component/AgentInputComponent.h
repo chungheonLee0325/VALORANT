@@ -97,7 +97,7 @@ private:
 	ABaseAgent* Agent = nullptr;
 
 	FGameplayTag LeftClickTag = FValorantGameplayTags::Get().InputTag_Default_LeftClick;	
-	FGameplayTag LeftClick= FValorantGameplayTags::Get().InputTag_Ability_C;
+	FGameplayTag RightClickTag = FValorantGameplayTags::Get().InputTag_Default_RightClick;
 	
 protected:
 	virtual void BeginPlay() override;
@@ -112,6 +112,9 @@ public:
 	
 	void StartFire(const FInputActionValue& InputActionValue);
 	void EndFire(const FInputActionValue& InputActionValue);
+	
+	void StartRightClick(const FInputActionValue& InputActionValue);
+	void EndRightClick(const FInputActionValue& InputActionValue);
 	
 	void WalkStart(const FInputActionValue& InputActionValue);
 	void WalkComplete(const FInputActionValue& InputActionValue);
