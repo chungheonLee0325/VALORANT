@@ -1,7 +1,5 @@
 #include "Sage_C_BarrierOrb.h"
 
-#include "BarrierOrbActor.h"
-#include "BarrierWallActor.h"
 #include "AbilitySystem/ValorantGameplayTags.h"
 #include "Kismet/GameplayStatics.h"
 #include "GameFramework/Character.h"
@@ -11,6 +9,8 @@
 #include "Engine/World.h"
 #include "CollisionQueryParams.h"
 #include "DrawDebugHelpers.h"
+#include "AgentAbility/Sage/BarrierOrbActor.h"
+#include "AgentAbility/Sage/BarrierWallActor.h"
 
 USage_C_BarrierOrb::USage_C_BarrierOrb()
 {

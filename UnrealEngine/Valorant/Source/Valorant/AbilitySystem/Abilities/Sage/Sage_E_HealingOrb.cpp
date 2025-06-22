@@ -1,5 +1,4 @@
 #include "Sage_E_HealingOrb.h"
-#include "HealingOrbActor.h"
 #include "AbilitySystem/ValorantGameplayTags.h"
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetMathLibrary.h"
@@ -11,6 +10,7 @@
 #include "NiagaraComponent.h"
 #include "Components/AudioComponent.h"
 #include "DrawDebugHelpers.h"
+#include "AgentAbility/Sage/HealingOrbActor.h"
 
 USage_E_HealingOrb::USage_E_HealingOrb()
 {

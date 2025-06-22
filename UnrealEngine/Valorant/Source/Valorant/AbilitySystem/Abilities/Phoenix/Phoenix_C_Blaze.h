@@ -1,7 +1,7 @@
 #pragma once
 
 #include "AbilitySystem/Abilities/BaseGameplayAbility.h"
-#include "Phoenix_C_BlazeProjectile.h"
+#include "AgentAbility/Phoenix/Phoenix_C_BlazeProjectile.h"
 #include "Phoenix_C_Blaze.generated.h"
 
 UCLASS()

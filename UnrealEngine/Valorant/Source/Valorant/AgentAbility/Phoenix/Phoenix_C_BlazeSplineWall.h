@@ -22,7 +22,7 @@ public:
 
     // 벽 설정값
     UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Wall Config")
-    float WallHeight = 300.0f;
+    float WallHeight = 340.0f;
     
     UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Wall Config")
     float WallThickness = 50.0f;

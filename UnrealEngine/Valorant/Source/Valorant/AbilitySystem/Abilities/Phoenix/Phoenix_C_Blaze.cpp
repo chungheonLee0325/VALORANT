@@ -1,6 +1,6 @@
 #include "Phoenix_C_Blaze.h"
 #include "AbilitySystem/ValorantGameplayTags.h"
-#include "Phoenix_C_BlazeProjectile.h"
+#include "AgentAbility/Phoenix/Phoenix_C_BlazeProjectile.h"
 #include "GameFramework/Character.h"
 #include "Kismet/GameplayStatics.h"
 

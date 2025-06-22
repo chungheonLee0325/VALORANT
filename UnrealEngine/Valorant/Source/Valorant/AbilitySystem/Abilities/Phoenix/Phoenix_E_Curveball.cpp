@@ -1,10 +1,10 @@
 #include "Phoenix_E_Curveball.h"
 
-#include "Phoenix_E_P_Curveball.h"
 #include "AbilitySystem/ValorantGameplayTags.h"
 #include "AgentAbility/FlashProjectile.h"
 #include "AgentAbility/KayO/Flashbang.h"
 #include "AgentAbility/Phoenix/Phoenix_E_EquippedCurveball.h"
+#include "AgentAbility/Phoenix/Phoenix_E_P_Curveball.h"
 #include "Player/Agent/BaseAgent.h"
 
 UPhoenix_E_Curveball::UPhoenix_E_Curveball(): UBaseGameplayAbility()
