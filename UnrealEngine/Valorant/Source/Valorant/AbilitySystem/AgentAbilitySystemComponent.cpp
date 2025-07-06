@@ -185,6 +185,13 @@ bool UAgentAbilitySystemComponent::TryActivateAbilityByTag(const FGameplayTag& I
         // GameplayEvent를 통해 입력 전달
         FGameplayEventData EventData;
         EventData.EventTag = InputTag;
+        
+        // 클라이언트에서 서버로 전송
+        if (!GetOwner()->HasAuthority())
+        {
+            ServerRPC_SendGameplayEvent(InputTag, EventData);
+        }
+        
         HandleGameplayEvent(InputTag, &EventData);
         return true;
     }

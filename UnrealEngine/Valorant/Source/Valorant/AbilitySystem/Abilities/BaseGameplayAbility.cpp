@@ -123,7 +123,7 @@ void UBaseGameplayAbility::StartWaitingPhase()
     
     // UI 알림을 위한 입력 태그 찾기
     FGameplayTag inputTag;
-    for (const FGameplayTag& Tag : AbilityTags)
+    for (const FGameplayTag& Tag : GetAssetTags())
     {
         if (Tag.MatchesTag(FGameplayTag::RequestGameplayTag(TEXT("Input.Skill"))))
         {

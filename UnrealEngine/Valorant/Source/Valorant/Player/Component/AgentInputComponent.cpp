@@ -180,21 +180,6 @@ void UAgentInputComponent::StartFire(const FInputActionValue& InputActionValue)
 		return;
 	}
 
-	// 어빌리티가 대기 중이면 GameplayEvent 전송
-	if (ASC->HasMatchingGameplayTag(FValorantGameplayTags::Get().State_Ability_Waiting))
-	{
-		FGameplayEventData EventData;
-		EventData.EventTag = FValorantGameplayTags::Get().InputTag_Default_LeftClick;
-		// GameplayEvent를 통해 입력 전달
-		if (!GetOwner()->HasAuthority())
-		{
-			ASC->ServerRPC_SendGameplayEvent(FValorantGameplayTags::Get().InputTag_Default_LeftClick, EventData);
-		}
-		ASC->HandleGameplayEvent(FValorantGameplayTags::Get().InputTag_Default_LeftClick, &EventData);
-		
-		return;
-	}
-
 	// 기본 좌클릭 어빌리티 시도 (일반적으로 무기 발사)
 	if (!ASC->TryActivateAbilityByTag(LeftClickTag))
 	{
@@ -239,22 +224,6 @@ void UAgentInputComponent::StartRightClick(const FInputActionValue& InputActionV
 	UAgentAbilitySystemComponent* ASC = Agent->GetASC();
 	if (!ASC)
 	{
-		return;
-	}
-
-	// 어빌리티가 대기 중이면 GameplayEvent 전송
-	if (ASC->HasMatchingGameplayTag(FValorantGameplayTags::Get().State_Ability_Waiting))
-	{
-		FGameplayEventData EventData;
-		EventData.EventTag = FValorantGameplayTags::Get().InputTag_Default_RightClick;
-		
-		// GameplayEvent를 통해 입력 전달
-		if (!GetOwner()->HasAuthority())
-		{
-			ASC->ServerRPC_SendGameplayEvent(FValorantGameplayTags::Get().InputTag_Default_RightClick, EventData);
-		}
-		ASC->HandleGameplayEvent(FValorantGameplayTags::Get().InputTag_Default_RightClick, &EventData);
-		
 		return;
 	}
 
