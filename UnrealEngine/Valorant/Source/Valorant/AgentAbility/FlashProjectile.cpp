@@ -39,16 +39,7 @@ void AFlashProjectile::ExplodeFlash()
     // 섬광이 터진 정확한 위치 저장
     FVector FlashLocation = GetActorLocation();
 
-    // 폭발 이펙트 스폰
-    if (ExplosionEffect)
-    {
-        UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), ExplosionEffect, FlashLocation);
-    }
-
-    if (ExplosionSound)
-    {
-        UGameplayStatics::PlaySoundAtLocation(GetWorld(), ExplosionSound, FlashLocation);
-    }
+    NetMulti_ExplosionEffects(FlashLocation);
 
     // 범위 내 플레이어들 확인
     TArray<AActor*> FoundActors;
