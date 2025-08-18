@@ -1,4 +1,4 @@
-# VALORITHM — Valorant 모작 (Unreal Engine 5, C++)
+# VALORANT - Multiplay Hypher FPS 게임 (UE, Multiplayer, GAS)
 
 ## 🎯 프로젝트 요약
 언리얼 엔진 5와 C++ Gameplay Ability System(GAS)을 기반으로 한 **멀티플레이어 FPS 전투 시스템**을 설계·구현했습니다.  
@@ -216,7 +216,7 @@ sequenceDiagram
 * **스파이크 설치:** 숫자키 4
 * **스파이크 해체 / 상호작용:** F
 * **상점 열기 / 닫기:** B
-
+> 스킬 준비 상태에서는 **입력 라우팅**이 변경됩니다(무기 발사 / 스킬 보조 입력 → 스킬 후속 입력).
 
 ---
 
