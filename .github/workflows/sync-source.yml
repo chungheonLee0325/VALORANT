@@ -1,0 +1,73 @@
+name: Sync Source to Source-only Mirror (VALORANT)
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'UnrealEngine/Valorant/Source/**'
+      - 'UnrealEngine/Valorant/Config/**'
+      - 'UnrealEngine/Valorant/Plugins/**'
+      - 'UnrealEngine/Valorant/Valorant.uproject'
+      - 'Doc/**'
+  workflow_dispatch:
+
+concurrency:
+  group: mirror-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout (sparse)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          lfs: false
+          sparse-checkout: |
+            UnrealEngine/Valorant/Source
+            UnrealEngine/Valorant/Config
+            UnrealEngine/Valorant/Plugins
+            UnrealEngine/Valorant/Valorant.uproject
+            Doc
+          sparse-checkout-cone-mode: false
+
+      - name: Prepare mirror workspace
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p out
+          [ -d "UnrealEngine/Valorant/Source" ] && rsync -av --delete "UnrealEngine/Valorant/Source/" "out/Source/" || true
+          [ -d "UnrealEngine/Valorant/Config" ] && rsync -av --delete "UnrealEngine/Valorant/Config/" "out/Config/" || true
+          if [ -d "UnrealEngine/Valorant/Plugins" ]; then
+            rsync -av --delete --include='*/' --include='*/Source/***' --exclude='*' \
+              "UnrealEngine/Valorant/Plugins/" "out/Plugins/"
+          fi
+          [ -f "UnrealEngine/Valorant/Valorant.uproject" ] && cp "UnrealEngine/Valorant/Valorant.uproject" "out/Valorant.uproject" || true
+          [ -d "Doc" ] && rsync -av --delete "Doc/" "out/Docs/" || true
+          printf '%s\n' \
+            'VALORANT.Source — source-only mirror' '' \
+            'Automated mirror of the main VALORANT (Unreal/GAS) repo, focused on code and docs.' '' \
+            'Includes: Source/, Config/, Plugins/*/Source, Valorant.uproject, Docs/' \
+            'Excludes: Content/, Binaries/, Intermediate/' \
+            'Source of truth: the main repository.' > out/README.md
+
+      - name: Push to source-only repo
+        working-directory: out
+        env:
+          MIRROR_REPO: ${{ secrets.VALORANT_SOURCE_REPO }}
+          MIRROR_PAT:  ${{ secrets.VALORANT_SOURCE_PAT }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          [ -n "${MIRROR_REPO:-}" ] || { echo "MIRROR_REPO empty"; exit 1; }
+          [ -n "${MIRROR_PAT:-}" ]  || { echo "MIRROR_PAT empty";  exit 1; }
+          git init
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add .
+          git commit -m "chore(mirror): sync from $GITHUB_SHA"
+          git branch -M main
+          git remote add origin "https://x-access-token:${MIRROR_PAT}@github.com/${MIRROR_REPO}.git"
+          git ls-remote --heads origin >/dev/null
+          git push -f origin main
