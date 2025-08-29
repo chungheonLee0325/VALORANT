@@ -89,4 +89,3 @@ jobs:
           git remote add origin "https://x-access-token:${MIRROR_PAT}@github.com/${MIRROR_REPO}.git"
           git ls-remote --heads origin >/dev/null
           git push -f origin main
-        
