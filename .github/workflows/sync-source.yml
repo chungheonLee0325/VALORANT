@@ -9,6 +9,7 @@ on:
       - 'UnrealEngine/Valorant/Plugins/**'
       - 'UnrealEngine/Valorant/Valorant.uproject'
       - 'Doc/**'
+      - 'README.md'
   workflow_dispatch:
 
 concurrency:
@@ -25,11 +26,12 @@ jobs:
           fetch-depth: 1
           lfs: false
           sparse-checkout: |
+            README.md
+            Doc
             UnrealEngine/Valorant/Source
             UnrealEngine/Valorant/Config
             UnrealEngine/Valorant/Plugins
             UnrealEngine/Valorant/Valorant.uproject
-            Doc
           sparse-checkout-cone-mode: false
 
       - name: Prepare mirror workspace
@@ -44,13 +46,29 @@ jobs:
               "UnrealEngine/Valorant/Plugins/" "out/Plugins/"
           fi
           [ -f "UnrealEngine/Valorant/Valorant.uproject" ] && cp "UnrealEngine/Valorant/Valorant.uproject" "out/Valorant.uproject" || true
-          [ -d "Doc" ] && rsync -av --delete "Doc/" "out/Docs/" || true
-          printf '%s\n' \
-            'VALORANT.Source — source-only mirror' '' \
-            'Automated mirror of the main VALORANT (Unreal/GAS) repo, focused on code and docs.' '' \
-            'Includes: Source/, Config/, Plugins/*/Source, Valorant.uproject, Docs/' \
-            'Excludes: Content/, Binaries/, Intermediate/' \
-            'Source of truth: the main repository.' > out/README.md
+          [ -d "Doc" ] && rsync -av --delete "Doc/" "out/Doc/" || true
+
+          {
+            echo "# VALORANT.Source — source-only mirror"
+            echo
+            echo "> 이 리포는 **소스 코드 전용 미러**입니다."
+            echo "> 전체 프로젝트(에셋 포함)와 **풀 README**는 원본 리포에서 확인하세요:"
+            echo "> 👉 [VALORANT (Main Repo)](https://github.com/${GITHUB_REPOSITORY%/*}/VALORANT)"
+            echo
+            echo "포함: \`Source/\`, \`Config/\`, \`Plugins/*/Source\`, \`Valorant.uproject\`, \`Doc/\`"
+            echo "제외: \`Content/\`, \`Binaries/\`, \`Intermediate/\`"
+            echo
+            echo "---"
+            echo
+            echo "<details><summary><b>Full README (from main repo)</b></summary>"
+            echo
+          } > out/README.md
+
+          if [ -f "README.md" ]; then
+            cat "README.md" >> out/README.md
+          fi
+
+          echo -e "\n</details>\n" >> out/README.md
 
       - name: Push to source-only repo
         working-directory: out
