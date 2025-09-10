@@ -6,24 +6,50 @@ Phoenix, Sage, KAY/O, Jett — 4명의 Agent × C/Q/E 총 12종 스킬을 멀티
 
 ---
 
-## **프로젝트 하이라이트**
-### 📌 결과물 요약
+## 📌 **프로젝트 하이라이트**
+### 결과물 요약
 프로젝트의 주요 결과물과 핵심 기능을 한눈에 볼 수 있는 영상입니다. \
 아래 gif를 클릭하면 유튜브 영상으로 시청할 수 있습니다.
 
 - 프로젝트 요약\
 [![프로젝트 요약 GIF](Doc/Gifs/VALORITH_Overview.gif)](https://youtu.be/Ym0MJUSHHbc)
 
+
+| 카테고리 | 장면 | GIF | 핵심 포인트                                   |
+|---|---|---|------------------------------------------|
+| Phoenix | Blaze – 곡선 장벽 경로 프리뷰 → 설치 | ![Blaze Preview](docs/gifs/phoenix_blaze_preview.gif) | 후속입력 시퀀스(Prepare→Wait→Active), Spline 경로 |
+| Sage | Barrier – 로컬 미리보기 회전/설치 | ![Barrier Preview](docs/gifs/sage_barrier_preview.gif) | 1P/3P 프리뷰, 우클릭 회전, 서버 설치 확정              |
+| KAY/O | Flash – 폭발 직후 UI/페이드 | ![Flash](docs/gifs/kayo_flash_blast.gif) | 차폐/시야각/거리 기반 지속시간, UI 동기화                |
+| Jett | Tailwind – 돌진 직후 | ![Tailwind](docs/gifs/jett_tailwind.gif) | 즉발형, 스택, 이동 상호작용                         |
+| Spike | Half‑Defuse – 50%에서 재개 | ![Half Defuse](docs/gifs/spike_half_defuse.gif) | 상태머신, 반해체 로직/게이지 UI                      |
+| Shop | 구매 성공/실패 비교 | ![Shop](docs/gifs/shop_buy_compare.gif) | 서버 검증, 크레딧 부족 피드백                        |
+
 ---
 
 ## 🏆 내 주요 성과
-- **GAS 기반 스킬 프레임워크(`UBaseGameplayAbility`) 설계**
-   - 상태머신(Preparing → Waiting → Active)
-   - 입력 하이재킹 / Projectile·GroundEffect 모듈화
-- **후속입력형 스킬** — Phoenix Blaze, Sage Barrier Orb
-- **즉발형 스킬** — Jett Tailwind, KAY/O Flash 등
-- **Spike 상태머신** — 설치/반해체/해체 로직
-- **상점·경제 시스템** — 서버 검증 구매, 데이터 테이블 기반 UI
+### **GAS 기반 스킬 프레임워크 설계** (`UBaseGameplayAbility`)
+- **구현 방법:** 3단계 상태머신(Preparing → Waiting → Active) 구조와 입력 하이재킹, Projectile/GroundEffect 모듈 내장
+- **성과:** 12개 스킬을 평균 **2~4개 함수 오버라이드**만으로 구현하여 신규 스킬 제작 시간 대폭 단축
+
+### **Flash(섬광) 판정 시스템**
+- **구현 방법:** 거리·시야각·장애물(LineTrace) 기반 강도/지속시간 계산, 폭발 방향을 방사형 UI로 피드백
+- **성과:** 각도별 체감과 공정성 향상, **대응 가능한 게임플레이 경험** 제공
+
+### **서버 권위 Spike 상태머신**
+- **구현 방법:**
+    - 서버 권위 `ASpike` 상태머신(소지/설치/반해체/해체/폭파)
+    - 진행률 서버 계산 + OnRep(상태)/Multicast(진행률) 동기화
+    - 반해체 체크포인트 시스템, 단일 키 설치/해체 자동 분기
+- **성과:** 다중 플레이어 환경에서 **진행률·상태 완벽 동기화**, 재진입 시 반해체 지점부터 재개로 경쟁 조건 제거 및 UX 개선
+
+### **통합 상점·경제 시스템**
+- **구현 방법:**
+    - UI→ClientPC→ServerPC→`UShop`→`UCredit` 서버 검증 구매 파이프라인
+    - 카테고리별 환불 규칙, DataTable 기반 아이템 구성
+- **성과:**
+    - **치팅 및 레이스컨디션 완전 차단**
+    - 라운드/환불/스택 UI 일관성 있는 동작
+    - 밸런스 변경 시 **코드 수정 없이** DataTable로 즉시 반영 가능
 
 ---
 ## 🏗 BaseGameplayAbility 아키텍처
