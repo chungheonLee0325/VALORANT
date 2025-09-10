@@ -282,7 +282,9 @@ public:
 	
 	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable)
 	void ResetRecordUI();
-	
+
+	UFUNCTION(BlueprintImplementableEvent)
+	void UpdateCreditDisplay(int32 NewCredit);
 public:
 	UPROPERTY(meta=(BindWidget))
 	TObjectPtr<UWidgetSwitcher> WidgetSwitcherAnnouncement = nullptr;

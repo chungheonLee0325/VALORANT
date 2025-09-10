@@ -73,6 +73,9 @@ void UMatchMapHUD::NativeConstruct()
 		// 어빌리티 데이터 로드 및 UI 업데이트
 		LoadAllAbilityData();
 		UpdateAbilityUI();
+
+		// 크레딧 정보 바인딩
+		ps->OnCreditChangedDelegate.AddDynamic(this, &UMatchMapHUD::UpdateCreditDisplay);
 	}
 	else
 	{
