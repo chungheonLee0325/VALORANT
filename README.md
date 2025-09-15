@@ -6,227 +6,84 @@ Phoenix, Sage, KAY/O, Jett — 4명의 Agent × C/Q/E 총 12종 스킬을 멀티
 
 ---
 
-## 📌 **프로젝트 하이라이트**
-### 결과물 요약
-프로젝트의 주요 결과물과 핵심 기능을 한눈에 볼 수 있는 영상입니다. \
-아래 gif를 클릭하면 유튜브 영상으로 시청할 수 있습니다.
+### 💡 프로젝트 탐색 가이드
+> 이 README는 프로젝트의 핵심을 요약한 '쇼케이스'입니다. 전체적인 개요를 파악한 뒤, 더 깊은 기술적 내용이 궁금하다면 Tech Docs를 확인해 보세요.
 
-- 프로젝트 요약\
-[![프로젝트 요약 GIF](Doc/Gifs/VALORITH_Overview.gif)](https://youtu.be/Ym0MJUSHHbc)
-
-
-| 카테고리 | 장면 | GIF | 핵심 포인트                                   |
-|---|---|---|------------------------------------------|
-| Phoenix | Blaze – 곡선 장벽 경로 프리뷰 → 설치 | ![Blaze Preview](docs/gifs/phoenix_blaze_preview.gif) | 후속입력 시퀀스(Prepare→Wait→Active), Spline 경로 |
-| Sage | Barrier – 로컬 미리보기 회전/설치 | ![Barrier Preview](docs/gifs/sage_barrier_preview.gif) | 1P/3P 프리뷰, 우클릭 회전, 서버 설치 확정              |
-| KAY/O | Flash – 폭발 직후 UI/페이드 | ![Flash](docs/gifs/kayo_flash_blast.gif) | 차폐/시야각/거리 기반 지속시간, UI 동기화                |
-| Jett | Tailwind – 돌진 직후 | ![Tailwind](docs/gifs/jett_tailwind.gif) | 즉발형, 스택, 이동 상호작용                         |
-| Spike | Half‑Defuse – 50%에서 재개 | ![Half Defuse](docs/gifs/spike_half_defuse.gif) | 상태머신, 반해체 로직/게이지 UI                      |
-| Shop | 구매 성공/실패 비교 | ![Shop](docs/gifs/shop_buy_compare.gif) | 서버 검증, 크레딧 부족 피드백                        |
+| 문서 | 역할                | 내용                          |
+| :--- |:------------------|:----------------------------|
+| 📋 [Project Gallery](https://github.com/chungheonLee0325/chungheonLee0325) | Root (전체 개요)      | 주요 프로젝트 목록, 핵심 역량 요약        |
+| 📁 **Repository README** | **What (개요)**     | 프로젝트 요약, 데모 영상, 핵심 기능, 아키텍처 |
+| 🔗 [Tech Docs](https://github.com/chungheonLee0325/VALORANT/wiki) | How & Why (상세 구현) | 코드 분석, 설계 과정, 기술 회고, 트러블슈팅  |
 
 ---
 
-## 🏆 내 주요 성과
-### **GAS 기반 스킬 프레임워크 설계** (`UBaseGameplayAbility`)
-- **구현 방법:** 3단계 상태머신(Preparing → Waiting → Active) 구조와 입력 하이재킹, Projectile/GroundEffect 모듈 내장
-- **성과:** 12개 스킬을 평균 **2~4개 함수 오버라이드**만으로 구현하여 신규 스킬 제작 시간 대폭 단축
+## 🎬 프로젝트 시연 영상
+프로젝트의 주요 결과물과 핵심 기능을 한눈에 볼 수 있는 영상입니다.
 
-### **Flash(섬광) 판정 시스템**
-- **구현 방법:** 거리·시야각·장애물(LineTrace) 기반 강도/지속시간 계산, 폭발 방향을 방사형 UI로 피드백
-- **성과:** 각도별 체감과 공정성 향상, **대응 가능한 게임플레이 경험** 제공
-
-### **서버 권위 Spike 상태머신**
-- **구현 방법:**
-    - 서버 권위 `ASpike` 상태머신(소지/설치/반해체/해체/폭파)
-    - 진행률 서버 계산 + OnRep(상태)/Multicast(진행률) 동기화
-    - 반해체 체크포인트 시스템, 단일 키 설치/해체 자동 분기
-- **성과:** 다중 플레이어 환경에서 **진행률·상태 완벽 동기화**, 재진입 시 반해체 지점부터 재개로 경쟁 조건 제거 및 UX 개선
-
-### **통합 상점·경제 시스템**
-- **구현 방법:**
-    - UI→ClientPC→ServerPC→`UShop`→`UCredit` 서버 검증 구매 파이프라인
-    - 카테고리별 환불 규칙, DataTable 기반 아이템 구성
-- **성과:**
-    - **치팅 및 레이스컨디션 완전 차단**
-    - 라운드/환불/스택 UI 일관성 있는 동작
-    - 밸런스 변경 시 **코드 수정 없이** DataTable로 즉시 반영 가능
-
+ <p align="center">
+ <a href="https://youtu.be/Ym0MJUSHHbc">
+ <img src="Doc/Gifs/VALORITH_Overview.gif" alt="프로젝트 하이라이트 영상 GIF" width="100%">
+ </a>
+ </p>
+ <p align="center">
+ <a href="https://youtu.be/Ym0MJUSHHbc"><b>▶ YouTube에서 고화질로 시청하기</b></a>
+ </p>
 ---
-## 🏗 BaseGameplayAbility 아키텍처
 
-`UBaseGameplayAbility`는 모든 에이전트 스킬의 **공통 상태머신(Preparing → Waiting → Executing)**, **후속입력 처리(좌/우클릭)**, **서버 권위 실행/복제**, **Projectile/GroundEffect 스폰**을 표준화하는 베이스 클래스입니다.
+## ✨ 구현된 핵심 시스템 (Implemented Core Systems)
 
-### BaseGameplayAbility 속성
-BaseGameplayAbility는 스킬의 동작 방식을 제어하는 몇 가지 핵심 속성을 가집니다.
+### 1. Gameplay Ability System (GAS) 기반 스킬 프레임워크
+<img src="./Doc/Gifs/GAS_Ability.gif" width="400"/>
 
-- **ActivationType** – 스킬 발동 플로우 유형
-    - `Instant`: 즉시 실행 스킬 - 바로 몽타주 재생과 함께 Executing 상태로 전이 (예: Jett – Cloudburst) 
-    - `WithPrepare`: Prepare 상태 이후 후속입력 대기 상태(WaitPahse)로 전환 (예: Sage – Barrier Orb, Phoenix - Blaze)
+> 모든 스킬의 기반이 되는 확장 가능한 프레임워크를 설계했습니다.
 
-- **FollowUpInputType** – Waiting 상태에서 허용하는 후속입력 종류
-    - `None`: 후속입력 없음
-    - `LeftClick`: 좌클릭만 허용
-    - `RightClick`: 우클릭만 허용
-    - `LeftOrRight`: 좌·우클릭 모두 허용
-  
-```mermaid
-classDiagram
-  direction LR
-
-  class UBaseGameplayAbility {
-    <<abstract>>
-    +ActivationType : EAbilityActivationType
-    +FollowUpInputType : EFollowUpInputType
-    +ProjectileClass : TSubclassOf<ABaseProjectile>
-    +PrepareAbility()* : void
-    +WaitAbility()* : void
-    +ExecuteAbility()* : void
-    +OnLeftClickInput() : bool
-    +OnRightClickInput() : bool
-    +SpawnProjectile() : bool
-  }
-
-  class USage_C_BarrierOrb {
-    +WaitAbility()
-    +OnLeftClickInput()
-    +OnRightClickInput()
-  }
-
-  class UPhoenix_C_Blaze {
-    +OnLeftClickInput()
-    +OnRightClickInput()
-  }
-
-  class UJett_C_Cloudburst {
-    +ExecuteAbility()
-  }
-
-  class USage_Q_SlowOrb {
-    +WaitAbility()
-    +OnLeftClickInput()
-  }
-
-  UBaseGameplayAbility <|-- USage_C_BarrierOrb
-  UBaseGameplayAbility <|-- UPhoenix_C_Blaze
-  UBaseGameplayAbility <|-- UJett_C_Cloudburst
-  UBaseGameplayAbility <|-- USage_Q_SlowOrb
-```
+- **3단계 상태 머신**: 모든 스킬은 `Preparing` → `Waiting` → `Executing`의 일관된 상태를 가지며, 각 상태에 맞는 애니메이션, 이펙트, 사운드가 자동으로 처리됩니다.
+- **활성화 타입 분리**: 스킬 키를 누르면 즉시 발동하는 `Instant` 타입과, 추가 입력을 기다리는 `WithPrepare` 타입을 분리하여 다양한 스킬을 효율적으로 구현했습니다.
+- **입력 하이재킹**: 스킬 준비 상태(`Waiting`)에서는 기존의 공격/조준 입력을 가로채, 스킬의 후속 동작(예: 좌클릭-직선 발사 / 우클릭-곡선 발사)으로 동적으로 재정의합니다.
 
 ---
 
-### 🧩 파생 어빌리티별 특징
-- **Sage – Barrier Orb (C)**
-    - `ActivationType = WithPrepare`
-    - `FollowUpInputType = LeftOrRight`
-    - `WaitAbility()`: 로컬 프리뷰 벽 생성/업데이트
-    - `OnRightClickInput()`: 프리뷰 회전
-    - `OnLeftClickInput()`: 서버 권위 설치 확정 → 어빌리티 종료
+### 2. 서버 권위 스파이크 시스템
+<img src="./Doc/Gifs/Spike_System.gif" width="400"/>
 
-- **Phoenix – Blaze (C)**
-    - `ActivationType = WithPrepare`
-    - `FollowUpInputType = LeftOrRight`
-    - `OnLeftClickInput()`: 서버 권위 직선 spline wall 확정 → 어빌리티 종료
-    - `OnRightClickInput()`: 서버 권위 곡선 spline wall 확정 → 어빌리티 종료
+> 게임의 승패를 결정하는 핵심 목표인 스파이크의 모든 로직을 서버 권위적으로 구현했습니다.
 
-- **Sage – Slow Orb (Q)**
-    - `ActivationType = WithPrepare`
-    - `FollowUpInputType = LeftClick`
-    - `WaitAbility()`: 프리뷰 오브 생성
-    - `OnLeftClickInput()`: 서버 권위 투척 확정 → 어빌리티 종료
-
-- **Jett – Cloudburst (C)**
-    - `ActivationType = Instant`
-    - `FollowUpInputType = None`
-    - `ExecuteAbility()`: 즉발형, 투사체 스폰만 수행
-
+- **상태 머신**: `소지`, `설치 중`, `설치 완료`, `해체 중`, `폭발` 등 모든 상태를 서버에서 직접 관리하여 데이터 정합성을 보장합니다.
+- **반 해체 (Half-Defuse)**: 해체 진행률이 50%를 넘으면 체크포인트가 저장되어, 잠시 중단했다가 다시 해체할 때 이어서 진행할 수 있습니다.
+- **상황인지 기반 상호작용**: 플레이어는 단일 상호작용 키(`F`)만으로 상황에 따라 스파이크 `줍기`, `설치`, `해체`가 자동으로 분기 처리되는 편리한 UX를 경험합니다.
 
 ---
 
-## 🔄 Ability 활성화 흐름
+### 3. 정교한 섬광(Flash) 시스템
+<img src="./Doc/Gifs/Flash_System.gif" width="400"/>
 
-```mermaid
-sequenceDiagram
-    autonumber
-    participant Input as Player Input
-    participant UIC as AgentInputComponent
-    participant ASC_C as AbilitySystemComponent(Client)
-    participant Ability_C as Ability(Client proxy)
-    participant ASC_S as AbilitySystemComponent(Server)
-    participant Ability_S as UBaseGameplayAbility(Server)
-    participant GS as MatchGameState
-    participant World as Projectile/Ground/FX
-    participant HUD as UI
+> 단순히 화면을 하얗게 만드는 것을 넘어, 플레이어의 대응을 유도하는 정교한 판정 시스템을 구현했습니다.
 
-%% 1) 입력 → 컴포넌트
-    Input->>UIC: C/Q/E 키 or LMB/RMB
-    UIC->>ASC_C: TryActivateAbilityByTag(Input.Skill.* / Left/Right)  %% C/Q/E, LMB/RMB 라우팅
+- **복합 판정 로직**: 폭발 지점과의 `거리`, 플레이어의 `시야각`, 그리고 중간 `장애물` 유무를 모두 계산하여 섬광 효과의 강도와 지속시간을 차등 적용합니다.
+- **복합 시각 효과**: 화면 전체를 덮는 `Post-Process` 효과와 함께, 폭발 방향을 알려주는 방사형 `UMG 위젯`을 결합하여 플레이어의 상황 인지를 돕습니다.
 
-%% 2) ASC 라우팅
-    alt Waiting 상태 보유(후속입력 전달)
-        ASC_C->>ASC_S: ServerRPC_SendGameplayEvent(EventTag)
-        ASC_C->>Ability_S: HandleGameplayEvent(EventTag)
-    else 일반 활성화
-        ASC_C->>ASC_S: TryActivateAbilitiesByTag(Input.Skill.*)
-        ASC_S->>Ability_S: ActivateAbility()
-    end
-
-%% 3) Ability 활성화 타입 분기
-    alt ActivationType = Instant
-        Ability_S->>Ability_S: StartExecutePhase()
-    else ActivationType = WithPrepare
-        Ability_S->>Ability_S: StartPreparePhase()
-        Ability_S-->>HUD: OnWaitAbility(SlotTag, FollowUpType)
-        Ability_S->>Ability_S: StartWaitingPhase()  %% 프리뷰/로컬 SFX
-    end
-
-%% 4) 대기 단계의 후속입력
-    par WaitGameplayEvent(Left)
-        ASC_C-->>Ability_S: GameplayEvent(LeftClick)
-    and WaitGameplayEvent(Right)
-        ASC_C-->>Ability_S: GameplayEvent(RightClick)
-    end
-    Ability_S->>Ability_S: OnFollowUpEventReceived() → OnLeft/RightClickInput()
-    alt 입력 유효(true)
-        Ability_S->>Ability_S: StartExecutePhase(InputType)
-    else 입력 무효/타임아웃
-        Ability_S->>Ability_S: CancelAbility()
-    end
-
-%% 5) 실행 단계(서버 권위)
-    Ability_S->>GS: ReduceAbilityStack() (Buy/PreRound 제외)
-    Ability_S->>World: Spawn / Replicate (Projectile/Ground) + Execute FX/SFX
-    Ability_S-->>ASC_C: MulticastRPC_OnAbilityExecuted()
-
-%% 6) 몽타주/완료 정리
-    Ability_S->>Ability_S: PlayMontage(1P/3P by InputType)
-    Ability_S->>Ability_S: CompleteAbility() → PerformFinalCleanup()
-    Ability_S->>UIC: 무기 상태 복귀
-
-```
-### 구현 포인트 요약
-- **입력 라우팅**: `AgentInputComponent`가 C/Q/E/LMB/RMB 입력을 **ASC로 태그 기반 전달**
-- **Waiting 중 입력 처리**: ASC는 **Waiting 상태면** 활성 어빌리티로 **GameplayEvent**를 보냄
-- **Activation Type 분기**: BaseAbility가 `ActivationType`에 따라 **즉발** 또는 **준비→대기**로 전환
-- **Waiting State 처리**: `OnWaitAbility()` 브로드캐스트로 **HUD 안내**, 좌/우클릭 이벤트 대기
-- **후속 입력 수신**: 태그에 따라 `OnLeftClickInput/OnRightClickInput` 호출 → 실행
-- **Executing(서버 권위)**: 스킬 스택 차감, VFX/SFX 멀티캐스트, 투사체/그라운드 스폰 후 복제
-- **정리/복귀**: 몽타주 완료 → `CompleteAbility()` → 무기 상태 복귀
-
-
-**사운드 재생 원칙:**
-- **준비 단계(Preparing)** — 시전자 전용(2D) 사운드로 피드백
-- **실행 단계(Executing)** — Multicast 사운드로 모든 플레이어에게 사용 알림
 ---
 
-## 설치 & 실행
-1) **요구사항**: UE 5.5, Visual Studio 2022(C++), (멀티 테스트 시) Steam 실행
-2) **빌드**: `Valorant.uproject` → *Generate Visual Studio project files* → `Valorant.sln` 열기 →  
-   구성 `Development Editor`로 `Valorant` 빌드
-3) **실행**: 에디터에서 `Lobby` 또는 `Game` 맵 열기 → **Play**
-  - Net Mode: *Listen Server / Client* 또는 Standalone 다중 인스턴스
+### 4. 안전한 상점 및 경제 시스템
+<img src="./Doc/Gifs/Shop_Credit_System.gif" width="400"/>
 
+> 라운드 기반의 전략성을 더하는 상점과 경제 시스템을 치팅에 안전한 구조로 설계했습니다.
 
-## 주요 조작키
+- **서버 검증 구매**: 모든 구매 요청은 서버에서 플레이어의 크레딧을 직접 확인하고 처리하여, 클라이언트 변조를 통한 부당 구매를 원천적으로 차단합니다.
+- **자동 환불 규칙**: 플레이어가 동일 카테고리의 다른 무기를 구매할 경우, 이전에 구매했던 미사용 무기의 가격을 자동으로 계산하여 환불해주는 편의 기능을 구현했습니다.
+- **라운드 기반 보상**: 라운드 승패, 연속 패배, 킬, 스파이크 설치 등 다양한 조건에 따라 크레딧을 차등 지급하는 경제 규칙을 구현했습니다.
+
+---
+
+## 📖 상세 기술 위키 (Technical Wiki)
+
+> 본 프로젝트의 상세한 아키텍처, 전체 시스템 설계, 각 클래스의 역할, 핵심 코드 분석, 그리고 프로젝트 회고에 대한 내용은 아래 기술 위키에서 확인하실 수 있습니다.
+> 
+> ### **➡️ [프로젝트 기술 위키 바로가기 (Click here for the Project's Technical Wiki)](https://github.com/chungheonLee0325/VALORANT/wiki)**
+
+---
+
+## ⌨️ 주요 조작키
 * **이동:** W, A, S, D
 * **시점 조작:** 마우스 이동
 * **기본 공격 / 스킬 발동:** 마우스 좌클릭
@@ -246,10 +103,9 @@ sequenceDiagram
 
 ---
 
-## 🔗 대표 코드 링크
-- [BaseGameplayAbility.h](UnrealEngine/Valorant/Source/Valorant/AbilitySystem/Abilities/BaseGameplayAbility.h)
-- [Phoenix_C_BlazeSplineWall.cpp](UnrealEngine/Valorant/Source/Valorant/AbilitySystem/Abilities/Phoenix/Phoenix_C_BlazeSplineWall.cpp)
-- [Sage_C_BarrierOrb.cpp](UnrealEngine/Valorant/Source/Valorant/AbilitySystem/Abilities/Sage/Sage_C_BarrierOrb.cpp)
-- [FlashComponent.cpp](UnrealEngine/Valorant/Source/Valorant/Player/Component/FlashComponent.cpp)
-- [Spike.cpp](UnrealEngine/Valorant/Source/ValorantObject/Spike/Spike.cpp)
-- [ShopComponent.cpp](UnrealEngine/Valorant/Source/Valorant/Player/Component/ShopComponent.cpp)
+## 🛠️ 설치 & 실행
+1) **요구사항**: UE 5.5, Visual Studio 2022(C++), (멀티 테스트 시) Steam 실행
+2) **빌드**: `Valorant.uproject` → *Generate Visual Studio project files* → `Valorant.sln` 열기 →  
+   구성 `Development Editor`로 `Valorant` 빌드
+3) **실행**: 에디터에서 `Lobby` 또는 `Game` 맵 열기 → **Play**
+  - Net Mode: *Listen Server / Client* 또는 Standalone 다중 인스턴스
