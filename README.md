@@ -1,3 +1,5 @@
+
+https://github.com/user-attachments/assets/73092605-2f6e-4b4e-89be-ea723ebfd2e2
 # VALORANT - Multiplay Hypher FPS 게임 (UE, Multiplayer, GAS)
 
 ## 🎯 프로젝트 요약
@@ -44,7 +46,8 @@ Phoenix, Sage, KAY/O, Jett — 4명의 Agent × C/Q/E 총 12종 스킬을 멀티
 ---
 
 ### 2. 서버 권위 스파이크 시스템
-<img src="./Doc/Gifs/Spike_System.gif" width="400"/>
+
+https://github.com/user-attachments/assets/360060ed-4a26-43bf-b9f8-7558dcd7411b
 
 > 게임의 승패를 결정하는 핵심 목표인 스파이크의 모든 로직을 서버 권위적으로 구현했습니다.
 
@@ -65,7 +68,8 @@ Phoenix, Sage, KAY/O, Jett — 4명의 Agent × C/Q/E 총 12종 스킬을 멀티
 ---
 
 ### 4. 안전한 상점 및 경제 시스템
-<img src="./Doc/Gifs/Shop_Credit_System.gif" width="400"/>
+
+https://github.com/user-attachments/assets/c4ddd177-9b8b-4776-bab3-dbbabbb3c2f8
 
 > 라운드 기반의 전략성을 더하는 상점과 경제 시스템을 치팅에 안전한 구조로 설계했습니다.
 
