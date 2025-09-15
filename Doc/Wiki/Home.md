@@ -9,7 +9,7 @@
 ### 1. Gameplay Ability System
 > 캐릭터의 스킬과 상호작용의 근간이 되는 Gameplay Ability System(GAS) 아키텍처와 구현을 다룹니다.
 > 
-> *GAS의 기본 개념이 익숙하지 않다면, 먼저 [GAS 기본 개념 정리 (GAS Fundamentals)](../Ref/GAS-Fundamentals.md) 문서를 읽어보시는 것을 권장합니다.*
+> *GAS의 기본 개념이 익숙하지 않다면, 먼저 [GAS 기본 개념 정리 (GAS Fundamentals)](./Ref/GAS-Fundamentals.md) 문서를 읽어보시는 것을 권장합니다.*
 *   [**1.1. GAS 선정 이유**](./1.1_Why-I-Chose-GAS.md) - 프로젝트에 GAS를 도입한 이유에 대해 설명합니다.
 *   [**1.2. GAS 아키텍처**](./1.2_Project-GAS-Architecture.md) - 이 프로젝트에서 GAS를 어떻게 확장하고 활용했는지 설명합니다.
 *   [**1.3. 어빌리티 상세 구현과 흐름**](./1.3_Skill-Implementation.md) - `UBaseGameplayAbility`의 상태 머신과 활성화 흐름을 분석합니다.
