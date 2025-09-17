@@ -33,7 +33,7 @@ Phoenix, Sage, KAY/O, Jett — 4명의 Agent × C/Q/E 총 12종 스킬을 멀티
 ## ✨ 구현된 핵심 시스템 (Implemented Core Systems)
 
 ### 1. Gameplay Ability System (GAS) 기반 스킬 프레임워크
-<img src="./Doc/Gifs/GAS_Ability.gif" width="400"/>
+
 
 > 모든 스킬의 기반이 되는 확장 가능한 프레임워크를 설계했습니다.
 
@@ -56,7 +56,7 @@ https://github.com/user-attachments/assets/360060ed-4a26-43bf-b9f8-7558dcd7411b
 ---
 
 ### 3. 정교한 섬광(Flash) 시스템
-<img src="./Doc/Gifs/Flash_System.gif" width="400"/>
+
 
 > 단순히 화면을 하얗게 만드는 것을 넘어, 플레이어의 대응을 유도하는 정교한 판정 시스템을 구현했습니다.
 
