@@ -16,6 +16,8 @@ class UBaseAttributeSet;
 class UAgentAbilitySystemComponent;
 class UMatchMapHUD;
 class UMiniMapWidget;
+class UShopLayer;
+class UShopViewModel;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_SixParams(FOnDamaged_PC, const FVector&, HitOrg, const EAgentDamagedPart, DamagedPart, const EAgentDamagedDirection, DamagedDirection, const bool, bDie, const bool, bLarge, const bool, bLowState);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnKillEvent_PC, ABaseAgent*, InstigatorAgent, ABaseAgent*, VictimAgent, const FKillFeedInfo&, Info);
@@ -25,6 +27,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnMaxHealthChanged_PC, float, newMa
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnArmorChanged_PC, float, newArmor);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnEffectSpeedChanged_PC, float, newSpeed);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_FourParams(FOnServerPurchaseResult, bool, bSuccess, int32, ItemID, EShopItemType, ItemType, const FString&, FailureReason);
+DECLARE_MULTICAST_DELEGATE_FiveParams(FOnShopPurchaseResponse, uint32, bool, int32, EShopItemType, const FString&);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnChangedAmmo, bool, bDisplayWidget, int, MagazineAmmo, int, SpareAmmo);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnSpikeOwnChanged_PC, const bool, bHighState);
 
@@ -58,6 +61,15 @@ public:
 
 	UPROPERTY(BlueprintAssignable, Category = "Shop")
 	FOnServerPurchaseResult OnServerPurchaseResult;
+	FOnShopPurchaseResponse OnShopPurchaseResponse;
+
+	uint32 AllocateShopRequestID();
+
+	UFUNCTION(Server, Reliable)
+	void Server_RequestShopPurchase(int32 ItemID, EShopItemType ItemType, uint32 RequestID);
+
+	UFUNCTION(Client, Reliable)
+	void Client_ReceiveShopPurchase(uint32 RequestID, bool bSuccess, int32 ItemID, EShopItemType ItemType, const FString& FailureReason);
 	
 	UPROPERTY(BlueprintAssignable)
 	FOnChangedAmmo OnChangedAmmo;
@@ -79,7 +91,7 @@ public:
 	void RequestPurchaseWeapon(int32 WeaponID);
 
 	// 서버에서 실행될 무기 구매 함수
-	UFUNCTION(Server, Reliable, WithValidation)
+	UFUNCTION(Server, Reliable)
 	void Server_RequestPurchaseWeapon(int32 WeaponID);
 
 	// 클라이언트에서 호출 -> 서버로 스킬 구매 요청
@@ -87,7 +99,7 @@ public:
 	void RequestPurchaseAbility(int AbilityID);
 
 	// 서버에서 실행될 실제 구매 요청 함수 (위 함수 내부에서 호출)
-	UFUNCTION(Server, Reliable, WithValidation)
+	UFUNCTION(Server, Reliable)
 	void Server_RequestPurchaseAbility(int AbilityID);
 
 	// 방어구 구매 요청
@@ -95,7 +107,7 @@ public:
 	void RequestPurchaseArmor(int32 ArmorLevel);
 
 	// 서버에서 실행될 방어구 구매 함수 
-	UFUNCTION(Server, Reliable, WithValidation)
+	UFUNCTION(Server, Reliable)
 	void Server_RequestPurchaseArmor(int32 ArmorID);
 
 	UFUNCTION(Client, Reliable)
@@ -113,8 +125,8 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "UI")
 	TSubclassOf<class UMatchMapShopUI> ShopUIClass;
 
-	UPROPERTY(BlueprintReadOnly, Category = "UI")
-	class UMatchMapShopUI* ShopUI;
+	bool IsShopOpen() const;
+	void RestoreShopGameplayInput();
 
 	// 상점 UI 열기
 	UFUNCTION(BlueprintCallable, Category = "UI")
@@ -123,10 +135,6 @@ public:
 	// 상점 UI 닫기
 	UFUNCTION(BlueprintCallable, Category = "UI")
 	void CloseShopUI();
-
-	// 상점 가용성 변경 이벤트 핸들러
-	UFUNCTION()
-	void OnShopAvailabilityChanged();
 
 	UFUNCTION(Client, Reliable)
 	void Client_ReceivePurchaseResult(bool bSuccess, int32 ItemID, EShopItemType ItemType, const FString& FailureReason);
@@ -157,6 +165,9 @@ protected:
 	virtual void OnPossess(APawn* InPawn) override;
 	virtual void OnRep_PlayerState() override;
 	virtual void BeginPlay() override;
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+	virtual void SetupInputComponent() override;
+	virtual void OnUnPossess() override;
 	
 	UFUNCTION()
 	void InitGAS();
@@ -216,4 +227,14 @@ public:
 
 	UFUNCTION()
 	void OnSpikeOwnChanged(const bool bOwnSpike);
+
+private:
+	void UnbindCachedAttributes();
+	uint32 LastShopRequestID = 0;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UShopLayer> ShopLayer;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UShopViewModel> ShopViewModel;
 };

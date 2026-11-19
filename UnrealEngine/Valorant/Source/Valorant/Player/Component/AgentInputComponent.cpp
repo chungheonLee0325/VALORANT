@@ -64,7 +64,6 @@ void UAgentInputComponent::BindInput(UInputComponent* InputComponent)
 		if (RightMouseAction)
 		{
 			eic->BindAction(RightMouseAction, ETriggerEvent::Started, this, &UAgentInputComponent::StartRightClick);
-			eic->BindAction(RightMouseAction, ETriggerEvent::Completed, this, &UAgentInputComponent::EndRightClick);
 		}
 		
 		if (MoveAction)
@@ -76,7 +75,7 @@ void UAgentInputComponent::BindInput(UInputComponent* InputComponent)
 		if (JumpAction)
 		{
 			eic->BindAction(JumpAction, ETriggerEvent::Started, this, &UAgentInputComponent::JumpStart);
-			eic->BindAction(JumpAction, ETriggerEvent::Started, this, &UAgentInputComponent::JumpComplete);
+			eic->BindAction(JumpAction, ETriggerEvent::Completed, this, &UAgentInputComponent::JumpComplete);
 		}
 
 		if (ShiftAction)
@@ -137,9 +136,29 @@ void UAgentInputComponent::BindInput(UInputComponent* InputComponent)
 	}
 }
 
+bool UAgentInputComponent::IsShopInputSuppressed() const
+{
+	const auto* controller = Agent ? Agent->GetController<AAgentPlayerController>() : nullptr;
+	return controller && controller->IsShopOpen();
+}
+
+void UAgentInputComponent::ReleaseGameplayInput()
+{
+	if (!IsValid(Agent) || Agent->IsDead())
+	{
+		return;
+	}
+	Agent->EndFire();
+	Agent->StopJumping();
+	Agent->UnCrouch();
+	Agent->SetIsRun(true);
+	Agent->ConsumeMovementInputVector();
+	Agent->CancelSpike(nullptr);
+}
+
 void UAgentInputComponent::OnMove(const FInputActionValue& value)
 {
-	if (Agent->CanMove())
+	if (Agent && Agent->CanMove() && !IsShopInputSuppressed())
 	{
 		const FVector2D& moveVector = value.Get<FVector2D>();
 		Agent->AddMovementInput(Agent->GetActorForwardVector(), moveVector.Y);
@@ -149,7 +168,7 @@ void UAgentInputComponent::OnMove(const FInputActionValue& value)
 
 void UAgentInputComponent::OnLook(const FInputActionValue& value)
 {
-	if (Agent)
+	if (Agent && !IsShopInputSuppressed())
 	{
 		const FVector2D& lookVector = value.Get<FVector2D>();
 		Agent->AddControllerYawInput(lookVector.X);
@@ -159,16 +178,7 @@ void UAgentInputComponent::OnLook(const FInputActionValue& value)
 
 void UAgentInputComponent::StartFire(const FInputActionValue& InputActionValue)
 {
-	// 상점 UI가 열려있으면 무시
-	if (const auto* PC = GetWorld()->GetFirstPlayerController<AAgentPlayerController>())
-	{
-		if (PC->ShopUI)
-		{
-			return;
-		}
-	}
-	
-	if (Agent->IsDead())
+	if (!Agent || Agent->IsDead() || IsShopInputSuppressed())
 	{
 		return;
 	}
@@ -190,15 +200,7 @@ void UAgentInputComponent::StartFire(const FInputActionValue& InputActionValue)
 
 void UAgentInputComponent::EndFire(const FInputActionValue& InputActionValue)
 {
-	if (const auto* PC = GetWorld()->GetFirstPlayerController<AAgentPlayerController>())
-	{
-		if (PC->ShopUI)
-		{
-			return;
-		}
-	}
-	
-	if (!Agent->IsDead())
+	if (Agent && !Agent->IsDead())
 	{
 		Agent->EndFire();
 	}
@@ -206,16 +208,7 @@ void UAgentInputComponent::EndFire(const FInputActionValue& InputActionValue)
 
 void UAgentInputComponent::StartRightClick(const FInputActionValue& InputActionValue)
 {
-	// 상점 UI가 열려있으면 무시
-	if (const auto* PC = GetWorld()->GetFirstPlayerController<AAgentPlayerController>())
-	{
-		if (PC->ShopUI)
-		{
-			return;
-		}
-	}
-	
-	if (Agent->IsDead())
+	if (!Agent || Agent->IsDead() || IsShopInputSuppressed())
 	{
 		return;
 	}
@@ -234,26 +227,9 @@ void UAgentInputComponent::StartRightClick(const FInputActionValue& InputActionV
 	}
 }
 
-void UAgentInputComponent::EndRightClick(const FInputActionValue& InputActionValue)
-{
-	if (const auto* PC = GetWorld()->GetFirstPlayerController<AAgentPlayerController>())
-	{
-		if (PC->ShopUI)
-		{
-			return;
-		}
-	}
-	
-	if (!Agent->IsDead())
-	{
-		// Agent에 우클릭 종료 처리 함수가 있다면 호출
-		// 예: Agent->EndAiming();
-	}
-}
-
 void UAgentInputComponent::JumpStart(const FInputActionValue& InputActionValue)
 {
-	if (!Agent->IsDead())
+	if (Agent && !Agent->IsDead() && !IsShopInputSuppressed())
 	{
 		if (Agent->bIsCrouched)
 		{
@@ -266,15 +242,15 @@ void UAgentInputComponent::JumpStart(const FInputActionValue& InputActionValue)
 
 void UAgentInputComponent::JumpComplete(const FInputActionValue& InputActionValue)
 {
-	// if (Agent)
-	// {
-	// 	Agent->StopJumping();
-	// }
+	if (Agent)
+	{
+		Agent->StopJumping();
+	}
 }
 
 void UAgentInputComponent::CrouchStart(const FInputActionValue& InputActionValue)
 {
-	if (!Agent->IsDead())
+	if (Agent && !Agent->IsDead() && !IsShopInputSuppressed())
 	{
 		Agent->Crouch();
 	}
@@ -282,7 +258,7 @@ void UAgentInputComponent::CrouchStart(const FInputActionValue& InputActionValue
 
 void UAgentInputComponent::CrouchComplete(const FInputActionValue& InputActionValue)
 {
-	if (!Agent->IsDead())
+	if (Agent && !Agent->IsDead())
 	{
 		Agent->UnCrouch();
 	}
@@ -290,7 +266,7 @@ void UAgentInputComponent::CrouchComplete(const FInputActionValue& InputActionVa
 
 void UAgentInputComponent::WalkStart(const FInputActionValue& InputActionValue)
 {
-	if (!Agent->IsDead())
+	if (Agent && !Agent->IsDead() && !IsShopInputSuppressed())
 	{
 		Agent->SetIsRun(false);
 	}
@@ -306,7 +282,7 @@ void UAgentInputComponent::WalkComplete(const FInputActionValue& InputActionValu
 
 void UAgentInputComponent::Drop(const FInputActionValue& InputActionValue)
 {
-	if (Agent)
+	if (Agent && !IsShopInputSuppressed())
 	{
 		Agent->ServerRPC_DropCurrentInteractor();
 	}
@@ -314,7 +290,7 @@ void UAgentInputComponent::Drop(const FInputActionValue& InputActionValue)
 
 void UAgentInputComponent::Interact(const FInputActionValue& InputActionValue)
 {
-	if (!Agent->IsDead())
+	if (Agent && !Agent->IsDead() && !IsShopInputSuppressed())
 	{
 		Agent->Interact();
 	}
@@ -327,7 +303,7 @@ void UAgentInputComponent::WeaponChange(const FInputActionValue& value)
 
 void UAgentInputComponent::Weapon1(const FInputActionValue& InputActionValue)
 {
-	if (!Agent->IsDead())
+	if (Agent && !Agent->IsDead() && !IsShopInputSuppressed())
 	{
 		Agent->SwitchEquipment(EInteractorType::MainWeapon);
 	}
@@ -335,7 +311,7 @@ void UAgentInputComponent::Weapon1(const FInputActionValue& InputActionValue)
 
 void UAgentInputComponent::Weapon2(const FInputActionValue& InputActionValue)
 {
-	if (!Agent->IsDead())
+	if (Agent && !Agent->IsDead() && !IsShopInputSuppressed())
 	{
 		Agent->SwitchEquipment(EInteractorType::SubWeapon);
 	}
@@ -343,7 +319,7 @@ void UAgentInputComponent::Weapon2(const FInputActionValue& InputActionValue)
 
 void UAgentInputComponent::Weapon3(const FInputActionValue& InputActionValue)
 {
-	if (!Agent->IsDead())
+	if (Agent && !Agent->IsDead() && !IsShopInputSuppressed())
 	{
 		Agent->SwitchEquipment(EInteractorType::Melee);
 	}
@@ -351,7 +327,7 @@ void UAgentInputComponent::Weapon3(const FInputActionValue& InputActionValue)
 
 void UAgentInputComponent::Weapon4(const FInputActionValue& InputActionValue)
 {
-	if (!Agent->IsDead())
+	if (Agent && !Agent->IsDead() && !IsShopInputSuppressed())
 	{
 		Agent->ActivateSpike();
 	}
@@ -367,7 +343,7 @@ void UAgentInputComponent::Weapon4Released(const FInputActionValue& InputActionV
 
 void UAgentInputComponent::StartReload(const FInputActionValue& InputActionValue)
 {
-	if (!Agent->IsDead())
+	if (Agent && !Agent->IsDead() && !IsShopInputSuppressed())
 	{
 		Agent->Reload();
 	}
@@ -383,20 +359,36 @@ void UAgentInputComponent::ShopUI(const FInputActionValue& InputActionValue)
 
 void UAgentInputComponent::AbilityCInput(const FInputActionValue& InputActionValue)
 {
-	Agent->GetASC()->TryActivateAbilityByTag(FGameplayTag::RequestGameplayTag(FName("Input.Skill.C")));
+	if (auto* abilitySystem = Agent ? Agent->GetASC() : nullptr;
+		abilitySystem && !Agent->IsDead() && !IsShopInputSuppressed())
+	{
+		abilitySystem->TryActivateAbilityByTag(FGameplayTag::RequestGameplayTag(FName("Input.Skill.C")));
+	}
 }
 
 void UAgentInputComponent::AbilityQInput(const FInputActionValue& InputActionValue)
 {
-	Agent->GetASC()->TryActivateAbilityByTag(FGameplayTag::RequestGameplayTag(FName("Input.Skill.Q")));
+	if (auto* abilitySystem = Agent ? Agent->GetASC() : nullptr;
+		abilitySystem && !Agent->IsDead() && !IsShopInputSuppressed())
+	{
+		abilitySystem->TryActivateAbilityByTag(FGameplayTag::RequestGameplayTag(FName("Input.Skill.Q")));
+	}
 }
 
 void UAgentInputComponent::AbilityEInput(const FInputActionValue& InputActionValue)
 {
-	Agent->GetASC()->TryActivateAbilityByTag(FGameplayTag::RequestGameplayTag(FName("Input.Skill.E")));
+	if (auto* abilitySystem = Agent ? Agent->GetASC() : nullptr;
+		abilitySystem && !Agent->IsDead() && !IsShopInputSuppressed())
+	{
+		abilitySystem->TryActivateAbilityByTag(FGameplayTag::RequestGameplayTag(FName("Input.Skill.E")));
+	}
 }
 
 void UAgentInputComponent::AbilityXInput(const FInputActionValue& InputActionValue)
 {
-	Agent->GetASC()->TryActivateAbilityByTag(FGameplayTag::RequestGameplayTag(FName("Input.Skill.X")));
+	if (auto* abilitySystem = Agent ? Agent->GetASC() : nullptr;
+		abilitySystem && !Agent->IsDead() && !IsShopInputSuppressed())
+	{
+		abilitySystem->TryActivateAbilityByTag(FGameplayTag::RequestGameplayTag(FName("Input.Skill.X")));
+	}
 }

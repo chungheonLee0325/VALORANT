@@ -10,10 +10,10 @@ enum class ERoundSubState : uint8;
 struct FKillFeedInfo;
 class ABaseAgent;
 class AAgentPlayerState;
+class AMatchGameState;
 class UCanvasPanel;
 class UImage;
 class UTextBlock;
-class UValorantGameInstance;
 /**
  * 
  */
@@ -22,16 +22,9 @@ class VALORANT_API UMatchMapHudTopWidget : public UUserWidget
 {
 	GENERATED_BODY()
 
-protected:
-	UPROPERTY()
-	TObjectPtr<UValorantGameInstance> GameInstance = nullptr;
-	
-	virtual void NativeConstruct() override;
-	
-	// 라운드 시작 3초전 카운트다운 음향을 위한 변수
-	bool bIsPreRound = false;
-	
 public:
+	void BindMatchState(AMatchGameState* Match);
+
 	UPROPERTY(meta=(BindWidget))
 	TObjectPtr<UTextBlock> TextBlockTime = nullptr;
 	UPROPERTY(meta=(BindWidget))
@@ -59,4 +52,15 @@ public:
 	void MarkKillOnPlayerCard(const AAgentPlayerState* VictimPS);
 	UFUNCTION(BlueprintImplementableEvent)
 	void InitPlayerCard();
+
+protected:
+	virtual void NativeDestruct() override;
+
+private:
+	TWeakObjectPtr<AMatchGameState> BoundMatchState;
+	TOptional<ERoundSubState> LastPhase;
+	int32 LastDisplayedSecond = INDEX_NONE;
+
+	UPROPERTY(EditDefaultsOnly, Category = "HUD|Style")
+	FLinearColor BuyClockColor = FLinearColor(0.62f, 0.90f, 0.91f);
 };

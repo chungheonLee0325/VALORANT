@@ -33,6 +33,13 @@ class VALORANT_API AAgentPlayerState : public AMatchPlayerState, public IAbility
 public:
 	AAgentPlayerState();
 
+	FSimpleMulticastDelegate OnAgentIdChanged;
+	FSimpleMulticastDelegate OnShopArmorTierChanged;
+
+	uint8 GetShopArmorTier() const { return ShopArmorTier; }
+	void SetShopArmorTier(uint8 Tier);
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
 	UFUNCTION(BlueprintCallable)
 	UAgentAbilitySystemComponent* GetAbilitySystemComponent() const;
 	
@@ -143,6 +150,12 @@ protected:
 	int32 m_AgentID = 0;
 	
 private:
+	UPROPERTY(ReplicatedUsing = OnRep_ShopArmorTier)
+	uint8 ShopArmorTier = 0;
+
+	UFUNCTION()
+	void OnRep_ShopArmorTier();
+
 	// AbilityID, Stack
 	UPROPERTY(EditDefaultsOnly)
 	TMap<int32, int32> AbilityStacks; 

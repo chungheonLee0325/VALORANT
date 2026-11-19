@@ -8,11 +8,14 @@
 #include "MatchMapShopUI.generated.h"
 
 class AAgentPlayerController;
+class AAgentPlayerState;
 class UTextBlock;
 class UImage;
+class UButton;
 
 // 구매 결과 이벤트 선언
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnPurchaseResult, bool, bSuccess, int32, ItemID, EShopItemType, ItemType);
+DECLARE_DELEGATE_TwoParams(FOnShopItemRequested, EShopItemType, int32);
 
 UENUM(BlueprintType)
 enum class EAbilityVisualState : uint8
@@ -56,6 +59,13 @@ class VALORANT_API UMatchMapShopUI : public UUserWidget
 	GENERATED_BODY()
 
 public:
+	FOnShopItemRequested OnItemRequested;
+	void SetPresentationOwner(AAgentPlayerController* Controller);
+	TArray<TObjectPtr<UButton>> GetPurchaseButtons(EShopItemType Type) const;
+	void ApplyPurchaseOutcome(bool bSuccess, int32 ItemID, EShopItemType ItemType, const FString& FailureReason);
+	void ShowUnavailable();
+	void ClearPresentationTimers();
+
 	// UI 초기화 함수 - 컨트롤러 설정
 	UFUNCTION(BlueprintCallable)
 	void InitializeShopUI(AAgentPlayerController* Controller);
@@ -91,7 +101,7 @@ public:
 	void OnClickedBuyShiledButton(const int ShieldId);
 
 	// 무기 목록 갱신 및 보유 중인 무기 하이라이트
-	UFUNCTION(Client, Reliable)
+	UFUNCTION(BlueprintCallable)
 	void Client_UpdateWeaponHighlight();
 	
 	UFUNCTION(BlueprintCallable)
@@ -155,6 +165,54 @@ public:
 	UFUNCTION(BlueprintImplementableEvent, Category = "Shop|Ability")
 	void UpdateAbilityStackVisual(EAbilitySlotType SlotType, int32 CurrentStack, int32 MaxStack, EAbilityVisualState VisualState);
 protected:
+	// Authored shop buttons. The Blueprint click graph provides the item ID.
+	UPROPERTY(BlueprintReadOnly, Category = "Shop|UI", meta = (BindWidgetOptional))
+	TObjectPtr<UButton> ButtonClassic;
+	UPROPERTY(BlueprintReadOnly, Category = "Shop|UI", meta = (BindWidgetOptional))
+	TObjectPtr<UButton> ButtonShorty;
+	UPROPERTY(BlueprintReadOnly, Category = "Shop|UI", meta = (BindWidgetOptional))
+	TObjectPtr<UButton> ButtonFrenzy;
+	UPROPERTY(BlueprintReadOnly, Category = "Shop|UI", meta = (BindWidgetOptional))
+	TObjectPtr<UButton> ButtonGhost;
+	UPROPERTY(BlueprintReadOnly, Category = "Shop|UI", meta = (BindWidgetOptional))
+	TObjectPtr<UButton> ButtonSheriff;
+	UPROPERTY(BlueprintReadOnly, Category = "Shop|UI", meta = (BindWidgetOptional))
+	TObjectPtr<UButton> ButtonStinger;
+	UPROPERTY(BlueprintReadOnly, Category = "Shop|UI", meta = (BindWidgetOptional))
+	TObjectPtr<UButton> ButtonSpectre;
+	UPROPERTY(BlueprintReadOnly, Category = "Shop|UI", meta = (BindWidgetOptional))
+	TObjectPtr<UButton> ButtonBucky;
+	UPROPERTY(BlueprintReadOnly, Category = "Shop|UI", meta = (BindWidgetOptional))
+	TObjectPtr<UButton> ButtonJudge;
+	UPROPERTY(BlueprintReadOnly, Category = "Shop|UI", meta = (BindWidgetOptional))
+	TObjectPtr<UButton> ButtonBulldog;
+	UPROPERTY(BlueprintReadOnly, Category = "Shop|UI", meta = (BindWidgetOptional))
+	TObjectPtr<UButton> ButtonGuardian;
+	UPROPERTY(BlueprintReadOnly, Category = "Shop|UI", meta = (BindWidgetOptional))
+	TObjectPtr<UButton> ButtonPhantom;
+	UPROPERTY(BlueprintReadOnly, Category = "Shop|UI", meta = (BindWidgetOptional))
+	TObjectPtr<UButton> ButtonVendal;
+	UPROPERTY(BlueprintReadOnly, Category = "Shop|UI", meta = (BindWidgetOptional))
+	TObjectPtr<UButton> ButtonMarshal;
+	UPROPERTY(BlueprintReadOnly, Category = "Shop|UI", meta = (BindWidgetOptional))
+	TObjectPtr<UButton> ButtonOutlaw;
+	UPROPERTY(BlueprintReadOnly, Category = "Shop|UI", meta = (BindWidgetOptional))
+	TObjectPtr<UButton> ButtonOperator;
+	UPROPERTY(BlueprintReadOnly, Category = "Shop|UI", meta = (BindWidgetOptional))
+	TObjectPtr<UButton> ButtonAres;
+	UPROPERTY(BlueprintReadOnly, Category = "Shop|UI", meta = (BindWidgetOptional))
+	TObjectPtr<UButton> ButtonOdin;
+	UPROPERTY(BlueprintReadOnly, Category = "Shop|UI", meta = (BindWidgetOptional))
+	TObjectPtr<UButton> ButtonSkillC;
+	UPROPERTY(BlueprintReadOnly, Category = "Shop|UI", meta = (BindWidgetOptional))
+	TObjectPtr<UButton> ButtonSkillQ;
+	UPROPERTY(BlueprintReadOnly, Category = "Shop|UI", meta = (BindWidgetOptional))
+	TObjectPtr<UButton> ButtonSkillE;
+	UPROPERTY(BlueprintReadOnly, Category = "Shop|UI", meta = (BindWidgetOptional))
+	TObjectPtr<UButton> ButtonLightShiled;
+	UPROPERTY(BlueprintReadOnly, Category = "Shop|UI", meta = (BindWidgetOptional))
+	TObjectPtr<UButton> ButtonHeavyShiled;
+
 	// 컨트롤러 참조
 	UPROPERTY(BlueprintReadOnly, Category = "Shop")
 	AAgentPlayerController* OwnerController;
@@ -224,6 +282,7 @@ protected:
 
 	// 위젯 초기화 시 호출
 	virtual void NativeConstruct() override;
+	virtual void NativeDestruct() override;
 
 	// 보유 중인 무기 ID 배열
 	UPROPERTY(BlueprintReadOnly, Category = "Shop")
@@ -264,11 +323,18 @@ protected:
 	FColor PurchaseColor = FColor(0,255,156);
 
 private:
+	void RequestItemPurchase(EShopItemType Type, int32 ItemID);
+	void UnbindLegacySources();
+
+	TWeakObjectPtr<AAgentPlayerState> LegacyPlayerState;
+	TWeakObjectPtr<UShopComponent> LegacyShop;
+
 	UPROPERTY()
 	UValorantGameInstance* GameInstance;
 
 	// 텍스트 색상 변경을 위한 타이머 핸들
 	FTimerHandle CreditTextColorTimerHandle;
+	FTimerHandle WeaponHighlightTimerHandle;
 
 	
 	// 텍스트 원래 색상 캐싱

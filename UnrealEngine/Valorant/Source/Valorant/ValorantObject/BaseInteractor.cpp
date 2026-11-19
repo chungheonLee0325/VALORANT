@@ -56,7 +56,9 @@ void ABaseInteractor::OnRep_OwnerAgent()
 		// 	}
 		// }
 		Sphere->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-		auto* Agent = Cast<ABaseAgent>(GetWorld()->GetFirstPlayerController()->GetCharacter());
+		const auto* world = GetWorld();
+		const auto* controller = world ? world->GetFirstPlayerController() : nullptr;
+		auto* Agent = controller ? Cast<ABaseAgent>(controller->GetPawn()) : nullptr;
 		if (Agent && Agent->GetFindInteractorActor() == this)
 		{
 			Agent->ResetFindInteractorActor();
@@ -70,16 +72,16 @@ void ABaseInteractor::OnRep_OwnerAgent()
 		Mesh->SetOnlyOwnerSee(false);
 		// Mesh->SetRenderCustomDepth(false);
 		Sphere->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
-		if (ThirdPersonInteractor)
-		{
-			ThirdPersonInteractor->Destroy();
-		}
 	}
 }
 
 void ABaseInteractor::SetOwnerAgent(ABaseAgent* NewAgent)
 {
 	OwnerAgent = NewAgent;
+	if (!NewAgent)
+	{
+		DestroyThirdPersonInteractor();
+	}
 	OnRep_OwnerAgent();
 }
 
@@ -98,12 +100,23 @@ void ABaseInteractor::Tick(float DeltaTime)
 	Super::Tick(DeltaTime);
 }
 
-void ABaseInteractor::BeginDestroy()
+void ABaseInteractor::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
-	Super::BeginDestroy();
-	if (ThirdPersonInteractor)
+	DestroyThirdPersonInteractor();
+	Super::EndPlay(EndPlayReason);
+}
+
+void ABaseInteractor::DestroyThirdPersonInteractor()
+{
+	if (!HasAuthority())
 	{
-		ThirdPersonInteractor->Destroy();
+		return;
+	}
+	auto* visual = ThirdPersonInteractor.Get();
+	ThirdPersonInteractor = nullptr;
+	if (IsValid(visual) && !visual->IsActorBeingDestroyed())
+	{
+		visual->Destroy();
 	}
 }
 

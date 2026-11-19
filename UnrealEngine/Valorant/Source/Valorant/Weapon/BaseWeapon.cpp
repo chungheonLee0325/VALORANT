@@ -523,12 +523,6 @@ bool ABaseWeapon::ServerOnly_CanDrop() const
 
 void ABaseWeapon::ServerRPC_PickUp_Implementation(ABaseAgent* Agent)
 {
-	Super::ServerRPC_PickUp_Implementation(Agent);
-	if (Agent == nullptr)
-	{
-		NET_LOG(LogTemp, Error, TEXT("%hs Called, InteractAgent is nullptr"), __FUNCTION__);
-		return;
-	}
 	ServerOnly_AttachWeapon(Agent);
 }
 
@@ -555,32 +549,86 @@ void ABaseWeapon::ServerRPC_Interact_Implementation(ABaseAgent* InteractAgent)
 
 void ABaseWeapon::ServerOnly_AttachWeapon(ABaseAgent* Agent)
 {
-	if (nullptr == Agent)
+	if (IsValid(Agent))
 	{
-		NET_LOG(LogTemp, Error, TEXT("%hs Called, InteractAgent is nullptr"), __FUNCTION__);
-		return;
+		TryEquipWeapon(*Agent, false);
+	}
+}
+
+bool ABaseWeapon::TryEquipPurchasedWeapon(ABaseAgent& Agent)
+{
+	return TryEquipWeapon(Agent, true);
+}
+
+bool ABaseWeapon::TryEquipWeapon(ABaseAgent& Agent, bool bDiscardUnused)
+{
+	if (!HasAuthority() || Agent.IsDead() || HasOwnerAgent() || !ServerOnly_CanInteract()
+		|| !WeaponData || !Mesh || !Mesh->GetSkeletalMeshAsset())
+	{
+		return false;
 	}
 
+	const FTransform worldTransform = GetActorTransform();
+	USceneComponent* parent = Mesh->GetAttachParent();
+	const FName socket = Mesh->GetAttachSocketName();
+	const bool bWasSimulating = Mesh->IsSimulatingPhysics();
+	const ECollisionEnabled::Type collision = Mesh->GetCollisionEnabled();
+	Mesh->SetSimulatePhysics(false);
+	if (!AttachWeaponMeshes(Agent))
+	{
+		Mesh->DetachFromComponent(FDetachmentTransformRules::KeepWorldTransform);
+		if (parent)
+		{
+			Mesh->AttachToComponent(parent, FAttachmentTransformRules::KeepWorldTransform, socket);
+		}
+		SetActorTransform(worldTransform, false, nullptr, ETeleportType::TeleportPhysics);
+		Mesh->SetCollisionEnabled(collision);
+		Mesh->SetSimulatePhysics(bWasSimulating);
+		return false;
+	}
+
+	ABaseInteractor::ServerRPC_PickUp_Implementation(&Agent);
+	if (!IsValid(this) || GetOwnerAgent() != &Agent)
+	{
+		return false;
+	}
+	if (!IsValid(ThirdPersonInteractor) || !Agent.AcquireWeapon(*this, bDiscardUnused))
+	{
+		return false;
+	}
+	ThirdPersonInteractor->MulticastRPC_InitWeapon(this, WeaponID);
+	return true;
+}
+
+bool ABaseWeapon::AttachWeaponMeshes(ABaseAgent& Agent)
+{
+	if (!Mesh || !Agent.GetMesh1P() || !Agent.GetMesh())
+	{
+		return false;
+	}
 	FAttachmentTransformRules AttachmentRules(
 		EAttachmentRule::SnapToTarget,
 		EAttachmentRule::SnapToTarget,
 		EAttachmentRule::KeepRelative,
 		true
 		);
-	Mesh->AttachToComponent(Agent->GetMesh1P(), AttachmentRules, FName(TEXT("R_WeaponSocket")));
-	if (nullptr != ThirdPersonInteractor)
+	const FName socket(TEXT("R_WeaponSocket"));
+	if (!Mesh->AttachToComponent(Agent.GetMesh1P(), AttachmentRules, socket))
 	{
-		ThirdPersonInteractor->Destroy();
-		ThirdPersonInteractor = nullptr;
+		return false;
 	}
-	if ((ThirdPersonInteractor = GetWorld()->SpawnActor<AThirdPersonInteractor>()))
+	DestroyThirdPersonInteractor();
+	ThirdPersonInteractor = GetWorld()->SpawnActor<AThirdPersonInteractor>();
+	if (IsValid(ThirdPersonInteractor))
 	{
-		ThirdPersonInteractor->SetOwner(Agent);
-		ThirdPersonInteractor->MulticastRPC_InitWeapon(this, WeaponID);
-		ThirdPersonInteractor->AttachToComponent(Agent->GetMesh(), AttachmentRules, FName(TEXT("R_WeaponSocket")));
+		ThirdPersonInteractor->SetOwner(&Agent);
+		if (ThirdPersonInteractor->AttachToComponent(Agent.GetMesh(), AttachmentRules, socket))
+		{
+			return true;
+		}
 	}
-
-	Agent->AcquireInteractor(this);
+	DestroyThirdPersonInteractor();
+	return false;
 }
 
 void ABaseWeapon::NetMulti_ReloadWeaponData_Implementation(int32 NewWeaponID)
@@ -620,7 +668,7 @@ void ABaseWeapon::NetMulti_ReloadWeaponData_Implementation(int32 NewWeaponID)
 
 void ABaseWeapon::OnRep_Ammo() const
 {
-	if (OwnerAgent && OwnerAgent->IsLocallyControlled())
+	if (OwnerAgent && OwnerAgent->IsLocallyControlled() && OwnerAgent->GetCurrentInterator() == this)
 	{
 		if (const auto* Controller = OwnerAgent->GetController<AAgentPlayerController>())
 		{

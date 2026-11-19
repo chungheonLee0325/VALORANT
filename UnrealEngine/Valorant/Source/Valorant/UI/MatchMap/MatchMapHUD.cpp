@@ -4,6 +4,8 @@
 #include "MatchMapHUD.h"
 
 #include "MatchMapHudTopWidget.h"
+#include "AbilitySystem/AgentAbilitySystemComponent.h"
+#include "Components/PanelWidget.h"
 #include "Valorant.h"
 #include "AbilitySystem/Abilities/BaseGameplayAbility.h"
 #include "Components/CanvasPanel.h"
@@ -19,6 +21,10 @@
 #include "Player/AgentPlayerState.h"
 #include "GameManager/ValorantGameInstance.h"
 #include "Player/Agent/BaseAgent.h"
+
+DEFINE_LOG_CATEGORY_STATIC(LogMatchHUD, Log, All);
+
+#define LOCTEXT_NAMESPACE "MatchMapHUD"
 
 void UMatchMapHUD::SetTrueVo()
 {
@@ -36,57 +42,189 @@ void UMatchMapHUD::SetFalseVo()
 
 void UMatchMapHUD::NativeConstruct()
 {
-	Super::NativeConstruct();
-	
-	// 게임 인스턴스 가져오기
-	GameInstance = UValorantGameInstance::Get(GetWorld());
+    Super::NativeConstruct();
+    bHudConstructed = true;
 
-	auto* GameState = GetWorld()->GetGameState<AMatchGameState>();
-	GameState->OnRemainRoundStateTimeChanged.AddDynamic(this, &UMatchMapHUD::UpdateTime);
-	GameState->OnRoundSubStateChanged.AddDynamic(this, &UMatchMapHUD::OnRoundSubStateChanged);
-	GameState->OnRoundEnd.AddDynamic(this, &UMatchMapHUD::OnRoundEnd);
+    if (!CombatViewModel)
+    {
+        CombatViewModel = NewObject<UCombatHUDViewModel>(this);
+        AbilityBar = NewObject<UHUDAbilityBarModel>(this);
+    }
+    CacheAbilityWidgets();
 
-	AAgentPlayerController* pc = Cast<AAgentPlayerController>(GetOwningPlayer());
-	if (pc)
-	{
-		BindToDelegatePC(pc->GetCacehdASC(),pc);
-	}
-	else
-	{
-		UE_LOG(LogTemp, Error, TEXT("%s"), TEXT("MatchMap HUD, PC NULL"));
-		return;
-	}
+    AbilityBar->OnSlotChanged.RemoveAll(this);
+    AbilityBar->OnSlotChanged.AddUObject(this, &UMatchMapHUD::OnAbilitySlotChanged);
 
-	if (AAgentPlayerState* ps = pc->GetPlayerState<AAgentPlayerState>())
-	{
-		InitUI(ps);
-		
-		// 어빌리티 스택 변경 델리게이트 바인딩
-		ps->OnAbilityStackChanged.AddDynamic(this, &UMatchMapHUD::HandleAbilityStackChanged);
-		
-		// 서버에 스택 정보 요청
-		ps->Server_RequestAbilityStackSync();
-		
-		// 어빌리티 스택 초기화
-		InitializeAbilityStacks();
-		
-		// 어빌리티 데이터 로드 및 UI 업데이트
-		LoadAllAbilityData();
-		UpdateAbilityUI();
+    GetWorld()->GameStateSetEvent.RemoveAll(this);
+    GetWorld()->GameStateSetEvent.AddUObject(this, &UMatchMapHUD::BindMatchState);
+    BindMatchState(GetWorld()->GetGameState());
+    RefreshPlayerSources();
 
-		// 크레딧 정보 바인딩
-		ps->OnCreditChangedDelegate.AddDynamic(this, &UMatchMapHUD::UpdateCreditDisplay);
-	}
-	else
-	{
-		UE_LOG(LogTemp, Error, TEXT("%s"), TEXT("MatchMap HUD, PS NULL"));
-	}
+    CombatViewModel->RemoveAllFieldValueChangedDelegates(this);
+    CombatViewModel->GetFieldNotificationDescriptor().ForEachField(
+        CombatViewModel->GetClass(), [this](UE::FieldNotification::FFieldId field)
+        {
+            CombatViewModel->AddFieldValueChangedDelegate(
+                field, UCombatHUDViewModel::FFieldValueChangedDelegate::CreateUObject(this, &UMatchMapHUD::OnStatusFieldChanged));
+            return true;
+        });
+
+    RenderVitals();
+    RenderAmmo();
+    UpdateCreditDisplay(CombatViewModel->Credits);
+}
+
+void UMatchMapHUD::NativeDestruct()
+{
+    bHudConstructed = false;
+    if (auto* world = GetWorld())
+    {
+        world->GameStateSetEvent.RemoveAll(this);
+        world->GetTimerManager().ClearTimer(AnnouncementTimerHandle);
+        CancelLatentActions();
+    }
+    HideAnnouncement();
+    HideFollowUpInputUI();
+    bIsPreRound = false;
+    SetTrueVo();
+    BindMatchState(nullptr);
+    UnbindPlayer();
+    RestoreAbilityWidgets();
+    Super::NativeDestruct();
+}
+
+void UMatchMapHUD::BindMatchState(AGameStateBase* State)
+{
+    auto* match = Cast<AMatchGameState>(State);
+    if (BoundMatchState.Get() == match && !BoundMatchState.IsStale())
+    {
+        return;
+    }
+    if (auto* previous = BoundMatchState.Get())
+    {
+        previous->OnRemainRoundStateTimeChanged.RemoveDynamic(this, &UMatchMapHUD::UpdateTime);
+        previous->OnRoundSubStateChanged.RemoveDynamic(this, &UMatchMapHUD::OnRoundSubStateChanged);
+        previous->OnRoundEnd.RemoveDynamic(this, &UMatchMapHUD::OnRoundEnd);
+    }
+
+    BoundMatchState = match;
+    TopWidget->BindMatchState(match);
+    if (match)
+    {
+        match->OnRemainRoundStateTimeChanged.AddUniqueDynamic(this, &UMatchMapHUD::UpdateTime);
+        match->OnRoundSubStateChanged.AddUniqueDynamic(this, &UMatchMapHUD::OnRoundSubStateChanged);
+        match->OnRoundEnd.AddUniqueDynamic(this, &UMatchMapHUD::OnRoundEnd);
+    }
+}
+
+void UMatchMapHUD::RefreshPlayerSources()
+{
+    auto* controller = GetOwningPlayer<AAgentPlayerController>();
+    if (!bHudConstructed || !controller)
+    {
+        return;
+    }
+
+    if (BoundController.Get() != controller)
+    {
+        if (auto* previous = BoundController.Get())
+        {
+            previous->OnDamaged_PC.RemoveDynamic(this, &UMatchMapHUD::OnDamaged);
+            previous->OnHealed_PC.RemoveDynamic(this, &UMatchMapHUD::OnHealed);
+            previous->OnKillEvent_PC.RemoveDynamic(this, &UMatchMapHUD::OnKillEvent);
+            previous->OnPossessedPawnChanged.RemoveDynamic(this, &UMatchMapHUD::OnPawnChanged);
+        }
+        BoundController = controller;
+        controller->OnDamaged_PC.AddUniqueDynamic(this, &UMatchMapHUD::OnDamaged);
+        controller->OnHealed_PC.AddUniqueDynamic(this, &UMatchMapHUD::OnHealed);
+        controller->OnKillEvent_PC.AddUniqueDynamic(this, &UMatchMapHUD::OnKillEvent);
+        controller->OnPossessedPawnChanged.AddUniqueDynamic(this, &UMatchMapHUD::OnPawnChanged);
+    }
+
+    const auto suppressionTag = FValorantGameplayTags::Get().State_Debuff_Suppressed;
+    auto* state = controller->GetPlayerState<AAgentPlayerState>();
+    auto* asc = state ? state->GetAbilitySystemComponent() : nullptr;
+    if (BoundASC.Get() != asc || BoundASC.IsStale())
+    {
+        if (auto* previous = BoundASC.Get())
+        {
+            previous->RegisterGameplayTagEvent(suppressionTag, EGameplayTagEventType::NewOrRemoved).Remove(SuppressionHandle);
+        }
+        BoundASC = asc;
+        SuppressionHandle.Reset();
+        if (asc)
+        {
+            SuppressionHandle = asc->RegisterGameplayTagEvent(suppressionTag, EGameplayTagEventType::NewOrRemoved)
+                .AddUObject(this, &UMatchMapHUD::OnSuppressed);
+        }
+        OnSuppressed(suppressionTag, asc ? asc->GetTagCount(suppressionTag) : 0);
+    }
+
+    const bool bPlayerStateChanged = BoundPlayerState.Get() != state || BoundPlayerState.IsStale();
+    if (bPlayerStateChanged)
+    {
+        if (auto* previous = BoundPlayerState.Get())
+        {
+            previous->OnAgentIdChanged.RemoveAll(this);
+        }
+        BoundPlayerState = state;
+        if (state)
+        {
+            state->OnAgentIdChanged.AddUObject(this, &UMatchMapHUD::RefreshPlayerSources);
+        }
+    }
+
+    CombatViewModel->Bind(*controller);
+    if (AbilityBar->Bind(state, GetWorld()->GetGameInstance<UValorantGameInstance>()))
+    {
+        for (const EAbilitySlotType slot : UHUDAbilityBarModel::SlotTypes)
+        {
+            RenderAbilitySlot(slot, true);
+        }
+    }
+    if (bPlayerStateChanged && state && !state->HasAuthority())
+    {
+        state->Server_RequestAbilityStackSync();
+    }
+}
+
+void UMatchMapHUD::UnbindPlayer()
+{
+    if (auto* controller = BoundController.Get())
+    {
+        controller->OnDamaged_PC.RemoveDynamic(this, &UMatchMapHUD::OnDamaged);
+        controller->OnHealed_PC.RemoveDynamic(this, &UMatchMapHUD::OnHealed);
+        controller->OnKillEvent_PC.RemoveDynamic(this, &UMatchMapHUD::OnKillEvent);
+        controller->OnPossessedPawnChanged.RemoveDynamic(this, &UMatchMapHUD::OnPawnChanged);
+    }
+    if (auto* state = BoundPlayerState.Get())
+    {
+        state->OnAgentIdChanged.RemoveAll(this);
+    }
+    if (auto* asc = BoundASC.Get())
+    {
+        asc->RegisterGameplayTagEvent(FValorantGameplayTags::Get().State_Debuff_Suppressed, EGameplayTagEventType::NewOrRemoved)
+            .Remove(SuppressionHandle);
+    }
+
+    CombatViewModel->RemoveAllFieldValueChangedDelegates(this);
+    CombatViewModel->Unbind();
+    AbilityBar->OnSlotChanged.RemoveAll(this);
+    AbilityBar->Unbind();
+    BoundController.Reset();
+    BoundPlayerState.Reset();
+    BoundASC.Reset();
+    SuppressionHandle.Reset();
+}
+
+void UMatchMapHUD::OnPawnChanged(APawn* OldPawn, APawn* NewPawn)
+{
+    HideFollowUpInputUI();
+    RefreshPlayerSources();
 }
 
 void UMatchMapHUD::UpdateTime(float Time)
 {
-	const int Minute = static_cast<int>(Time / 60);
-	const int Seconds = static_cast<int>(Time) % 60;
 	if (bIsPreRound && FMath::IsNearlyEqual(Time, 3.f, 0.5f))
 	{
 		PlayRemTimeVO(3);
@@ -133,6 +271,9 @@ void UMatchMapHUD::OnRoundSubStateChanged(const ERoundSubState RoundSubState, co
 		DisplayAnnouncement(EMatchAnnouncement::EMA_BuyPhase, TransitionTime);
 		break;
 	case ERoundSubState::RSS_InRound:
+		HideAnnouncement();
+		GetWorld()->GetTimerManager().ClearTimer(AnnouncementTimerHandle);
+		bIsPreRound = false;
 		SetFalseVo();
 		break;
 	case ERoundSubState::RSS_EndPhase:
@@ -206,7 +347,7 @@ void UMatchMapHUD::DisplayAnnouncement(EMatchAnnouncement MatchAnnouncement, flo
 	OnSpikeOwnChanged(false);
 	
 	GetWorld()->GetTimerManager().SetTimer(AnnouncementTimerHandle, this, &UMatchMapHUD::HideAnnouncement, DisplayTime, false);
-	bIsPreRound = true;
+	bIsPreRound = MatchAnnouncement == EMatchAnnouncement::EMA_BuyPhase;
 }
 
 void UMatchMapHUD::HideAnnouncement()
@@ -214,30 +355,47 @@ void UMatchMapHUD::HideAnnouncement()
 	WidgetSwitcherAnnouncement->SetVisibility(ESlateVisibility::Hidden);
 }
 
-void UMatchMapHUD::UpdateDisplayHealth(const float health, bool bIsDamage)
+void UMatchMapHUD::OnStatusFieldChanged(UObject* Object, UE::FieldNotification::FFieldId Field)
 {
-	int32 intHealth = FMath::TruncToInt(health);
-	txt_HP->SetText(FText::AsNumber(intHealth));
+    if (Field.GetName() == GET_MEMBER_NAME_CHECKED(UCombatHUDViewModel, Vitals))
+    {
+        RenderVitals();
+    }
+    else if (Field.GetName() == GET_MEMBER_NAME_CHECKED(UCombatHUDViewModel, Ammo))
+    {
+        RenderAmmo();
+    }
+    else if (Field.GetName() == GET_MEMBER_NAME_CHECKED(UCombatHUDViewModel, Credits))
+    {
+        UpdateCreditDisplay(CombatViewModel->Credits);
+        UE_LOG(LogMatchHUD, Verbose, TEXT("HUD credits=%d"), CombatViewModel->Credits);
+    }
 }
 
-void UMatchMapHUD::UpdateDisplayArmor(const float armor)
+void UMatchMapHUD::RenderVitals()
 {
-	int32 intArmor = FMath::TruncToInt(armor);
-	txt_Armor->SetText(FText::AsNumber(intArmor));
+    const auto& vitals = CombatViewModel->Vitals;
+    const bool bKnown = vitals.MaxHealth > 0;
+    const bool bLow = bKnown && vitals.Health <= vitals.MaxHealth * LowHealthFraction;
+    txt_HP->SetText(bKnown ? FText::AsNumber(vitals.Health) : LOCTEXT("UnknownHealth", "—"));
+    txt_HP->SetColorAndOpacity(bLow ? WarningTextColor : FLinearColor::White);
+    txt_Armor->SetText(bKnown ? FText::AsNumber(vitals.Armor) : LOCTEXT("UnknownArmor", "—"));
+    txt_Armor->SetColorAndOpacity(vitals.Armor > 0 ? SecondaryTextColor : UnavailableSkillColor);
+    UE_LOG(LogMatchHUD, Verbose, TEXT("HUD vitals=%d/%d armor=%d"), vitals.Health, vitals.MaxHealth, vitals.Armor);
 }
 
-void UMatchMapHUD::UpdateAmmo(bool bDisplayWidget, int MagazineAmmo, int SpareAmmo)
+void UMatchMapHUD::RenderAmmo()
 {
-	if (bDisplayWidget)
-	{
-		HorizontalBoxAmmo->SetVisibility(ESlateVisibility::Visible);
-		TextBlockMagazineAmmo->SetText(FText::FromString(FString::Printf(TEXT("%d"), MagazineAmmo)));
-		TextBlockSpareAmmo->SetText(FText::FromString(FString::Printf(TEXT("%d"), SpareAmmo)));
-	}
-	else
-	{
-		HorizontalBoxAmmo->SetVisibility(ESlateVisibility::Hidden);
-	}
+    const auto& ammo = CombatViewModel->Ammo;
+    HorizontalBoxAmmo->SetVisibility(ammo.bVisible ? ESlateVisibility::HitTestInvisible : ESlateVisibility::Hidden);
+    if (ammo.bVisible)
+    {
+        TextBlockMagazineAmmo->SetText(FText::AsNumber(ammo.Magazine));
+        TextBlockMagazineAmmo->SetColorAndOpacity(ammo.Magazine == 0 ? WarningTextColor : FLinearColor::White);
+        TextBlockSpareAmmo->SetText(FText::Format(LOCTEXT("ReserveAmmo", "/ {0}"), FText::AsNumber(ammo.Reserve)));
+        TextBlockSpareAmmo->SetColorAndOpacity(SecondaryTextColor);
+    }
+    UE_LOG(LogMatchHUD, Verbose, TEXT("HUD ammo=%d/%d visible=%d"), ammo.Magazine, ammo.Reserve, ammo.bVisible);
 }
 
 void UMatchMapHUD::OnDamaged(const FVector& HitOrg, const EAgentDamagedPart DamagedPart,
@@ -252,458 +410,179 @@ void UMatchMapHUD::OnDamaged(const FVector& HitOrg, const EAgentDamagedPart Dama
 
 void UMatchMapHUD::BindToDelegatePC(UAgentAbilitySystemComponent* asc, AAgentPlayerController* pc)
 {
-	pc->OnDamaged_PC.AddDynamic(this, &UMatchMapHUD::OnDamaged);
-	pc->OnHealed_PC.AddDynamic(this, &UMatchMapHUD::OnHealed);
-	pc->OnKillEvent_PC.AddDynamic(this, &UMatchMapHUD::OnKillEvent);
-	pc->OnHealthChanged_PC.AddDynamic(this, &UMatchMapHUD::UpdateDisplayHealth);
-	pc->OnArmorChanged_PC.AddDynamic(this, &UMatchMapHUD::UpdateDisplayArmor);
-	pc->OnChangedAmmo.AddDynamic(this, &UMatchMapHUD::UpdateAmmo);
-	pc->GetCacehdASC()->RegisterGameplayTagEvent(FValorantGameplayTags::Get().State_Debuff_Suppressed,EGameplayTagEventType::NewOrRemoved).AddUObject(this, &UMatchMapHUD::OnSuppressed);
-
-	if (asc == nullptr)
-	{
-		UE_LOG(LogTemp, Error, TEXT("AgentWidget, ASC NULL"));
-		return;
-	}
-	ASC = asc;
+    if (pc && pc == GetOwningPlayer())
+    {
+        RefreshPlayerSources();
+    }
 }
 
 void UMatchMapHUD::InitUI(AAgentPlayerState* ps)
 {
-	txt_HP->SetText(FText::AsNumber(ps->GetHealth()));
-	txt_Armor->SetText(FText::AsNumber(ps->GetArmor()));
+    if (ps && GetOwningPlayer() && ps == GetOwningPlayer()->GetPlayerState<AAgentPlayerState>())
+    {
+        RefreshPlayerSources();
+    }
 }
 
 void UMatchMapHUD::DebugRoundSubState(const FString& RoundSubStateStr)
 {
-	// TextBlockRoundSubStateDbg->SetText(FText::FromString(TEXT("RoundSubState: ") + RoundSubStateStr));
-}
-
-// 어빌리티 스택 처리 함수 구현
-void UMatchMapHUD::HandleAbilityStackChanged(int32 AbilityID, int32 NewStack)
-{
-	// 스택 정보 캐시 업데이트
-	AbilityStacksCache.Add(AbilityID, NewStack);
-	
-	// 해당 어빌리티가 어떤 슬롯에 해당하는지 확인하고 업데이트
-	if (AbilityID == SkillCID)
-	{
-		UpdateSlotStackInfo(EAbilitySlotType::Slot_C, AbilityID);
-	}
-	else if (AbilityID == SkillQID)
-	{
-		UpdateSlotStackInfo(EAbilitySlotType::Slot_Q, AbilityID);
-	}
-	else if (AbilityID == SkillEID)
-	{
-		UpdateSlotStackInfo(EAbilitySlotType::Slot_E, AbilityID);
-	}
-	else if (AbilityID == SkillXID)
-	{
-		UpdateSlotStackInfo(EAbilitySlotType::Slot_X, AbilityID);
-	}
-	
-	// 어빌리티 정보 캐시 업데이트
-	FHUDAbilityInfo* AbilityInfo = AbilityInfoCache.Find(AbilityID);
-	if (AbilityInfo)
-	{
-		AbilityInfo->CurrentStack = NewStack;
-		
-		// 슬롯 타입 확인 및 UI 업데이트
-		if (AbilityID == SkillCID)
-		{
-			OnAbilityInfoUpdated(EAbilitySlotType::Slot_C, *AbilityInfo);
-		}
-		else if (AbilityID == SkillQID)
-		{
-			OnAbilityInfoUpdated(EAbilitySlotType::Slot_Q, *AbilityInfo);
-		}
-		else if (AbilityID == SkillEID)
-		{
-			OnAbilityInfoUpdated(EAbilitySlotType::Slot_E, *AbilityInfo);
-		}
-		else if (AbilityID == SkillXID)
-		{
-			OnAbilityInfoUpdated(EAbilitySlotType::Slot_X, *AbilityInfo);
-		}
-	}
 }
 
 void UMatchMapHUD::InitializeAbilityStacks()
 {
-	// 플레이어 스테이트와 게임 인스턴스가 유효한지 확인
-	AAgentPlayerController* PC = Cast<AAgentPlayerController>(GetOwningPlayer());
-	if (!PC)
-	{
-		return;
-	}
-	
-	AAgentPlayerState* PS = PC->GetPlayerState<AAgentPlayerState>();
-	if (!PS)
-	{
-		return;
-	}
-	
-	if (!GameInstance)
-	{
-		GameInstance = UValorantGameInstance::Get(GetWorld());
-		if (!GameInstance)
-		{
-			return;
-		}
-	}
-	
-	// 현재 캐릭터의 능력 ID 가져오기
-	int32 AgentID = PS->GetAgentID();
-
-	if (AgentID == 0)
-	{
-		return;
-	}
-	
-	FAgentData* AgentData = GameInstance->GetAgentData(AgentID);
-	if (!AgentData)
-	{
-		return;
-	}
-	
-	// 능력 ID 저장
-	if (AgentData->AbilityID_C > 0)
-	{
-		SkillCID = AgentData->AbilityID_C;
-	}
-	
-	if (AgentData->AbilityID_Q > 0)
-	{
-		SkillQID = AgentData->AbilityID_Q;
-	}
-	
-	if (AgentData->AbilityID_E > 0)
-	{
-		SkillEID = AgentData->AbilityID_E;
-	}
-	
-	if (AgentData->AbilityID_X > 0)
-	{
-		SkillXID = AgentData->AbilityID_X;
-	}
-	
-	// 각 능력의 스택 정보 초기화
-	AbilityStacksCache.Empty();
-	SlotStackInfoMap.Empty();
-	
-	// C 능력 스택 로드
-	if (SkillCID > 0)
-	{
-		int32 StackC = PS->GetAbilityStack(SkillCID);
-		int32 MaxStackC = PS->GetMaxAbilityStack(SkillCID);
-		AbilityStacksCache.Add(SkillCID, StackC);
-
-		// 어빌리티 슬롯 max 갯수를 위한 초기화
-		InitializeAbilityMaxStacks(EAbilitySlotType::Slot_C, MaxStackC);
-		
-		// 슬롯 스택 정보 초기화 및 업데이트
-		UpdateSlotStackInfo(EAbilitySlotType::Slot_C, SkillCID);
-	}
-	
-	// Q 능력 스택 로드
-	if (SkillQID > 0)
-	{
-		int32 StackQ = PS->GetAbilityStack(SkillQID);
-		int32 MaxStackQ = PS->GetMaxAbilityStack(SkillQID);
-		AbilityStacksCache.Add(SkillQID, StackQ);
-		
-		// 어빌리티 슬롯 max 갯수를 위한 초기화
-		InitializeAbilityMaxStacks(EAbilitySlotType::Slot_Q, MaxStackQ);
-		
-		// 슬롯 스택 정보 초기화 및 업데이트
-		UpdateSlotStackInfo(EAbilitySlotType::Slot_Q, SkillQID);
-	}
-	
-	// E 능력 스택 로드
-	if (SkillEID > 0)
-	{
-		int32 StackE = PS->GetAbilityStack(SkillEID);
-		int32 MaxStackE = PS->GetMaxAbilityStack(SkillEID);
-		AbilityStacksCache.Add(SkillEID, StackE);
-		
-		// 어빌리티 슬롯 max 갯수를 위한 초기화
-		InitializeAbilityMaxStacks(EAbilitySlotType::Slot_E, MaxStackE);
-
-		// 슬롯 스택 정보 초기화 및 업데이트
-		UpdateSlotStackInfo(EAbilitySlotType::Slot_E, SkillEID);
-	}
-	
-	// X 능력 스택 로드
-	if (SkillXID > 0)
-	{
-		int32 StackX = PS->GetAbilityStack(SkillXID);
-		int32 MaxStackX = PS->GetMaxAbilityStack(SkillXID);
-		AbilityStacksCache.Add(SkillXID, StackX);
-		
-		// 어빌리티 슬롯 max 갯수를 위한 초기화
-		InitializeAbilityMaxStacks(EAbilitySlotType::Slot_X, MaxStackX);
-
-		// 슬롯 스택 정보 초기화 및 업데이트
-		UpdateSlotStackInfo(EAbilitySlotType::Slot_X, SkillXID);
-	}
+    RefreshPlayerSources();
 }
 
 void UMatchMapHUD::UpdateSlotStackInfo(EAbilitySlotType AbilitySlot, int32 AbilityID)
 {
-	// 플레이어 스테이트 가져오기
-	AAgentPlayerController* PC = Cast<AAgentPlayerController>(GetOwningPlayer());
-	if (!PC)
-	{
-		return;
-	}
-	
-	AAgentPlayerState* PS = PC->GetPlayerState<AAgentPlayerState>();
-	if (!PS)
-	{
-		return;
-	}
-	
-	// 현재 스택 및 최대 스택 가져오기
-	int32 CurrentStack = PS->GetAbilityStack(AbilityID);
-	int32 MaxStack = PS->GetMaxAbilityStack(AbilityID);
-	
-	// 슬롯 스택 정보 업데이트
-	FAbilitySlotStackInfo StackInfo;
-	StackInfo.Initialize(AbilityID, CurrentStack, MaxStack);
-	SlotStackInfoMap.Add(AbilitySlot, StackInfo);
-	
-	// 블루프린트 이벤트 호출
-	OnSlotStackInfoUpdated(AbilitySlot, StackInfo);
+    if (AbilityBar && bHudConstructed)
+    {
+        AbilityBar->RefreshSlot(AbilitySlot, AbilityID);
+    }
 }
 
-FAbilitySlotStackInfo UMatchMapHUD::GetSlotStackInfo(EAbilitySlotType AbilitySlot) const
-{
-	// 캐시된 슬롯 스택 정보 반환
-	const FAbilitySlotStackInfo* StackInfoPtr = SlotStackInfoMap.Find(AbilitySlot);
-	if (StackInfoPtr)
-	{
-		return *StackInfoPtr;
-	}
-	
-	// 정보가 없으면 기본값 반환
-	return FAbilitySlotStackInfo();
-}
-
-// 특정 어빌리티 데이터 로드
-void UMatchMapHUD::LoadAbilityData(int32 AbilityID)
-{
-	if (!GameInstance)
-	{
-		return;
-	}
-	
-	FAbilityData* AbilityData = GameInstance->GetAbilityData(AbilityID);
-	if (!AbilityData)
-	{
-		return;
-	}
-	
-	// 현재 스택 정보 가져오기
-	AAgentPlayerController* PC = Cast<AAgentPlayerController>(GetOwningPlayer());
-	if (!PC)
-	{
-		return;
-	}
-	
-	AAgentPlayerState* PS = PC->GetPlayerState<AAgentPlayerState>();
-	if (!PS)
-	{
-		return;
-	}
-	
-	int32 CurrentStack = PS->GetAbilityStack(AbilityID);
-	int32 MaxStack = PS->GetMaxAbilityStack(AbilityID);
-	
-	// 어빌리티 정보 구조체 생성 및 캐싱
-	FHUDAbilityInfo AbilityInfo;
-	AbilityInfo.AbilityID = AbilityID;
-	AbilityInfo.AbilityName = AbilityData->AbilityName;
-	AbilityInfo.AbilityDescription = AbilityData->AbilityDescription;
-	AbilityInfo.AbilityIcon = AbilityData->AbilityIcon;
-	AbilityInfo.ChargeCost = AbilityData->ChargeCost;
-	AbilityInfo.CurrentStack = CurrentStack;
-	AbilityInfo.MaxStack = MaxStack;
-	
-	// 캐시에 저장
-	AbilityInfoCache.Add(AbilityID, AbilityInfo);
-}
-
-// 모든 어빌리티 데이터 로드
-void UMatchMapHUD::LoadAllAbilityData()
-{
-	AAgentPlayerController* PC = Cast<AAgentPlayerController>(GetOwningPlayer());
-	if (!PC)
-	{
-		return;
-	}
-	
-	AAgentPlayerState* PS = PC->GetPlayerState<AAgentPlayerState>();
-	if (!PS)
-	{
-		return;
-	}
-	
-	// 캐릭터 ID 가져오기
-	int32 AgentID = PS->GetAgentID();
-	if (AgentID == 0 || !GameInstance)
-	{
-		return;
-	}
-	
-	FAgentData* AgentData = GameInstance->GetAgentData(AgentID);
-	if (!AgentData)
-	{
-		return;
-	}
-	
-	// 각 슬롯의 어빌리티 ID 로드
-	if (AgentData->AbilityID_C > 0)
-	{
-		SkillCID = AgentData->AbilityID_C;
-		LoadAbilityData(SkillCID);
-	}
-	
-	if (AgentData->AbilityID_Q > 0)
-	{
-		SkillQID = AgentData->AbilityID_Q;
-		LoadAbilityData(SkillQID);
-	}
-	
-	if (AgentData->AbilityID_E > 0)
-	{
-		SkillEID = AgentData->AbilityID_E;
-		LoadAbilityData(SkillEID);
-	}
-	
-	if (AgentData->AbilityID_X > 0)
-	{
-		SkillXID = AgentData->AbilityID_X;
-		LoadAbilityData(SkillXID);
-	}
-}
-
-// 어빌리티 UI 업데이트
-void UMatchMapHUD::UpdateAbilityUI()
-{
-	// 각 슬롯 별 어빌리티 정보 업데이트
-	if (SkillCID > 0)
-	{
-		FHUDAbilityInfo* AbilityInfo = AbilityInfoCache.Find(SkillCID);
-		if (AbilityInfo)
-		{
-			// 이미지 UI 업데이트
-			if (AbilityC_Image && AbilityInfo->AbilityIcon)
-			{
-				AbilityC_Image->SetBrushFromTexture(AbilityInfo->AbilityIcon);
-			}
-			
-			// 블루프린트 이벤트 호출
-			OnAbilityInfoUpdated(EAbilitySlotType::Slot_C, *AbilityInfo);
-		}
-	}
-	
-	if (SkillQID > 0)
-	{
-		FHUDAbilityInfo* AbilityInfo = AbilityInfoCache.Find(SkillQID);
-		if (AbilityInfo)
-		{
-			// 이미지 UI 업데이트
-			if (AbilityQ_Image && AbilityInfo->AbilityIcon)
-			{
-				AbilityQ_Image->SetBrushFromTexture(AbilityInfo->AbilityIcon);
-			}
-			
-			// 블루프린트 이벤트 호출
-			OnAbilityInfoUpdated(EAbilitySlotType::Slot_Q, *AbilityInfo);
-		}
-	}
-	
-	if (SkillEID > 0)
-	{
-		FHUDAbilityInfo* AbilityInfo = AbilityInfoCache.Find(SkillEID);
-		if (AbilityInfo)
-		{
-			// 이미지 UI 업데이트
-			if (AbilityE_Image && AbilityInfo->AbilityIcon)
-			{
-				AbilityE_Image->SetBrushFromTexture(AbilityInfo->AbilityIcon);
-			}
-			
-			// 블루프린트 이벤트 호출
-			OnAbilityInfoUpdated(EAbilitySlotType::Slot_E, *AbilityInfo);
-		}
-	}
-	
-	if (SkillXID > 0)
-	{
-		FHUDAbilityInfo* AbilityInfo = AbilityInfoCache.Find(SkillXID);
-		if (AbilityInfo)
-		{
-			// 이미지 UI 업데이트
-			if (AbilityX_Image && AbilityInfo->AbilityIcon)
-			{
-				AbilityX_Image->SetBrushFromTexture(AbilityInfo->AbilityIcon);
-			}
-			
-			// 블루프린트 이벤트 호출
-			OnAbilityInfoUpdated(EAbilitySlotType::Slot_X, *AbilityInfo);
-		}
-	}
-}
-
-// 어빌리티 정보 가져오기
 FHUDAbilityInfo UMatchMapHUD::GetAbilityInfo(int32 AbilityID) const
 {
-	const FHUDAbilityInfo* InfoPtr = AbilityInfoCache.Find(AbilityID);
-	if (InfoPtr)
-	{
-		return *InfoPtr;
-	}
-	
-	// 기본 빈 정보 반환
-	return FHUDAbilityInfo();
+    return AbilityBar ? AbilityBar->GetAbility(AbilityID) : FHUDAbilityInfo();
 }
 
-// 슬롯별 어빌리티 정보 가져오기
 FHUDAbilityInfo UMatchMapHUD::GetAbilityInfoBySlot(EAbilitySlotType SlotType) const
 {
-	int32 AbilityID = 0;
-	
-	switch (SlotType)
-	{
-	case EAbilitySlotType::Slot_C:
-		AbilityID = SkillCID;
-		break;
-	case EAbilitySlotType::Slot_Q:
-		AbilityID = SkillQID;
-		break;
-	case EAbilitySlotType::Slot_E:
-		AbilityID = SkillEID;
-		break;
-	case EAbilitySlotType::Slot_X:
-		AbilityID = SkillXID;
-		break;
-	default:
-		break;
-	}
-	
-	if (AbilityID > 0)
-	{
-		return GetAbilityInfo(AbilityID);
-	}
-	
-	// 기본 빈 정보 반환
-	return FHUDAbilityInfo();
+    return AbilityBar ? AbilityBar->GetSlot(SlotType) : FHUDAbilityInfo();
+}
+
+UImage* UMatchMapHUD::GetAbilityImage(EAbilitySlotType AbilitySlot) const
+{
+    switch (AbilitySlot)
+    {
+    case EAbilitySlotType::Slot_C: return AbilityC_Image;
+    case EAbilitySlotType::Slot_Q: return AbilityQ_Image;
+    case EAbilitySlotType::Slot_E: return AbilityE_Image;
+    case EAbilitySlotType::Slot_X: return AbilityX_Image;
+    default: return nullptr;
+    }
+}
+
+void UMatchMapHUD::CacheAbilityWidgets()
+{
+    const struct
+    {
+        EAbilitySlotType Slot;
+        UTextBlock* Label;
+        UCanvasPanel* Pips;
+    } widgets[] = {
+        { EAbilitySlotType::Slot_C, TextBlock_101, CanvasPanel_1 },
+        { EAbilitySlotType::Slot_Q, TextBlock, CanvasPanel_0 },
+        { EAbilitySlotType::Slot_E, TextBlock_1, CanvasPanel },
+        { EAbilitySlotType::Slot_X, TextBlock_2, CanvasPanel_2 },
+    };
+    for (const auto& widget : widgets)
+    {
+        if (auto* icon = GetAbilityImage(widget.Slot))
+        {
+            AuthoredAbilityBrushes.Add(widget.Slot, icon->GetBrush());
+        }
+        if (widget.Label)
+        {
+            AbilityKeyLabels.Add(widget.Slot, widget.Label);
+            AuthoredAbilityKeys.Add(widget.Slot, widget.Label->GetText());
+        }
+        if (widget.Pips)
+        {
+            AbilityPipPanels.Add(widget.Slot, widget.Pips);
+        }
+        if (!widget.Label || !widget.Pips)
+        {
+            UE_LOG(LogMatchHUD, Warning, TEXT("%s missing ability bindings for slot %d (label=%d, panel=%d)"),
+                *GetClass()->GetName(), static_cast<int32>(widget.Slot), widget.Label != nullptr, widget.Pips != nullptr);
+        }
+    }
+}
+
+void UMatchMapHUD::RestoreAbilityWidgets()
+{
+    for (const auto slot : UHUDAbilityBarModel::SlotTypes)
+    {
+        if (auto* label = AbilityKeyLabels.FindRef(slot).Get())
+        {
+            label->SetText(AuthoredAbilityKeys.FindRef(slot));
+        }
+        if (auto* icon = GetAbilityImage(slot))
+        {
+            if (const auto* brush = AuthoredAbilityBrushes.Find(slot))
+            {
+                icon->SetBrush(*brush);
+            }
+        }
+    }
+    AbilityKeyLabels.Reset();
+    AbilityPipPanels.Reset();
+    AuthoredAbilityKeys.Reset();
+    AuthoredAbilityBrushes.Reset();
+}
+
+void UMatchMapHUD::OnAbilitySlotChanged(EAbilitySlotType AbilitySlot)
+{
+    RenderAbilitySlot(AbilitySlot, false);
+}
+
+void UMatchMapHUD::RenderAbilitySlot(EAbilitySlotType AbilitySlot, bool bLayoutChanged)
+{
+    const FHUDAbilityInfo ability = AbilityBar->GetSlot(AbilitySlot);
+    const bool bConfigured = ability.AbilityID > 0;
+    FAbilitySlotStackInfo stack;
+    stack.Initialize(ability.AbilityID, ability.CurrentStack, ability.MaxStack);
+    SlotStackInfoMap.Add(AbilitySlot, stack);
+
+    switch (AbilitySlot)
+    {
+    case EAbilitySlotType::Slot_C: SkillCID = ability.AbilityID; break;
+    case EAbilitySlotType::Slot_Q: SkillQID = ability.AbilityID; break;
+    case EAbilitySlotType::Slot_E: SkillEID = ability.AbilityID; break;
+    case EAbilitySlotType::Slot_X: SkillXID = ability.AbilityID; break;
+    default: break;
+    }
+
+    if (bLayoutChanged)
+    {
+        if (auto* icon = GetAbilityImage(AbilitySlot))
+        {
+            if (ability.AbilityIcon)
+            {
+                icon->SetBrushFromTexture(ability.AbilityIcon);
+            }
+            else if (const auto* brush = AuthoredAbilityBrushes.Find(AbilitySlot))
+            {
+                icon->SetBrush(*brush);
+            }
+            icon->SetRenderOpacity(bConfigured ? 1.0f : UnavailableSkillOpacity);
+        }
+        if (auto* pips = AbilityPipPanels.FindRef(AbilitySlot).Get())
+        {
+            pips->SetVisibility(bConfigured ? ESlateVisibility::SelfHitTestInvisible : ESlateVisibility::Hidden);
+        }
+        InitializeAbilityMaxStacks(AbilitySlot, ability.MaxStack);
+    }
+    OnSlotStackInfoUpdated(AbilitySlot, stack);
+    OnAbilityInfoUpdated(AbilitySlot, ability);
+
+    if (auto* label = AbilityKeyLabels.FindRef(AbilitySlot).Get())
+    {
+        const FText key = AuthoredAbilityKeys.FindRef(AbilitySlot);
+        label->SetText(bConfigured
+            ? FText::Format(LOCTEXT("AbilityStackCount", "{0}  {1}/{2}"), key,
+                FText::AsNumber(ability.CurrentStack), FText::AsNumber(ability.MaxStack))
+            : FText::Format(LOCTEXT("UnavailableAbilitySlot", "{0}  —"), key));
+        label->SetColorAndOpacity(bConfigured && ability.CurrentStack > 0 ? SecondaryTextColor : UnavailableSkillColor);
+    }
+    UE_LOG(LogMatchHUD, Verbose, TEXT("HUD ability slot=%d id=%d stacks=%d/%d"),
+        static_cast<int32>(AbilitySlot), ability.AbilityID, ability.CurrentStack, ability.MaxStack);
 }
 
 void UMatchMapHUD::OnKillEvent(ABaseAgent* InstigatorAgent, ABaseAgent* VictimAgent, const FKillFeedInfo& KillFeedInfo)
 {
+	TopWidget->OnKillEvent(InstigatorAgent, VictimAgent, KillFeedInfo);
+	const auto* MyController = GetOwningPlayer<AAgentPlayerController>();
 	auto* GI = GetWorld()->GetGameInstance<UValorantGameInstance>();
 	if (nullptr == GI)
 	{
@@ -711,7 +590,6 @@ void UMatchMapHUD::OnKillEvent(ABaseAgent* InstigatorAgent, ABaseAgent* VictimAg
 		return;
 	}
 	
-	const auto* MyController = GetWorld()->GetFirstPlayerController<AAgentPlayerController>();
 	if (nullptr == MyController)
 	{
 		NET_LOG(LogTemp, Error, TEXT("%hs Called, MyController is nullptr"), __FUNCTION__);
@@ -764,56 +642,39 @@ void UMatchMapHUD::OnKillEvent(ABaseAgent* InstigatorAgent, ABaseAgent* VictimAg
 
 void UMatchMapHUD::DisplayFollowUpInputUI(FGameplayTag slotTag, EFollowUpInputType inputType)
 {
-	if (slotTag == FGameplayTag::RequestGameplayTag(FName("Input.Skill.E")))
-	{
-		if (inputType == EFollowUpInputType::LeftClick)
-		{
-			DisplayedFollowUpInputUI = Left_E;
-			Left_E->SetVisibility(ESlateVisibility::Visible);
-		}
-		else if (inputType == EFollowUpInputType::LeftOrRight)
-		{
-			DisplayedFollowUpInputUI = LeftOrRight_E;
-			LeftOrRight_E->SetVisibility(ESlateVisibility::Visible);
-		}
-	}
-	else if (slotTag == FGameplayTag::RequestGameplayTag(FName("Input.Skill.Q")))
-	{
-		if (inputType == EFollowUpInputType::LeftClick)
-		{
-			DisplayedFollowUpInputUI = Left_Q;
-			Left_Q->SetVisibility(ESlateVisibility::Visible);
-		}
-		else if (inputType == EFollowUpInputType::LeftOrRight)
-		{
-			DisplayedFollowUpInputUI = LeftOrRight_Q;
-			LeftOrRight_Q->SetVisibility(ESlateVisibility::Visible);
-		}
-	}
-	else if (slotTag == FGameplayTag::RequestGameplayTag(FName("Input.Skill.C")))
-	{
-		if (inputType == EFollowUpInputType::LeftClick)
-		{
-			DisplayedFollowUpInputUI = Left_C;
-			Left_C->SetVisibility(ESlateVisibility::Visible);
-		}
-		else if (inputType == EFollowUpInputType::LeftOrRight)
-		{
-			DisplayedFollowUpInputUI = LeftOrRight_C;
-			LeftOrRight_C->SetVisibility(ESlateVisibility::Visible);
-		}
-	}
-	// else if (slotTag == FGameplayTag::RequestGameplayTag(FName("Input.Skill.X")))
-	// {
-	// 	if (inputType == EFollowUpInputType::LeftClick)
-	// 	{
-	// 		Left_X->SetVisibility(ESlateVisibility::Visible);
-	// 	}
-	// 	else if (inputType == EFollowUpInputType::LeftOrRight)
-	// 	{
-	// 		LeftOrRight_X->SetVisibility(ESlateVisibility::Visible);
-	// 	}
-	// }
+    HideFollowUpInputUI();
+
+    UPanelWidget* left = nullptr;
+    UPanelWidget* either = nullptr;
+    if (slotTag == FGameplayTag::RequestGameplayTag(FName("Input.Skill.E")))
+    {
+        left = Left_E;
+        either = LeftOrRight_E;
+    }
+    else if (slotTag == FGameplayTag::RequestGameplayTag(FName("Input.Skill.Q")))
+    {
+        left = Left_Q;
+        either = LeftOrRight_Q;
+    }
+    else if (slotTag == FGameplayTag::RequestGameplayTag(FName("Input.Skill.C")))
+    {
+        left = Left_C;
+        either = LeftOrRight_C;
+    }
+
+    if (inputType == EFollowUpInputType::LeftClick)
+    {
+        DisplayedFollowUpInputUI = left;
+    }
+    else if (inputType == EFollowUpInputType::LeftOrRight)
+    {
+        DisplayedFollowUpInputUI = either;
+    }
+    if (DisplayedFollowUpInputUI)
+    {
+        DisplayedFollowUpInputUI->SetVisibility(ESlateVisibility::HitTestInvisible);
+        UE_LOG(LogMatchHUD, Verbose, TEXT("HUD follow-up=%s"), *DisplayedFollowUpInputUI->GetName());
+    }
 }
 
 void UMatchMapHUD::HideFollowUpInputUI()
@@ -827,43 +688,12 @@ void UMatchMapHUD::HideFollowUpInputUI()
 
 int32 UMatchMapHUD::GetAbilityStack(int32 AbilityID) const
 {
-	// 캐시에서 스택 값 가져오기
-	const int32* StackPtr = AbilityStacksCache.Find(AbilityID);
-	if (StackPtr)
-	{
-		return *StackPtr;
-	}
-	
-	// 캐시에 없으면 플레이어 스테이트에서 직접 가져오기
-	AAgentPlayerController* PC = Cast<AAgentPlayerController>(GetOwningPlayer());
-	if (!PC)
-	{
-		return 0;
-	}
-	
-	AAgentPlayerState* PS = PC->GetPlayerState<AAgentPlayerState>();
-	if (!PS)
-	{
-		return 0;
-	}
-	
-	return PS->GetAbilityStack(AbilityID);
+    return AbilityBar ? AbilityBar->GetCurrentStack(AbilityID) : 0;
 }
 
 int32 UMatchMapHUD::GetMaxAbilityStack(int32 AbilityID) const
 {
-	// 플레이어 스테이트에서 최대 스택 값 가져오기
-	AAgentPlayerController* PC = Cast<AAgentPlayerController>(GetOwningPlayer());
-	if (!PC)
-	{
-		return 0;
-	}
-	
-	AAgentPlayerState* PS = PC->GetPlayerState<AAgentPlayerState>();
-	if (!PS)
-	{
-		return 0;
-	}
-	
-	return PS->GetMaxAbilityStack(AbilityID);
+    return AbilityBar ? AbilityBar->GetMaxStack(AbilityID) : 0;
 }
+
+#undef LOCTEXT_NAMESPACE

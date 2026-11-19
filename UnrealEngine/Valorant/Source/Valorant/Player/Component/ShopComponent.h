@@ -78,7 +78,10 @@ public:
 	void InitializeShopItems();
 
 	// 능력 초기화
-	void InitBySkillData(TArray<int32> SkillIDs);
+	void RefreshAbilityItems();
+
+	UFUNCTION(BlueprintCallable, Category = "Shop")
+	bool IsShopAvailable() const;
 
 	// 무기 구매 함수
 	UFUNCTION(BlueprintCallable, Category = "Shop")
@@ -91,6 +94,8 @@ public:
 	// 방어구 구매 함수
 	UFUNCTION(BlueprintCallable, Category = "Shop")
 	bool PurchaseArmor(int32 ArmorLevel);
+
+	bool PurchaseItem(int32 ItemID, EShopItemType ItemType, uint32 RequestID);
 
 	// 구매 가능 여부 확인
 	UFUNCTION(BlueprintCallable, Category = "Shop")
@@ -146,10 +151,6 @@ protected:
 	// 아이템 ID로 상점 아이템 찾기
 	FShopItem* FindShopItem(int32 ItemID, EShopItemType ItemType);
 
-	// 라운드 상태 확인 (상점이 이용 가능한지)
-	UFUNCTION(BlueprintCallable, Category = "Shop")
-	bool IsShopAvailable() const;
-
 private:
 	// 상점 소유자
 	UPROPERTY()
@@ -164,7 +165,13 @@ private:
 
 	// 무기 생성 및 플레이어 할당
 	// Sidearm은 SecondWeapon, 다른 무기는 PrimaryWeapon에 할당
-	void SpawnWeaponForPlayer(int32 WeaponID);
+	bool SpawnWeaponForPlayer(const FWeaponData& WeaponData);
+	bool IsAgentAbility(int32 AbilityID) const;
+	const TCHAR* GetPurchaseError(int32 ItemID, EShopItemType ItemType, int32& OutRefundAmount) const;
+	void SendPurchaseResponse(uint32 RequestID, int32 ItemID, EShopItemType ItemType, const TCHAR* Failure) const;
+	bool bProcessingPurchase = false;
+	uint32 LatestRequestID = 0;
+	uint32 ActiveRequestID = 0;
 
 	// 상점 활성화 상태
 	UPROPERTY(BlueprintReadOnly, Category = "Shop", meta = (AllowPrivateAccess = "true"))

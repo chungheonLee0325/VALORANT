@@ -280,6 +280,10 @@ public:
 	/** 장착 X, 획득하는 개념 (땅에 떨어진 무기 줍기, 상점에서 무기 구매) */
 	UFUNCTION(BlueprintCallable, Category = "Weapon")
 	void AcquireInteractor(ABaseInteractor* Interactor);
+	bool AcquireWeapon(ABaseWeapon& Weapon, bool bDiscardUnused = false);
+
+	FSimpleMulticastDelegate OnWeaponSlotsChanged;
+	FSimpleMulticastDelegate OnActiveInteractorChanged;
 
 	/** 해당 슬롯의 인터랙터를 손에 들고자 할 때 */
 	UFUNCTION(BlueprintCallable, Category = "Weapon")
@@ -530,10 +534,13 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	float FindItemRange = 250.0f;
 
-	UPROPERTY(Replicated)
+	UPROPERTY(ReplicatedUsing = OnRep_WeaponSlots)
 	ABaseWeapon* MainWeapon = nullptr;
-	UPROPERTY(Replicated)
+	UPROPERTY(ReplicatedUsing = OnRep_WeaponSlots)
 	ABaseWeapon* SubWeapon = nullptr;
+
+	UFUNCTION()
+	void OnRep_WeaponSlots();
 
 	UPROPERTY(Replicated)
 	ABaseWeapon* MeleeKnife = nullptr;
@@ -541,8 +548,11 @@ protected:
 	UPROPERTY(Replicated)
 	ASpike* Spike = nullptr;
 
-	UPROPERTY(VisibleAnywhere, Replicated)
+	UPROPERTY(VisibleAnywhere, ReplicatedUsing = OnRep_ActiveInteractor)
 	ABaseInteractor* CurrentInteractor = nullptr;
+
+	UFUNCTION()
+	void OnRep_ActiveInteractor();
 
 	UPROPERTY(Replicated, ReplicatedUsing = OnRep_CurrentInteractorState)
 	EInteractorType CurrentEquipmentState = EInteractorType::None;

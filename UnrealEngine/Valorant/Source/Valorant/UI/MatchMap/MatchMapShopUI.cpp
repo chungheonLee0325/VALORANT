@@ -7,94 +7,132 @@
 #include "Valorant/Player/Component/CreditComponent.h"
 #include "Valorant/Player/AgentPlayerState.h"
 #include "Components/TextBlock.h"
+#include "Components/Button.h"
 #include "Components/Image.h"
 #include "Valorant/GameManager/ValorantGameInstance.h"
 
 void UMatchMapShopUI::NativeConstruct()
 {
 	Super::NativeConstruct();
-
-	// UI 초기화 설정
-	if (CreditText)
-	{
-		// 기본값으로 0 설정
-		AAgentPlayerState* PS = OwnerController->GetPlayerState<AAgentPlayerState>();
-		if (PS)
-		{
-			int32 currentCredit = PS->GetCurrentCredit();
-			UpdateCreditDisplay(currentCredit);
-		}
-		OriginalCreditTextColor = CreditText->GetColorAndOpacity();
-	}
-
 	GameInstance = UValorantGameInstance::Get(GetWorld());
-
-	// 색상 관련 초기화
 	if (CreditText)
 	{
 		OriginalCreditTextColor = CreditText->GetColorAndOpacity();
 	}
+	if (OwnerController && !OnItemRequested.IsBound())
+	{
+		if (const auto* state = OwnerController->GetPlayerState<AAgentPlayerState>())
+		{
+			UpdateCreditDisplay(state->GetCurrentCredit());
+		}
+	}
+}
+
+void UMatchMapShopUI::NativeDestruct()
+{
+	ClearPresentationTimers();
+	UnbindLegacySources();
+	Super::NativeDestruct();
+}
+
+void UMatchMapShopUI::UnbindLegacySources()
+{
+	if (IsValid(OwnerController))
+	{
+		OwnerController->OnServerPurchaseResult.RemoveDynamic(this, &UMatchMapShopUI::HandleServerPurchaseResult);
+	}
+	if (auto* shop = LegacyShop.Get())
+	{
+		shop->OnEquippedWeaponsChanged.RemoveDynamic(this, &UMatchMapShopUI::Client_UpdateWeaponHighlight);
+	}
+	if (auto* state = LegacyPlayerState.Get())
+	{
+		state->OnAbilityStackChanged.RemoveDynamic(this, &UMatchMapShopUI::HandleAbilityStackChanged);
+		if (auto* credits = state->GetCreditComponent())
+		{
+			credits->OnCreditChanged.RemoveDynamic(this, &UMatchMapShopUI::UpdateCreditDisplay);
+		}
+	}
+	LegacyShop.Reset();
+	LegacyPlayerState.Reset();
+}
+
+void UMatchMapShopUI::SetPresentationOwner(AAgentPlayerController* Controller)
+{
+	UnbindLegacySources();
+	OwnerController = Controller;
+	GameInstance = UValorantGameInstance::Get(GetWorld());
+}
+
+TArray<TObjectPtr<UButton>> UMatchMapShopUI::GetPurchaseButtons(EShopItemType Type) const
+{
+	switch (Type)
+	{
+	case EShopItemType::Weapon:
+		return { ButtonClassic, ButtonShorty, ButtonFrenzy, ButtonGhost, ButtonSheriff,
+			ButtonStinger, ButtonSpectre, ButtonBucky, ButtonJudge, ButtonBulldog,
+			ButtonGuardian, ButtonPhantom, ButtonVendal, ButtonMarshal, ButtonOutlaw,
+			ButtonOperator, ButtonAres, ButtonOdin };
+	case EShopItemType::Ability:
+		return { ButtonSkillC, ButtonSkillQ, ButtonSkillE };
+	case EShopItemType::Armor:
+		return { ButtonLightShiled, ButtonHeavyShiled };
+	default:
+		return {};
+	}
+}
+
+void UMatchMapShopUI::ApplyPurchaseOutcome(bool bSuccess, int32 ItemID, EShopItemType ItemType, const FString& FailureReason)
+{
+	HandleServerPurchaseResult(bSuccess, ItemID, ItemType, FailureReason);
+	if (!bSuccess)
+	{
+		ShowUnavailable();
+	}
+}
+
+void UMatchMapShopUI::ShowUnavailable()
+{
+	FlashCreditTextColor(FLinearColor::Red);
+}
+
+void UMatchMapShopUI::ClearPresentationTimers()
+{
+	if (auto* world = GetWorld())
+	{
+		world->GetTimerManager().ClearTimer(CreditTextColorTimerHandle);
+		world->GetTimerManager().ClearTimer(WeaponHighlightTimerHandle);
+	}
+	ResetCreditTextColor();
 }
 
 void UMatchMapShopUI::InitializeShopUI(AAgentPlayerController* Controller)
 {
-	if (!Controller)
+	if (!IsValid(Controller) || OnItemRequested.IsBound())
 	{
-		UE_LOG(LogTemp, Error, TEXT("ShopUI: 컨트롤러가 없습니다!"));
 		return;
 	}
-
-	OwnerController = Controller;
-
-	// 초기 크레딧 표시 업데이트
-	AAgentPlayerState* PS = OwnerController->GetPlayerState<AAgentPlayerState>();
-	if (PS)
+	SetPresentationOwner(Controller);
+	LegacyPlayerState = Controller->GetPlayerState<AAgentPlayerState>();
+	LegacyShop = Controller->ShopComponent;
+	if (auto* state = LegacyPlayerState.Get())
 	{
-		// PlayerState의 크레딧 델리게이트에 바인딩
-		PS->OnCreditChangedDelegate.AddDynamic(this, &UMatchMapShopUI::UpdateCreditDisplay);
-
-		// 어빌리티 스택 변경 델리게이트에 바인딩
-		PS->OnAbilityStackChanged.AddDynamic(this, &UMatchMapShopUI::HandleAbilityStackChanged);
-
-		// 크레딧 컴포넌트의 델리게이트에도 바인딩 (이중 안전장치)
-		UCreditComponent* CreditComp = PS->GetCreditComponent();
-		if (CreditComp)
+		state->OnAbilityStackChanged.AddUniqueDynamic(this, &UMatchMapShopUI::HandleAbilityStackChanged);
+		if (auto* credits = state->GetCreditComponent())
 		{
-			// 서버에 최신 크레딧 값 요청 (명시적 동기화)
+			credits->OnCreditChanged.AddUniqueDynamic(this, &UMatchMapShopUI::UpdateCreditDisplay);
+			UpdateCreditDisplay(credits->GetCurrentCredit());
 			RequestLatestCreditValue();
-
-			// 크레딧 변경 이벤트에 바인딩
-			CreditComp->OnCreditChanged.AddDynamic(this, &UMatchMapShopUI::UpdateCreditDisplay);
 		}
-
-		// 서버에 스택 정보 요청
-		PS->Server_RequestAbilityStackSync();
+		state->Server_RequestAbilityStackSync();
 	}
-
-	// 상점 아이템 목록 업데이트
-	UpdateShopItemList();
-
-	// 상점 컴포넌트의 무기 장착 변경 이벤트에 연결
-	if (Controller && Controller->ShopComponent)
+	if (auto* shop = LegacyShop.Get())
 	{
-		Controller->ShopComponent->OnEquippedWeaponsChanged.AddDynamic(this, &UMatchMapShopUI::Client_UpdateWeaponHighlight);
-
-		// 초기 하이라이트 상태 업데이트
-		Client_UpdateWeaponHighlight();
+		shop->OnEquippedWeaponsChanged.AddUniqueDynamic(this, &UMatchMapShopUI::Client_UpdateWeaponHighlight);
 	}
-
-	// 서버로부터 오는 구매 결과 델리게이트에 바인딩
-	if (OwnerController)
-	{
-		OwnerController->OnServerPurchaseResult.AddDynamic(this, &UMatchMapShopUI::HandleServerPurchaseResult);
-	}
-
-	// 어빌리티 UI 초기화
+	Controller->OnServerPurchaseResult.AddUniqueDynamic(this, &UMatchMapShopUI::HandleServerPurchaseResult);
 	InitializeAbilityUI();
-	
-	// 어빌리티 데이터 로드 및 UI 업데이트
-	LoadAllAbilityData();
-	UpdateAbilityUI();
+	UpdateWeaponHighlights();
 }
 
 void UMatchMapShopUI::UpdateCreditDisplay(int32 CurrentCredit)
@@ -118,134 +156,39 @@ void UMatchMapShopUI::UpdateCreditDisplay(int32 CurrentCredit)
 	}
 }
 
-void UMatchMapShopUI::OnClickedBuyWeaponButton(const int WeaponId)
+void UMatchMapShopUI::OnClickedBuyWeaponButton(int32 WeaponId)
 {
-	if (!OwnerController)
-	{
-		UE_LOG(LogTemp, Error, TEXT("ShopUI: 컨트롤러가 없습니다!"));
-		return;
-	}
-
-	// 구매 전 크레딧 충분한지 확인
-	AAgentPlayerState* PS = OwnerController->GetPlayerState<AAgentPlayerState>();
-	if (PS)
-	{
-		UCreditComponent* CreditComp = PS->FindComponentByClass<UCreditComponent>();
-		UShopComponent* ShopComp = OwnerController->ShopComponent;
-
-		if (CreditComp && ShopComp)
-		{
-			// 아이템 가격 확인
-			const FShopItem* Item = nullptr;
-			for (const FShopItem& ShopItem : ShopComp->GetAllShopItems())
-			{
-				if (ShopItem.ItemID == WeaponId && ShopItem.ItemType == EShopItemType::Weapon)
-				{
-					Item = &ShopItem;
-					break;
-				}
-			}
-
-			// 크레딧 부족 시 UI 피드백
-			int refundAmount = 0;
-			if (!ShopComp->CanPurchaseItem(Item->ItemID, Item->ItemType, refundAmount))
-			{
-				// 색깔 피드백
-				FlashCreditTextColor(FLinearColor::Red);
-
-				// 구매 실패 처리
-				HandleServerPurchaseResult(false, WeaponId, EShopItemType::Weapon, TEXT("크레딧이 부족합니다."));
-				return;
-			}
-		}
-	}
-
-	// 구매 요청
-	OwnerController->RequestPurchaseWeapon(WeaponId);
+	RequestItemPurchase(EShopItemType::Weapon, WeaponId);
 }
 
-void UMatchMapShopUI::OnClickedBuySkillButton(const int SkillId)
+void UMatchMapShopUI::OnClickedBuySkillButton(int32 SkillId)
 {
-	if (!OwnerController)
-	{
-		UE_LOG(LogTemp, Error, TEXT("ShopUI: 컨트롤러가 없습니다!"));
-		return;
-	}
-
-	// 현재 스택 및 최대 스택 확인
-	int32 CurrentStack = GetAbilityStack(SkillId);
-	int32 MaxStack = GetMaxAbilityStack(SkillId);
-
-	// 이미 최대 스택인 경우 구매 불가 메시지 표시
-	if (CurrentStack >= MaxStack)
-	{
-		// 구매 실패 피드백 - 이미 최대 스택
-		HandleServerPurchaseResult(false, SkillId, EShopItemType::Ability, TEXT("최대 스택에 도달했습니다."));
-		return;
-	}
-
-	// 구매 전 크레딧 충분한지 확인
-	AAgentPlayerState* PS = OwnerController->GetPlayerState<AAgentPlayerState>();
-	if (PS)
-	{
-		UCreditComponent* CreditComp = PS->FindComponentByClass<UCreditComponent>();
-		UShopComponent* ShopComp = OwnerController->ShopComponent;
-
-		if (CreditComp && ShopComp)
-		{
-			// 아이템 가격 확인
-			FAbilityData* AbilityData = GameInstance->GetAbilityData(SkillId);
-			if (AbilityData && !CreditComp->CanUseCredits(AbilityData->ChargeCost))
-			{
-				// 색깔 피드백
-				FlashCreditTextColor(FLinearColor::Red);
-
-				// 구매 실패 처리
-				HandleServerPurchaseResult(false, SkillId, EShopItemType::Ability, TEXT("크레딧이 부족합니다."));
-				return;
-			}
-		}
-	}
-
-	// 컨트롤러를 통해 스킬 구매 요청 (ShopComponent를 직접 호출하지 않음)
-	OwnerController->RequestPurchaseAbility(SkillId);
+	RequestItemPurchase(EShopItemType::Ability, SkillId);
 }
 
-void UMatchMapShopUI::OnClickedBuyShiledButton(const int ShieldId)
+void UMatchMapShopUI::OnClickedBuyShiledButton(int32 ShieldId)
 {
-	if (!OwnerController)
-	{
-		UE_LOG(LogTemp, Error, TEXT("ShopUI: 컨트롤러가 없습니다!"));
-		return;
-	}
-
-	// 구매 전 크레딧 충분한지 확인
-	AAgentPlayerState* PS = OwnerController->GetPlayerState<AAgentPlayerState>();
-	if (PS)
-	{
-		UCreditComponent* CreditComp = PS->FindComponentByClass<UCreditComponent>();
-		if (CreditComp)
-		{
-			// 아이템 가격 확인 (방어구는 ID 1이면 400, 2면 1000)
-			int32 Cost = (ShieldId == 1) ? 400 : 1000;
-
-			if (!CreditComp->CanUseCredits(Cost))
-			{
-				// 색깔 피드백
-				FlashCreditTextColor(FLinearColor::Red);
-
-				// 구매 실패 처리
-				HandleServerPurchaseResult(false, ShieldId, EShopItemType::Armor, TEXT("크레딧이 부족합니다."));
-				return;
-			}
-		}
-	}
-
-	// 컨트롤러를 통해 방어구 구매 요청
-	OwnerController->RequestPurchaseArmor(ShieldId);
+	RequestItemPurchase(EShopItemType::Armor, ShieldId);
 }
 
-void UMatchMapShopUI::Client_UpdateWeaponHighlight_Implementation()
+void UMatchMapShopUI::RequestItemPurchase(EShopItemType Type, int32 ItemID)
+{
+	if (OnItemRequested.ExecuteIfBound(Type, ItemID))
+	{
+		return;
+	}
+	auto* shop = LegacyShop.Get();
+	int32 refund = 0;
+	if (!IsValid(OwnerController) || !shop || !shop->CanPurchaseItem(ItemID, Type, refund))
+	{
+		ShowUnavailable();
+		OnPurchaseResult.Broadcast(false, ItemID, Type);
+		return;
+	}
+	OwnerController->Server_RequestShopPurchase(ItemID, Type, 0);
+}
+
+void UMatchMapShopUI::Client_UpdateWeaponHighlight()
 {
 	UpdateWeaponHighlights();
 }
@@ -290,34 +233,17 @@ void UMatchMapShopUI::UpdateShopItemListByType(EShopItemType ItemType)
 void UMatchMapShopUI::HandleServerPurchaseResult(bool bSuccess, int32 ItemID, EShopItemType ItemType,
                                                  const FString& FailureReason)
 {
-	UE_LOG(LogTemp, Log, TEXT("HandleServerPurchaseResult: Success: %d, ItemID: %d, Type: %s, Reason: %s"), bSuccess,
-	       ItemID, *UEnum::GetValueAsString(ItemType), *FailureReason);
-
-	// 구매 결과 이벤트 발생 (Blueprint 등에서 사용 가능)
 	OnPurchaseResult.Broadcast(bSuccess, ItemID, ItemType);
-
-	if (bSuccess)
+	if (!OnItemRequested.IsBound())
 	{
-		Client_UpdateWeaponHighlight();
-		UpdateShopItemList(); // 아이템 목록 UI 갱신
-		// 크레딧 표시는 OnCreditChanged 델리게이트를 통해 자동으로 업데이트될 것이므로, 여기서 직접 호출할 필요는 없을 수 있음
-		// 필요하다면 RequestLatestCreditValue(); 호출 고려
-		UE_LOG(LogTemp, Log, TEXT("Purchase successful for Item %d (%s)"), ItemID, *UEnum::GetValueAsString(ItemType));
-		// ToDo : 성공 시 UI 피드백 로직 추가 (예: 성공 메시지, 사운드)
-		
-		// 어빌리티 구매 성공 시 해당 어빌리티 정보 업데이트
-		if (ItemType == EShopItemType::Ability)
+		if (bSuccess && ItemType == EShopItemType::Weapon)
 		{
-			LoadAbilityData(ItemID);
-			UpdateAbilityUI();
+			UpdateWeaponHighlights();
 		}
-	}
-	else
-	{
-		UE_LOG(LogTemp, Warning, TEXT("Purchase failed for Item %d (%s). Reason: %s"), ItemID,
-		       *UEnum::GetValueAsString(ItemType), *FailureReason);
-		// 여기에 실패 시 UI 피드백 로직 추가 (예: 실패 메시지 표시 - FailureReason 활용)
-		// 예를 들어, 특정 TextBlock에 FailureReason을 표시할 수 있습니다.
+		else if (!bSuccess)
+		{
+			ShowUnavailable();
+		}
 	}
 }
 
@@ -348,12 +274,11 @@ void UMatchMapShopUI::UpdateWeaponHighlights()
 	}
 
 	// Replicate 동기화를 위해 잠시뒤 처리
-	FTimerHandle TimerHandle;
 	TWeakObjectPtr<UMatchMapShopUI> WeakThis = this;
-	GetWorld()->GetTimerManager().SetTimer(TimerHandle, [WeakThis]()
+	GetWorld()->GetTimerManager().SetTimer(WeaponHighlightTimerHandle, [WeakThis]()
 	{
 		UMatchMapShopUI* StrongThis = WeakThis.Get();
-		if (StrongThis)
+		if (StrongThis && IsValid(StrongThis->OwnerController) && StrongThis->OwnerController->ShopComponent)
 		{
 			// 현재 장착 중인 무기 ID 가져오기
 			StrongThis->EquippedWeaponIDs = StrongThis->OwnerController->ShopComponent->GetEquippedWeaponIDs();
