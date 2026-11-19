@@ -1,4 +1,4 @@
-### [Wiki Home](https://github.com/chungheonLee0325/VALORANT/wiki)
+﻿### [Wiki Home](https://github.com/chungheonLee0325/VALORANT/wiki)
 
 ---
 
@@ -26,3 +26,11 @@
 
 #### **4. 기술 부채 개선 사례**
 * [**4.1. GameplayCue 리팩토링**](./4.1_Refactoring_Example-GameplayCue)
+
+
+### 개인 후속 UI 리팩터링
+
+* [4.2. CommonUI와 입력 설계](./4.2_CommonUI-Input-Architecture)
+* [4.3. MVVM과 HUD](./4.3_MVVM-HUD-Architecture)
+* [4.4. 서버 구매와 Actor 수명](./4.4_Server-Purchase-Actor-Lifecycle)
+* [4.5. 멀티플레이 회귀와 AI 도구 활용](./4.5_Multiplayer-Regression-AI)

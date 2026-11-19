@@ -1,0 +1,303 @@
+{
+  "status": "PASS",
+  "sourceCommit": "0d439057bc43e2312b211c9de2008babe80c2079",
+  "requiredCount": 49,
+  "passedCount": 49,
+  "failure": "",
+  "checks": [
+    {
+      "id": "SHOP.ARMOR.DUPLICATE",
+      "process": "host",
+      "status": "PASS",
+      "occurrences": 1
+    },
+    {
+      "id": "SHOP.ARMOR.DAMAGED_UPGRADE",
+      "process": "host",
+      "status": "PASS",
+      "occurrences": 1
+    },
+    {
+      "id": "SHOP.ARMOR.INVALID",
+      "process": "host",
+      "status": "PASS",
+      "occurrences": 1
+    },
+    {
+      "id": "SHOP.REQUEST.REENTRY",
+      "process": "host",
+      "status": "PASS",
+      "occurrences": 1
+    },
+    {
+      "id": "WEAPON.PICKUP.FIRST_PERSON_FAILURE",
+      "process": "host",
+      "status": "PASS",
+      "occurrences": 1
+    },
+    {
+      "id": "WEAPON.PICKUP.SPAWN_FAILURE",
+      "process": "host",
+      "status": "PASS",
+      "occurrences": 1
+    },
+    {
+      "id": "WEAPON.PICKUP.ATTACH_FAILURE",
+      "process": "host",
+      "status": "PASS",
+      "occurrences": 1
+    },
+    {
+      "id": "SHOP.WEAPON.REFUND",
+      "process": "host",
+      "status": "PASS",
+      "occurrences": 1
+    },
+    {
+      "id": "SHOP.WEAPON.SPAWN_FAILURE",
+      "process": "host",
+      "status": "PASS",
+      "occurrences": 1
+    },
+    {
+      "id": "SHOP.WEAPON.ATTACH_FAILURE",
+      "process": "host",
+      "status": "PASS",
+      "occurrences": 1
+    },
+    {
+      "id": "WEAPON.PICKUP.RETRY",
+      "process": "host",
+      "status": "PASS",
+      "occurrences": 1
+    },
+    {
+      "id": "SHOP.REQUEST.PENDING_CLICK",
+      "process": "client2",
+      "status": "PASS",
+      "occurrences": 1
+    },
+    {
+      "id": "SHOP.REQUEST.TIMEOUT",
+      "process": "client2",
+      "status": "PASS",
+      "occurrences": 1
+    },
+    {
+      "id": "SHOP.REQUEST.STALE_REPLY",
+      "process": "client2",
+      "status": "PASS",
+      "occurrences": 1
+    },
+    {
+      "id": "SHOP.REQUEST.AFTER_TIMEOUT",
+      "process": "client2",
+      "status": "PASS",
+      "occurrences": 1
+    },
+    {
+      "id": "UI.INPUT.FIRE_RELEASE",
+      "process": "client2",
+      "status": "PASS",
+      "occurrences": 1
+    },
+    {
+      "id": "WEAPON.LIFETIME.DEATH",
+      "process": "host",
+      "status": "PASS",
+      "occurrences": 1
+    },
+    {
+      "id": "HUD.KILL_FEED",
+      "process": "host",
+      "status": "PASS",
+      "occurrences": 1
+    },
+    {
+      "id": "UI.FOCUS.INITIAL",
+      "process": "client1",
+      "status": "PASS",
+      "occurrences": 1
+    },
+    {
+      "id": "HUD.CARDS.INITIAL",
+      "process": "client1",
+      "status": "PASS",
+      "occurrences": 1
+    },
+    {
+      "id": "UI.INPUT.CROUCH_WALK_RELEASE",
+      "process": "client1",
+      "status": "PASS",
+      "occurrences": 1
+    },
+    {
+      "id": "UI.FOCUS.CATEGORY",
+      "process": "client1",
+      "status": "PASS",
+      "occurrences": 1
+    },
+    {
+      "id": "UI.FOCUS.DPAD",
+      "process": "client1",
+      "status": "PASS",
+      "occurrences": 1
+    },
+    {
+      "id": "UI.MODAL.ARMOR",
+      "process": "client1",
+      "status": "PASS",
+      "occurrences": 1
+    },
+    {
+      "id": "UI.MODAL.CANCEL",
+      "process": "client1",
+      "status": "PASS",
+      "occurrences": 1
+    },
+    {
+      "id": "SHOP.REQUEST.PENDING",
+      "process": "client1",
+      "status": "PASS",
+      "occurrences": 1
+    },
+    {
+      "id": "SHOP.SESSION.REOPEN_PENDING",
+      "process": "client1",
+      "status": "PASS",
+      "occurrences": 1
+    },
+    {
+      "id": "SHOP.SESSION.LATE_REPLY",
+      "process": "client1",
+      "status": "PASS",
+      "occurrences": 1
+    },
+    {
+      "id": "SHOP.SESSION.DUPLICATE_REPLY",
+      "process": "client1",
+      "status": "PASS",
+      "occurrences": 1
+    },
+    {
+      "id": "SHOP.ARMOR.CLIENT_DUPLICATE",
+      "process": "client1",
+      "status": "PASS",
+      "occurrences": 1
+    },
+    {
+      "id": "UI.FOCUS.WEAPON",
+      "process": "client1",
+      "status": "PASS",
+      "occurrences": 1
+    },
+    {
+      "id": "UI.MODAL.WEAPON",
+      "process": "client1",
+      "status": "PASS",
+      "occurrences": 1
+    },
+    {
+      "id": "SHOP.WEAPON.REPLICATION",
+      "process": "client1",
+      "status": "PASS",
+      "occurrences": 1
+    },
+    {
+      "id": "WEAPON.LIFETIME.REPLACEMENT",
+      "process": "client1",
+      "status": "PASS",
+      "occurrences": 1
+    },
+    {
+      "id": "UI.FOCUS.SKILL",
+      "process": "client1",
+      "status": "PASS",
+      "occurrences": 1
+    },
+    {
+      "id": "UI.MODAL.SKILL",
+      "process": "client1",
+      "status": "PASS",
+      "occurrences": 1
+    },
+    {
+      "id": "SHOP.SKILL.REPLICATION",
+      "process": "client1",
+      "status": "PASS",
+      "occurrences": 1
+    },
+    {
+      "id": "UI.INPUT.INJECT",
+      "process": "client1",
+      "status": "PASS",
+      "occurrences": 1
+    },
+    {
+      "id": "UI.INPUT.BLOCK",
+      "process": "client1",
+      "status": "PASS",
+      "occurrences": 1
+    },
+    {
+      "id": "UI.INPUT.AUTO_CLOSE",
+      "process": "client1",
+      "status": "PASS",
+      "occurrences": 1
+    },
+    {
+      "id": "HUD.CARDS.ROUND",
+      "process": "client1",
+      "status": "PASS",
+      "occurrences": 1
+    },
+    {
+      "id": "UI.INPUT.HELD_KEYS",
+      "process": "client1",
+      "status": "PASS",
+      "occurrences": 1
+    },
+    {
+      "id": "UI.INPUT.RESTORE",
+      "process": "client1",
+      "status": "PASS",
+      "occurrences": 1
+    },
+    {
+      "id": "HUD.REPLICATION.AMMO",
+      "process": "client1",
+      "status": "PASS",
+      "occurrences": 1
+    },
+    {
+      "id": "HUD.SKILL.FOLLOW_UP",
+      "process": "client1",
+      "status": "PASS",
+      "occurrences": 1
+    },
+    {
+      "id": "HUD.SKILL.CONSUME",
+      "process": "client1",
+      "status": "PASS",
+      "occurrences": 1
+    },
+    {
+      "id": "HUD.REPLICATION.VITALS_SCORE",
+      "process": "client1",
+      "status": "PASS",
+      "occurrences": 1
+    },
+    {
+      "id": "HUD.RECREATE",
+      "process": "client1",
+      "status": "PASS",
+      "occurrences": 1
+    },
+    {
+      "id": "HUD.DAMAGE_INDICATOR",
+      "process": "client1",
+      "status": "PASS",
+      "occurrences": 1
+    }
+  ]
+}
