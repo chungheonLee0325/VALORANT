@@ -169,9 +169,7 @@ private:
 	bool IsAgentAbility(int32 AbilityID) const;
 	const TCHAR* GetPurchaseError(int32 ItemID, EShopItemType ItemType, int32& OutRefundAmount) const;
 	void SendPurchaseResponse(uint32 RequestID, int32 ItemID, EShopItemType ItemType, const TCHAR* Failure) const;
-	bool bProcessingPurchase = false;
 	uint32 LatestRequestID = 0;
-	uint32 ActiveRequestID = 0;
 
 	// 상점 활성화 상태
 	UPROPERTY(BlueprintReadOnly, Category = "Shop", meta = (AllowPrivateAccess = "true"))

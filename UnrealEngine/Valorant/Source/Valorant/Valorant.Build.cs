@@ -23,6 +23,7 @@ public class Valorant : ModuleRules
 			"GameplayTags", 
 			"GameplayTasks", 
 			"UMG",
+			"CommonInput",
 			"CommonUI",
 			"ModelViewViewModel",
 			"OnlineSubsystem",

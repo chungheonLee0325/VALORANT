@@ -21,7 +21,8 @@ if (Get-NetUDPEndpoint -LocalPort $Port -ErrorAction SilentlyContinue) {
 $archive = Join-Path $projectRoot 'Saved/Logs/UIRegression'
 $run = Join-Path $archive (Get-Date -Format 'yyyyMMdd-HHmmss-fff')
 New-Item -ItemType Directory -Path $run -Force | Out-Null
-$required = @(Get-Content -LiteralPath (Join-Path $PSScriptRoot 'UIRegressionChecks.json') -Raw | ConvertFrom-Json)
+# Windows PowerShell 5.1 emits a JSON array as one object, so @() would wrap it again.
+$required = Get-Content -LiteralPath (Join-Path $PSScriptRoot 'UIRegressionChecks.json') -Raw | ConvertFrom-Json
 $sourceCommit = (& git -C $projectRoot rev-parse HEAD).Trim()
 $outcome = 'FAIL'
 $failureReason = ''

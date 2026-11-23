@@ -1,5 +1,10 @@
 #if WITH_DEV_AUTOMATION_TESTS && !UE_BUILD_SHIPPING
 #include "CommonActivatableWidget.h"
+#include "CommonInputSettings.h"
+#include "CommonInputSubsystem.h"
+#include "ICommonInputModule.h"
+#include "Input/CommonUIActionRouterBase.h"
+#include "Input/CommonUIInputTypes.h"
 #include "AbilitySystem/Attributes/BaseAttributeSet.h"
 #include "Components/Button.h"
 #include "Components/PanelWidget.h"
@@ -22,6 +27,7 @@
 #include "Player/Component/AgentInputComponent.h"
 #include "Player/Component/CreditComponent.h"
 #include "UI/MatchMap/MatchMapShopUI.h"
+#include "UI/MatchMap/ShopLayer.h"
 #include "UI/MatchMap/ShopViewModel.h"
 #include "UI/MatchMap/MatchMapHUD.h"
 #include "UObject/UObjectIterator.h"
@@ -53,6 +59,38 @@ namespace
         const auto* blue = top ? Cast<UPanelWidget>(top->GetWidgetFromName(TEXT("StackBoxBlue"))) : nullptr;
         const auto* red = top ? Cast<UPanelWidget>(top->GetWidgetFromName(TEXT("StackBoxRed"))) : nullptr;
         return blue && red ? blue->GetChildrenCount() + red->GetChildrenCount() : INDEX_NONE;
+    }
+
+    TMap<FName, FName> ActiveUIActions(const AAgentPlayerController& PC)
+    {
+        TMap<FName, FName> actions;
+        if (const auto* router = PC.GetLocalPlayer()->GetSubsystem<UCommonUIActionRouterBase>())
+        {
+            for (const FUIActionBindingHandle& handle : router->GatherActiveBindings())
+            {
+                actions.Add(handle.GetActionName(), GetFNameSafe(handle.GetBoundWidget()));
+                UE_LOG(LogTemp, Display, TEXT("REPLAY active UI action %s on %s"),
+                    *handle.GetActionName().ToString(), *GetNameSafe(handle.GetBoundWidget()));
+            }
+        }
+        return actions;
+    }
+
+    // CommonUI names a table-row binding after its table and row.
+    FName UIActionName(FDataTableRowHandle Row, FName RowName = NAME_None)
+    {
+        if (!RowName.IsNone())
+        {
+            Row.RowName = RowName;
+        }
+        return FBindUIActionArgs(Row, FSimpleDelegate()).GetActionName();
+    }
+
+    FString KeyLabel(const UUserWidget* Modal, const TCHAR* Button)
+    {
+        const auto* button = Modal ? Cast<UUserWidget>(Modal->GetWidgetFromName(Button)) : nullptr;
+        const auto* label = button ? Cast<UTextBlock>(button->GetWidgetFromName(TEXT("InputKeyLabel"))) : nullptr;
+        return label ? label->GetText().ToString() : FString();
     }
 
     void Key(const FKey& Key)
@@ -322,7 +360,8 @@ namespace
         }
 
         static int32 step = 0;
-        static bool bModalShotRequested = false;
+        static int32 modalStage = 0;
+        static bool bGamepadPrompts = false;
         static double next = 0;
         static FVector pos;
         static FRotator aim;
@@ -360,17 +399,20 @@ namespace
             auto* button = shop ? Cast<UButton>(shop->GetWidgetFromName(Name)) : nullptr;
             return button && button->HasUserFocus(pc);
         };
-        const auto modal = [pc]()
+        const auto activeModal = [pc]() -> UShopConfirmation*
         {
-            for (TObjectIterator<UCommonActivatableWidget> item; item; ++item)
+            for (TObjectIterator<UShopConfirmation> item; item; ++item)
             {
-                if (item->GetOwningPlayer() == pc && item->IsActivated() && item->GetClass()->GetName() == TEXT("ShopConfirmation"))
+                if (item->GetOwningPlayer() == pc && item->IsActivated())
                 {
-                    return true;
+                    return *item;
                 }
             }
-            return false;
+            return nullptr;
         };
+        const auto modal = [&activeModal]() { return activeModal() != nullptr; };
+        const auto& inputSettings = ICommonInputModule::GetSettings();
+        auto* inputSubsystem = UCommonInputSubsystem::Get(pc->GetLocalPlayer());
         const auto inject = [pc, pawn](bool bSwitch)
         {
             auto* input = pawn->FindComponentByClass<UAgentInputComponent>();
@@ -432,6 +474,14 @@ namespace
                 break;
             }
             Result(TEXT("UI.FOCUS.INITIAL"), TEXT("initial Classic focus"), focused(TEXT("ButtonClassic")));
+            {
+                const auto actions = ActiveUIActions(*pc);
+                const FDataTableRowHandle back = inputSettings.GetDefaultBackAction();
+                Result(TEXT("UI.ACTION.SCREEN"), TEXT("shop screen binds Back, shop key and LB/RB as CommonUI actions"),
+                    actions.Contains(UIActionName(back)) && actions.Contains(UIActionName(back, TEXT("ShopClose")))
+                    && actions.Contains(UIActionName(back, TEXT("ShopPreviousCategory")))
+                    && actions.Contains(UIActionName(back, TEXT("ShopNextCategory"))));
+            }
             Result(TEXT("HUD.CARDS.INITIAL"), TEXT("buy phase has four top HUD cards"), CountPlayerCards(*pc) == 4);
             {
                 const auto* running = FindFProperty<FBoolProperty>(ABaseAgent::StaticClass(), TEXT("bIsRun"));
@@ -455,12 +505,45 @@ namespace
             ++step;
             break;
         case 4:
-            if (!bModalShotRequested)
+            if (modalStage == 0)
             {
                 Result(TEXT("UI.MODAL.ARMOR"), TEXT("Heavy Shield maps to item 2 and opens modal"), modal() && vm && vm->SelectedItemId == 2);
+                const auto actions = ActiveUIActions(*pc);
+                const FDataTableRowHandle back = inputSettings.GetDefaultBackAction();
+                const FName* confirm = actions.Find(UIActionName(inputSettings.GetDefaultClickAction()));
+                const FName* cancel = actions.Find(UIActionName(back));
+                Result(TEXT("UI.ACTION.MODAL"), TEXT("modal buttons own the default Click and Back actions while LB/RB are inactive"),
+                    confirm && *confirm == TEXT("ConfirmButton") && cancel && *cancel == TEXT("CancelButton")
+                    && !actions.Contains(UIActionName(back, TEXT("ShopPreviousCategory")))
+                    && !actions.Contains(UIActionName(back, TEXT("ShopNextCategory"))));
+                bGamepadPrompts = inputSubsystem && inputSubsystem->GetCurrentInputType() == ECommonInputType::Gamepad
+                    && KeyLabel(activeModal(), TEXT("ConfirmButton")) == EKeys::Gamepad_FaceButton_Bottom.GetDisplayName(false).ToString()
+                    && KeyLabel(activeModal(), TEXT("CancelButton")) == EKeys::Gamepad_FaceButton_Right.GetDisplayName(false).ToString();
+                UE_LOG(LogTemp, Display, TEXT("REPLAY modal prompts: confirm=%s cancel=%s"),
+                    *KeyLabel(activeModal(), TEXT("ConfirmButton")), *KeyLabel(activeModal(), TEXT("CancelButton")));
                 FScreenshotRequest::RequestScreenshot(Path(TEXT("UIRegressionShop="), TEXT("-confirm.png")), true, false);
-                bModalShotRequested = true;
+                ++modalStage;
                 break;
+            }
+            if (modalStage == 1)
+            {
+                if (inputSubsystem)
+                {
+                    inputSubsystem->SetCurrentInputType(ECommonInputType::MouseAndKeyboard);
+                }
+                UE_LOG(LogTemp, Display, TEXT("REPLAY modal prompts: confirm=%s cancel=%s"),
+                    *KeyLabel(activeModal(), TEXT("ConfirmButton")), *KeyLabel(activeModal(), TEXT("CancelButton")));
+                Result(TEXT("UI.ACTION.PROMPTS"), TEXT("modal key prompts follow the switch between gamepad and keyboard"),
+                    bGamepadPrompts && inputSubsystem && inputSubsystem->GetCurrentInputType() == ECommonInputType::MouseAndKeyboard
+                    && KeyLabel(activeModal(), TEXT("ConfirmButton")) == EKeys::Enter.GetDisplayName(false).ToString()
+                    && KeyLabel(activeModal(), TEXT("CancelButton")) == EKeys::Escape.GetDisplayName(false).ToString());
+                FScreenshotRequest::RequestScreenshot(Path(TEXT("UIRegressionShop="), TEXT("-confirm-kbm.png")), true, false);
+                ++modalStage;
+                break;
+            }
+            if (inputSubsystem)
+            {
+                inputSubsystem->SetCurrentInputType(ECommonInputType::Gamepad);
             }
             Key(EKeys::Gamepad_FaceButton_Right);
             ++step;

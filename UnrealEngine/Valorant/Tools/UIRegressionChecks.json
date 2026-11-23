@@ -15,9 +15,9 @@
     "description": "armor: insufficient credit and unknown ID preserve balance and armor"
   },
   {
-    "id": "SHOP.REQUEST.REENTRY",
+    "id": "SHOP.REQUEST.ORDER",
     "process": "host",
-    "description": "requests: active duplicate coalesced, distinct reentry acknowledged, completed duplicate rejected"
+    "description": "requests: a processed or older request number is rejected without settlement"
   },
   {
     "id": "WEAPON.PICKUP.FIRST_PERSON_FAILURE",
@@ -95,6 +95,11 @@
     "description": "initial Classic focus"
   },
   {
+    "id": "UI.ACTION.SCREEN",
+    "process": "client1",
+    "description": "shop screen binds Back, shop key and LB/RB as CommonUI actions"
+  },
+  {
     "id": "HUD.CARDS.INITIAL",
     "process": "client1",
     "description": "buy phase has four top HUD cards"
@@ -118,6 +123,16 @@
     "id": "UI.MODAL.ARMOR",
     "process": "client1",
     "description": "Heavy Shield maps to item 2 and opens modal"
+  },
+  {
+    "id": "UI.ACTION.MODAL",
+    "process": "client1",
+    "description": "modal buttons own the default Click and Back actions while LB/RB are inactive"
+  },
+  {
+    "id": "UI.ACTION.PROMPTS",
+    "process": "client1",
+    "description": "modal key prompts follow the switch between gamepad and keyboard"
   },
   {
     "id": "UI.MODAL.CANCEL",

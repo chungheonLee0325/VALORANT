@@ -286,9 +286,9 @@ void AAgentPlayerController::OpenShopUI()
 		return;
 	}
 
-	if (!ShopUIClass)
+	if (!ShopUIClass || !ShopConfirmationClass)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("ShopUIClass is not configured on the local controller."));
+		UE_LOG(LogTemp, Warning, TEXT("ShopUIClass or ShopConfirmationClass is not configured on the local controller."));
 		return;
 	}
 
@@ -322,7 +322,7 @@ void AAgentPlayerController::OpenShopUI()
 	ShopViewModel->Bind(*this);
 	ShopViewModel->BeginSession();
 	ShopComponent->SetShopActive(true);
-	ShopLayer->Open(*ShopViewModel, ShopUIClass);
+	ShopLayer->Open(*ShopViewModel, ShopUIClass, ShopConfirmationClass);
 }
 
 bool AAgentPlayerController::IsShopOpen() const

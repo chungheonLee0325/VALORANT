@@ -21,26 +21,47 @@ public:
 	UShopButtonStyle();
 };
 
-UCLASS()
+// Behavior of a modal button. Layout, fonts and colors live in WBP_ShopButton.
+UCLASS(Abstract)
 class UShopButton : public UCommonButtonBase
 {
 	GENERATED_BODY()
 
 public:
-	void SetContent(const FText& Title);
+	UShopButton();
 
 protected:
+	virtual void NativePreConstruct() override;
 	virtual void NativeOnInitialized() override;
-	virtual FReply NativeOnKeyDown(const FGeometry& Geometry, const FKeyEvent& Event) override;
+	virtual void UpdateInputActionWidget() override;
 
 private:
 	void RefreshAppearance();
 
-	UPROPERTY(Transient)
+	UPROPERTY(EditAnywhere, Category = "Shop")
+	FText ButtonText;
+
+	UPROPERTY(EditAnywhere, Category = "Shop")
+	FLinearColor BackgroundColor = FLinearColor::Black;
+
+	UPROPERTY(EditAnywhere, Category = "Shop")
+	FLinearColor HighlightedBackgroundColor = FLinearColor::Gray;
+
+	UPROPERTY(EditAnywhere, Category = "Shop")
+	FLinearColor TextColor = FLinearColor::White;
+
+	UPROPERTY(EditAnywhere, Category = "Shop")
+	FLinearColor HighlightedTextColor = FLinearColor::White;
+
+	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UBorder> Background;
 
-	UPROPERTY(Transient)
+	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UTextBlock> Label;
+
+	// Shows the bound key as text when the platform has no icon for it.
+	UPROPERTY(meta = (BindWidgetOptional))
+	TObjectPtr<UTextBlock> InputKeyLabel;
 };
 
 UCLASS(Abstract)
@@ -49,9 +70,11 @@ class UShopPanel : public UCommonActivatableWidget
 	GENERATED_BODY()
 
 protected:
+	virtual void NativeOnInitialized() override;
 	virtual TOptional<FUIInputConfig> GetDesiredInputConfig() const override;
-	virtual FReply NativeOnPreviewKeyDown(const FGeometry& Geometry, const FKeyEvent& Event) override;
 };
+
+class UShopConfirmation;
 
 UCLASS()
 class UShopScreen : public UShopPanel
@@ -59,14 +82,15 @@ class UShopScreen : public UShopPanel
 	GENERATED_BODY()
 
 public:
-	void Configure(UShopViewModel& Model, UCommonActivatableWidgetStack& Stack, TSubclassOf<UMatchMapShopUI> ContentClass);
+	UShopScreen();
+	void Configure(UShopViewModel& Model, UCommonActivatableWidgetStack& Stack, TSubclassOf<UMatchMapShopUI> ContentClass,
+		TSubclassOf<UShopConfirmation> InConfirmationClass);
 
 protected:
 	virtual void NativeOnInitialized() override;
 	virtual void NativeOnActivated() override;
 	virtual void NativeOnDeactivated() override;
 	virtual UWidget* NativeGetDesiredFocusTarget() const override;
-	virtual FReply NativeOnPreviewKeyDown(const FGeometry& Geometry, const FKeyEvent& Event) override;
 
 private:
 	void CollectPurchaseButtons();
@@ -83,6 +107,9 @@ private:
 	TObjectPtr<UCommonActivatableWidgetStack> ShopStack;
 
 	UPROPERTY(Transient)
+	TSubclassOf<UShopConfirmation> ConfirmationClass;
+
+	UPROPERTY(Transient)
 	TObjectPtr<UOverlay> ContentRoot;
 
 	UPROPERTY(Transient)
@@ -96,12 +123,10 @@ private:
 
 	UPROPERTY(Transient)
 	TArray<TObjectPtr<UButton>> ArmorButtons;
-
-	TWeakObjectPtr<UButton> RestoreFocus;
-	FDelegateHandle FocusChangingHandle;
 };
 
-UCLASS()
+// Behavior of the purchase modal. Layout, fonts and colors live in WBP_ShopConfirmation.
+UCLASS(Abstract)
 class UShopConfirmation : public UShopPanel
 {
 	GENERATED_BODY()
@@ -119,11 +144,14 @@ private:
 	UPROPERTY(Transient)
 	TObjectPtr<UShopViewModel> ViewModel;
 
-	UPROPERTY(Transient)
+	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UTextBlock> Details;
 
-	UPROPERTY(Transient)
+	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UShopButton> ConfirmButton;
+
+	UPROPERTY(meta = (BindWidget))
+	TObjectPtr<UShopButton> CancelButton;
 };
 
 UCLASS()
@@ -132,7 +160,7 @@ class UShopLayer : public UUserWidget
 	GENERATED_BODY()
 
 public:
-	void Open(UShopViewModel& ViewModel, TSubclassOf<UMatchMapShopUI> ContentClass);
+	void Open(UShopViewModel& ViewModel, TSubclassOf<UMatchMapShopUI> ContentClass, TSubclassOf<UShopConfirmation> ConfirmationClass);
 	void Close();
 	bool IsOpen() const;
 

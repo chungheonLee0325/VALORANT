@@ -65,42 +65,27 @@ namespace
         return counts;
     }
 
-    bool CheckRequestReentry(AAgentPlayerController& PC, int32 WeaponID)
+    bool CheckRequestOrder(AAgentPlayerController& PC, UCreditComponent& Credits, int32 WeaponID)
     {
         auto& shop = *PC.ShopComponent;
+        const uint32 older = PC.AllocateShopRequestID();
         const uint32 purchase = PC.AllocateShopRequestID();
-        const uint32 nested = PC.AllocateShopRequestID();
-        int32 successes = 0;
-        int32 duplicateRejections = 0;
-        int32 busyRejections = 0;
-        bool bAttempted = false;
+        int32 rejections = 0;
         const auto replies = PC.OnShopPurchaseResponse.AddLambda(
             [&](uint32 ID, bool bSuccess, int32, EShopItemType, const FString& Reason)
             {
-                if (ID == purchase)
-                {
-                    if (bSuccess) { ++successes; }
-                    else if (Reason.Contains(TEXT("이미 처리"))) { ++duplicateRejections; }
-                }
-                if (ID == nested && !bSuccess && Reason.Contains(TEXT("다른 구매"))) { ++busyRejections; }
+                rejections += (ID == purchase || ID == older) && !bSuccess && Reason.Contains(TEXT("이미 처리"));
             });
-        UWorld* world = PC.GetWorld();
-        const auto spawn = world->AddOnActorSpawnedHandler(FOnActorSpawned::FDelegate::CreateLambda([&](AActor* Actor)
-        {
-            if (!bAttempted && Actor->IsA<ABaseWeapon>())
-            {
-                bAttempted = true;
-                shop.PurchaseItem(WeaponID, EShopItemType::Weapon, purchase);
-                shop.PurchaseItem(2, EShopItemType::Armor, nested);
-            }
-        }));
         const bool bBought = shop.PurchaseItem(WeaponID, EShopItemType::Weapon, purchase);
-        world->RemoveOnActorSpawnedHandler(spawn);
+        const int32 balance = Credits.GetCurrentCredit();
         const bool bReplayRejected = !shop.PurchaseItem(WeaponID, EShopItemType::Weapon, purchase);
+        // CheckArmor leaves a damaged heavy shield, so a new number would refill it.
+        const bool bOlderRejected = !shop.PurchaseItem(2, EShopItemType::Armor, older);
         PC.OnShopPurchaseResponse.Remove(replies);
-        UE_LOG(LogTemp, Display, TEXT("SHOP CHECK request replies: success=%d busy=%d replay=%d"), successes, busyRejections, duplicateRejections);
-        Record(TEXT("SHOP.REQUEST.REENTRY"), TEXT("requests: active duplicate coalesced, distinct reentry acknowledged, completed duplicate rejected"),
-            bBought && bAttempted && bReplayRejected && successes == 1 && busyRejections == 1 && duplicateRejections == 1);
+        UE_LOG(LogTemp, Display, TEXT("SHOP CHECK request order: bought=%d rejections=%d balance=%d/%d"),
+            bBought, rejections, Credits.GetCurrentCredit(), balance);
+        Record(TEXT("SHOP.REQUEST.ORDER"), TEXT("requests: a processed or older request number is rejected without settlement"),
+            bBought && bReplayRejected && bOlderRejected && rejections == 2 && Credits.GetCurrentCredit() == balance);
         return bBought;
     }
 
@@ -173,7 +158,7 @@ namespace
         }
 
         Credits.AddCredits(5000 - Credits.GetCurrentCredit());
-        const bool bBoughtVandal = CheckRequestReentry(PC, vandal->WeaponID);
+        const bool bBoughtVandal = CheckRequestOrder(PC, Credits, vandal->WeaponID);
         const auto beforeReplacement = CountWeaponActors(*Agent.GetWorld());
         const TWeakObjectPtr<ABaseWeapon> unused = Agent.GetMainWeapon();
         const bool bBoughtPhantom = Shop.PurchaseWeapon(phantom->WeaponID);

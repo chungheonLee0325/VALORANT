@@ -125,6 +125,9 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "UI")
 	TSubclassOf<class UMatchMapShopUI> ShopUIClass;
 
+	UPROPERTY(EditDefaultsOnly, Category = "UI")
+	TSubclassOf<class UShopConfirmation> ShopConfirmationClass;
+
 	bool IsShopOpen() const;
 	void RestoreShopGameplayInput();
 

@@ -199,26 +199,13 @@ bool UShopComponent::PurchaseItem(int32 ItemID, EShopItemType ItemType, uint32 R
 	}
 	if (RequestID != 0)
 	{
-		// A repeated call within the same transaction shares the original reply.
-		if (bProcessingPurchase && RequestID == ActiveRequestID)
-		{
-			return false;
-		}
-		const uint32 advance = RequestID - LatestRequestID;
-		if (LatestRequestID != 0 && (advance == 0 || advance > MAX_int32))
+		if (RequestID <= LatestRequestID)
 		{
 			SendPurchaseResponse(RequestID, ItemID, ItemType, TEXT("이미 처리한 요청 번호입니다."));
 			return false;
 		}
 		LatestRequestID = RequestID;
 	}
-	if (bProcessingPurchase)
-	{
-		SendPurchaseResponse(RequestID, ItemID, ItemType, TEXT("다른 구매를 처리하고 있습니다."));
-		return false;
-	}
-	TGuardValue<bool> processing(bProcessingPurchase, true);
-	TGuardValue<uint32> activeRequest(ActiveRequestID, RequestID);
 	int32 refund = 0;
 	const TCHAR* failure = GetPurchaseError(ItemID, ItemType, refund);
 	if (!failure)

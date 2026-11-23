@@ -4,18 +4,16 @@
 
 #include "Blueprint/WidgetTree.h"
 #include "Brushes/SlateNoResource.h"
+#include "CommonActionWidget.h"
+#include "CommonInputSettings.h"
+#include "CommonInputSubsystem.h"
+#include "CommonUITypes.h"
 #include "Components/Border.h"
 #include "Components/Button.h"
-#include "Components/PanelWidget.h"
-#include "Components/HorizontalBox.h"
-#include "Components/HorizontalBoxSlot.h"
 #include "Components/Overlay.h"
 #include "Components/OverlaySlot.h"
-#include "Components/SizeBox.h"
 #include "Components/TextBlock.h"
-#include "Components/VerticalBox.h"
-#include "Components/VerticalBoxSlot.h"
-#include "Framework/Application/SlateApplication.h"
+#include "ICommonInputModule.h"
 #include "Input/CommonUIInputTypes.h"
 #include "Player/AgentPlayerController.h"
 #include "Widgets/CommonActivatableWidgetContainer.h"
@@ -24,48 +22,12 @@
 
 namespace
 {
-	const FLinearColor Accent(0.20f, 0.92f, 0.74f);
-
-	UTextBlock* AddText(UWidgetTree& Tree, UVerticalBox& Box, const FText& Text, int32 Size)
+	// Shop actions are rows of the UI action table that holds the project's default Back action.
+	FDataTableRowHandle ShopAction(FName Row)
 	{
-		auto* label = Tree.ConstructWidget<UTextBlock>();
-		label->SetText(Text);
-		label->SetFont(FCoreStyle::GetDefaultFontStyle("Regular", Size));
-		Box.AddChildToVerticalBox(label)->SetPadding(FMargin(0, 4));
-		return label;
-	}
-
-	UVerticalBox* MakePanel(UWidgetTree& Tree, float Width)
-	{
-		auto* background = Tree.ConstructWidget<UBorder>();
-		background->SetBrushColor(FLinearColor(0.008f, 0.015f, 0.024f, 0.90f));
-		auto* center = Tree.ConstructWidget<UOverlay>();
-		background->SetContent(center);
-		Tree.RootWidget = background;
-
-		auto* size = Tree.ConstructWidget<USizeBox>();
-		size->SetWidthOverride(Width);
-		auto* slot = center->AddChildToOverlay(size);
-		slot->SetHorizontalAlignment(HAlign_Center);
-		slot->SetVerticalAlignment(VAlign_Center);
-
-		auto* panel = Tree.ConstructWidget<UBorder>();
-		panel->SetBrushColor(FLinearColor(0.035f, 0.060f, 0.085f));
-		panel->SetPadding(FMargin(24, 18));
-		size->SetContent(panel);
-		auto* body = Tree.ConstructWidget<UVerticalBox>();
-		panel->SetContent(body);
-		return body;
-	}
-
-	UShopButton* AddButton(UWidgetTree& Tree, UHorizontalBox& Row, const FText& Text)
-	{
-		auto* button = Tree.ConstructWidget<UShopButton>();
-		button->SetContent(Text);
-		auto* slot = Row.AddChildToHorizontalBox(button);
-		slot->SetPadding(FMargin(0, 0, 5, 0));
-		slot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
-		return button;
+		FDataTableRowHandle action = ICommonInputModule::GetSettings().GetDefaultBackAction();
+		action.RowName = Row;
+		return action;
 	}
 }
 
@@ -76,42 +38,44 @@ UShopButtonStyle::UShopButtonStyle()
 	ButtonPadding = FMargin(0);
 }
 
+UShopButton::UShopButton()
+{
+	Style = UShopButtonStyle::StaticClass();
+}
+
+void UShopButton::NativePreConstruct()
+{
+	Super::NativePreConstruct();
+	// The designer previews this before every bound widget exists.
+	if (Label && Background)
+	{
+		Label->SetText(ButtonText);
+		RefreshAppearance();
+	}
+}
+
 void UShopButton::NativeOnInitialized()
 {
 	Super::NativeOnInitialized();
-
-	Background = WidgetTree->ConstructWidget<UBorder>();
-	Background->SetPadding(FMargin(12, 9));
-	Background->SetVisibility(ESlateVisibility::HitTestInvisible);
-	WidgetTree->RootWidget = Background;
-	Label = WidgetTree->ConstructWidget<UTextBlock>();
-	Label->SetFont(FCoreStyle::GetDefaultFontStyle("Bold", 15));
-	Background->SetContent(Label);
-	SetStyle(UShopButtonStyle::StaticClass());
 	OnFocusReceived().AddUObject(this, &UShopButton::RefreshAppearance);
 	OnFocusLost().AddUObject(this, &UShopButton::RefreshAppearance);
 	OnHovered().AddUObject(this, &UShopButton::RefreshAppearance);
 	OnUnhovered().AddUObject(this, &UShopButton::RefreshAppearance);
-	RefreshAppearance();
 }
 
-void UShopButton::SetContent(const FText& Title)
+void UShopButton::UpdateInputActionWidget()
 {
-	Label->SetText(Title);
-}
-
-FReply UShopButton::NativeOnKeyDown(const FGeometry& Geometry, const FKeyEvent& Event)
-{
-	const FKey key = Event.GetKey();
-	if (key == EKeys::Enter || key == EKeys::Virtual_Accept || key == EKeys::Gamepad_FaceButton_Bottom)
+	Super::UpdateInputActionWidget();
+	auto* input = GetInputSubsystem();
+	if (!InputKeyLabel || !input)
 	{
-		if (!Event.IsRepeat())
-		{
-			HandleButtonClicked();
-		}
-		return FReply::Handled();
+		return;
 	}
-	return Super::NativeOnKeyDown(Geometry, Event);
+	const bool bHasIcon = InputActionWidget && InputActionWidget->GetIcon().DrawAs != ESlateBrushDrawType::NoDrawType;
+	const auto* action = TriggeringInputAction.GetRow<FCommonInputActionDataBase>(TEXT("ShopButton"));
+	const FKey key = action && !bHasIcon
+		? action->GetInputTypeInfo(input->GetCurrentInputType(), input->GetCurrentGamepadName()).GetKey() : FKey();
+	InputKeyLabel->SetText(key.IsValid() ? key.GetDisplayName(false) : FText::GetEmpty());
 }
 
 void UShopButton::RefreshAppearance()
@@ -119,8 +83,14 @@ void UShopButton::RefreshAppearance()
 	auto* player = GetOwningPlayer();
 	const bool bHighlighted = IsHovered()
 		|| (player && (HasUserFocus(player) || HasUserFocusedDescendants(player)));
-	Background->SetBrushColor(bHighlighted ? FLinearColor(0.08f, 0.28f, 0.30f) : FLinearColor(0.07f, 0.12f, 0.16f));
-	Label->SetColorAndOpacity(bHighlighted ? Accent : FLinearColor::White);
+	Background->SetBrushColor(bHighlighted ? HighlightedBackgroundColor : BackgroundColor);
+	Label->SetColorAndOpacity(bHighlighted ? HighlightedTextColor : TextColor);
+}
+
+void UShopPanel::NativeOnInitialized()
+{
+	Super::NativeOnInitialized();
+	RegisterUIActionBinding(FBindUIActionArgs(ShopAction(TEXT("ShopClose")), false, FSimpleDelegate::CreateUObject(this, &UShopPanel::DeactivateWidget)));
 }
 
 TOptional<FUIInputConfig> UShopPanel::GetDesiredInputConfig() const
@@ -128,19 +98,10 @@ TOptional<FUIInputConfig> UShopPanel::GetDesiredInputConfig() const
 	return FUIInputConfig(ECommonInputMode::Menu, EMouseCaptureMode::NoCapture, EMouseLockMode::DoNotLock);
 }
 
-FReply UShopPanel::NativeOnPreviewKeyDown(const FGeometry& Geometry, const FKeyEvent& Event)
+UShopScreen::UShopScreen()
 {
-	const FKey key = Event.GetKey();
-	if (IsActivated() && (key == EKeys::Escape || key == EKeys::Gamepad_FaceButton_Right || key == EKeys::B
-		|| key == EKeys::Gamepad_Special_Left))
-	{
-		if (!Event.IsRepeat())
-		{
-			DeactivateWidget();
-		}
-		return FReply::Handled();
-	}
-	return Super::NativeOnPreviewKeyDown(Geometry, Event);
+	bIsBackHandler = true;
+	bAutoRestoreFocus = true;
 }
 
 void UShopScreen::NativeOnInitialized()
@@ -148,14 +109,18 @@ void UShopScreen::NativeOnInitialized()
 	Super::NativeOnInitialized();
 	ContentRoot = WidgetTree->ConstructWidget<UOverlay>();
 	WidgetTree->RootWidget = ContentRoot;
+	RegisterUIActionBinding(FBindUIActionArgs(ShopAction(TEXT("ShopPreviousCategory")), false, FSimpleDelegate::CreateUObject(this, &UShopScreen::MoveCategory, -1)));
+	RegisterUIActionBinding(FBindUIActionArgs(ShopAction(TEXT("ShopNextCategory")), false, FSimpleDelegate::CreateUObject(this, &UShopScreen::MoveCategory, 1)));
 }
 
 void UShopScreen::Configure(UShopViewModel& Model, UCommonActivatableWidgetStack& Stack,
-	TSubclassOf<UMatchMapShopUI> ContentClass)
+	TSubclassOf<UMatchMapShopUI> ContentClass, TSubclassOf<UShopConfirmation> InConfirmationClass)
 {
 	ViewModel = &Model;
 	ShopStack = &Stack;
-	RestoreFocus.Reset();
+	ConfirmationClass = InConfirmationClass;
+	// A reopened shop starts from its first item instead of the last focused one.
+	ClearFocusRestorationTarget();
 	if (!Content || Content->GetClass() != ContentClass)
 	{
 		ContentRoot->ClearChildren();
@@ -203,26 +168,6 @@ void UShopScreen::NativeOnActivated()
 	});
 	ViewModel->OnAbilityStackUpdated.AddUObject(Content.Get(), &UMatchMapShopUI::HandleAbilityStackChanged);
 	ViewModel->OnEquipmentUpdated.AddUObject(Content.Get(), &UMatchMapShopUI::UpdateWeaponHighlights);
-	FocusChangingHandle = FSlateApplication::Get().OnFocusChanging().AddWeakLambda(this,
-		[this](const FFocusEvent&, const FWeakWidgetPath&, const TSharedPtr<SWidget>&,
-			const FWidgetPath&, const TSharedPtr<SWidget>& focused)
-		{
-			if (!focused.IsValid())
-			{
-				return;
-			}
-			for (const auto* group : {&WeaponButtons, &AbilityButtons, &ArmorButtons})
-			{
-				for (const auto& button : *group)
-				{
-					if (button->GetCachedWidget() == focused)
-					{
-						RestoreFocus = button.Get();
-						return;
-					}
-				}
-			}
-		});
 	Content->UpdateCreditDisplay(ViewModel->CurrentCredits);
 	Content->InitializeAbilityUI();
 	Content->UpdateWeaponHighlights();
@@ -231,11 +176,6 @@ void UShopScreen::NativeOnActivated()
 
 void UShopScreen::NativeOnDeactivated()
 {
-	if (FocusChangingHandle.IsValid() && FSlateApplication::IsInitialized())
-	{
-		FSlateApplication::Get().OnFocusChanging().Remove(FocusChangingHandle);
-		FocusChangingHandle.Reset();
-	}
 	if (ViewModel)
 	{
 		ViewModel->RemoveAllFieldValueChangedDelegates(this);
@@ -251,10 +191,6 @@ void UShopScreen::NativeOnDeactivated()
 
 UWidget* UShopScreen::NativeGetDesiredFocusTarget() const
 {
-	if (RestoreFocus.IsValid() && RestoreFocus->GetIsEnabled() && RestoreFocus->IsVisible())
-	{
-		return RestoreFocus.Get();
-	}
 	for (const auto* group : {&WeaponButtons, &AbilityButtons, &ArmorButtons})
 	{
 		if (const auto* target = group->FindByPredicate([](const TObjectPtr<UButton>& button)
@@ -285,36 +221,6 @@ UButton* UShopScreen::FindFocusedButton() const
 	return nullptr;
 }
 
-FReply UShopScreen::NativeOnPreviewKeyDown(const FGeometry& Geometry, const FKeyEvent& Event)
-{
-	const FKey key = Event.GetKey();
-	if (IsActivated() && (key == EKeys::Gamepad_LeftShoulder || key == EKeys::Gamepad_RightShoulder))
-	{
-		if (!Event.IsRepeat())
-		{
-			MoveCategory(key == EKeys::Gamepad_RightShoulder ? 1 : -1);
-		}
-		return FReply::Handled();
-	}
-	if (IsActivated() && (key == EKeys::Enter || key == EKeys::Gamepad_FaceButton_Bottom))
-	{
-		auto* button = FindFocusedButton();
-		if (!button)
-		{
-			button = RestoreFocus.Get();
-		}
-		if (button && button->GetIsEnabled() && button->IsVisible())
-		{
-			if (!Event.IsRepeat())
-			{
-				button->OnClicked.Broadcast();
-			}
-			return FReply::Handled();
-		}
-	}
-	return Super::NativeOnPreviewKeyDown(Geometry, Event);
-}
-
 void UShopScreen::MoveCategory(int32 Direction)
 {
 	const TArray<TObjectPtr<UButton>>* groups[] = {&WeaponButtons, &AbilityButtons, &ArmorButtons};
@@ -336,7 +242,6 @@ void UShopScreen::MoveCategory(int32 Direction)
 		if (const auto* target = groups[category]->FindByPredicate([](const TObjectPtr<UButton>& button)
 			{ return button->GetIsEnabled() && button->IsVisible(); }))
 		{
-			RestoreFocus = target->Get();
 			(*target)->SetUserFocus(GetOwningPlayer());
 			return;
 		}
@@ -356,11 +261,7 @@ void UShopScreen::OpenConfirmation(EShopItemType Type, int32 ItemId)
 		ViewModel->SelectItem(*item);
 		if (ViewModel->bCanPurchase)
 		{
-			if (auto* focused = FindFocusedButton())
-			{
-				RestoreFocus = focused;
-			}
-			ShopStack->AddWidget<UShopConfirmation>(UShopConfirmation::StaticClass(), [this](UShopConfirmation& dialog)
+			ShopStack->AddWidget<UShopConfirmation>(ConfirmationClass, [this](UShopConfirmation& dialog)
 			{
 				dialog.Configure(*ViewModel);
 			});
@@ -393,15 +294,11 @@ void UShopScreen::ApplyPurchaseOutcome()
 void UShopConfirmation::NativeOnInitialized()
 {
 	Super::NativeOnInitialized();
-	auto* body = MakePanel(*WidgetTree, 460);
-	AddText(*WidgetTree, *body, LOCTEXT("ConfirmTitle", "구매 확인"), 26);
-	Details = AddText(*WidgetTree, *body, FText::GetEmpty(), 18);
-	auto* actions = WidgetTree->ConstructWidget<UHorizontalBox>();
-	body->AddChildToVerticalBox(actions)->SetPadding(FMargin(0, 12, 0, 0));
-	ConfirmButton = AddButton(*WidgetTree, *actions, LOCTEXT("Confirm", "구매"));
+	const auto& settings = ICommonInputModule::GetSettings();
+	ConfirmButton->SetTriggeringInputAction(settings.GetDefaultClickAction());
 	ConfirmButton->OnClicked().AddUObject(this, &UShopConfirmation::Confirm);
-	auto* cancel = AddButton(*WidgetTree, *actions, LOCTEXT("Cancel", "취소"));
-	cancel->OnClicked().AddUObject(this, &UShopConfirmation::DeactivateWidget);
+	CancelButton->SetTriggeringInputAction(settings.GetDefaultBackAction());
+	CancelButton->OnClicked().AddUObject(this, &UShopConfirmation::DeactivateWidget);
 }
 
 void UShopConfirmation::Configure(UShopViewModel& Model)
@@ -434,14 +331,14 @@ void UShopLayer::NativeOnInitialized()
 	WidgetTree->RootWidget = Stack;
 }
 
-void UShopLayer::Open(UShopViewModel& ViewModel, TSubclassOf<UMatchMapShopUI> ContentClass)
+void UShopLayer::Open(UShopViewModel& ViewModel, TSubclassOf<UMatchMapShopUI> ContentClass, TSubclassOf<UShopConfirmation> ConfirmationClass)
 {
 	if (!IsOpen())
 	{
 		Stack->SetTransitionDuration(0);
-		Stack->AddWidget<UShopScreen>(UShopScreen::StaticClass(), [this, &ViewModel, ContentClass](UShopScreen& screen)
+		Stack->AddWidget<UShopScreen>(UShopScreen::StaticClass(), [this, &ViewModel, ContentClass, ConfirmationClass](UShopScreen& screen)
 		{
-			screen.Configure(ViewModel, *Stack, ContentClass);
+			screen.Configure(ViewModel, *Stack, ContentClass, ConfirmationClass);
 		});
 	}
 }
