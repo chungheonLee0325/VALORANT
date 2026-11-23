@@ -40,7 +40,7 @@ UShopViewModel은 잔액, 선택, 구매 대기와 결과를 FieldNotify로 전�
 - **상품 확인.** 포커스된 상품 UButton의 기본 Accept 처리(Slate 내비게이션, 패드에서는 CommonUI 아날로그 커서의 가상 클릭)를 그대로 쓴다. 패드와 마우스가 같은 버튼 클릭 경로를 지난다.
 - **확인 모달.** 구매·취소 버튼의 TriggeringInputAction에 Default Click·Back을 지정한다. CommonButton이 액션 바인딩과 버튼 안의 UCommonActionWidget을 관리한다. 패드 A는 포커스와 무관하게 구매이므로 취소 버튼은 포커스 대상에서 뺐다. 취소는 B/Esc나 마우스 클릭으로 한다.
 - **포커스 복귀.** UShopScreen의 bAutoRestoreFocus가 비활성화 직전 포커스를 저장하고 모달이 닫히면 되돌린다. 기존 전역 FSlateApplication::OnFocusChanging 훅과 직접 저장하던 복귀 대상을 제거했다. 상점을 다시 열면 ClearFocusRestorationTarget으로 첫 상품부터 시작한다.
-- **키 표시.** 프로젝트·엔진·CommonUI 플러그인에 게임에서 쓸 패드·키보드 아이콘 텍스처가 없어(CommonUI는 GenericInputActionDataTable만 제공) 컨트롤러 데이터를 만들지 않았다. 버튼은 현재 입력 방식의 키 이름을 텍스트(InputKeyLabel)로 보여 준다. 입력 방식이 바뀌면 Enter·Esc와 Gamepad Face Button Bottom·Right가 서로 바뀐다. 컨트롤러 데이터가 추가되면 같은 자리의 UCommonActionWidget이 아이콘을 그리고 텍스트는 비워진다.
+- **키 아이콘.** 프로젝트·엔진·CommonUI 플러그인에 게임에서 쓸 패드·키보드 아이콘 텍스처가 없었다(CommonUI는 GenericInputActionDataTable만 제공). Enter·Esc 키캡과 A·B 버튼 아이콘을 ChatGPT 이미지 생성으로 만들었다. 브랜드 로고 없는 일반 디자인이다. 단색 배경을 제거해 높이 128px 텍스처로 임포트했다. BP_ControllerData_KeyboardMouse와 BP_ControllerData_Gamepad(GamepadName Windows)가 키와 아이콘을 연결하고, DefaultGame.ini의 Windows 플랫폼 입력 설정이 둘을 등록한다. 버튼 안의 UCommonActionWidget이 입력 방식에 맞는 아이콘을 그린다. 아이콘이 없는 키는 키 이름 텍스트(InputKeyLabel)로 대체하고, 아이콘이 있으면 텍스트를 접는다.
 
 ## 서버 구매와 월드 획득
 
@@ -77,7 +77,7 @@ UMatchMapHUD는 두 모델을 구독하고 기존 Blueprint의 피격·킬 피�
 | 상점 행을 Default Back과 같은 테이블에서 찾음 | 화면 클래스는 WBP가 없어 행 핸들을 편집할 곳이 없다. ini에 에셋 참조를 두면 CDO 생성 시점에 DataTable을 읽게 된다. 행 이름 세 개만 코드에 둔다. |
 | 모달 확인을 Default Click 액션에 연결 | CommonButton의 TriggeringInputAction이 바인딩과 아이콘 표시를 함께 처리한다. 대신 A가 항상 구매이므로 취소 버튼을 포커스에서 제외했다. |
 | bAutoRestoreFocus로 포커스 복귀 | 스택이 화면을 비활성화하기 직전 포커스를 CommonUI가 저장한다. 전역 Slate 훅을 유지할 이유가 없다. |
-| 아이콘 대신 키 이름 텍스트 | 사용할 수 있는 아이콘 에셋이 없다. 아이콘을 새로 만들지 않고 컨트롤러 데이터를 추가할 자리만 남겼다. |
+| 생성 아이콘과 텍스트 대체 | 사용할 수 있는 아이콘 에셋이 없어 필요한 네 키만 생성했다. 컨트롤러 데이터에 없는 키는 텍스트로 보여 주어 아이콘이 빠져도 키를 알 수 있다. |
 | 서버 요청 번호를 "처리했거나 오래된 번호 거부"로 단순화 | 한 연결의 Reliable 서버 RPC는 한 번씩 순서대로 실행된다. 처리 중 같은 번호 병합과 uint32 래핑 비교는 정상 경로에서 일어나지 않는다. |
 | 재진입 잠금(bProcessingPurchase) 제거 | C++와 Blueprint에 구매 처리 중 다시 PurchaseItem을 부르는 경로가 없다. Blueprint는 클라이언트의 RequestPurchaseAbility RPC만 호출한다. 기존 검사는 Actor 생성 콜백으로 만든 인위적 재진입만 다뤘다. |
 

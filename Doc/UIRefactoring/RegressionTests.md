@@ -2,7 +2,7 @@
 
 ## 환경과 재현
 
-최신 결과의 제품·회귀 도구 기준은 입력 후속 개선 커밋 80a33a81이다. 이전 Release는 공개 main 0e2d734d에서 만든 로컬 커밋 35cda65d(제품)와 0d439057(회귀 도구)이었다. UE 5.5.4, Windows, Win64 Development Editor에서 실제 MatchMap의 호스트 1개와 원격 3개를 실행한다. 네 요원이 확정된 뒤 구매·장비·UI 검사를 시작한다.
+최신 결과의 제품·회귀 도구 기준은 커밋 17d28b6f이다. 입력 후속 개선의 첫 기준은 80a33a81이었다. 이전 Release는 공개 main 0e2d734d에서 만든 로컬 커밋 35cda65d(제품)와 0d439057(회귀 도구)이었다. UE 5.5.4, Windows, Win64 Development Editor에서 실제 MatchMap의 호스트 1개와 원격 3개를 실행한다. 네 요원이 확정된 뒤 구매·장비·UI 검사를 시작한다.
 
 프로젝트 폴더 UnrealEngine/Valorant에서 다음을 실행한다. EngineRoot에는 설치된 UE 5.5.4 폴더를 넣는다.
 
@@ -14,7 +14,7 @@ pwsh -File ./Tools/Run-UIRegression.ps1 -EngineRoot $EngineRoot -Port 18011 -Tim
 
 PowerShell 7(pwsh)과 Windows PowerShell 5.1(powershell -File) 모두에서 실행한다. 5.1은 JSON 배열을 한 객체로 내보내므로 검사 목록을 @()로 다시 감싸지 않게 고쳤다. 최신 결과는 5.1로 실행했다.
 
-에셋을 바꾼 뒤 첫 두 실행에서 DX12 원격의 게임 스레드가 수 분 멈췄다. 그동안 셰이더 컴파일 지연과 거리장 빌드 로그가 이어졌고, 캐시가 채워진 뒤에는 210초 안에 끝났다. 정확한 대기 지점은 디버거 없이 확인하지 못했다. 멈춘 원격의 연결이 끊기면 기존 UMiniMapWidget::UpdateAgentIcons가 다른 프로세스에서 크래시한다. 이 크래시는 이번 범위 밖이라 고치지 않았다.
+아이콘·컨트롤러 데이터를 추가한 뒤에도 연속 두 실행에서 화면용 원격이 상점 흐름을 시작하지 않아 18/52로 끝났다(호스트·client2 검사는 PASS). 단계 로그를 넣은 다음 실행부터는 연속으로 통과했고 원인은 찾지 못했다. 에셋을 바꾼 뒤 첫 두 실행에서 DX12 원격의 게임 스레드가 수 분 멈춘 일도 있었다. 그동안 셰이더 컴파일 지연과 거리장 빌드 로그가 이어졌고, 캐시가 채워진 뒤에는 210초 안에 끝났다. 정확한 대기 지점은 디버거 없이 확인하지 못했다. 멈춘 원격의 연결이 끊기자 나머지 세 프로세스가 기존 UMiniMapWidget::UpdateAgentIcons에서 크래시했다. 미니맵이 나간 플레이어의 파괴된 PlayerState를 목록에 남겨 두고, 가비지 컬렉션이 그 항목을 null로 바꾼 뒤 역참조했다. 갱신 전에 유효하지 않은 PlayerState와 그 아이콘을 제거하도록 고쳤다. 별도 재현(원격 하나 강제 종료, 연결 타임아웃 10초·GC 5초)에서 수정 전에는 5초 안에 세 프로세스가 같은 줄에서 크래시했고, 수정 후에는 90초 동안 모두 유지됐다. 수정 후 전체 회귀도 52/52 PASS였다. 이 재현은 실행 절차가 달라 필수 검사에는 넣지 않았다.
 
 호스트와 보조 클라이언트는 NullRHI, 화면 캡처용 원격 피닉스는 DX12 오프스크린이다. Steam과 HTTP를 실행 옵션으로 끄고 루프백에만 연결한다. 엔진 USD 플러그인 초기화 오류가 발생한 환경에서 게임과 무관한 USD 플러그인을 회귀 실행 옵션으로 비활성화했다. 일반 프로젝트 설정을 바꾸지는 않았다.
 
@@ -37,9 +37,9 @@ WITH_DEV_AUTOMATION_TESTS 및 비 Shipping 빌드에서만 도구를 컴파일�
 
 ## 최신 실행 결과
 
-실제 실행의 요약과 모든 검사 상태는 [results.json](Evidence/results.json), 대표 서버·원격 로그는 [regression-results.txt](Evidence/regression-results.txt)에 있다. 실행 20261123-211159-774에서 52개 필수 검사가 각 지정 프로세스에서 한 번씩 PASS였다. 전체 C++ 빌드에 이어 커밋 80a33a81을 기록한 상태에서 실행했다. 이번에 바꾼 WBP_ShopConfirmation·WBP_ShopButton·PC_Agent·BP_UIInputData는 AgentMCP 컴파일 오류·경고 0개였다. 이전 Release의 49개 결과는 커밋 0d439057 기준이며 이번 결과와 합산하지 않는다.
+실제 실행의 요약과 모든 검사 상태는 [results.json](Evidence/results.json), 대표 서버·원격 로그는 [regression-results.txt](Evidence/regression-results.txt)에 있다. 실행 20261124-001915-128에서 52개 필수 검사가 각 지정 프로세스에서 한 번씩 PASS였다. 전체 C++ 빌드에 이어 커밋 17d28b6f을 기록한 상태에서 실행했다. 이번에 바꾼 WBP_ShopConfirmation·WBP_ShopButton·PC_Agent·BP_UIInputData·BP_ControllerData_KeyboardMouse·BP_ControllerData_Gamepad는 AgentMCP 컴파일 오류·경고 0개였다. 이전 Release의 49개 결과는 커밋 0d439057 기준이며 이번 결과와 합산하지 않는다.
 
-후속 개선에서 바뀐 검사는 네 개다. SHOP.REQUEST.REENTRY는 새 서버 정책에 맞춰 SHOP.REQUEST.ORDER로 바꿨다. 이미 처리한 번호와 더 오래된 번호를 보내고, 오래된 번호의 요청이 새 번호였다면 승인됐을 손상 방어구 복구여도 잔액이 그대로인지 본다. UI.ACTION.SCREEN·UI.ACTION.MODAL은 CommonUI 라우터의 활성 바인딩에서 Back·상점 키·LB/RB와 모달 버튼의 Default Click·Back을 확인한다. UI.ACTION.PROMPTS는 입력 방식을 패드에서 키보드·마우스로 바꿀 때 모달의 키 표시가 바뀌는지 확인한다. 화면 코드에 키 판정이 없으므로 기존 LB·D-pad·A·B 주입 검사가 그대로 액션 경로를 지난다.
+후속 개선에서 바뀐 검사는 네 개다. SHOP.REQUEST.REENTRY는 새 서버 정책에 맞춰 SHOP.REQUEST.ORDER로 바꿨다. 이미 처리한 번호와 더 오래된 번호를 보내고, 오래된 번호의 요청이 새 번호였다면 승인됐을 손상 방어구 복구여도 잔액이 그대로인지 본다. UI.ACTION.SCREEN·UI.ACTION.MODAL은 CommonUI 라우터의 활성 바인딩에서 Back·상점 키·LB/RB와 모달 버튼의 Default Click·Back을 확인한다. UI.ACTION.PROMPTS는 입력 방식을 패드에서 키보드·마우스로 바꿀 때 모달 버튼의 아이콘이 A·B에서 Enter·Esc 텍스처로 바뀌고 텍스트 라벨이 비어 있는지 확인한다. 화면 코드에 키 판정이 없으므로 기존 LB·D-pad·A·B 주입 검사가 그대로 액션 경로를 지난다.
 
 ![게임패드 입력의 구매 확인](Evidence/shop-confirmation.png)
 
@@ -115,6 +115,6 @@ WITH_DEV_AUTOMATION_TESTS 및 비 Shipping 빌드에서만 도구를 컴파일�
 
 실물 Xbox·PlayStation 컨트롤러, 물리 키보드·마우스 혼용, Win64 패키지, Steam·전용 서버, 실제 네트워크 지연·손실, 독립 PlayerState·ASC 교체와 ServerTravel은 NOT RUN이다. 입력 주입 결과는 로컬 재현 범위다.
 
-입력 후속 개선의 NOT RUN 범위는 다음과 같다. 키 표시 전환은 UCommonInputSubsystem::SetCurrentInputType으로 입력 방식을 바꿔 확인했고 실제 키보드·마우스 이벤트로 전환하지 않았다. Enter·Esc·B(상점 키)·View 키 입력은 주입하지 않았다. 같은 액션 행의 패드 키(A·B·LB·RB)만 주입했다. 아이콘 에셋이 없어 아이콘 표시는 확인하지 않았고 키 이름 텍스트를 확인했다. 패키지 빌드에서 Input Data·DataTable이 쿡되는지는 확인하지 않았다. 방향별 피격 표시와 모든 총기 애니메이션은 별도 확인이 필요하며, 기존 쇼티 데이터에는 발사 애니메이션이 빠져 있다.
+입력 후속 개선의 NOT RUN 범위는 다음과 같다. 키 표시 전환은 UCommonInputSubsystem::SetCurrentInputType으로 입력 방식을 바꿔 확인했고 실제 키보드·마우스 이벤트로 전환하지 않았다. Enter·Esc·B(상점 키)·View 키 입력은 주입하지 않았다. 같은 액션 행의 패드 키(A·B·LB·RB)만 주입했다. 아이콘은 CommonActionWidget이 고른 텍스처 이름으로 확인했다. 실물 컨트롤러에서 CommonInput이 Windows 외의 패드 이름을 고르면 패드 아이콘이 나오지 않을 수 있으며, 이 경우는 확인하지 않았다. 패키지 빌드에서 Input Data·DataTable이 쿡되는지는 확인하지 않았다. 방향별 피격 표시와 모든 총기 애니메이션은 별도 확인이 필요하며, 기존 쇼티 데이터에는 발사 애니메이션이 빠져 있다.
 
 새 일반 획득 실패 주입은 호스트에서 수행했다. 원격에서는 정상 교체 후 소유권·슬롯·메시·Actor 수와 HUD를 확인했다. 소스 전용 미러는 필수 WBP와 MatchMap을 포함하지 않으므로 원본 VALORANT 프로젝트에서 전체 검증을 실행해야 한다.
