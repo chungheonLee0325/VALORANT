@@ -1,8 +1,8 @@
 {
   "status": "PASS",
-  "sourceCommit": "0d439057bc43e2312b211c9de2008babe80c2079",
-  "requiredCount": 49,
-  "passedCount": 49,
+  "sourceCommit": "80a33a8150356dc7d307007cc0ed182c2d8607ca",
+  "requiredCount": 52,
+  "passedCount": 52,
   "failure": "",
   "checks": [
     {
@@ -24,7 +24,7 @@
       "occurrences": 1
     },
     {
-      "id": "SHOP.REQUEST.REENTRY",
+      "id": "SHOP.REQUEST.ORDER",
       "process": "host",
       "status": "PASS",
       "occurrences": 1
@@ -120,6 +120,12 @@
       "occurrences": 1
     },
     {
+      "id": "UI.ACTION.SCREEN",
+      "process": "client1",
+      "status": "PASS",
+      "occurrences": 1
+    },
+    {
       "id": "HUD.CARDS.INITIAL",
       "process": "client1",
       "status": "PASS",
@@ -145,6 +151,18 @@
     },
     {
       "id": "UI.MODAL.ARMOR",
+      "process": "client1",
+      "status": "PASS",
+      "occurrences": 1
+    },
+    {
+      "id": "UI.ACTION.MODAL",
+      "process": "client1",
+      "status": "PASS",
+      "occurrences": 1
+    },
+    {
+      "id": "UI.ACTION.PROMPTS",
       "process": "client1",
       "status": "PASS",
       "occurrences": 1

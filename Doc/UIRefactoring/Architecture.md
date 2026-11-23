@@ -10,7 +10,9 @@ UE 5.5 VALORANT 팀 프로젝트에 수행한 개인 후속 리팩터링이다. 
 flowchart TD
     PC[AgentPlayerController] --> Layer[ShopLayer / CommonUI Stack]
     Layer --> Screen[ShopScreen / authored Shop WBP]
-    Layer --> Modal[ShopConfirmation]
+    Layer --> Modal[ShopConfirmation / WBP_ShopConfirmation]
+    Input[CommonUI Input Data / DT_UIInputActions] -.-> Screen
+    Input -.-> Modal
     Screen --> ShopVM[ShopViewModel / FieldNotify]
     Modal --> ShopVM
     ShopVM --> RPC[Server purchase RPC]
@@ -25,9 +27,20 @@ flowchart TD
     GS[MatchGameState] --> Top[MatchMapHudTopWidget]
 ~~~
 
-UShopLayer가 Activatable Stack을 소유한다. UShopScreen은 기존 WBP_MatchMap_ShopUI를 담고 상품 버튼과 모달의 포커스를 관리한다. 모달에서 취소하면 선택한 상품에 포커스가 돌아온다. 기본 상점 그리드·아이콘·충전 바를 재사용했다. 상시 HUD는 게임 조작 중 상태를 보여 주는 UMG 화면으로 유지했다.
+UShopLayer가 Activatable Stack을 소유한다. UShopScreen은 기존 WBP_MatchMap_ShopUI를 담고 상품 버튼 그룹과 카테고리 이동을 관리한다. 모달에서 취소하면 CommonUI가 저장한 포커스로 선택한 상품에 돌아온다. 기본 상점 그리드·아이콘·충전 바를 재사용했다. 상시 HUD는 게임 조작 중 상태를 보여 주는 UMG 화면으로 유지했다.
 
 UShopViewModel은 잔액, 선택, 구매 대기와 결과를 FieldNotify로 전달한다. 구현은 UMVVMViewModelBase의 네이티브 구독이며 UMG 에디터의 MVVM View Binding은 미적용이다. 화면을 닫으면 선택과 피드백을 지우고 서버 처리 중인 요청은 계속 추적한다. 타임아웃은 대기를 해제하고 결과 미확인을 알린다. 늦게 복제된 장비와 재화는 실제 값에 따라 갱신된다.
+
+## 입력 액션
+
+상점 화면 코드에는 키 판정이 없다. 뒤로 가기·상점 키·카테고리 이동·모달 확인은 CommonUI 액션으로 처리한다.
+
+- **입력 데이터.** DT_UIInputActions(CommonInputActionDataBase)에 Confirm(Enter / A), Back(Esc / B), ShopClose(B / View), ShopPreviousCategory(LB), ShopNextCategory(RB) 행을 둔다. BP_UIInputData가 Default Click=Confirm, Default Back=Back을 지정하고 DefaultGame.ini의 CommonInputSettings가 이 Input Data를 가리킨다.
+- **상점 화면.** UShopScreen은 bIsBackHandler로 Default Back을 받아 닫힌다. 상점 키와 LB/RB는 RegisterUIActionBinding으로 등록한다. 상점 행은 Default Back 행이 있는 같은 테이블에서 행 이름으로 찾는다.
+- **상품 확인.** 포커스된 상품 UButton의 기본 Accept 처리(Slate 내비게이션, 패드에서는 CommonUI 아날로그 커서의 가상 클릭)를 그대로 쓴다. 패드와 마우스가 같은 버튼 클릭 경로를 지난다.
+- **확인 모달.** 구매·취소 버튼의 TriggeringInputAction에 Default Click·Back을 지정한다. CommonButton이 액션 바인딩과 버튼 안의 UCommonActionWidget을 관리한다. 패드 A는 포커스와 무관하게 구매이므로 취소 버튼은 포커스 대상에서 뺐다. 취소는 B/Esc나 마우스 클릭으로 한다.
+- **포커스 복귀.** UShopScreen의 bAutoRestoreFocus가 비활성화 직전 포커스를 저장하고 모달이 닫히면 되돌린다. 기존 전역 FSlateApplication::OnFocusChanging 훅과 직접 저장하던 복귀 대상을 제거했다. 상점을 다시 열면 ClearFocusRestorationTarget으로 첫 상품부터 시작한다.
+- **키 표시.** 프로젝트·엔진·CommonUI 플러그인에 게임에서 쓸 패드·키보드 아이콘 텍스처가 없어(CommonUI는 GenericInputActionDataTable만 제공) 컨트롤러 데이터를 만들지 않았다. 버튼은 현재 입력 방식의 키 이름을 텍스트(InputKeyLabel)로 보여 준다. 입력 방식이 바뀌면 Enter·Esc와 Gamepad Face Button Bottom·Right가 서로 바뀐다. 컨트롤러 데이터가 추가되면 같은 자리의 UCommonActionWidget이 아이콘을 그리고 텍스트는 비워진다.
 
 ## 서버 구매와 월드 획득
 
@@ -38,7 +51,7 @@ UShopComponent::GetPurchaseError는 구매 구간·생존 Pawn·카탈로그·�
 - 새 무기의 부착과 슬롯 지급이 성공해야 결제한다. 생성·부착 실패 시 기존 슬롯과 잔액을 보존한다.
 - 일반 월드 무기 획득도 같은 ABaseWeapon::TryEquipWeapon을 사용한다. 소유권과 PickUp 이벤트 전에 부착을 확인한다. 실패하면 원래 위치·물리·충돌을 복원하고 새 표시 Actor를 제거한다.
 
-RequestID는 Controller별로 증가한다. 서버는 처리 중 같은 번호를 합치고 다른 번호의 재진입을 거부 응답한다. 처리한 번호의 재제출은 재결제 없이 거부한다. 이 정책은 단일 Controller 연결의 요청 순서를 관리한다.
+RequestID는 Controller별로 증가한다. 서버는 이미 처리했거나 더 오래된 번호를 재정산 없이 거부한다. 번호의 핵심 가치는 클라이언트 UShopViewModel의 대조다. 타임아웃 뒤 늦게 온 응답은 새 요청을 끝내지 못한다.
 
 ## Actor와 입력 수명
 
@@ -54,18 +67,33 @@ UMatchMapHUD는 두 모델을 구독하고 기존 Blueprint의 피격·킬 피�
 
 상점 상품은 명시적인 버튼 그룹, HUD 스킬의 키·충전 패널은 필수 BindWidget으로 연결한다. 기존 에셋 내부 이름과 이벤트 그래프를 보존했다. 레이아웃·정적 글꼴·그림자·버튼 포커스는 WBP에서 편집한다. 구매 판정·복제 구독·요청 수명은 C++가 담당한다.
 
+확인 모달과 모달 버튼은 WBP_ShopConfirmation·WBP_ShopButton이 레이아웃·색·글꼴을 가진다. C++ UShopConfirmation·UShopButton은 BindWidget 계약과 동작만 둔다. 필수는 Details·ConfirmButton·CancelButton, Background·Label이고 선택은 InputKeyLabel과 CommonButton의 InputActionWidget이다. 버튼의 기본·강조 색과 문구는 WBP 기본값과 인스턴스 속성으로 편집한다. 모달 클래스는 PC_Agent의 ShopConfirmationClass로 지정하고 UShopLayer::Open이 화면까지 전달한다.
+
+## 후속 개선의 결정 근거
+
+| 결정 | 근거 |
+| --- | --- |
+| 입력을 CommonUI 액션으로 이전 | 키 목록이 화면 코드와 마우스·패드 경로에 흩어져 있었다. 액션 테이블 한 곳에서 키를 바꾸고, 같은 데이터로 버튼 키 표시를 만든다. |
+| 상점 행을 Default Back과 같은 테이블에서 찾음 | 화면 클래스는 WBP가 없어 행 핸들을 편집할 곳이 없다. ini에 에셋 참조를 두면 CDO 생성 시점에 DataTable을 읽게 된다. 행 이름 세 개만 코드에 둔다. |
+| 모달 확인을 Default Click 액션에 연결 | CommonButton의 TriggeringInputAction이 바인딩과 아이콘 표시를 함께 처리한다. 대신 A가 항상 구매이므로 취소 버튼을 포커스에서 제외했다. |
+| bAutoRestoreFocus로 포커스 복귀 | 스택이 화면을 비활성화하기 직전 포커스를 CommonUI가 저장한다. 전역 Slate 훅을 유지할 이유가 없다. |
+| 아이콘 대신 키 이름 텍스트 | 사용할 수 있는 아이콘 에셋이 없다. 아이콘을 새로 만들지 않고 컨트롤러 데이터를 추가할 자리만 남겼다. |
+| 서버 요청 번호를 "처리했거나 오래된 번호 거부"로 단순화 | 한 연결의 Reliable 서버 RPC는 한 번씩 순서대로 실행된다. 처리 중 같은 번호 병합과 uint32 래핑 비교는 정상 경로에서 일어나지 않는다. |
+| 재진입 잠금(bProcessingPurchase) 제거 | C++와 Blueprint에 구매 처리 중 다시 PurchaseItem을 부르는 경로가 없다. Blueprint는 클라이언트의 RequestPurchaseAbility RPC만 호출한다. 기존 검사는 Actor 생성 콜백으로 만든 인위적 재진입만 다뤘다. |
+
 ## 코드와 검증
 
 | 책임 | 코드 |
 | --- | --- |
 | CommonUI와 모달 | [ShopLayer.cpp](https://github.com/chungheonLee0325/VALORANT/blob/main/UnrealEngine/Valorant/Source/Valorant/UI/MatchMap/ShopLayer.cpp) |
+| UI 입력 설정 | [DefaultGame.ini](https://github.com/chungheonLee0325/VALORANT/blob/main/UnrealEngine/Valorant/Config/DefaultGame.ini), Content/BluePrint/UI/Input의 DT_UIInputActions·BP_UIInputData |
 | 구매 세션 | [ShopViewModel.cpp](https://github.com/chungheonLee0325/VALORANT/blob/main/UnrealEngine/Valorant/Source/Valorant/UI/MatchMap/ShopViewModel.cpp) |
 | 구매 규칙과 정산 | [ShopComponent.cpp](https://github.com/chungheonLee0325/VALORANT/blob/main/UnrealEngine/Valorant/Source/Valorant/Player/Component/ShopComponent.cpp) |
 | 장착과 실패 복원 | [BaseWeapon.cpp](https://github.com/chungheonLee0325/VALORANT/blob/main/UnrealEngine/Valorant/Source/Valorant/Weapon/BaseWeapon.cpp) |
 | 표시 Actor 정리 | [BaseInteractor.cpp](https://github.com/chungheonLee0325/VALORANT/blob/main/UnrealEngine/Valorant/Source/Valorant/ValorantObject/BaseInteractor.cpp) |
 | 상태·슬롯 모델 | [CombatHUDViewModel.cpp](https://github.com/chungheonLee0325/VALORANT/blob/main/UnrealEngine/Valorant/Source/Valorant/UI/MatchMap/CombatHUDViewModel.cpp), [HUDAbilityBarModel.cpp](https://github.com/chungheonLee0325/VALORANT/blob/main/UnrealEngine/Valorant/Source/Valorant/UI/MatchMap/HUDAbilityBarModel.cpp) |
 
-AI 코딩 에이전트는 코드 수정·빌드·재생 도구 실행과 문서 초안을 보조했다. AgentMCP는 UE 5.5.4 에디터의 실제 WBP 조회·수정·컴파일에 사용했다. 결과는 실패 주입, 서버·원격 상태 비교, 화면 캡처로 확인했다. 코드 리뷰에서 월드 재획득의 소유권 설정 순서를 다시 수정했고, 독립된 복제 객체가 같은 프레임에 도착한다는 테스트 가정도 고쳤다. [실행 범위와 재현](RegressionTests.md)
+AI 코딩 에이전트는 코드 수정·빌드·재생 도구 실행과 문서 초안을 보조했다. AgentMCP는 UE 5.5.4 에디터의 실제 WBP 조회·수정·컴파일에 사용했다. 후속 개선에서는 입력 DataTable·Input Data·두 WBP 생성, PC_Agent 설정, 컴파일과 저장에 사용했다. 결과는 실패 주입, 서버·원격 상태 비교, 화면 캡처로 확인했다. 코드 리뷰에서 월드 재획득의 소유권 설정 순서를 다시 수정했고, 독립된 복제 객체가 같은 프레임에 도착한다는 테스트 가정도 고쳤다. [실행 범위와 재현](RegressionTests.md)
 
 ## 화면 비교
 
