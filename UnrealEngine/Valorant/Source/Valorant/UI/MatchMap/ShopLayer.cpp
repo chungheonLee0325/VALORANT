@@ -76,6 +76,7 @@ void UShopButton::UpdateInputActionWidget()
 	const FKey key = action && !bHasIcon
 		? action->GetInputTypeInfo(input->GetCurrentInputType(), input->GetCurrentGamepadName()).GetKey() : FKey();
 	InputKeyLabel->SetText(key.IsValid() ? key.GetDisplayName(false) : FText::GetEmpty());
+	InputKeyLabel->SetVisibility(key.IsValid() ? ESlateVisibility::HitTestInvisible : ESlateVisibility::Collapsed);
 }
 
 void UShopButton::RefreshAppearance()

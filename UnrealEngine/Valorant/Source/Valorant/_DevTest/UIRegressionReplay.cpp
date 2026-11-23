@@ -1,4 +1,5 @@
 #if WITH_DEV_AUTOMATION_TESTS && !UE_BUILD_SHIPPING
+#include "CommonActionWidget.h"
 #include "CommonActivatableWidget.h"
 #include "CommonInputSettings.h"
 #include "CommonInputSubsystem.h"
@@ -91,6 +92,13 @@ namespace
         const auto* button = Modal ? Cast<UUserWidget>(Modal->GetWidgetFromName(Button)) : nullptr;
         const auto* label = button ? Cast<UTextBlock>(button->GetWidgetFromName(TEXT("InputKeyLabel"))) : nullptr;
         return label ? label->GetText().ToString() : FString();
+    }
+
+    FString PromptIcon(const UUserWidget* Modal, const TCHAR* Button)
+    {
+        const auto* button = Modal ? Cast<UUserWidget>(Modal->GetWidgetFromName(Button)) : nullptr;
+        const auto* icon = button ? Cast<UCommonActionWidget>(button->GetWidgetFromName(TEXT("InputActionWidget"))) : nullptr;
+        return icon && icon->IsVisible() ? GetNameSafe(icon->GetIcon().GetResourceObject()) : FString();
     }
 
     void Key(const FKey& Key)
@@ -517,10 +525,12 @@ namespace
                     && !actions.Contains(UIActionName(back, TEXT("ShopPreviousCategory")))
                     && !actions.Contains(UIActionName(back, TEXT("ShopNextCategory"))));
                 bGamepadPrompts = inputSubsystem && inputSubsystem->GetCurrentInputType() == ECommonInputType::Gamepad
-                    && KeyLabel(activeModal(), TEXT("ConfirmButton")) == EKeys::Gamepad_FaceButton_Bottom.GetDisplayName(false).ToString()
-                    && KeyLabel(activeModal(), TEXT("CancelButton")) == EKeys::Gamepad_FaceButton_Right.GetDisplayName(false).ToString();
-                UE_LOG(LogTemp, Display, TEXT("REPLAY modal prompts: confirm=%s cancel=%s"),
-                    *KeyLabel(activeModal(), TEXT("ConfirmButton")), *KeyLabel(activeModal(), TEXT("CancelButton")));
+                    && PromptIcon(activeModal(), TEXT("ConfirmButton")) == TEXT("T_Prompt_A")
+                    && PromptIcon(activeModal(), TEXT("CancelButton")) == TEXT("T_Prompt_B")
+                    && KeyLabel(activeModal(), TEXT("ConfirmButton")).IsEmpty();
+                UE_LOG(LogTemp, Display, TEXT("REPLAY modal prompts: confirm=%s cancel=%s label=%s"),
+                    *PromptIcon(activeModal(), TEXT("ConfirmButton")), *PromptIcon(activeModal(), TEXT("CancelButton")),
+                    *KeyLabel(activeModal(), TEXT("ConfirmButton")));
                 FScreenshotRequest::RequestScreenshot(Path(TEXT("UIRegressionShop="), TEXT("-confirm.png")), true, false);
                 ++modalStage;
                 break;
@@ -531,12 +541,14 @@ namespace
                 {
                     inputSubsystem->SetCurrentInputType(ECommonInputType::MouseAndKeyboard);
                 }
-                UE_LOG(LogTemp, Display, TEXT("REPLAY modal prompts: confirm=%s cancel=%s"),
-                    *KeyLabel(activeModal(), TEXT("ConfirmButton")), *KeyLabel(activeModal(), TEXT("CancelButton")));
+                UE_LOG(LogTemp, Display, TEXT("REPLAY modal prompts: confirm=%s cancel=%s label=%s"),
+                    *PromptIcon(activeModal(), TEXT("ConfirmButton")), *PromptIcon(activeModal(), TEXT("CancelButton")),
+                    *KeyLabel(activeModal(), TEXT("ConfirmButton")));
                 Result(TEXT("UI.ACTION.PROMPTS"), TEXT("modal key prompts follow the switch between gamepad and keyboard"),
                     bGamepadPrompts && inputSubsystem && inputSubsystem->GetCurrentInputType() == ECommonInputType::MouseAndKeyboard
-                    && KeyLabel(activeModal(), TEXT("ConfirmButton")) == EKeys::Enter.GetDisplayName(false).ToString()
-                    && KeyLabel(activeModal(), TEXT("CancelButton")) == EKeys::Escape.GetDisplayName(false).ToString());
+                    && PromptIcon(activeModal(), TEXT("ConfirmButton")) == TEXT("T_Prompt_Enter")
+                    && PromptIcon(activeModal(), TEXT("CancelButton")) == TEXT("T_Prompt_Esc")
+                    && KeyLabel(activeModal(), TEXT("ConfirmButton")).IsEmpty());
                 FScreenshotRequest::RequestScreenshot(Path(TEXT("UIRegressionShop="), TEXT("-confirm-kbm.png")), true, false);
                 ++modalStage;
                 break;
