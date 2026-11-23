@@ -1,0 +1,90 @@
+UE 5.5.4 Win64 Development Editor / loopback Listen Server / Windows PowerShell 5.1
+Commit 17d28b6f9d4979a4280f4844685049e95d03e8a1
+Run 20261124-001915-128 / required checks 52 / passed 52
+Physical controller and keyboard input, gamepad name detection on real hardware and package tests: NOT RUN
+
+host.log
+1447 [2026.11.23-15.19.40:715][469]LogTemp: Display: REPLAY lock-in agent=1
+1448 [2026.11.23-15.19.40:776][471]LogTemp: Warning: [SERVER] 208D: AMatchGameMode::OnLockIn Called, All Players Completed Lock In
+1543 [2026.11.23-15.19.45:793][621]LogTemp: Display: SHOP CHECK PASS [SHOP.ARMOR.DUPLICATE] armor: initial purchase and repeated full-tier rejection
+1553 [2026.11.23-15.19.45:793][621]LogTemp: Display: SHOP CHECK PASS [SHOP.ARMOR.DAMAGED_UPGRADE] armor: damaged refill, full-price upgrade, damaged downgrade rejection
+1557 [2026.11.23-15.19.45:793][621]LogTemp: Display: SHOP CHECK PASS [SHOP.ARMOR.INVALID] armor: insufficient credit and unknown ID preserve balance and armor
+1565 [2026.11.23-15.19.45:795][621]LogTemp: Display: SHOP CHECK request order: bought=1 rejections=2 balance=2100/2100
+1566 [2026.11.23-15.19.45:795][621]LogTemp: Display: SHOP CHECK PASS [SHOP.REQUEST.ORDER] requests: a processed or older request number is rejected without settlement
+1571 [2026.11.23-15.19.45:796][621]LogTemp: Display: SHOP CHECK PASS [SHOP.WEAPON.REFUND] weapons: new slot ownership, unused replacement refund, duplicate request
+1574 [2026.11.23-15.19.45:796][621]LogTemp: Display: SHOP CHECK PASS [SHOP.WEAPON.SPAWN_FAILURE] weapons: engine rejects a deferred spawn and preserves the old slot and balance
+1577 [2026.11.23-15.19.45:797][621]LogTemp: Display: SHOP CHECK PASS [SHOP.WEAPON.ATTACH_FAILURE] weapons: failed presentation attachment preserves the old slot and balance
+1584 [2026.11.23-15.19.45:798][621]LogTemp: Display: SHOP CHECK PASS [WEAPON.PICKUP.FIRST_PERSON_FAILURE] world pickup: first-person attachment failure preserves the world weapon and previous slot
+1586 [2026.11.23-15.19.45:798][621]LogTemp: Display: SHOP CHECK PASS [WEAPON.PICKUP.SPAWN_FAILURE] world pickup: presentation spawn failure restores transform physics collision and ownership
+1588 [2026.11.23-15.19.45:798][621]LogTemp: Display: SHOP CHECK PASS [WEAPON.PICKUP.ATTACH_FAILURE] world pickup: presentation attachment failure leaves no dependent actor and permits retry
+1591 [2026.11.23-15.19.45:799][621]LogTemp: Display: SHOP CHECK host weapon/visual counts: before=1/1 drop=2/1 pickup=2/1
+1592 [2026.11.23-15.19.45:799][621]LogTemp: Display: SHOP CHECK PASS [WEAPON.PICKUP.RETRY] weapons: used gun drops, can be picked up, and presentation count stays bounded
+3189 [2026.11.23-15.20.46:782][451]LogTemp: Display: REPLAY PASS [WEAPON.LIFETIME.DEATH] death removes all captured presentation actors while sidearm stays in the world
+3190 [2026.11.23-15.20.46:782][451]LogTemp: Display: REPLAY PASS [HUD.KILL_FEED] GAS kill creates a Blueprint kill-feed card on the host
+
+client1.log
+2374 [2026.11.23-15.19.40:734][ 26]LogTemp: Display: REPLAY lock-in agent=2
+2417 [2026.11.23-15.19.47:462][226]LogTemp: Display: REPLAY PASS [UI.FOCUS.INITIAL] initial Classic focus
+2418 [2026.11.23-15.19.47:462][226]LogTemp: Display: REPLAY active UI action Legacy_DT_UIInputActions_ShopClose on ShopScreen_0
+2419 [2026.11.23-15.19.47:462][226]LogTemp: Display: REPLAY active UI action Legacy_DT_UIInputActions_ShopPreviousCategory on ShopScreen_0
+2420 [2026.11.23-15.19.47:462][226]LogTemp: Display: REPLAY active UI action Legacy_DT_UIInputActions_ShopNextCategory on ShopScreen_0
+2421 [2026.11.23-15.19.47:462][226]LogTemp: Display: REPLAY active UI action Legacy_DT_UIInputActions_Back on ShopScreen_0
+2422 [2026.11.23-15.19.47:462][226]LogTemp: Display: REPLAY PASS [UI.ACTION.SCREEN] shop screen binds Back, shop key and LB/RB as CommonUI actions
+2423 [2026.11.23-15.19.47:462][226]LogTemp: Display: REPLAY PASS [HUD.CARDS.INITIAL] buy phase has four top HUD cards
+2424 [2026.11.23-15.19.47:462][226]LogTemp: Display: REPLAY PASS [UI.INPUT.CROUCH_WALK_RELEASE] opening while crouched and walking releases both states
+2430 [2026.11.23-15.19.48:142][240]LogTemp: Display: REPLAY PASS [UI.FOCUS.CATEGORY] armor category focuses Light Shield
+2431 [2026.11.23-15.19.48:809][260]LogTemp: Display: REPLAY PASS [UI.FOCUS.DPAD] D-pad skips Regen and focuses Heavy Shield
+2436 [2026.11.23-15.19.49:475][280]LogTemp: Display: REPLAY PASS [UI.MODAL.ARMOR] Heavy Shield maps to item 2 and opens modal
+2437 [2026.11.23-15.19.49:475][280]LogTemp: Display: REPLAY active UI action Legacy_DT_UIInputActions_Confirm on ConfirmButton
+2438 [2026.11.23-15.19.49:475][280]LogTemp: Display: REPLAY active UI action Legacy_DT_UIInputActions_Back on CancelButton
+2439 [2026.11.23-15.19.49:475][280]LogTemp: Display: REPLAY active UI action Legacy_DT_UIInputActions_ShopClose on WBP_ShopConfirmation_C_0
+2440 [2026.11.23-15.19.49:475][280]LogTemp: Display: REPLAY PASS [UI.ACTION.MODAL] modal buttons own the default Click and Back actions while LB/RB are inactive
+2441 [2026.11.23-15.19.49:475][280]LogTemp: Display: REPLAY modal prompts: confirm=T_Prompt_A cancel=T_Prompt_B label=
+2447 [2026.11.23-15.19.50:134][299]LogTemp: Display: REPLAY modal prompts: confirm=T_Prompt_Enter cancel=T_Prompt_Esc label=
+2448 [2026.11.23-15.19.50:134][299]LogTemp: Display: REPLAY PASS [UI.ACTION.PROMPTS] modal key prompts follow the switch between gamepad and keyboard
+2457 [2026.11.23-15.19.51:473][338]LogTemp: Display: REPLAY PASS [UI.MODAL.CANCEL] cancel restores the Heavy Shield button
+2464 [2026.11.23-15.19.52:140][358]LogTemp: Display: REPLAY PASS [SHOP.REQUEST.PENDING] confirm emits a pending remote purchase
+2480 [2026.11.23-15.19.52:141][358]LogTemp: Display: REPLAY PASS [SHOP.SESSION.REOPEN_PENDING] screen reopen preserves pending and ignores uncorrelated legacy reply
+2485 [2026.11.23-15.19.53:340][394]LogTemp: Display: REPLAY PASS [SHOP.SESSION.LATE_REPLY] late Heavy Shield reply updates replication, model and UI without restoring old feedback
+2486 [2026.11.23-15.19.53:340][394]LogTemp: Display: REPLAY PASS [SHOP.SESSION.DUPLICATE_REPLY] duplicate response leaves the reopened shop unchanged
+2488 [2026.11.23-15.19.54:674][434]LogTemp: Display: REPLAY PASS [SHOP.ARMOR.CLIENT_DUPLICATE] full Heavy Shield cannot open a second modal
+2490 [2026.11.23-15.19.56:007][474]LogTemp: Display: REPLAY PASS [UI.FOCUS.WEAPON] weapon navigation focuses Shorty
+2494 [2026.11.23-15.19.56:673][494]LogTemp: Display: REPLAY PASS [UI.MODAL.WEAPON] Shorty opens weapon confirmation
+2502 [2026.11.23-15.19.57:673][524]LogTemp: Display: REPLAY PASS [SHOP.WEAPON.REPLICATION] weapon purchase replicates slot and balance to the remote owner
+2503 [2026.11.23-15.19.57:673][524]LogTemp: Display: REPLAY remote weapon/visual counts: before=10/8 after=10/8
+2504 [2026.11.23-15.19.57:673][524]LogTemp: Display: REPLAY PASS [WEAPON.LIFETIME.REPLACEMENT] remote unused replacement keeps counts and initializes the replicated mesh
+2505 [2026.11.23-15.19.58:340][544]LogTemp: Display: REPLAY PASS [UI.FOCUS.SKILL] skill category focuses the authored Phoenix C button
+2509 [2026.11.23-15.19.59:007][564]LogTemp: Display: REPLAY PASS [UI.MODAL.SKILL] Phoenix C authored button sends the current agent skill ID
+2517 [2026.11.23-15.19.59:674][584]LogTemp: Display: REPLAY PASS [SHOP.SKILL.REPLICATION] Phoenix C purchase replicates into HUD and debits 300
+2518 [2026.11.23-15.19.59:675][584]LogTemp: Display: REPLAY PASS [UI.INPUT.INJECT] Enhanced Input action injection started while shop is open
+2520 [2026.11.23-15.20.00:340][604]LogTemp: Display: REPLAY PASS [UI.INPUT.BLOCK] open shop blocks movement, aim, fire, skill and weapon switch
+2530 [2026.11.23-15.20.21:007][224]LogTemp: Display: REPLAY PASS [UI.INPUT.AUTO_CLOSE] round start clears shop stack
+2531 [2026.11.23-15.20.21:007][224]LogTemp: Display: REPLAY PASS [HUD.CARDS.ROUND] round transition preserves exactly four top HUD cards
+2534 [2026.11.23-15.20.21:683][242]LogTemp: Display: REPLAY PASS [UI.INPUT.HELD_KEYS] held shop keys do not carry movement or fire into gameplay
+2540 [2026.11.23-15.20.22:349][262]LogTemp: Display: REPLAY PASS [UI.INPUT.RESTORE] gameplay input restored after closing
+2542 [2026.11.23-15.20.24:749][334]LogTemp: Display: REPLAY PASS [HUD.REPLICATION.AMMO] remote release and reload propagate ammo
+2545 [2026.11.23-15.20.26:349][382]LogTemp: Display: REPLAY PASS [HUD.SKILL.FOLLOW_UP] Phoenix preparation shows existing follow-up hint
+2922 [2026.11.23-15.20.28:359][440]LogTemp: Display: REPLAY PASS [HUD.SKILL.CONSUME] Phoenix confirmed ability consumes stack and refreshes HUD
+2924 [2026.11.23-15.20.34:360][620]LogTemp: Display: REPLAY PASS [HUD.REPLICATION.VITALS_SCORE] server health and score change reach remote HUD
+2939 [2026.11.23-15.20.38:372][738]LogTemp: Display: REPLAY PASS [HUD.RECREATE] two HUD recreations restore vitals and keep four cards
+2941 [2026.11.23-15.20.42:361][858]LogTemp: Display: REPLAY PASS [HUD.DAMAGE_INDICATOR] GAS damage creates a Blueprint damage indicator
+2942 [2026.11.23-15.20.42:361][858]LogTemp: Display: REPLAY completed agent=2 armor=50 credit=3400
+
+client2.log
+2277 [2026.11.23-15.19.40:743][109]LogTemp: Display: REPLAY lock-in agent=3
+2303 [2026.11.23-15.19.45:830][261]LogTemp: Display: REPLAY PASS [SHOP.REQUEST.PENDING_CLICK] timeout fixture sends one purchase and blocks a second click
+2311 [2026.11.23-15.19.55:807][561]LogTemp: Warning: Shop response timed out request=1
+2312 [2026.11.23-15.19.55:807][561]LogTemp: Display: REPLAY PASS [SHOP.REQUEST.TIMEOUT] timeout clears UI pending while real weapon and debit replicate
+2313 [2026.11.23-15.19.55:807][561]LogTemp: Display: REPLAY PASS [SHOP.REQUEST.STALE_REPLY] held success cannot complete the new request
+2318 [2026.11.23-15.19.55:840][562]LogTemp: Display: REPLAY PASS [SHOP.REQUEST.AFTER_TIMEOUT] new response completes once and preserves both server purchases
+2331 [2026.11.23-15.19.56:640][586]LogTemp: Display: REPLAY PASS [UI.INPUT.FIRE_RELEASE] opening during held fire stops the shot sequence
+
+client3.log
+2277 [2026.11.23-15.19.40:742][119]LogTemp: Display: REPLAY lock-in agent=4
+
+Blueprint compile results (AgentMCP blueprint_compile, assets unchanged since)
+WBP_ShopConfirmation, WBP_ShopButton, PC_Agent, BP_UIInputData, BP_ControllerData_KeyboardMouse, BP_ControllerData_Gamepad: 0 errors, 0 warnings.
+Build.bat ValorantEditor Win64 Development: target up to date at the commit above.
+
+Regression runner contract checks
+Not re-run in this follow-up. The duplicate, missing-ID and missing-flag checks were run for the previous Release (0d439057).

@@ -151,6 +151,20 @@ FVector2D UMiniMapWidget::WorldToMinimapPosition(const FVector& TargetActorLocat
 
 void UMiniMapWidget::UpdateAgentIcons()
 {
+	// A player who leaves keeps a destroyed PlayerState here until garbage collection nulls the entry.
+	PlayerArray.RemoveAll([](const AAgentPlayerState* Player) { return !IsValid(Player); });
+	for (auto Icon = AgentIconMap.CreateIterator(); Icon; ++Icon)
+	{
+		if (!IsValid(Icon->Key))
+		{
+			if (IsValid(Icon->Value))
+			{
+				Icon->Value->RemoveFromParent();
+			}
+			Icon.RemoveCurrent();
+		}
+	}
+
 	const auto* MyAgent = MyPlayerState->GetPawn<ABaseAgent>();
 	if (nullptr == MyAgent) // 관찰자 에이전트가 유효하지 않은 경우
 		return; // 함수 종료

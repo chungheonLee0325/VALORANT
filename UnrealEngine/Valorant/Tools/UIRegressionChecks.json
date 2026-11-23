@@ -1,0 +1,262 @@
+[
+  {
+    "id": "SHOP.ARMOR.DUPLICATE",
+    "process": "host",
+    "description": "armor: initial purchase and repeated full-tier rejection"
+  },
+  {
+    "id": "SHOP.ARMOR.DAMAGED_UPGRADE",
+    "process": "host",
+    "description": "armor: damaged refill, full-price upgrade, damaged downgrade rejection"
+  },
+  {
+    "id": "SHOP.ARMOR.INVALID",
+    "process": "host",
+    "description": "armor: insufficient credit and unknown ID preserve balance and armor"
+  },
+  {
+    "id": "SHOP.REQUEST.ORDER",
+    "process": "host",
+    "description": "requests: a processed or older request number is rejected without settlement"
+  },
+  {
+    "id": "WEAPON.PICKUP.FIRST_PERSON_FAILURE",
+    "process": "host",
+    "description": "world pickup: first-person attachment failure preserves the world weapon and previous slot"
+  },
+  {
+    "id": "WEAPON.PICKUP.SPAWN_FAILURE",
+    "process": "host",
+    "description": "world pickup: presentation spawn failure restores transform physics collision and ownership"
+  },
+  {
+    "id": "WEAPON.PICKUP.ATTACH_FAILURE",
+    "process": "host",
+    "description": "world pickup: presentation attachment failure leaves no dependent actor and permits retry"
+  },
+  {
+    "id": "SHOP.WEAPON.REFUND",
+    "process": "host",
+    "description": "weapons: new slot ownership, unused replacement refund, duplicate request"
+  },
+  {
+    "id": "SHOP.WEAPON.SPAWN_FAILURE",
+    "process": "host",
+    "description": "weapons: engine rejects a deferred spawn and preserves the old slot and balance"
+  },
+  {
+    "id": "SHOP.WEAPON.ATTACH_FAILURE",
+    "process": "host",
+    "description": "weapons: failed presentation attachment preserves the old slot and balance"
+  },
+  {
+    "id": "WEAPON.PICKUP.RETRY",
+    "process": "host",
+    "description": "weapons: used gun drops, can be picked up, and presentation count stays bounded"
+  },
+  {
+    "id": "SHOP.REQUEST.PENDING_CLICK",
+    "process": "client2",
+    "description": "timeout fixture sends one purchase and blocks a second click"
+  },
+  {
+    "id": "SHOP.REQUEST.TIMEOUT",
+    "process": "client2",
+    "description": "timeout clears UI pending while real weapon and debit replicate"
+  },
+  {
+    "id": "SHOP.REQUEST.STALE_REPLY",
+    "process": "client2",
+    "description": "held success cannot complete the new request"
+  },
+  {
+    "id": "SHOP.REQUEST.AFTER_TIMEOUT",
+    "process": "client2",
+    "description": "new response completes once and preserves both server purchases"
+  },
+  {
+    "id": "UI.INPUT.FIRE_RELEASE",
+    "process": "client2",
+    "description": "opening during held fire stops the shot sequence"
+  },
+  {
+    "id": "WEAPON.LIFETIME.DEATH",
+    "process": "host",
+    "description": "death removes all captured presentation actors while sidearm stays in the world"
+  },
+  {
+    "id": "HUD.KILL_FEED",
+    "process": "host",
+    "description": "GAS kill creates a Blueprint kill-feed card on the host"
+  },
+  {
+    "id": "UI.FOCUS.INITIAL",
+    "process": "client1",
+    "description": "initial Classic focus"
+  },
+  {
+    "id": "UI.ACTION.SCREEN",
+    "process": "client1",
+    "description": "shop screen binds Back, shop key and LB/RB as CommonUI actions"
+  },
+  {
+    "id": "HUD.CARDS.INITIAL",
+    "process": "client1",
+    "description": "buy phase has four top HUD cards"
+  },
+  {
+    "id": "UI.INPUT.CROUCH_WALK_RELEASE",
+    "process": "client1",
+    "description": "opening while crouched and walking releases both states"
+  },
+  {
+    "id": "UI.FOCUS.CATEGORY",
+    "process": "client1",
+    "description": "armor category focuses Light Shield"
+  },
+  {
+    "id": "UI.FOCUS.DPAD",
+    "process": "client1",
+    "description": "D-pad skips Regen and focuses Heavy Shield"
+  },
+  {
+    "id": "UI.MODAL.ARMOR",
+    "process": "client1",
+    "description": "Heavy Shield maps to item 2 and opens modal"
+  },
+  {
+    "id": "UI.ACTION.MODAL",
+    "process": "client1",
+    "description": "modal buttons own the default Click and Back actions while LB/RB are inactive"
+  },
+  {
+    "id": "UI.ACTION.PROMPTS",
+    "process": "client1",
+    "description": "modal key prompts follow the switch between gamepad and keyboard"
+  },
+  {
+    "id": "UI.MODAL.CANCEL",
+    "process": "client1",
+    "description": "cancel restores the Heavy Shield button"
+  },
+  {
+    "id": "SHOP.REQUEST.PENDING",
+    "process": "client1",
+    "description": "confirm emits a pending remote purchase"
+  },
+  {
+    "id": "SHOP.SESSION.REOPEN_PENDING",
+    "process": "client1",
+    "description": "screen reopen preserves pending and ignores uncorrelated legacy reply"
+  },
+  {
+    "id": "SHOP.SESSION.LATE_REPLY",
+    "process": "client1",
+    "description": "late Heavy Shield reply updates replication, model and UI without restoring old feedback"
+  },
+  {
+    "id": "SHOP.SESSION.DUPLICATE_REPLY",
+    "process": "client1",
+    "description": "duplicate response leaves the reopened shop unchanged"
+  },
+  {
+    "id": "SHOP.ARMOR.CLIENT_DUPLICATE",
+    "process": "client1",
+    "description": "full Heavy Shield cannot open a second modal"
+  },
+  {
+    "id": "UI.FOCUS.WEAPON",
+    "process": "client1",
+    "description": "weapon navigation focuses Shorty"
+  },
+  {
+    "id": "UI.MODAL.WEAPON",
+    "process": "client1",
+    "description": "Shorty opens weapon confirmation"
+  },
+  {
+    "id": "SHOP.WEAPON.REPLICATION",
+    "process": "client1",
+    "description": "weapon purchase replicates slot and balance to the remote owner"
+  },
+  {
+    "id": "WEAPON.LIFETIME.REPLACEMENT",
+    "process": "client1",
+    "description": "remote unused replacement keeps counts and initializes the replicated mesh"
+  },
+  {
+    "id": "UI.FOCUS.SKILL",
+    "process": "client1",
+    "description": "skill category focuses the authored Phoenix C button"
+  },
+  {
+    "id": "UI.MODAL.SKILL",
+    "process": "client1",
+    "description": "Phoenix C authored button sends the current agent skill ID"
+  },
+  {
+    "id": "SHOP.SKILL.REPLICATION",
+    "process": "client1",
+    "description": "Phoenix C purchase replicates into HUD and debits 300"
+  },
+  {
+    "id": "UI.INPUT.INJECT",
+    "process": "client1",
+    "description": "Enhanced Input action injection started while shop is open"
+  },
+  {
+    "id": "UI.INPUT.BLOCK",
+    "process": "client1",
+    "description": "open shop blocks movement, aim, fire, skill and weapon switch"
+  },
+  {
+    "id": "UI.INPUT.AUTO_CLOSE",
+    "process": "client1",
+    "description": "round start clears shop stack"
+  },
+  {
+    "id": "HUD.CARDS.ROUND",
+    "process": "client1",
+    "description": "round transition preserves exactly four top HUD cards"
+  },
+  {
+    "id": "UI.INPUT.HELD_KEYS",
+    "process": "client1",
+    "description": "held shop keys do not carry movement or fire into gameplay"
+  },
+  {
+    "id": "UI.INPUT.RESTORE",
+    "process": "client1",
+    "description": "gameplay input restored after closing"
+  },
+  {
+    "id": "HUD.REPLICATION.AMMO",
+    "process": "client1",
+    "description": "remote release and reload propagate ammo"
+  },
+  {
+    "id": "HUD.SKILL.FOLLOW_UP",
+    "process": "client1",
+    "description": "Phoenix preparation shows existing follow-up hint"
+  },
+  {
+    "id": "HUD.SKILL.CONSUME",
+    "process": "client1",
+    "description": "Phoenix confirmed ability consumes stack and refreshes HUD"
+  },
+  {
+    "id": "HUD.REPLICATION.VITALS_SCORE",
+    "process": "client1",
+    "description": "server health and score change reach remote HUD"
+  },
+  {
+    "id": "HUD.RECREATE",
+    "process": "client1",
+    "description": "two HUD recreations restore vitals and keep four cards"
+  },
+  {
+    "id": "HUD.DAMAGE_INDICATOR",
+    "process": "client1",
+    "description": "GAS damage creates a Blueprint damage indicator"
+  }
+]

@@ -171,11 +171,7 @@ void ASpike::ServerRPC_PickUp_Implementation(ABaseAgent* Agent)
 		);
 	Mesh->AttachToComponent(Agent->GetMesh1P(), AttachmentRules, FName(TEXT("L_SpikeSocket")));
 	
-	if (nullptr != ThirdPersonInteractor)
-	{
-		ThirdPersonInteractor->Destroy();
-		ThirdPersonInteractor = nullptr;
-	}
+	DestroyThirdPersonInteractor();
 	if ((ThirdPersonInteractor = GetWorld()->SpawnActor<AThirdPersonInteractor>()))
 	{
 		ThirdPersonInteractor->SetOwner(Agent);

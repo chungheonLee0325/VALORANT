@@ -30,15 +30,20 @@ AThirdPersonInteractor::AThirdPersonInteractor()
 
 void AThirdPersonInteractor::SetXraySetting() const
 {
-	if (const auto* OwnerAgent = Cast<ABaseAgent>(OwnerInteractor->GetOwnerAgent()))
+	const auto* ownerAgent = Cast<ABaseAgent>(GetOwner());
+	if (!ownerAgent && IsValid(OwnerInteractor))
+	{
+		ownerAgent = OwnerInteractor->GetOwnerAgent();
+	}
+	if (ownerAgent)
 	{
 		if (const auto* MyPC = GetWorld()->GetFirstPlayerController<AAgentPlayerController>())
 		{
 			if (const auto* MyPS = MyPC->GetPlayerState<AAgentPlayerState>())
 			{
-				if (const auto* OwnerPS = OwnerAgent->GetPlayerState<AAgentPlayerState>())
+				if (const auto* OwnerPS = ownerAgent->GetPlayerState<AAgentPlayerState>())
 				{
-					const bool bSameTeam = MyPS != OwnerPS && MyPS->bIsBlueTeam == OwnerAgent->IsBlueTeam();
+					const bool bSameTeam = MyPS != OwnerPS && MyPS->bIsBlueTeam == ownerAgent->IsBlueTeam();
 					Mesh->SetRenderCustomDepth(bSameTeam);
 				}
 			}
@@ -46,8 +51,18 @@ void AThirdPersonInteractor::SetXraySetting() const
 	}
 }
 
+void AThirdPersonInteractor::OnRep_Owner()
+{
+	Super::OnRep_Owner();
+	SetXraySetting();
+}
+
 void AThirdPersonInteractor::MulticastRPC_InitSpike_Implementation(ASpike* Spike)
 {
+	if (!IsValid(Spike))
+	{
+		return;
+	}
 	OwnerInteractor = Spike;
 	Mesh->SetSkeletalMeshAsset(Spike->GetMesh()->GetSkeletalMeshAsset());
 	Mesh->SetRelativeScale3D(FVector(0.34f));

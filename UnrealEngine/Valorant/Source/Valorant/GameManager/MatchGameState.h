@@ -91,6 +91,9 @@ public:
 	UFUNCTION(NetMultiCast, Reliable)
 	void MulticastRPC_HandleRoundEnd(bool bBlueWin, ERoundEndReason RoundEndReason);
 	void SetTeamScore(int NewTeamBlueScore, int NewTeamRedScore);
+	float GetRemainRoundStateTime() const { return RemainRoundStateTime; }
+	int32 GetTeamBlueScore() const { return TeamBlueScore; }
+	int32 GetTeamRedScore() const { return TeamRedScore; }
 	
 	// 현재 상점을 열 수 있는 상태인지 확인 (클라이언트에서도 호출 가능)
 	UFUNCTION(BlueprintCallable, Category="Shop")

@@ -679,10 +679,17 @@ void ABaseAgent::ServerRPC_SetCurrentInteractor_Implementation(ABaseInteractor* 
 		CurrentInteractor->SetActive(true);
 		NET_LOG(LogTemp, Warning, TEXT("%hs Called, 현재 장착 중인 Interactor: %s"), __FUNCTION__, *CurrentInteractor->GetActorNameOrLabel());
 	}
+	OnRep_ActiveInteractor();
+}
+
+void ABaseAgent::OnRep_ActiveInteractor()
+{
+	OnActiveInteractorChanged.Broadcast();
 }
 
 void ABaseAgent::ResetCurrentInteractor()
 {
+	const bool bWeaponSlotChanged = CurrentInteractor && (CurrentInteractor == MainWeapon || CurrentInteractor == SubWeapon);
 	if (CurrentInteractor == MainWeapon)
 	{
 		NET_LOG(LogTemp,Warning,TEXT("버린 물건이 Main"));
@@ -700,6 +707,11 @@ void ABaseAgent::ResetCurrentInteractor()
 	}
 	
 	CurrentInteractor = nullptr;
+	OnRep_ActiveInteractor();
+	if (bWeaponSlotChanged)
+	{
+		OnRep_WeaponSlots();
+	}
 }
 
 ABaseWeapon* ABaseAgent::GetMainWeapon() const
@@ -750,29 +762,57 @@ void ABaseAgent::AcquireInteractor(ABaseInteractor* Interactor)
 		return;
 	}
 
-	if (weapon->GetWeaponCategory() == EWeaponCategory::Sidearm)
-	{
-		if (SubWeapon)
-		{
-			SubWeapon->ServerRPC_Drop();
-		}
-		SubWeapon = weapon;
-	}
-	else if (weapon->GetWeaponCategory() == EWeaponCategory::Melee)
+	if (weapon->GetWeaponCategory() == EWeaponCategory::Melee)
 	{
 		MeleeKnife = weapon;
+		SwitchEquipment(weapon->GetInteractorType());
+		return;
+	}
+
+	AcquireWeapon(*weapon);
+}
+
+bool ABaseAgent::AcquireWeapon(ABaseWeapon& Weapon, bool bDiscardUnused)
+{
+	if (!HasAuthority() || !IsValid(&Weapon))
+	{
+		return false;
+	}
+	const EInteractorType type = Weapon.GetInteractorType();
+	ABaseWeapon*& slot = type == EInteractorType::SubWeapon ? SubWeapon : MainWeapon;
+	ABaseWeapon* previous = slot;
+	if (previous == &Weapon)
+	{
+		return true;
+	}
+
+	slot = &Weapon;
+	if (type == CurrentEquipmentState)
+	{
+		PerformWeaponSwitch(type);
 	}
 	else
 	{
-		if (MainWeapon)
-		{
-			MainWeapon->ServerRPC_Drop();
-		}
-		MainWeapon = weapon;
+		SwitchEquipment(type);
 	}
-	
-	// 무기를 얻으면, 해당 무기의 타입의 슬롯으로 전환해 바로 장착하도록
-	SwitchEquipment(Interactor->GetInteractorType());
+	if (IsValid(previous))
+	{
+		if (bDiscardUnused && !previous->GetWasUsed())
+		{
+			previous->Destroy();
+		}
+		else
+		{
+			previous->ServerRPC_Drop();
+		}
+	}
+	OnRep_WeaponSlots();
+	return true;
+}
+
+void ABaseAgent::OnRep_WeaponSlots()
+{
+	OnWeaponSlotsChanged.Broadcast();
 }
 
 void ABaseAgent::SwitchEquipment(EInteractorType EquipmentType)
@@ -954,37 +994,9 @@ void ABaseAgent::ServerRPC_SwitchEquipment_Implementation(EInteractorType Intera
 
 void ABaseAgent::SetShopUI()
 {
-	if (IsLocallyControlled())
+	if (IsLocallyControlled() && PC)
 	{
-		// 현재 라운드 상태 확인
-		// GameMode 대신 GameState를 사용 (클라이언트에서 접근 가능)
-		AMatchGameState* GameState = GetWorld()->GetGameState<AMatchGameState>();
-		if (GameState)
-		{
-			// 구매 페이즈인지 확인
-			if (GameState->CanOpenShop())
-			{
-				// 구매 페이즈일 때만 상점 UI 열기
-				PC->RequestShopUI();
-			}
-			else
-			{
-				// 구매 페이즈가 아닐 때는 알림 메시지 표시
-				FString Message = TEXT("상점은 구매 페이즈에서만 이용할 수 있습니다.");
-
-				// 알림 메시지 표시 (이미 열려있는 상점이 있으면 닫음)
-				if (PC)
-				{
-					PC->Client_ReceivePurchaseResult(false, 0, EShopItemType::None, Message);
-					PC->CloseShopUI();
-				}
-			}
-		}
-		else
-		{
-			// GameState를 찾을 수 없는 경우 기존 동작 유지
-			PC->RequestShopUI();
-		}
+		PC->RequestShopUI();
 	}
 }
 
@@ -1133,6 +1145,7 @@ void ABaseAgent::Die()
 		SubWeapon->ServerRPC_Drop();
 		SubWeapon = nullptr;
 	}
+	OnRep_WeaponSlots();
 	if (MeleeKnife)
 	{
 		MeleeKnife->Destroy();

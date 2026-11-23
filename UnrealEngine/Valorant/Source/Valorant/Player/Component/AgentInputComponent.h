@@ -23,6 +23,7 @@ class VALORANT_API UAgentInputComponent : public UActorComponent
 
 public:
 	UAgentInputComponent();
+	void ReleaseGameplayInput();
 
 	// Input Setting
 	/** MappingContext */
@@ -90,6 +91,8 @@ public:
 	UInputAction* ShopUIAction;
 	
 private:
+	bool IsShopInputSuppressed() const;
+
 	UPROPERTY()
 	UEnhancedInputLocalPlayerSubsystem* InputSubsystem = nullptr;
 
@@ -114,7 +117,6 @@ public:
 	void EndFire(const FInputActionValue& InputActionValue);
 	
 	void StartRightClick(const FInputActionValue& InputActionValue);
-	void EndRightClick(const FInputActionValue& InputActionValue);
 	
 	void WalkStart(const FInputActionValue& InputActionValue);
 	void WalkComplete(const FInputActionValue& InputActionValue);

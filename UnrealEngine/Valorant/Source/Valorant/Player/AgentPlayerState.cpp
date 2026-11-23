@@ -13,6 +13,26 @@
 #include "Net/UnrealNetwork.h"
 #include "Valorant/Player/AgentPlayerController.h"
 
+void AAgentPlayerState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+	DOREPLIFETIME_CONDITION(AAgentPlayerState, ShopArmorTier, COND_OwnerOnly);
+}
+
+void AAgentPlayerState::SetShopArmorTier(uint8 Tier)
+{
+	if (HasAuthority() && ShopArmorTier != Tier)
+	{
+		ShopArmorTier = Tier;
+		OnRep_ShopArmorTier();
+	}
+}
+
+void AAgentPlayerState::OnRep_ShopArmorTier()
+{
+	OnShopArmorTierChanged.Broadcast();
+}
+
 AAgentPlayerState::AAgentPlayerState()
 {
 	ASC = CreateDefaultSubobject<UAgentAbilitySystemComponent>(TEXT("ASC"));
@@ -211,8 +231,11 @@ int32 AAgentPlayerState::GetAgentID() const
 
 void AAgentPlayerState::MulticastRPC_SetAgentID_Implementation(int AgentID)
 {
-	// NET_LOG(LogTemp, Warning, TEXT("%hs Called, AgentId: %d"), __FUNCTION__, AgentID);
-	m_AgentID = AgentID;
+	if (m_AgentID != AgentID)
+	{
+		m_AgentID = AgentID;
+		OnAgentIdChanged.Broadcast();
+	}
 }
 
 float AAgentPlayerState::GetHealth() const

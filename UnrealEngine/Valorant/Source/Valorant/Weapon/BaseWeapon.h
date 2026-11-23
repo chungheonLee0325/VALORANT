@@ -152,7 +152,7 @@ public:
 	void ServerRPC_StartReload();
 	
 	UFUNCTION(BlueprintCallable)
-	EWeaponCategory GetWeaponCategory() const { return WeaponData->WeaponCategory; }
+	EWeaponCategory GetWeaponCategory() const { return WeaponData ? WeaponData->WeaponCategory : EWeaponCategory::None; }
 
 	UPROPERTY(EditDefaultsOnly)
 	TSubclassOf<UGameplayEffect> DamageEffectClass;
@@ -170,6 +170,9 @@ public:
 	virtual void ServerRPC_Drop_Implementation() override;
 	virtual void ServerRPC_Interact_Implementation(ABaseAgent* InteractAgent) override;
 	void ServerOnly_AttachWeapon(ABaseAgent* Agent);
+	bool TryEquipPurchasedWeapon(ABaseAgent& Agent);
+	bool AttachWeaponMeshes(ABaseAgent& Agent);
+	bool TryEquipWeapon(ABaseAgent& Agent, bool bDiscardUnused);
 
 	// 무기 사용 여부 리셋 (라운드 시작 시)
 	UFUNCTION(BlueprintCallable, Category="Weapon")

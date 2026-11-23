@@ -70,7 +70,7 @@ void UCreditComponent::AddCredits(int32 Amount)
 {
 	if (GetOwnerRole() == ROLE_Authority)
 	{
-		const int32 NewAmount = FMath::Clamp(CurrentCredit + Amount, 0, MaxCredit);
+		const int32 NewAmount = static_cast<int32>(FMath::Clamp<int64>(static_cast<int64>(CurrentCredit) + Amount, 0, MaxCredit));
 		SetCurrentCredit(NewAmount);
 	}
 }
@@ -79,7 +79,7 @@ bool UCreditComponent::UseCredits(int32 Amount)
 {
 	if (GetOwnerRole() == ROLE_Authority)
 	{
-		if (CurrentCredit >= Amount)
+		if (CanUseCredits(Amount))
 		{
 			const int32 NewAmount = CurrentCredit - Amount;
 			SetCurrentCredit(NewAmount);
@@ -91,7 +91,7 @@ bool UCreditComponent::UseCredits(int32 Amount)
 
 bool UCreditComponent::CanUseCredits(int32 Amount) const
 {
-	return CurrentCredit >= Amount;
+	return Amount >= 0 && CurrentCredit >= Amount;
 }
 
 void UCreditComponent::ResetForNewRound()
@@ -152,4 +152,4 @@ void UCreditComponent::OnRep_CurrentCredit()
 	// 클라이언트에서 CurrentCredit 값이 복제될 때 호출됨
 	// UI 업데이트 등을 위해 델리게이트 호출
 	OnCreditChanged.Broadcast(CurrentCredit);
-} 
+}

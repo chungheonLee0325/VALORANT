@@ -1,53 +1,80 @@
-﻿// Fill out your copyright notice in the Description page of Project Settings.
-
+// Fill out your copyright notice in the Description page of Project Settings.
 
 #include "MatchMapHudTopWidget.h"
 
 #include "Components/TextBlock.h"
 #include "GameManager/MatchGameState.h"
-#include "Player/AgentPlayerState.h"
-#include "GameManager/ValorantGameInstance.h"
-#include "Player/AgentPlayerController.h"
 #include "Player/Agent/BaseAgent.h"
+#include "Player/AgentPlayerState.h"
 
-void UMatchMapHudTopWidget::NativeConstruct()
+void UMatchMapHudTopWidget::BindMatchState(AMatchGameState* Match)
 {
-	Super::NativeConstruct();
-	
-	GameInstance = UValorantGameInstance::Get(GetWorld());
-	auto* GameState = GetWorld()->GetGameState<AMatchGameState>();
-	GameState->OnRemainRoundStateTimeChanged.AddDynamic(this, &UMatchMapHudTopWidget::UpdateTime);
-	GameState->OnTeamScoreChanged.AddDynamic(this, &UMatchMapHudTopWidget::UpdateScore);
-	GameState->OnRoundSubStateChanged.AddDynamic(this, &UMatchMapHudTopWidget::OnRoundSubStateChanged);
+    if (BoundMatchState.Get() == Match && !BoundMatchState.IsStale())
+    {
+        return;
+    }
+    if (auto* previous = BoundMatchState.Get())
+    {
+        previous->OnRemainRoundStateTimeChanged.RemoveDynamic(this, &UMatchMapHudTopWidget::UpdateTime);
+        previous->OnTeamScoreChanged.RemoveDynamic(this, &UMatchMapHudTopWidget::UpdateScore);
+        previous->OnRoundSubStateChanged.RemoveDynamic(this, &UMatchMapHudTopWidget::OnRoundSubStateChanged);
+    }
 
-	auto* PC = GetWorld()->GetFirstPlayerController<AAgentPlayerController>();
-	PC->OnKillEvent_PC.AddDynamic(this, &UMatchMapHudTopWidget::OnKillEvent);
+    BoundMatchState = Match;
+    LastPhase.Reset();
+    LastDisplayedSecond = INDEX_NONE;
+    if (Match)
+    {
+        Match->OnRemainRoundStateTimeChanged.AddUniqueDynamic(this, &UMatchMapHudTopWidget::UpdateTime);
+        Match->OnTeamScoreChanged.AddUniqueDynamic(this, &UMatchMapHudTopWidget::UpdateScore);
+        Match->OnRoundSubStateChanged.AddUniqueDynamic(this, &UMatchMapHudTopWidget::OnRoundSubStateChanged);
+        UpdateTime(Match->GetRemainRoundStateTime());
+        UpdateScore(Match->GetTeamBlueScore(), Match->GetTeamRedScore());
+        OnRoundSubStateChanged(Match->GetRoundSubState(), 0.0f);
+    }
+}
+
+void UMatchMapHudTopWidget::NativeDestruct()
+{
+    BindMatchState(nullptr);
+    Super::NativeDestruct();
 }
 
 void UMatchMapHudTopWidget::UpdateTime(float Time)
 {
-	const int Minute = static_cast<int>(Time / 60);
-	const int Seconds = static_cast<int>(Time) % 60;
-	const FString TimeStr = FString::Printf(TEXT("%d:%02d"), Minute, Seconds);
-	TextBlockTime->SetText(FText::FromString(TimeStr));
+    const int32 second = FMath::TruncToInt(FMath::Max(Time, 0.0f));
+    if (second != LastDisplayedSecond)
+    {
+        LastDisplayedSecond = second;
+        TextBlockTime->SetText(FText::FromString(FString::Printf(TEXT("%d:%02d"), second / 60, second % 60)));
+    }
 }
 
 void UMatchMapHudTopWidget::UpdateScore(int TeamBlueScore, int TeamRedScore)
 {
-	TextBlockBlueScore->SetText(FText::FromString(FString::Printf(TEXT("%d"), TeamBlueScore)));
-	TextBlockRedScore->SetText(FText::FromString(FString::Printf(TEXT("%d"), TeamRedScore)));
+    TextBlockBlueScore->SetText(FText::AsNumber(TeamBlueScore));
+    TextBlockRedScore->SetText(FText::AsNumber(TeamRedScore));
 }
 
 void UMatchMapHudTopWidget::OnRoundSubStateChanged(const ERoundSubState RoundSubState, const float TransitionTime)
 {
-	if (RoundSubState == ERoundSubState::RSS_PreRound || RoundSubState == ERoundSubState::RSS_BuyPhase)
-	{
-		InitPlayerCard();
-	}
+    if (LastPhase.IsSet() && LastPhase.GetValue() == RoundSubState)
+    {
+        return;
+    }
+    LastPhase = RoundSubState;
+    const bool bBuying = RoundSubState == ERoundSubState::RSS_PreRound || RoundSubState == ERoundSubState::RSS_BuyPhase;
+    TextBlockTime->SetColorAndOpacity(bBuying ? BuyClockColor : FLinearColor::White);
+    if (bBuying)
+    {
+        InitPlayerCard();
+    }
 }
 
 void UMatchMapHudTopWidget::OnKillEvent(ABaseAgent* InstigatorAgent, ABaseAgent* VictimAgent, const FKillFeedInfo& Info)
 {
-	const auto* VictimPS = VictimAgent->GetPlayerState<AAgentPlayerState>();
-	MarkKillOnPlayerCard(VictimPS);
+    if (const auto* victim = VictimAgent ? VictimAgent->GetPlayerState<AAgentPlayerState>() : nullptr)
+    {
+        MarkKillOnPlayerCard(victim);
+    }
 }

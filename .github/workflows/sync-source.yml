@@ -2,12 +2,14 @@ name: Sync Source to Source-only Mirror (VALORANT)
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
     paths:
       - 'UnrealEngine/Valorant/Source/**'
       - 'UnrealEngine/Valorant/Config/**'
       - 'UnrealEngine/Valorant/Plugins/**'
       - 'UnrealEngine/Valorant/Valorant.uproject'
+      - 'UnrealEngine/Valorant/Tools/**'
+      - '.github/workflows/sync-source.yml'
       - 'Doc/**'
       - 'README.md'
   workflow_dispatch:
@@ -20,7 +22,7 @@ jobs:
   sync:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout (sparse)
+      - name: Checkout source
         uses: actions/checkout@v4
         with:
           fetch-depth: 1
@@ -31,61 +33,59 @@ jobs:
             UnrealEngine/Valorant/Source
             UnrealEngine/Valorant/Config
             UnrealEngine/Valorant/Plugins
+            UnrealEngine/Valorant/Tools
             UnrealEngine/Valorant/Valorant.uproject
           sparse-checkout-cone-mode: false
+
+      - name: Checkout existing source mirror
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ secrets.VALORANT_SOURCE_REPO }}
+          token: ${{ secrets.VALORANT_SOURCE_PAT }}
+          ref: main
+          path: out
+          fetch-depth: 1
 
       - name: Prepare mirror workspace
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p out
-          [ -d "UnrealEngine/Valorant/Source" ] && rsync -av --delete "UnrealEngine/Valorant/Source/" "out/Source/" || true
-          [ -d "UnrealEngine/Valorant/Config" ] && rsync -av --delete "UnrealEngine/Valorant/Config/" "out/Config/" || true
+          for folder in Source Config Tools; do
+            rsync -av --delete "UnrealEngine/Valorant/$folder/" "out/$folder/"
+          done
           if [ -d "UnrealEngine/Valorant/Plugins" ]; then
             rsync -av --delete --include='*/' --include='*/Source/***' --exclude='*' \
               "UnrealEngine/Valorant/Plugins/" "out/Plugins/"
           fi
-          [ -f "UnrealEngine/Valorant/Valorant.uproject" ] && cp "UnrealEngine/Valorant/Valorant.uproject" "out/Valorant.uproject" || true
-          [ -d "Doc" ] && rsync -av --delete "Doc/" "out/Doc/" || true
+          cp "UnrealEngine/Valorant/Valorant.uproject" "out/Valorant.uproject"
+          rsync -av --delete "Doc/" "out/Doc/"
 
-          {
-            echo "# VALORANT.Source — source-only mirror"
-            echo
-            echo "> 이 리포는 **소스 코드 전용 미러**입니다."
-            echo "> 전체 프로젝트(에셋 포함)와 **풀 README**는 원본 리포에서 확인하세요:"
-            echo "> 👉 [VALORANT (Main Repo)](https://github.com/${GITHUB_REPOSITORY%/*}/VALORANT)"
-            echo
-            echo "포함: \`Source/\`, \`Config/\`, \`Plugins/*/Source\`, \`Valorant.uproject\`, \`Doc/\`"
-            echo "제외: \`Content/\`, \`Binaries/\`, \`Intermediate/\`"
-            echo
-            echo "---"
-            echo
-            echo "<details><summary><b>Full README (from main repo)</b></summary>"
-            echo
-          } > out/README.md
+          cat > out/README.md <<'MARKDOWN'
+          # VALORANT.Source
 
-          if [ -f "README.md" ]; then
-            cat "README.md" >> out/README.md
-          fi
+          기존 VALORANT 팀 프로젝트와 개인 UI 리팩터링의 소스 확인용 미러입니다.
+          `Source/`, `Config/`, `Plugins/*/Source`, `Valorant.uproject`, `Tools/`, `Doc/`를 동기화합니다.
+          필수 Widget Blueprint와 MatchMap을 포함한 `Content/` 에셋이 없어 이 저장소만으로 전체 게임 실행과 UI 회귀 검증을 수행할 수 없습니다.
 
-          echo -e "\n</details>\n" >> out/README.md
+          - [전체 프로젝트와 시연](https://github.com/chungheonLee0325/VALORANT)
+          - [UI 아키텍처와 주요 코드](https://github.com/chungheonLee0325/VALORANT/blob/main/Doc/UIRefactoring/Architecture.md)
+          - [검증 환경과 재현 방법](https://github.com/chungheonLee0325/VALORANT/blob/main/Doc/UIRefactoring/RegressionTests.md)
+          - [기술 Wiki](https://github.com/chungheonLee0325/VALORANT/wiki)
 
-      - name: Push to source-only repo
+          기존 미러 이력을 유지하며 원본 main 변경을 일반 커밋으로 동기화합니다.
+          MARKDOWN
+          printf '\n원본 커밋 [%s](https://github.com/%s/commit/%s).\n' "$GITHUB_SHA" "$GITHUB_REPOSITORY" "$GITHUB_SHA" >> out/README.md
+
+      - name: Push source mirror
         working-directory: out
-        env:
-          MIRROR_REPO: ${{ secrets.VALORANT_SOURCE_REPO }}
-          MIRROR_PAT:  ${{ secrets.VALORANT_SOURCE_PAT }}
         shell: bash
         run: |
           set -euo pipefail
-          [ -n "${MIRROR_REPO:-}" ] || { echo "MIRROR_REPO empty"; exit 1; }
-          [ -n "${MIRROR_PAT:-}" ]  || { echo "MIRROR_PAT empty";  exit 1; }
-          git init
-          git config user.name  "github-actions[bot]"
+          git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add .
+          if git diff --cached --quiet; then
+            exit 0
+          fi
           git commit -m "chore(mirror): sync from $GITHUB_SHA"
-          git branch -M main
-          git remote add origin "https://x-access-token:${MIRROR_PAT}@github.com/${MIRROR_REPO}.git"
-          git ls-remote --heads origin >/dev/null
-          git push -f origin main
+          git push origin HEAD:main

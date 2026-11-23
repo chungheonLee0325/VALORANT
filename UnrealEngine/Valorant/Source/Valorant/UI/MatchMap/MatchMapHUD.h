@@ -4,6 +4,8 @@
 
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
+#include "CombatHUDViewModel.h"
+#include "HUDAbilityBarModel.h"
 #include "GameManager/MatchGameState.h"
 #include "Player/Animaiton/AgentAnimInstance.h"
 #include "ResourceManager/ValorantGameType.h"
@@ -20,7 +22,8 @@ class AAgentPlayerState;
 class UWidgetSwitcher;
 class UTextBlock;
 class UImage;
-class UValorantGameInstance;
+class UPanelWidget;
+class UCanvasPanel;
 
 UENUM(BlueprintType)
 enum class EMatchAnnouncement : uint8
@@ -32,68 +35,6 @@ enum class EMatchAnnouncement : uint8
 	EMA_SpikeActivated_Lost,  // 스파이크 폭발로 인한 패배
 	EMA_SpikeDefused_Won,     // 스파이크 해제로 인한 승리
 	EMA_SpikeDefused_Lost     // 스파이크 해제로 인한 패배
-};
-
-// 스킬 슬롯별 스택 정보 구조체
-USTRUCT(BlueprintType)
-struct FAbilitySlotStackInfo
-{
-	GENERATED_BODY()
-
-	// 현재 스택 수
-	UPROPERTY(BlueprintReadOnly)
-	int32 CurrentStack = 0;
-
-	// 최대 스택 수
-	UPROPERTY(BlueprintReadOnly)
-	int32 MaxStack = 0;
-
-	// 어빌리티 ID
-	UPROPERTY(BlueprintReadOnly)
-	int32 AbilityID = 0;
-
-	// 초기화 함수
-	void Initialize(int32 InAbilityID, int32 InCurrentStack, int32 InMaxStack)
-	{
-		AbilityID = InAbilityID;
-		CurrentStack = InCurrentStack;
-		MaxStack = InMaxStack;
-	}
-};
-
-// 어빌리티 상세 정보 구조체 (HUD용)
-USTRUCT(BlueprintType)
-struct FHUDAbilityInfo
-{
-	GENERATED_BODY()
-	
-	// 어빌리티 ID
-	UPROPERTY(BlueprintReadOnly)
-	int32 AbilityID = 0;
-	
-	// 어빌리티 이름
-	UPROPERTY(BlueprintReadOnly)
-	FString AbilityName = "";
-	
-	// 어빌리티 설명
-	UPROPERTY(BlueprintReadOnly)
-	FText AbilityDescription;
-	
-	// 어빌리티 아이콘
-	UPROPERTY(BlueprintReadOnly)
-	UTexture2D* AbilityIcon = nullptr;
-	
-	// 현재 스택 수
-	UPROPERTY(BlueprintReadOnly)
-	int32 CurrentStack = 0;
-	
-	// 최대 스택 수
-	UPROPERTY(BlueprintReadOnly)
-	int32 MaxStack = 0;
-	
-	// 충전 비용
-	UPROPERTY(BlueprintReadOnly)
-	int32 ChargeCost = 0;
 };
 
 /**
@@ -120,6 +61,7 @@ class VALORANT_API UMatchMapHUD : public UUserWidget
 	
 protected:
 	virtual void NativeConstruct() override;
+	virtual void NativeDestruct() override;
 
 	UFUNCTION()
 	void UpdateTime(float Time);
@@ -139,21 +81,10 @@ protected:
 	void HideAnnouncement();
 
 	UFUNCTION()
-	void UpdateDisplayHealth(const float health, bool bIsDamage);
-	UFUNCTION()
-	void UpdateDisplayArmor(const float armor);
-	UFUNCTION()
-	void UpdateAmmo(bool bDisplayWidget, int MagazineAmmo, int SpareAmmo);
-
-	UFUNCTION()
 	void OnDamaged(const FVector& HitOrg, const EAgentDamagedPart DamagedPart, const EAgentDamagedDirection DamagedDirection, const bool bDie, const bool bLarge, const bool bLowState);
 	UFUNCTION(BlueprintImplementableEvent)
 	void OnHealed(const bool bHighState);
 	
-	// 어빌리티 스택 관련 함수들
-	UFUNCTION()
-	void HandleAbilityStackChanged(int32 AbilityID, int32 NewStack);
-
 	// 어빌리티 슬롯 정보 초기화 메서드(어빌리티 max 갯수)
 	UFUNCTION(BlueprintImplementableEvent, Category = "Ability|Stack")
 	void InitializeAbilityMaxStacks(EAbilitySlotType AbilitySlot, int32 MaxStacks);
@@ -169,18 +100,10 @@ protected:
 	// 특정 슬롯의 스택 정보 업데이트
 	UFUNCTION(BlueprintCallable, Category = "Ability|Stack")
 	void UpdateSlotStackInfo(EAbilitySlotType AbilitySlot, int32 AbilityID);
-	FAbilitySlotStackInfo GetSlotStackInfo(EAbilitySlotType AbilitySlot) const;
-	
-	// 어빌리티 데이터 로드
-	void LoadAbilityData(int32 AbilityID);
-	
-	// 모든 어빌리티 데이터 로드
-	void LoadAllAbilityData();
-	
-	// 어빌리티 UI 업데이트
-	void UpdateAbilityUI();
 
 public:
+	void RefreshPlayerSources();
+
 	UFUNCTION(BlueprintCallable)
 	void BindToDelegatePC(UAgentAbilitySystemComponent* asc, AAgentPlayerController* pc);
 
@@ -316,6 +239,24 @@ public:
 	UPROPERTY(meta=(BindWidget), BlueprintReadOnly, Category = "Ability|UI")
 	UImage* AbilityX_Image;
 
+	// Names match the existing HUD asset. BindWidget validates these types during Blueprint compilation.
+	UPROPERTY(BlueprintReadOnly, Category = "Ability|UI", meta = (BindWidget, DisplayName = "C Key Label"))
+	TObjectPtr<UTextBlock> TextBlock_101;
+	UPROPERTY(BlueprintReadOnly, Category = "Ability|UI", meta = (BindWidget, DisplayName = "C Stack Panel"))
+	TObjectPtr<UCanvasPanel> CanvasPanel_1;
+	UPROPERTY(BlueprintReadOnly, Category = "Ability|UI", meta = (BindWidget, DisplayName = "Q Key Label"))
+	TObjectPtr<UTextBlock> TextBlock;
+	UPROPERTY(BlueprintReadOnly, Category = "Ability|UI", meta = (BindWidget, DisplayName = "Q Stack Panel"))
+	TObjectPtr<UCanvasPanel> CanvasPanel_0;
+	UPROPERTY(BlueprintReadOnly, Category = "Ability|UI", meta = (BindWidget, DisplayName = "E Key Label"))
+	TObjectPtr<UTextBlock> TextBlock_1;
+	UPROPERTY(BlueprintReadOnly, Category = "Ability|UI", meta = (BindWidget, DisplayName = "E Stack Panel"))
+	TObjectPtr<UCanvasPanel> CanvasPanel;
+	UPROPERTY(BlueprintReadOnly, Category = "Ability|UI", meta = (BindWidget, DisplayName = "X Key Label"))
+	TObjectPtr<UTextBlock> TextBlock_2;
+	UPROPERTY(BlueprintReadOnly, Category = "Ability|UI", meta = (BindWidget, DisplayName = "X Stack Panel"))
+	TObjectPtr<UCanvasPanel> CanvasPanel_2;
+
 	// 후속 입력키 UI
 	UPROPERTY(meta=(BindWidget), BlueprintReadOnly, Category = "FollowUpInput")
 	UOverlay* Left_E;
@@ -338,16 +279,54 @@ public:
 	// UHorizontalBox* LeftOrRight_X;
 
 private:
-	UPROPERTY()
-	UAgentAbilitySystemComponent* ASC;
-	
-	// 어빌리티 스택 정보 캐시
-	UPROPERTY()
-	TMap<int32, int32> AbilityStacksCache;
-	
-	// 어빌리티 상세 정보 캐시
-	UPROPERTY()
-	TMap<int32, FHUDAbilityInfo> AbilityInfoCache;
+    void BindMatchState(AGameStateBase* State);
+    void UnbindPlayer();
+    void CacheAbilityWidgets();
+    void RestoreAbilityWidgets();
+    void RenderAbilitySlot(EAbilitySlotType AbilitySlot, bool bLayoutChanged);
+    UImage* GetAbilityImage(EAbilitySlotType AbilitySlot) const;
+    void OnAbilitySlotChanged(EAbilitySlotType AbilitySlot);
+    void OnStatusFieldChanged(UObject* Object, UE::FieldNotification::FFieldId Field);
+    void RenderVitals();
+    void RenderAmmo();
+
+    UFUNCTION()
+    void OnPawnChanged(APawn* OldPawn, APawn* NewPawn);
+
+    UPROPERTY(Transient, BlueprintReadOnly, Category = "HUD", meta = (AllowPrivateAccess = "true"))
+    TObjectPtr<UCombatHUDViewModel> CombatViewModel;
+
+    UPROPERTY(Transient)
+    TObjectPtr<UHUDAbilityBarModel> AbilityBar;
+
+    UPROPERTY(EditDefaultsOnly, Category = "HUD|Style")
+    FLinearColor SecondaryTextColor = FLinearColor(0.62f, 0.90f, 0.91f);
+
+    UPROPERTY(EditDefaultsOnly, Category = "HUD|Style")
+    FLinearColor WarningTextColor = FLinearColor(1.0f, 0.67f, 0.36f);
+
+    UPROPERTY(EditDefaultsOnly, Category = "HUD|Style")
+    FLinearColor UnavailableSkillColor = FLinearColor(0.68f, 0.71f, 0.76f);
+
+    UPROPERTY(EditDefaultsOnly, Category = "HUD|Appearance", meta = (ClampMin = "0.0", ClampMax = "1.0"))
+    float UnavailableSkillOpacity = 0.30f;
+
+    UPROPERTY(EditDefaultsOnly, Category = "HUD|Style", meta = (ClampMin = "0.0", ClampMax = "1.0"))
+    float LowHealthFraction = 0.25f;
+
+    UPROPERTY(Transient)
+    TMap<EAbilitySlotType, FSlateBrush> AuthoredAbilityBrushes;
+
+    TMap<EAbilitySlotType, TWeakObjectPtr<UTextBlock>> AbilityKeyLabels;
+    TMap<EAbilitySlotType, TWeakObjectPtr<UWidget>> AbilityPipPanels;
+    TMap<EAbilitySlotType, FText> AuthoredAbilityKeys;
+
+    TWeakObjectPtr<AAgentPlayerController> BoundController;
+    TWeakObjectPtr<AAgentPlayerState> BoundPlayerState;
+    TWeakObjectPtr<AMatchGameState> BoundMatchState;
+    TWeakObjectPtr<UAgentAbilitySystemComponent> BoundASC;
+    FDelegateHandle SuppressionHandle;
+    bool bHudConstructed = false;
 
 	// 현재 에이전트 스킬 ID
 	UPROPERTY(BlueprintReadOnly, Category = "Ability", meta = (AllowPrivateAccess = "true"))
@@ -361,10 +340,6 @@ private:
 	
 	UPROPERTY(BlueprintReadOnly, Category = "Ability", meta = (AllowPrivateAccess = "true"))
 	int32 SkillXID = 0;
-
-	// 게임 인스턴스 참조
-	UPROPERTY()
-	UValorantGameInstance* GameInstance;
 
 	// 활성화된 후속 입력키 UI 다시 숨기기
 	UPROPERTY()
