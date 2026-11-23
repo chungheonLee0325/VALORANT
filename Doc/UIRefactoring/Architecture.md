@@ -93,7 +93,7 @@ UMatchMapHUD는 두 모델을 구독하고 기존 Blueprint의 피격·킬 피�
 | 표시 Actor 정리 | [BaseInteractor.cpp](https://github.com/chungheonLee0325/VALORANT/blob/main/UnrealEngine/Valorant/Source/Valorant/ValorantObject/BaseInteractor.cpp) |
 | 상태·슬롯 모델 | [CombatHUDViewModel.cpp](https://github.com/chungheonLee0325/VALORANT/blob/main/UnrealEngine/Valorant/Source/Valorant/UI/MatchMap/CombatHUDViewModel.cpp), [HUDAbilityBarModel.cpp](https://github.com/chungheonLee0325/VALORANT/blob/main/UnrealEngine/Valorant/Source/Valorant/UI/MatchMap/HUDAbilityBarModel.cpp) |
 
-AI 코딩 에이전트는 코드 수정·빌드·재생 도구 실행과 문서 초안을 보조했다. AgentMCP는 UE 5.5.4 에디터의 실제 WBP 조회·수정·컴파일에 사용했다. 후속 개선에서는 입력 DataTable·Input Data·두 WBP 생성, PC_Agent 설정, 컴파일과 저장에 사용했다. 결과는 실패 주입, 서버·원격 상태 비교, 화면 캡처로 확인했다. 코드 리뷰에서 월드 재획득의 소유권 설정 순서를 다시 수정했고, 독립된 복제 객체가 같은 프레임에 도착한다는 테스트 가정도 고쳤다. [실행 범위와 재현](RegressionTests.md)
+AI 코딩 에이전트는 코드 수정·빌드·재생 도구 실행과 문서 초안을 보조했다. AgentMCP는 UE 5.5.4 에디터의 실제 WBP 조회·수정·컴파일에 사용했다. 후속 개선에서는 입력 DataTable·Input Data·두 WBP 생성, PC_Agent 설정, 컴파일과 저장에 사용했다. 결과는 실패 주입, 서버·원격 상태 비교, 화면 캡처로 확인했다. 코드 리뷰에서 월드 재획득의 소유권 설정 순서를 다시 수정했고, 독립된 복제 객체가 같은 프레임에 도착한다는 테스트 가정도 고쳤다. [검증 범위와 결과](RegressionTests.md)
 
 ## 화면 비교
 

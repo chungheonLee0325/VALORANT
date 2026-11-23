@@ -98,7 +98,7 @@ https://github.com/user-attachments/assets/c4ddd177-9b8b-4776-bab3-dbbabbb3c2f8
 AI 코딩 에이전트로 수정과 검증 도구 작성을 보조했고 AgentMCP로 실제 UE 5.5.4 Blueprint를 조사·편집·컴파일했습니다. 입력 주입 기반의 네 프로세스 Listen Server 회귀는 필수 검사별 결과·누락·중복을 확인합니다. 실행 범위와 미검증 조건을 기록했습니다.
 
 - [최종 아키텍처와 코드](Doc/UIRefactoring/Architecture.md)
-- [회귀 결과와 실행 방법](Doc/UIRefactoring/RegressionTests.md)
+- [회귀 검사 구성과 결과](Doc/UIRefactoring/RegressionTests.md)
 - [CommonUI와 입력 설계](https://github.com/chungheonLee0325/VALORANT/wiki/4.2_CommonUI-Input-Architecture)
 - [소스 전용 미러](https://github.com/chungheonLee0325/Valorant.Source)
 

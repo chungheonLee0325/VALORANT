@@ -86,9 +86,5 @@ Blueprint compile results (AgentMCP blueprint_compile, assets unchanged since)
 WBP_ShopConfirmation, WBP_ShopButton, PC_Agent, BP_UIInputData, BP_ControllerData_KeyboardMouse, BP_ControllerData_Gamepad: 0 errors, 0 warnings.
 Build.bat ValorantEditor Win64 Development: target up to date at the commit above.
 
-Minimap disconnect repro (separate script, not a required check)
-Before fix: one remote killed, host and two remotes crashed in UMiniMapWidget::UpdateAgentIcons within 5 s.
-After fix: same repro, all three processes alive for 90 s with no new crash report.
-
 Regression runner contract checks
 Not re-run in this follow-up. The duplicate, missing-ID and missing-flag checks were run for the previous Release (0d439057).
